@@ -1,0 +1,19 @@
+services:
+  build:
+    build:
+      context: ./
+    volumes:
+      - ./:/build
+    environment:
+      - BUILD_ONCE
+
+  serve:
+    image: caddy:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./web:/etc/caddy:ro
+    environment:
+      - SERVER_ADDRESS
+      - SERVER_NAME
