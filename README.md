@@ -1,10 +1,20 @@
 ![logo](logo.svg)
 
-THis is a libc for WASM for those who lothe Emscripten and their build script monstrocity. This you can compile with `clang` without much fuss. There are a few gotchas but not like DEBUGGING EMSCRIPTEN. Also this generates ONLY WASM not webpages. However, to help you along there is a bootloader and SPA template available. But if you want all the tooling crap you should use `WACC` which was purpose built for JACL developpment.
+**JACLibc** \ˈja-kəl-ˌlib-sē\ ● *proper noun* — *fr. JACL, acron. “Just Another C Library” ● cf. alt. “Javascript Accessible Composeable Linkage” (rare, chiefly in marketing) occasionally faux Old French “jacalibre” — nimble code escaping monstrous build systems...*
+
+1. A lean C standard library for WASM — escape hatch for the Emscripten-averse.  
+2. (colloq.) Sanctuary for compiling with `clang` — no build-script penance required.
+3. Includes bootloader and SPA template.
+
+***SEE ALSO:** For the full developer circus, see **WACC** crafted for JACL devotees...*
+
+### This is a libc for WASM for those who lothe Emscripten and their build script monstrocity. ● You can compile without much fuss. — There are a few gotchas but not like DEBUGGING EMSCRIPTEN!!! ● This generates ONLY WASM not webpages, *THANK GOD!!!* ● There is a bootloader and SPA template available. ● If you want all the tooling crap you should use `WACC` — which is built on JACL...
 
 # Compiling...
 
-You should just be able to compile directly against this. However, there are a few flags that you should use to make things work optimal. The easiest thing to do is:
+You should just be able to compile directly against this. However there are a few flags that you should use to make things work optimal.
+
+The easiest thing to do is:
 
 ```bash
 clang --nostdlib --include=path/to/jacl.h yourfile.c
@@ -39,3 +49,4 @@ A simplifified hosting environment borrowed from WACC is avaialble in web if you
 # Contributions
 
 Pull requiests are welcome, but you will be assigning copyright to us. We don't maintain a list of contributours on the copyright. It's just FRINKnet and Friends. So consider your PR as a legally valid ESIGN that you are assigning copyright. If you have a problem with this fork and don't submit a PR. If you've done something cool and you don't push it upstream we may ask. But you have the power to say no. That's how the whole thing works.
+
