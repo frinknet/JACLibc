@@ -18,7 +18,6 @@ extern "C" {
 #define JS_IMPORT(name) __attribute__((import_module("env"), import_name(name))) extern
 #define JS_START static JS_EXPORT(_start)
 #define JS_CODE(code, ...) js_code(#code, sizeof(#code) - 1, __VA_ARGS__)
-#define JS_EXEC(fn, ...) js_CODE("cost [f,...a]=arguments;return this.pack(this.unpack(f)(...a.map(this.unpack)))", __VA_ARGS__)
 
 JS_IMPORT(js) double	js_code(const char *code, int len, ...);
 
@@ -212,6 +211,8 @@ static inline size_t js_length(js_t* v) {
 	return &v->length;
 }
 
+
+#ifndef JS_NO_EXTERNALS
 JS_CODE({
 const
 A={
@@ -276,11 +277,40 @@ RF=p=>F[RD(p)],
 WF=(p,v)=>WD(p, F.includes(v)?F.indexOf(v):F.push(v)-1);
 RG=p=>new Proxy(p,A),
 this.data=X(this.exports.data);
-this.unpack=X;
-this.pack=v=>W(0,0,v);
+this.export=X;
+this.import=v=>W(0,0,v);
 this.listen=(pt,fn)=>H.push([new RegExp(pt.replace(/\./g,'\\.').replace(/\*/g,'.*')),fn]);
 this.trigger=async pt=>H.forEach(async([re,fn])=>re.test(path)&&fn(path));
 });
+#define JS_NO_NOTIFY 
+#define JS_NO_ASYNC 
+#define JS_EXEC(fn, ...) JS_CODE("cost [f,...a]=arguments;return this.import(this.export(f)(...a.map(this.export)))", __VA_ARGS__)
+#else
+#define JS_EXEC(fn, ...)
+#endif
+
+
+// Slep and async
+#ifndef JS_NO_ASYNC
+_t* js_async = JS_CODE({
+let SP = 0,SM;
+const SH = 64*1024,SO = {
+pause:sp=>{SP=sp;SM=new Uint8Array(this.exports.memory.buffer,SP,SH);throw 'PAUSE'},
+sleep:ms=>setTimeout(SO.resume,ms),
+resume:()=>{new Uint8Array(this.exports.memory.buffer,SP,SH).set(SM);this.exports.resume();}
+};
+return this.import(SO);
+});
+#define JS_PAUSE JS_EXEC(js_property(js_async, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
+#define JS_SLEEP JS_PAUSE; JS_EXEC(js_property(js_async, "sleep"), ms);
+#define JS_RESUME js_resume
+JS_EXPORT(pause)
+void js_pause() { JS_PAUSE; }
+JS_EXPORT(sleep)
+void js_sleep(uint32_t ms) { JS_SLEEP(ms); }
+JS_EXPORT(resume)
+void js_resume(void) {}
+#endif
 
 // Node path
 char* js_path(js_t* v) {
@@ -340,11 +370,15 @@ static inline bool js_inroot(js_t* v) {
 	return false;
 }
 
+#ifndef JS_NO_NOTIFY
 void js_notify(js_t* v) {
 	if (!is_inroot(v)) return;
 
-	JS_CODE("this.trigger(this.unpack(arguments[0]))", JS_FROM(js_path(v)));
+	JS_CODE("this.trigger(this.export(arguments[0]))", JS_FROM(js_path(v)));
 }
+#else
+void js_notify(js_t* v) {}
+#endif
 
 // Universal value pointer accessor
 static inline void* js_value(js_t* v) {

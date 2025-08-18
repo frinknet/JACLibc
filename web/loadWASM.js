@@ -13,8 +13,8 @@
           ENV === true
             ? _ => null
             : (p, l, ...a) => {
-              return JSON.strigify(Function( new TextDecoder().decode(new Uint8Array(WASM.exports.memory.buffer, p, l))
-              ).apply(WASM, a));
+              return Function(new TextDecoder().decode(new Uint8Array(WASM.exports.memory.buffer, p, l))
+              ).apply(WASM, a);
             }
         )
       })
