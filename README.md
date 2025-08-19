@@ -17,14 +17,21 @@ You should just be able to compile directly against this. However there are a fe
 The easiest thing to do is:
 
 ```bash
-clang --nostdlib --include=path/to/jacl.h yourfile.c
+clang --nostdlib -mbulk-memory -fbuiltin -Iinclude yourfile.c -o web/wasm/yourfile.wasm
 ```
-
-However if you want a repeatable build we have the dockerfile and docker compose environments provided...
+But for maximum repeatability (and zero “works on my laptop” blues), do everything inside our Docker Compose environment:
 
 ```bash
-how to docker it...
+docker compose run -it build clang --nostdlib -mbulk-memory -fbuiltin -I/build/include /build/yourfile.c -o /build/web/wasm/yourfile.wasm
 ```
+
+Once you've built your WASM, bring up the provided test system:
+
+```bash
+docker compose up serve
+```
+
+Any wasm that goes in web/wasm gets served as SPA apps at localhost/{name}. This is a bit of WACC that we felt was worth sharing with everyone...
 
 # Compatability
 
@@ -55,5 +62,6 @@ A simplifified hosting environment borrowed from WACC is avaialble in web if you
 # Contributions
 
 Pull requiests are welcome, but you will be assigning copyright to us. We don't maintain a list of contributours on the copyright. It's just FRINKnet and Friends. So consider your PR as a legally valid ESIGN that you are assigning copyright. If you have a problem with this fork and don't submit a PR. If you've done something cool and you don't push it upstream we may ask. But you have the power to say no. That's how the whole thing works.
+
 
 
