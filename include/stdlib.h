@@ -3,10 +3,11 @@
 #define STDLIB_H
 
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <limits.h>
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,7 +36,7 @@ static int			 __jacl_initialized;
 			__jacl_free_bitmap	 = 0;																												\
 			for (int i = 0; i < JACL_FL_INDEX_COUNT; i++)																			\
 				__jacl_free_list[i] = 0xFFFF;																									\
-			size_t st = ​JACL_ALIGN_UP(0);																								 \
+			size_t st = JACL_ALIGN_UP(0);																								 \
 			int c = 31 - __builtin_clz((unsigned)(JACL_DEFAULT_HEAP_SIZE - st));							\
 			if (c >= JACL_FL_INDEX_COUNT) c = JACL_FL_INDEX_COUNT - 1;															 \
 			__jacl_free_list[c] = (uint16_t)st;																							\
@@ -48,7 +49,7 @@ static int			 __jacl_initialized;
 static inline void* malloc(size_t n) {
 	JACL_INIT_MEM();
 	if (n <= JACL_FASTBIN_MAX) {
-		size_t sz = ​JACL_ALIGN_UP(n);
+		size_t sz = JACL_ALIGN_UP(n);
 		if (__jacl_arena_offset + sz <= JACL_DEFAULT_HEAP_SIZE) {
 			void* p = __jacl_heap + __jacl_arena_offset;
 			__jacl_arena_offset += sz;
@@ -95,6 +96,7 @@ static inline void* realloc(void* ptr, size_t size) {
 	if (q) memcpy(q, ptr, size);
 	return q;
 }
+
 /* — Integer Conversion & Parsing — */
 static inline int atoi(const char *nptr) { int v=0; sscanf(nptr, "%d", &v); return v; }
 static inline long atol(const char *nptr) { long v=0; sscanf(nptr, "%ld", &v); return v; }
@@ -163,7 +165,6 @@ static inline int mblen(const char *s, size_t n) {
 
 	return *s ? 1 : 0;
 }
-
 
 typedef struct { int quot, rem; }				div_t;
 typedef struct { long quot, rem; }			ldiv_t;
@@ -244,6 +245,20 @@ static inline void exit(int st)	{ (void)st; abort(); }
 static inline char* getenv(const char* n)	{ return NULL; }
 static inline int		system(const char* c)	{ return -1; }
 
+static inline char *strdup(const char *s) {
+		size_t n = strlen(s) + 1;
+		char *p = (char *)malloc(n);
+		return p ? (char *)memcpy(p, s, n) : NULL;
+}
+
+static inline char *strndup(const char *s, size_t n) {
+		size_t len = strnlen(s, n);
+		char *p = (char *)malloc(len + 1);
+		if (!p) return NULL;
+		memcpy(p, s, len);
+		p[len] = '\0';
+		return p;
+}
 
 #ifdef __cplusplus
 }

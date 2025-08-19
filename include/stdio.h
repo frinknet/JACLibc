@@ -2,16 +2,22 @@
 #ifndef STDIO_H
 #define STDIO_H
 
-#include <stddef.h>		 // size_t, NULL
-#include <stdarg.h>		 // va_list
+#ifndef EOF
+#define EOF (-1)
+#endif
+
+#if defined(__cplusplus)
+	#define restrict __restrict__
+#elif !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
+	#define restrict	 /* nothing */
+#endif
+
+#include <stddef.h>
+#include <stdarg.h>
 #include <wchar.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-#ifndef EOF
-#define EOF (-1)
 #endif
 
 // — FILE Type Stub —
@@ -158,9 +164,46 @@ static inline void perror(const char* s) {
 		(void)s;
 }
 
+/* Scans */
+static inline int scanf(const char * restrict fmt, ...) {
+		va_list ap; va_start(ap, fmt);
+		int r = __builtin_vscanf(fmt, ap);
+
+		va_end(ap);
+
+		return r;
+}
+static inline int fscanf(FILE* restrict f, const char * restrict fmt, ...) {
+		va_list ap; va_start(ap, fmt);
+		int r = __builtin_vfscanf(f, fmt, ap);
+
+		va_end(ap);
+
+		return r;
+}
+static inline int vscanf(const char * restrict fmt, va_list ap) {
+		return __builtin_vscanf(fmt, ap);
+}
+/*— at the top, after va_list declarations —*/
+static inline int sscanf(const char * restrict s, const char * restrict fmt, ...)
+{
+		va_list ap;
+		va_start(ap, fmt);
+		int r = __builtin_vsscanf(s, fmt, ap);
+		va_end(ap);
+		return r;
+}
+
+static inline int vfscanf(FILE * restrict f, const char * restrict fmt, va_list ap)
+{
+		return __builtin_vfscanf(f, fmt, ap);
+}
+static inline int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap) {
+		return __builtin_vsscanf(s, fmt, ap);
+}
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* STDIO_H */
-

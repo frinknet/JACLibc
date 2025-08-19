@@ -14,8 +14,8 @@ extern "C" {
 #define JS_MAX_DEPTH 64
 #endif
 
-#define JS_EXPORT(name) __attribute__((used, export_name(name)))
-#define JS_IMPORT(name) __attribute__((import_module("env"), import_name(name))) extern
+#define JS_EXPORT(name) __attribute__((used, export_name(#name)))
+#define JS_IMPORT(name) __attribute__((import_module("env"), import_name(#name))) extern
 #define JS_START static JS_EXPORT(_start)
 #define JS_CODE(code, ...) js_code(#code, sizeof(#code) - 1, __VA_ARGS__)
 
@@ -45,7 +45,7 @@ typedef struct js_t {
 		struct js_t*	parent;  // parent
 } js_t;
 
-JS_EXPORT(data)
+JS_EXPORT("data")
 js_t* JS_ROOT;
 
 // Create & constructors
