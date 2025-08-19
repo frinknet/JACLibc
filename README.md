@@ -10,7 +10,7 @@
 
 ### This is a libc for WASM for those who lothe Emscripten and their build script monstrocity. ● You can compile without much fuss. — There are a few gotchas but not like DEBUGGING EMSCRIPTEN!!! ● This generates ONLY WASM not webpages, *THANK GOD!!!* ● There is a bootloader and SPA template available. ● If you want all the tooling crap you should use `WACC` — which is built on JACL...
 
-# Compiling...
+# Compiling and Testing
 
 You should just be able to compile directly against this. However there are a few flags that you should use to make things work optimal.
 
@@ -32,6 +32,8 @@ docker compose up serve
 ```
 
 Any wasm that goes in web/wasm gets served as SPA apps at localhost/{name}. This is a bit of WACC that we felt was worth sharing with everyone...
+
+If you want more of a dev enviroment including templates, makefiles and continuous builds you may want to work with WACC. But for quick and dirty stuff these work. In reality this is just the guts of WACC without all the opinionated tooling.
 
 # Compatability
 
@@ -62,6 +64,7 @@ A simplifified hosting environment borrowed from WACC is avaialble in web if you
 # Contributions
 
 Pull requiests are welcome, but you will be assigning copyright to us. We don't maintain a list of contributours on the copyright. It's just FRINKnet and Friends. So consider your PR as a legally valid ESIGN that you are assigning copyright. If you have a problem with this fork and don't submit a PR. If you've done something cool and you don't push it upstream we may ask. But you have the power to say no. That's how the whole thing works.
+
 
 
 
