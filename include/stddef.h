@@ -8,9 +8,8 @@
 extern "C" {
 #endif
 
-/* Fundamental types for WASM 32-bit */
-typedef uint32_t size_t;
-typedef int32_t ptrdiff_t;
+typedef unsigned long size_t;
+typedef long ptrdiff_t;
 
 /* NULL pointer constant */
 #ifndef NULL

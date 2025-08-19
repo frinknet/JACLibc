@@ -11,20 +11,20 @@ extern "C" {
 #endif
 
 /* — Memory Operations — */
-static inline void *memcpy(void *dest, const void *src, size_t n) {
+void *memcpy(void *dest, const void *src, size_t n) {
 		unsigned char *d = (unsigned char *)dest;
 		const unsigned char *s = (const unsigned char *)src;
 		for (size_t i = 0; i < n; i++) d[i] = s[i];
 		return dest;
 }
 
-static inline void *memset(void *s, int c, size_t n) {
+void *memset(void *s, int c, size_t n) {
 		unsigned char *p = (unsigned char *)s;
 		for (size_t i = 0; i < n; i++) p[i] = (unsigned char)c;
 		return s;
 }
 
-static inline void *memmove(void *dest, const void *src, size_t n) {
+void *memmove(void *dest, const void *src, size_t n) {
 		unsigned char *d = (unsigned char *)dest;
 		const unsigned char *s = (const unsigned char *)src;
 		if (d < s) {
@@ -35,7 +35,7 @@ static inline void *memmove(void *dest, const void *src, size_t n) {
 		return dest;
 }
 
-static inline int memcmp(const void *a, const void *b, size_t n) {
+int memcmp(const void *a, const void *b, size_t n) {
 		const unsigned char *x = (const unsigned char *)a;
 		const unsigned char *y = (const unsigned char *)b;
 		for (size_t i = 0; i < n; i++)
@@ -43,7 +43,7 @@ static inline int memcmp(const void *a, const void *b, size_t n) {
 		return 0;
 }
 
-static inline void *memchr(const void *s, int c, size_t n) {
+void *memchr(const void *s, int c, size_t n) {
 		const unsigned char *p = (const unsigned char *)s;
 		for (size_t i = 0; i < n; i++)
 				if (p[i] == (unsigned char)c) return (void *)&p[i];
@@ -51,7 +51,7 @@ static inline void *memchr(const void *s, int c, size_t n) {
 }
 
 #ifdef _GNU_SOURCE
-static inline void *memmem(const void *hay, size_t hl, const void *ndl, size_t nl) {
+void *memmem(const void *hay, size_t hl, const void *ndl, size_t nl) {
 		if (nl > hl) return NULL;
 		const unsigned char *h = (const unsigned char *)hay;
 		for (size_t i = 0; i <= hl - nl; i++)
@@ -61,38 +61,38 @@ static inline void *memmem(const void *hay, size_t hl, const void *ndl, size_t n
 #endif
 
 /* — UTF-8–aware String Length & Copy — */
-static inline size_t strlen(const char *s) {
+size_t strlen(const char *s) {
 		const char *p = s;
 		while (*p) p++;
 		return (size_t)(p - s);
 }
 
-static inline size_t strnlen(const char *s, size_t n) {
+size_t strnlen(const char *s, size_t n) {
 		size_t i = 0;
 		while (i < n && s[i]) i++;
 		return i;
 }
 
-static inline char *strcpy(char *dest, const char *src) {
+char *strcpy(char *dest, const char *src) {
 		char *p = dest;
 		while ((*p++ = *src++));
 		return dest;
 }
 
-static inline char *strncpy(char *dest, const char *src, size_t n) {
+char *strncpy(char *dest, const char *src, size_t n) {
 		size_t i = 0;
 		for (; i < n && src[i]; i++) dest[i] = src[i];
 		for (; i < n; i++) dest[i] = '\0';
 		return dest;
 }
 
-static inline char *strcat(char *dest, const char *src) {
+char *strcat(char *dest, const char *src) {
 		char *p = dest + strlen(dest);
 		while ((*p++ = *src++));
 		return dest;
 }
 
-static inline char *strncat(char *dest, const char *src, size_t n) {
+char *strncat(char *dest, const char *src, size_t n) {
 		char *p = dest + strlen(dest);
 		size_t i = 0;
 		for (; i < n && src[i]; i++) p[i] = src[i];
@@ -101,23 +101,23 @@ static inline char *strncat(char *dest, const char *src, size_t n) {
 }
 
 /* — Comparison & Collation (byte-safe, Unicode case-fold hooks) — */
-static inline int strcmp(const char *a, const char *b) {
+int strcmp(const char *a, const char *b) {
 		while (*a && *a == *b) { a++; b++; }
 		return (*a < *b) ? -1 : (*a > *b);
 }
 
-static inline int strncmp(const char *a, const char *b, size_t n) {
+int strncmp(const char *a, const char *b, size_t n) {
 		size_t i = 0;
 		for (; i < n && a[i] && a[i] == b[i]; i++);
 		if (i == n) return 0;
 		return (a[i] < b[i]) ? -1 : 1;
 }
 
-static inline char _jacl_tolower(char c) {
+char _jacl_tolower(char c) {
 		return (c >= 'A' && c <= 'Z') ? c + 32 : c;
 }
 
-static inline int strcasecmp(const char *a, const char *b) {
+int strcasecmp(const char *a, const char *b) {
 		while (*a && *b) {
 				char ca = _jacl_tolower(*a++);
 				char cb = _jacl_tolower(*b++);
@@ -126,7 +126,7 @@ static inline int strcasecmp(const char *a, const char *b) {
 		return (*a < *b) ? -1 : (*a > *b);
 }
 
-static inline int strncasecmp(const char *a, const char *b, size_t n) {
+int strncasecmp(const char *a, const char *b, size_t n) {
 		for (size_t i = 0; i < n && a[i] && b[i]; i++) {
 				char ca = _jacl_tolower(a[i]);
 				char cb = _jacl_tolower(b[i]);
@@ -135,11 +135,11 @@ static inline int strncasecmp(const char *a, const char *b, size_t n) {
 		return 0;
 }
 
-static inline int strcoll(const char *a, const char *b) {
+int strcoll(const char *a, const char *b) {
 		return strcmp(a, b);
 }
 
-static inline size_t strxfrm(char *dest, const char *src, size_t n) {
+size_t strxfrm(char *dest, const char *src, size_t n) {
 		size_t l = strlen(src);
 		if (n > l) strcpy(dest, src);
 		return l;
@@ -152,7 +152,7 @@ static _Thread_local char _jacl_errbuf[64];
 static __thread char _jacl_errbuf[64];
 #endif
 
-static inline int strerror_r(int err, char *buf, size_t buflen) {
+int strerror_r(int err, char *buf, size_t buflen) {
 		static const char *msgs[] = { "Success", "Perm", "NoEnt", "Acc", "BadF" };	
 		const char *m = (unsigned)err < (sizeof msgs/sizeof *msgs) ? msgs[err] : "Unknown";
 		size_t l = strlen(m);
@@ -162,24 +162,24 @@ static inline int strerror_r(int err, char *buf, size_t buflen) {
 		return 0;
 }
 
-static inline char *strerror(int err) {
+char *strerror(int err) {
 		strerror_r(err, _jacl_errbuf, sizeof _jacl_errbuf);
 		return _jacl_errbuf;
 }
 
 /* — Search & Tokenization — */
-static inline char *strchr(const char *s, int c) {
+char *strchr(const char *s, int c) {
 		for (; *s; s++) if (*s == (char)c) return (char *)s;
 		return NULL;
 }
 
-static inline char *strrchr(const char *s, int c) {
+char *strrchr(const char *s, int c) {
 		const char *r = NULL;
 		for (; *s; s++) if (*s == (char)c) r = s;
 		return (char *)r;
 }
 
-static inline char *strstr(const char *h, const char *n) {
+char *strstr(const char *h, const char *n) {
 		size_t nl = strlen(n);
 		if (!nl) return (char *)h;
 		for (; *h; h++)
@@ -187,24 +187,24 @@ static inline char *strstr(const char *h, const char *n) {
 		return NULL;
 }
 
-static inline size_t strspn(const char *s, const char *accept) {
+size_t strspn(const char *s, const char *accept) {
 		size_t i = 0;
 		while (s[i] && strchr(accept, s[i])) i++;
 		return i;
 }
 
-static inline size_t strcspn(const char *s, const char *reject) {
+size_t strcspn(const char *s, const char *reject) {
 		size_t i = 0;
 		while (s[i] && !strchr(reject, s[i])) i++;
 		return i;
 }
 
-static inline char *strpbrk(const char *s, const char *accept) {
+char *strpbrk(const char *s, const char *accept) {
 		for (; *s; s++) if (strchr(accept, *s)) return (char *)s;
 		return NULL;
 }
 
-static inline char *strtok_r(char *s, const char *delim, char **save) {
+char *strtok_r(char *s, const char *delim, char **save) {
 		char *p = s ? s : *save;
 		if (!p) return NULL;
 		p += strspn(p, delim);
@@ -215,14 +215,14 @@ static inline char *strtok_r(char *s, const char *delim, char **save) {
 		return p;
 }
 
-static inline char *strtok(char *s, const char *delim) {
+char *strtok(char *s, const char *delim) {
 		static __thread char *tls_save;
 		return strtok_r(s, delim, &tls_save);
 }
 
 /* — BSD-Style Safe Copy/Cat — */
 #if defined(_BSD_SOURCE) || defined(_SUSV2)
-static inline size_t strlcpy(char *dest, const char *src, size_t n) {
+size_t strlcpy(char *dest, const char *src, size_t n) {
 		size_t len = strlen(src);
 		size_t end = (len >= n) ? n - 1 : len;
 		memcpy(dest, src, end);
@@ -230,7 +230,7 @@ static inline size_t strlcpy(char *dest, const char *src, size_t n) {
 		return len;
 }
 
-static inline size_t strlcat(char *dest, const char *src, size_t n) {
+size_t strlcat(char *dest, const char *src, size_t n) {
 		size_t dlen = strlen(dest);
 		size_t slen = strlen(src);
 		if (dlen >= n) return n + slen;
@@ -243,7 +243,7 @@ static inline size_t strlcat(char *dest, const char *src, size_t n) {
 
 /* — POSIX basename simple no-alloc — */
 #if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
-static inline const char *basename(const char *path) {
+const char *basename(const char *path) {
 		const char *p = strrchr(path, '/');
 		return p ? p + 1 : path;
 }

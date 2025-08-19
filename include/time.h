@@ -28,15 +28,15 @@ struct tm {
 	int tm_isdst;  /* daylight savings flag */
 };
 
-static inline clock_t clock(void) { return __builtin_clock(); }
-static inline time_t time(time_t *tloc) { return __builtin_time(tloc); }
-static inline double difftime(time_t time1, time_t time0) { return __builtin_difftime(time1, time0); }
-static inline time_t mktime(struct tm *tm) { return __builtin_mktime(tm); }
-static inline struct tm *gmtime(const time_t *timer) { return __builtin_gmtime(timer); }
-static inline struct tm *localtime(const time_t *timer) {  return __builtin_localtime(timer); }
-static inline char *asctime(const struct tm *tm) { return __builtin_asctime(tm); }
-static inline char *ctime(const time_t *timer) { return __builtin_ctime(timer); }
-static inline size_t strftime(char *s, size_t max, const char *fmt, const struct tm *tm) { return __builtin_strftime(s, max, fmt, tm); }
+clock_t clock(void) { return __builtin_clock(); }
+time_t time(time_t *tloc) { return __builtin_time(tloc); }
+double difftime(time_t time1, time_t time0) { return __builtin_difftime(time1, time0); }
+time_t mktime(struct tm *tm) { return __builtin_mktime(tm); }
+struct tm *gmtime(const time_t *timer) { return __builtin_gmtime(timer); }
+struct tm *localtime(const time_t *timer) {  return __builtin_localtime(timer); }
+char *asctime(const struct tm *tm) { return __builtin_asctime(tm); }
+char *ctime(const time_t *timer) { return __builtin_ctime(timer); }
+size_t strftime(char *s, size_t max, const char *fmt, const struct tm *tm) { return __builtin_strftime(s, max, fmt, tm); }
 
 #ifdef __cplusplus
 }

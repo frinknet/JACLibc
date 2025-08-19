@@ -61,18 +61,18 @@ typedef struct { atomic_bool _Value; } atomic_flag;
 #define atomic_fetch_xor(obj,v)		__atomic_fetch_xor(&(obj),(v), memory_order_seq_cst)
 
 /* Atomic Flag Test-and-Set / Clear */
-static inline bool atomic_flag_test_and_set(atomic_flag* f) {
+bool atomic_flag_test_and_set(atomic_flag* f) {
 		return __atomic_test_and_set(&f->_Value, memory_order_seq_cst);
 }
-static inline void atomic_flag_clear(atomic_flag* f) {
+void atomic_flag_clear(atomic_flag* f) {
 		__atomic_clear(&f->_Value, memory_order_seq_cst);
 }
 
 /* Atomic Thread Fences */
-static inline void atomic_thread_fence(int mo) {
+void atomic_thread_fence(int mo) {
 		__atomic_thread_fence(mo);
 }
-static inline void atomic_signal_fence(int mo) {
+void atomic_signal_fence(int mo) {
 		__atomic_signal_fence(mo);
 }
 

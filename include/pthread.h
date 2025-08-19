@@ -16,7 +16,7 @@ extern "C" {
 	#define PTHREAD_WIN32
 	#include <windows.h>
 	#include <process.h>
-#elif defined(__wasm__) || defined(__EMSCRIPTEN__)
+#elif defined(__wasm__)
 	#define PTHREAD_WASM
 #else
 	#define PTHREAD_POSIX
@@ -33,7 +33,7 @@ typedef struct { atomic_int waiters; atomic_int futex; } pthread_cond_t;
 typedef uintptr_t pthread_key_t;
 
 /*―― Threads ――*/
-static inline int pthread_create(pthread_t *t, const void *attr,
+int pthread_create(pthread_t *t, const void *attr,
 																 void *(*start)(void*), void *arg) {
 	(void)attr;
 #ifdef PTHREAD_WIN32
@@ -55,7 +55,7 @@ static inline int pthread_create(pthread_t *t, const void *attr,
 #endif
 }
 
-static inline int pthread_join(pthread_t t, void **res) {
+int pthread_join(pthread_t t, void **res) {
 #ifdef PTHREAD_WIN32
 	WaitForSingleObject((HANDLE)t.handle,INFINITE);
 	if(res)*res=NULL; CloseHandle((HANDLE)t.handle);
@@ -72,7 +72,7 @@ static inline int pthread_join(pthread_t t, void **res) {
 #endif
 }
 
-static inline void pthread_exit(void *res) {
+void pthread_exit(void *res) {
 #ifdef PTHREAD_WIN32
 	_endthreadex((uintptr_t)res);
 #elif defined(PTHREAD_WASM)
@@ -86,12 +86,12 @@ static inline void pthread_exit(void *res) {
 #define PTHREAD_MUTEX_UNLOCKED 0
 #define PTHREAD_MUTEX_LOCKED	 1
 
-static inline int pthread_mutex_init(pthread_mutex_t *m,const void*_) {
+int pthread_mutex_init(pthread_mutex_t *m,const void*_) {
 	(void)_;
 	atomic_store(&m->state,PTHREAD_MUTEX_UNLOCKED);
 	return 0;
 }
-static inline int pthread_mutex_lock(pthread_mutex_t *m) {
+int pthread_mutex_lock(pthread_mutex_t *m) {
 	int e=PTHREAD_MUTEX_UNLOCKED;
 	while(!atomic_compare_exchange_weak(&m->state,&e,PTHREAD_MUTEX_LOCKED))
 		{ e=PTHREAD_MUTEX_UNLOCKED; 
@@ -100,19 +100,19 @@ static inline int pthread_mutex_lock(pthread_mutex_t *m) {
 #endif }
 	return 0;
 }
-static inline int pthread_mutex_unlock(pthread_mutex_t *m) {
+int pthread_mutex_unlock(pthread_mutex_t *m) {
 	atomic_store(&m->state,PTHREAD_MUTEX_UNLOCKED);
 	return 0;
 }
-static inline int pthread_mutex_destroy(pthread_mutex_t*m){(void)m;return 0;}
+int pthread_mutex_destroy(pthread_mutex_t*m){(void)m;return 0;}
 
 /*―― Condition ――*/
-static inline int pthread_cond_init(pthread_cond_t *c,const void*_) {
+int pthread_cond_init(pthread_cond_t *c,const void*_) {
 	(void)_; atomic_store(&c->waiters,0); atomic_store(&c->futex,0);
 	return 0;
 }
 
-static inline int pthread_cond_wait(pthread_cond_t *c,pthread_mutex_t *m){
+int pthread_cond_wait(pthread_cond_t *c,pthread_mutex_t *m){
 #ifdef PTHREAD_WIN32
 	SleepConditionVariableCS((PCONDITION_VARIABLE)c,(LPCRITICAL_SECTION)m,INFINITE);
 	return 0;
@@ -129,7 +129,7 @@ static inline int pthread_cond_wait(pthread_cond_t *c,pthread_mutex_t *m){
 #endif
 }
 
-static inline int pthread_cond_signal(pthread_cond_t *c){
+int pthread_cond_signal(pthread_cond_t *c){
 #ifdef PTHREAD_WIN32
 	WakeConditionVariable((PCONDITION_VARIABLE)c);
 	return 0;
@@ -144,7 +144,7 @@ static inline int pthread_cond_signal(pthread_cond_t *c){
 #endif
 }
 
-static inline int pthread_cond_broadcast(pthread_cond_t*c){
+int pthread_cond_broadcast(pthread_cond_t*c){
 #ifdef PTHREAD_WIN32
 	WakeAllConditionVariable((PCONDITION_VARIABLE)c);
 	return 0;
@@ -157,7 +157,7 @@ static inline int pthread_cond_broadcast(pthread_cond_t*c){
 #endif
 }
 
-static inline int pthread_cond_destroy(pthread_cond_t*c){
+int pthread_cond_destroy(pthread_cond_t*c){
 	(void)c; return 0;
 }
 
@@ -166,17 +166,17 @@ static inline int pthread_cond_destroy(pthread_cond_t*c){
 static atomic_uint tls_ctr=0;
 static void *tls_arr[MAX_TLS];
 
-static inline int pthread_key_create(pthread_key_t*k,void(*_)(void*)){
+int pthread_key_create(pthread_key_t*k,void(*_)(void*)){
 	*k = atomic_fetch_add(&tls_ctr,1);
 	return (*k<MAX_TLS)?0:EAGAIN;
 }
-static inline int pthread_key_delete(pthread_key_t k){
+int pthread_key_delete(pthread_key_t k){
 	(void)k; return 0;
 }
-static inline int pthread_setspecific(pthread_key_t k,const void*v){
+int pthread_setspecific(pthread_key_t k,const void*v){
 	if(k<MAX_TLS){tls_arr[k]=(void*)v;return 0;}return EINVAL;
 }
-static inline void* pthread_getspecific(pthread_key_t k){
+void* pthread_getspecific(pthread_key_t k){
 	return (k<MAX_TLS)?tls_arr[k]:NULL;
 }
 

@@ -21,10 +21,10 @@ typedef uint_least32_t char32_t;
 #define CHAR32_MAX	0xFFFFFFFFu
 
 /* Conversion functions */
-static inline size_t mbrtoc16(char16_t *pc16, const char *s, size_t n, mbstate_t *ps) { return __builtin_mbrtoc16(pc16, s, n, ps); }
-static inline size_t c16rtomb(char *s, char16_t c16, mbstate_t *ps) { return __builtin_c16rtomb(s, c16, ps); }
-static inline size_t mbrtoc32(char32_t *pc32, const char *s, size_t n, mbstate_t *ps) { return __builtin_mbrtoc32(pc32, s, n, ps); }
-static inline size_t c32rtomb(char *s, char32_t c32, mbstate_t *ps) { return __builtin_c32rtomb(s, c32, ps); }
+size_t mbrtoc16(char16_t *pc16, const char *s, size_t n, mbstate_t *ps) { return __builtin_mbrtoc16(pc16, s, n, ps); }
+size_t c16rtomb(char *s, char16_t c16, mbstate_t *ps) { return __builtin_c16rtomb(s, c16, ps); }
+size_t mbrtoc32(char32_t *pc32, const char *s, size_t n, mbstate_t *ps) { return __builtin_mbrtoc32(pc32, s, n, ps); }
+size_t c32rtomb(char *s, char32_t c32, mbstate_t *ps) { return __builtin_c32rtomb(s, c32, ps); }
 
 #ifdef __cplusplus
 }

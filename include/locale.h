@@ -26,8 +26,8 @@ typedef struct {
 		char n_sign_posn;
 } lconv;
 
-static inline char *setlocale(int category, const char *locale) {return __builtin_setlocale(category, locale); }
-static inline struct lconv *localeconv(void) { return __builtin_localeconv(); }
+char *setlocale(int category, const char *locale) {return __builtin_setlocale(category, locale); }
+struct lconv *localeconv(void) { return __builtin_localeconv(); }
 
 #define LC_ALL			 0
 #define LC_COLLATE	 1

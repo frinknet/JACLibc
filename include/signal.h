@@ -20,9 +20,9 @@ typedef void (*sig_t)(int);
 #define SIG_ERR ((sig_t)-1)
 
 /* Raise a signal */
-static inline int raise(int sig) { (void)sig; return 0; }
+int raise(int sig) { (void)sig; return 0; }
 
 /* Set signal handler */
-static inline sig_t signal(int sig, sig_t handler) { (void)sig; (void)handler; return SIG_ERR; }
+sig_t signal(int sig, sig_t handler) { (void)sig; (void)handler; return SIG_ERR; }
 
 #endif /* SIGNAL_H */

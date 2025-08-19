@@ -41,7 +41,7 @@ extern "C" {
 #endif
 
 /*–– UTF-8 ⇄ wchar_t ––*/
-static inline size_t mbrlen(const char *s, size_t n, mbstate_t *m) {
+size_t mbrlen(const char *s, size_t n, mbstate_t *m) {
 		(void)m;
 		if (!s||n==0) return 0;
 		unsigned char c = (unsigned char)*s;
@@ -52,7 +52,7 @@ static inline size_t mbrlen(const char *s, size_t n, mbstate_t *m) {
 		return (size_t)-1;
 }
 
-static inline int mbtowc(wchar_t *p, const char *s, size_t n) {
+int mbtowc(wchar_t *p, const char *s, size_t n) {
 		if (!s||n==0) return 0;
 		size_t l = mbrlen(s,n,NULL);
 		if (l==(size_t)-1) { if (p) *p = 0xFFFD; return 1; }
@@ -63,7 +63,7 @@ static inline int mbtowc(wchar_t *p, const char *s, size_t n) {
 		return (int)l;
 }
 
-static inline int wctomb(char *s, wchar_t wc) {
+int wctomb(char *s, wchar_t wc) {
 		if (wc > 0x10FFFF) wc = 0xFFFD;
 		if (wc < 0x80) {
 				s[0] = (char)wc; 
@@ -88,7 +88,7 @@ static inline int wctomb(char *s, wchar_t wc) {
 
 
 /*–– String conversions ––*/
-static inline size_t mbstowcs(wchar_t *pw, const char *s, size_t n) {
+size_t mbstowcs(wchar_t *pw, const char *s, size_t n) {
 		size_t i=0, b;
 		while (i<n && *s) {
 				b = mbtowc(&pw[i], s, n - i);
@@ -98,7 +98,7 @@ static inline size_t mbstowcs(wchar_t *pw, const char *s, size_t n) {
 		return i;
 }
 
-static inline size_t wcstombs(char *s, const wchar_t *pw, size_t n) {
+size_t wcstombs(char *s, const wchar_t *pw, size_t n) {
 		size_t i=0, t=0, l;
 		while (i<n && pw[i]) {
 				l = wctomb(s + t, pw[i]);
@@ -109,74 +109,74 @@ static inline size_t wcstombs(char *s, const wchar_t *pw, size_t n) {
 }
 
 /*–– Single-byte ↔ wide ––*/
-static inline wint_t btowc(int c) {
+wint_t btowc(int c) {
 		return c == EOF ? WEOF : (wint_t)(unsigned char)c;
 }
 
-static inline int wctob(wint_t wc) {
+int wctob(wint_t wc) {
 		return wc == WEOF || wc > 0xFF ? EOF : (int)wc;
 }
 
 
 /*–– Orientation ––*/
-static inline int fwide(void *stream, int mode) { (void)stream; return mode; }
+int fwide(void *stream, int mode) { (void)stream; return mode; }
 
 /*–– Memory ops ––*/
-static inline wchar_t *wmemcpy(wchar_t *d, const wchar_t *s, size_t n) {
+wchar_t *wmemcpy(wchar_t *d, const wchar_t *s, size_t n) {
 		for (size_t i=0; i<n; i++) d[i] = s[i]; return d;
 }
-static inline wchar_t *wmemmove(wchar_t *d, const wchar_t *s, size_t n) {
+wchar_t *wmemmove(wchar_t *d, const wchar_t *s, size_t n) {
 		if (d < s) for (size_t i=0; i<n; i++) d[i]=s[i];
 		else				for (size_t i=n; i-->0;) d[i]=s[i];
 		return d;
 }
-static inline wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n) {
+wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n) {
 		for (size_t i=0; i<n; i++) if (s[i]==c) return (wchar_t*)&s[i];
 		return NULL;
 }
-static inline int wmemcmp(const wchar_t *a, const wchar_t *b, size_t n) {
+int wmemcmp(const wchar_t *a, const wchar_t *b, size_t n) {
 		for (size_t i=0; i<n; i++)
 				if (a[i]!=b[i]) return a[i]<b[i]?-1:1;
 		return 0;
 }
-static inline wchar_t *wmemset(wchar_t *s, wchar_t c, size_t n) {
+wchar_t *wmemset(wchar_t *s, wchar_t c, size_t n) {
 		for (size_t i=0; i<n; i++) s[i] = c; return s;
 }
 
 /*–– String ops ––*/
-static inline size_t wcslen(const wchar_t *s) {
+size_t wcslen(const wchar_t *s) {
 		const wchar_t *p=s; while (*p) ++p; return (size_t)(p-s);
 }
-static inline wchar_t* wcscpy(wchar_t *d, const wchar_t *s) {
+wchar_t* wcscpy(wchar_t *d, const wchar_t *s) {
 		wchar_t *p = d;
 		while ((*p++ = *s++)) { }
 		return d;
 }
 
-static inline wchar_t *wcsncpy(wchar_t *d, const wchar_t *s, size_t n) {
+wchar_t *wcsncpy(wchar_t *d, const wchar_t *s, size_t n) {
 		size_t i=0; for (; i<n && s[i]; i++) d[i]=s[i];
 		for (; i<n; i++) d[i]=0; return d;
 }
-static inline int wcscmp(const wchar_t *a, const wchar_t *b) {
+int wcscmp(const wchar_t *a, const wchar_t *b) {
 		while (*a && *a==*b) { a++; b++; }
 		return (*a<*b)? -1 : (*a>*b);
 }
-static inline int wcsncmp(const wchar_t *a, const wchar_t *b, size_t n) {
+int wcsncmp(const wchar_t *a, const wchar_t *b, size_t n) {
 		size_t i=0;
 		for (; i<n && a[i] && a[i]==b[i]; i++);
 		if (i==n) return 0;
 		return (a[i]<b[i])? -1 : 1;
 }
-static inline wchar_t *wcschr(const wchar_t *s, wchar_t c) {
+wchar_t *wcschr(const wchar_t *s, wchar_t c) {
 		for (; *s; s++) if (*s==c) return (wchar_t*)s;
 		return NULL;
 }
-static inline wchar_t *wcsrchr(const wchar_t *s, wchar_t c) {
+wchar_t *wcsrchr(const wchar_t *s, wchar_t c) {
 		const wchar_t *r=NULL;
 		for (; *s; s++) if (*s==c) r=s;
 		return (wchar_t*)r;
 }
-static inline wchar_t *wcsstr(const wchar_t *h, const wchar_t *n) {
+wchar_t *wcsstr(const wchar_t *h, const wchar_t *n) {
 		size_t l = wcslen(n);
 		if (!l) return (wchar_t*)h;
 		for (; *h; h++) if (!wcsncmp(h,n,l)) return (wchar_t*)h;
@@ -184,8 +184,8 @@ static inline wchar_t *wcsstr(const wchar_t *h, const wchar_t *n) {
 }
 
 /*–– Collation & transform ––*/
-static inline int		 strcoll(const wchar_t *a, const wchar_t *b) { return wcscmp(a,b); }
-static inline size_t wcsxfrm(wchar_t *d, const wchar_t *s, size_t n) {
+int		 wstrcoll(const wchar_t *a, const wchar_t *b) { return wcscmp(a,b); }
+size_t wcsxfrm(wchar_t *d, const wchar_t *s, size_t n) {
 		size_t l = wcslen(s);
 		if (n>l) wcscpy(d,s);
 		return l;
