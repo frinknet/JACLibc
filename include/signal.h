@@ -2,27 +2,14 @@
 #ifndef SIGNAL_H
 #define SIGNAL_H
 
-/* C99 Signal Handling */
-
 typedef void (*sig_t)(int);
+typedef uint32_t sigset_t;
 
-/* Standard signals */
-#define SIGABRT  6
-#define SIGFPE	 8
-#define SIGILL	 4
-#define SIGINT	 2
-#define SIGSEGV 11
-#define SIGTERM 15
+#define SIG_DFL		 ((sig_t)0)
+#define SIG_IGN		 ((sig_t)1)
+#define SIG_ERR		 ((sig_t)-1)
+#define SIG_BLOCK		0
+#define SIG_UNBLOCK 1
+#define SIG_SETMASK 2
 
-/* Special handlers */
-#define SIG_DFL ((sig_t)0)
-#define SIG_IGN ((sig_t)1)
-#define SIG_ERR ((sig_t)-1)
-
-/* Raise a signal */
-int raise(int sig) { (void)sig; return 0; }
-
-/* Set signal handler */
-sig_t signal(int sig, sig_t handler) { (void)sig; (void)handler; return SIG_ERR; }
-
-#endif /* SIGNAL_H */
+#endif

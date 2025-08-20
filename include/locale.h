@@ -26,8 +26,36 @@ typedef struct {
 		char n_sign_posn;
 } lconv;
 
-char *setlocale(int category, const char *locale) {return __builtin_setlocale(category, locale); }
-struct lconv *localeconv(void) { return __builtin_localeconv(); }
+char *setlocale(int category, const char *locale) {
+	//TODO: Just return "C" for minimal support
+	static char c_locale[] = "C";
+
+	return (locale == NULL) ? c_locale : (strcmp(locale, "") == 0 || strcmp(locale, "C") == 0) ? c_locale : NULL;
+}
+
+static lconv __jacl_lconv_default = {
+	.decimal_point			= ".",
+	.thousands_sep			= "",
+	.grouping						= "",
+	.int_curr_symbol		= "",
+	.currency_symbol		= "",
+	.mon_decimal_point	= "",
+	.mon_thousands_sep	= "",
+	.mon_grouping				= "",
+	.positive_sign			= "",
+	.negative_sign			= "",
+	.int_frac_digits		= CHAR_MAX,
+	.frac_digits				= CHAR_MAX,
+	.p_cs_precedes			= CHAR_MAX,
+	.p_sep_by_space			= CHAR_MAX,
+	.n_cs_precedes			= CHAR_MAX,
+	.n_sep_by_space			= CHAR_MAX,
+	.p_sign_posn				= CHAR_MAX,
+	.n_sign_posn				= CHAR_MAX
+};
+
+lconv *localeconv(void) { return &__jacl_lconv_default; }
+
 
 #define LC_ALL			 0
 #define LC_COLLATE	 1

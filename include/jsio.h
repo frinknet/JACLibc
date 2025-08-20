@@ -268,14 +268,14 @@ js_t* js_number(js_t* x, double n) {
 #ifdef __wasm__
 JS_IMPORT(js)
 extern double	js_code(const char *code, int len, ...);
-#define JS_CODE(code) js_code(#code, sizeof(#code) - 1)
+#define JS_CODE(...) js_code(#__VA_ARGS__, sizeof(#__VA_ARGS__) - 1)
 #else
-#define JS_CODE(code)
+#define JS_CODE(...)
 #define JS_NO_EXTERNALS
 #endif
 
 #ifndef JS_NO_EXTERNALS
-void* __JS_INIT__ = JS_CODE(
+static double __jacl_js_init = JS_CODE(
 	const
 	A={
 		has:(o,k)=>!!S(o,k),
@@ -296,17 +296,17 @@ void* __JS_INIT__ = JS_CODE(
 	T=p=>String.fromCharCode(R8(p)),
 	V=v=>v===null?'0':Array.isArray(v)?'a':{boolean:'b',string:'c',number:'d',object:'e',function:'f'}[typeof v],
 	W=(p,k,v)=>{
-	const
-	o=p?S(p,k):0,
-	t=V(v),
-	n=this.exports.nodeCreate(t,k.length,v.length);
-	if(p && k)WK(x,k);
-	if(t==='c')WC(x,v);
-	else if(t==='d')WD(x,v);
-	else if(t==='b')WB(x,v);
-	else if(t==='f')WF(x,v);
-	else for(let x in v)W(n,t==='e'?x:0,v[x]); 
-	o?this.exports.nodeReplace(o,n):this.exports.nodeAttach(n,p);
+		const
+		o=p?S(p,k):0,
+		t=V(v),
+		n=this.exports.nodeCreate(t,k.length,v.length);
+		if(p && k)WK(x,k);
+		if(t==='c')WC(x,v);
+		else if(t==='d')WD(x,v);
+		else if(t==='b')WB(x,v);
+		else if(t==='f')WF(x,v);
+		else for(let x in v)W(n,t==='e'?x:0,v[x]); 
+		o?this.exports.nodeReplace(o,n):this.exports.nodeAttach(n,p);
 	},
 	X=p=>{switch(T(p)){
 		case'0':return null;
@@ -321,9 +321,9 @@ void* __JS_INIT__ = JS_CODE(
 	Y=p=>R32(p+28),
 	Z=p=>R32(p+24),
 	R8=p=>M.getUint8(p),
-	W8=(p,v)=>M.setUint8(p,v)),
+	W8=(p,v)=>M.setUint8(p,v),
 	R32=p=>M.getUint32(p),
-	W32=(p,v)=>M.setUint32(p,v)),
+	W32=(p,v)=>M.setUint32(p,v),
 	R64=p=>M.getFloat64(p),
 	W64=(p,v)=>M.getFloat64(p),
 	RS=p=>D(Uint8Array.from(function*(i,b){for(; (b=R8(i)); ++i) yield b}(p))),
@@ -343,12 +343,12 @@ void* __JS_INIT__ = JS_CODE(
 	this.data=X(this.exports.nodeRoot());
 	this.export=X;
 	this.import=v=>W(0,0,v);
-	this.listen=(pt,fn)=>H.push([new RegExp(pt.replace(/\./g,'\\.').replace(/\*/g,'.*')),fn]);
+	this.listen=(pt,fn)=>H.push([new RegExp(pt),fn]);
 	this.trigger=async pt=>H.forEach(async([re,fn])=>re.test(path)&&fn(path));
 );
 #define JS_EXEC(fn, ...) js_code("[f,...a]=arguments;return this.import(this.export(f)(...a.map(this.export)))", 76, fn, __VA_ARGS__)
 #define JS_NO_NOTIFY 
-#define JS_NO_ASYNC 
+#define JS_NO_ASYNCIFY 
 #else
 #define JS_EXEC(fn, ...)
 #endif
@@ -365,8 +365,8 @@ void js_notify(js_t* v) {}
 #endif
 
 // Slep and async
-#ifndef JS_NO_ASYNC
-_t* js_async = JS_CODE(
+#ifndef JS_NO_ASYNCIFY
+static js_t* __jacl_js_async = (js_t*)JS_CODE(
 	let SP = 0,SM;
 	const SH = 64*1024,SO = {
 		pause:sp=>{SP=sp;SM=new Uint8Array(this.exports.memory.buffer,SP,SH);throw 'PAUSE'},
@@ -376,8 +376,8 @@ _t* js_async = JS_CODE(
 
 	return this.import(SO);
 );
-#define JS_PAUSE JS_EXEC(js_property(js_async, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
-#define JS_SLEEP JS_PAUSE; JS_EXEC(js_property(js_async, "sleep"), ms);
+#define JS_PAUSE JS_EXEC(js_property(__jacl_js_async, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
+#define JS_SLEEP JS_PAUSE; JS_EXEC(js_property(__jacl_js_async, "sleep"), ms);
 #define JS_RESUME js_resume
 JS_EXPORT(pause)
 void js_pause() { JS_PAUSE; }
@@ -415,9 +415,7 @@ void* js_value(js_t* v) {
 }
 
 // Array operations
-static void	js_push(js_t* a, js_t* v) {
-	if (a && a->type == JS_TYPE_ARRAY) js_attach(v, a);
-}
+static void	js_push(js_t* a, js_t* v) { if (a && a->type == JS_TYPE_ARRAY) js_attach(v, a); }
 static js_t* js_pop(js_t* a) {
 	if (!a || a->type != JS_TYPE_ARRAY || !a->first) return NULL;
 
@@ -469,7 +467,7 @@ js_t* js_property(js_t* o, const char* key) {
 // JS Parser
 static js_t* js_parse_value(const char* s, size_t* i);
 static js_t* js_parse_object(const char* s, size_t* i) {
-	js_t* o = js_create(JS_TYPE_OBJECT); (*i)++; // skip '{'
+	js_t* o = js_create(JS_TYPE_OBJECT,0,0); (*i)++; // skip '{'
 
 	while (s[*i] && s[*i] != '}') {
 		while (isspace((unsigned char)s[*i]) || s[*i]=='"') (*i)++;
@@ -493,7 +491,7 @@ static js_t* js_parse_object(const char* s, size_t* i) {
 	return o;
 }
 static js_t* js_parse_array(const char* s, size_t* i) {
-	js_t* a = js_create(JS_TYPE_ARRAY); (*i)++; // skip '['
+	js_t* a = js_create(JS_TYPE_ARRAY,0,0); (*i)++; // skip '['
 
 	while (s[*i] && s[*i] != ']') {
 		js_t* v = js_parse_value(s, i);

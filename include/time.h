@@ -1,4 +1,4 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef TIME_H
 #define TIME_H
 
@@ -8,38 +8,71 @@
 extern "C" {
 #endif
 
-/* C99 Time Utilities */
-typedef long time_t;
-typedef long clock_t;
-
-/* Clock ticks per second */
+typedef long       time_t;
+typedef long       clock_t;
 #define CLOCKS_PER_SEC 1000000L
 
-/* Broken-down time */
 struct tm {
-	int tm_sec;		 /* seconds [0,61] */
-	int tm_min;		 /* minutes [0,59] */
-	int tm_hour;	 /* hours [0,23] */
-	int tm_mday;	 /* day of month [1,31] */
-	int tm_mon;		 /* month of year [0,11] */
-	int tm_year;	 /* years since 1900 */
-	int tm_wday;	 /* day of week [0,6] (Sunday = 0) */
-	int tm_yday;	 /* day of year [0,365] */
-	int tm_isdst;  /* daylight savings flag */
+    int tm_sec;
+    int tm_min;
+    int tm_hour;
+    int tm_mday;
+    int tm_mon;
+    int tm_year;
+    int tm_wday;
+    int tm_yday;
+    int tm_isdst;
 };
 
-clock_t clock(void) { return __builtin_clock(); }
-time_t time(time_t *tloc) { return __builtin_time(tloc); }
-double difftime(time_t time1, time_t time0) { return __builtin_difftime(time1, time0); }
-time_t mktime(struct tm *tm) { return __builtin_mktime(tm); }
-struct tm *gmtime(const time_t *timer) { return __builtin_gmtime(timer); }
-struct tm *localtime(const time_t *timer) {  return __builtin_localtime(timer); }
-char *asctime(const struct tm *tm) { return __builtin_asctime(tm); }
-char *ctime(const time_t *timer) { return __builtin_ctime(timer); }
-size_t strftime(char *s, size_t max, const char *fmt, const struct tm *tm) { return __builtin_strftime(s, max, fmt, tm); }
+/* Stub implementations: no-ops returning zero or NULL */
+
+static inline clock_t clock(void) {
+    return 0;
+}
+
+static inline time_t time(time_t *tloc) {
+    if (tloc) *tloc = 0;
+    return 0;
+}
+
+static inline double difftime(time_t time1, time_t time0) {
+    (void)time1; (void)time0;
+    return 0.0;
+}
+
+static inline time_t mktime(struct tm *tm) {
+    (void)tm;
+    return 0;
+}
+
+static inline struct tm *gmtime(const time_t *timer) {
+    (void)timer;
+    return NULL;
+}
+
+static inline struct tm *localtime(const time_t *timer) {
+    (void)timer;
+    return NULL;
+}
+
+static inline char *asctime(const struct tm *tm) {
+    (void)tm;
+    return NULL;
+}
+
+static inline char *ctime(const time_t *timer) {
+    (void)timer;
+    return NULL;
+}
+
+static inline size_t strftime(char *s, size_t max, const char *fmt, const struct tm *tm) {
+    (void)s; (void)max; (void)fmt; (void)tm;
+    return 0;
+}
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* TIME_H */
+
