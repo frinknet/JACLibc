@@ -1,6 +1,6 @@
 // (c) 2025 FRINKnet & Friends - MIT licence
-#ifndef JACL_H
-#define JACL_H
+#ifndef JACL_C
+#define JACL_C
 
 #include <jsio.h>
 #include <assert.h>
@@ -31,4 +31,9 @@
 #include <wchar.h>
 #include <wctype.h>
 
-#endif /* JACL_H */
+// Don't do this at home children!
+// But the compiler build it fast this way
+#include <stlib.c>
+#include <jsio.c>
+
+#endif /* JACL_C */

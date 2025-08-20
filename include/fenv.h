@@ -30,30 +30,30 @@ typedef int fenv_t;
 
 #if defined(__wasm__)
 /* WASM: no-op fenv */
-int fetestexcept(int e)									{ (void)e; return 0; }
-int feraiseexcept(int e)								{ (void)e; return 0; }
-int feclearexcept(int e)								{ (void)e; return 0; }
-int fegetexceptflag(fexcept_t* f,int e) { (void)f; (void)e; return 0; }
-int fesetexceptflag(const fexcept_t* f,int e) { (void)f; (void)e; return 0; }
-int fegetround(void)										{ return FE_TONEAREST; }
-int fesetround(int m)										{ (void)m; return 0; }
-int fegetenv(fenv_t* envp)							{ (void)envp; return 0; }
-int fesetenv(const fenv_t* envp)				{ (void)envp; return 0; }
-int feholdexcept(fenv_t* envp)					{ (void)envp; return 0; }
-int feupdateenv(const fenv_t* envp)			{ (void)envp; return 0; }
+static inline int fetestexcept(int e)									{ (void)e; return 0; }
+static inline int feraiseexcept(int e)								{ (void)e; return 0; }
+static inline int feclearexcept(int e)								{ (void)e; return 0; }
+static inline int fegetexceptflag(fexcept_t* f,int e) { (void)f; (void)e; return 0; }
+static inline int fesetexceptflag(const fexcept_t* f,int e) { (void)f; (void)e; return 0; }
+static inline int fegetround(void)										{ return FE_TONEAREST; }
+static inline int fesetround(int m)										{ (void)m; return 0; }
+static inline int fegetenv(fenv_t* envp)							{ (void)envp; return 0; }
+static inline int fesetenv(const fenv_t* envp)				{ (void)envp; return 0; }
+static inline int feholdexcept(fenv_t* envp)					{ (void)envp; return 0; }
+static inline int feupdateenv(const fenv_t* envp)			{ (void)envp; return 0; }
 #else
 /* Native: use builtins */
-int fetestexcept(int e)									{ return __builtin_fetestexcept(e); }
-int feraiseexcept(int e)								{ return __builtin_feraiseexcept(e); }
-int feclearexcept(int e)								{ return __builtin_feclearexcept(e); }
-int fegetexceptflag(fexcept_t* f,int e) { return __builtin_fegetexceptflag(f,e); }
-int fesetexceptflag(const fexcept_t* f,int e) { return __builtin_fesetexceptflag(f,e); }
-int fegetround(void)										{ return __builtin_fegetround(); }
-int fesetround(int m)										{ return __builtin_fesetround(m); }
-int fegetenv(fenv_t* envp)							{ return __builtin_fegetenv(envp); }
-int fesetenv(const fenv_t* envp)				{ return __builtin_fesetenv(envp); }
-int feholdexcept(fenv_t* envp)					{ return __builtin_feholdexcept(envp); }
-int feupdateenv(const fenv_t* envp)			{ return __builtin_feupdateenv(envp); }
+static inline int fetestexcept(int e)									{ return __builtin_fetestexcept(e); }
+static inline int feraiseexcept(int e)								{ return __builtin_feraiseexcept(e); }
+static inline int feclearexcept(int e)								{ return __builtin_feclearexcept(e); }
+static inline int fegetexceptflag(fexcept_t* f,int e) { return __builtin_fegetexceptflag(f,e); }
+static inline int fesetexceptflag(const fexcept_t* f,int e) { return __builtin_fesetexceptflag(f,e); }
+static inline int fegetround(void)										{ return __builtin_fegetround(); }
+static inline int fesetround(int m)										{ return __builtin_fesetround(m); }
+static inline int fegetenv(fenv_t* envp)							{ return __builtin_fegetenv(envp); }
+static inline int fesetenv(const fenv_t* envp)				{ return __builtin_fesetenv(envp); }
+static inline int feholdexcept(fenv_t* envp)					{ return __builtin_feholdexcept(envp); }
+static inline int feupdateenv(const fenv_t* envp)			{ return __builtin_feupdateenv(envp); }
 #endif
 
 #ifdef __cplusplus

@@ -23,7 +23,10 @@ extern "C" {
 #endif
 #ifndef _MBSTATE_T_DEFINED_
 # define _MBSTATE_T_DEFINED_
-	typedef int mbstate_t;
+	typedef struct {
+		uint32_t wc;
+		int bytes, want;
+	} mbstate_t;
 #endif
 
 /*–– Constants ––*/
@@ -40,55 +43,97 @@ extern "C" {
 # define WCHAR_MAX 0xFFFFFFFFu
 #endif
 
-/*–– UTF-8 ⇄ wchar_t ––*/
-size_t mbrlen(const char *s, size_t n, mbstate_t *m) {
-		(void)m;
-		if (!s||n==0) return 0;
-		unsigned char c = (unsigned char)*s;
+static inline size_t mbrlen(const char *s, size_t n, mbstate_t *ps) {
+	if (!s || n == 0) return 0;
+	mbstate_t *st = ps ? ps : &(mbstate_t){0};
+
+	unsigned char c = (unsigned char)s[0];
+	if (st->bytes == 0) { // new character
 		if (c < 0x80) return 1;
-		if ((c & 0xE0) == 0xC0 && n >= 2) return 2;
-		if ((c & 0xF0) == 0xE0 && n >= 3) return 3;
-		if ((c & 0xF8) == 0xF0 && n >= 4) return 4;
+		if ((c & 0xE0) == 0xC0) { st->wc = c & 0x1F; st->want = 2; }
+		else if ((c & 0xF0) == 0xE0) { st->wc = c & 0x0F; st->want = 3; }
+		else if ((c & 0xF8) == 0xF0) { st->wc = c & 0x07; st->want = 4; }
+		else return (size_t)-1;
+		st->bytes = 1;
+		if (n < st->want) return (size_t)-2;
+		return st->want;
+	}
+	// Continuation logic for multi-call streams (not fully fleshed here, expand as needed)
+	return (size_t)-1;
+}
+
+static inline int mbtowc(wchar_t *pwc, const char *s, size_t n) {
+		static mbstate_t internal_state = {0,0,0};
+		return mbrtowc(pwc, s, n, &internal_state);
+}
+
+static inline int mbrtowc(wchar_t *pwc, const char *s, size_t n, mbstate_t *ps) {
+		if (!s || n == 0) return 0;
+		mbstate_t *st = ps ? ps : &(mbstate_t){0};
+		unsigned char c = (unsigned char) s[0];
+		// Single-byte ASCII
+		if (c < 0x80) { if (pwc) *pwc = c; return 1; }
+		// Two to four byte sequences
+		if ((c & 0xE0) == 0xC0 && n >= 2) {
+				if (pwc) *pwc = ((c & 0x1F) << 6) | ((unsigned char)s[1] & 0x3F);
+				return 2;
+		}
+		if ((c & 0xF0) == 0xE0 && n >= 3) {
+				if (pwc) *pwc = ((c & 0x0F) << 12) |
+												((unsigned char)s[1] & 0x3F) << 6 |
+												(unsigned char)s[2] & 0x3F;
+				return 3;
+		}
+		if ((c & 0xF8) == 0xF0 && n >= 4) {
+				if (pwc) *pwc = ((c & 0x07) << 18) |
+												((unsigned char)s[1] & 0x3F) << 12 |
+												((unsigned char)s[2] & 0x3F) << 6 |
+												(unsigned char)s[3] & 0x3F;
+				return 4;
+		}
+		// Fragmented input: update state, signal incomplete
+		st->wc = c;
+		st->bytes = 1;
+		st->want = (c & 0xE0) == 0xC0 ? 2 :
+							 (c & 0xF0) == 0xE0 ? 3 :
+							 (c & 0xF8) == 0xF0 ? 4 : 1;
+		if (n < st->want) return (size_t)-2;
 		return (size_t)-1;
 }
 
-int mbtowc(wchar_t *p, const char *s, size_t n) {
-		if (!s||n==0) return 0;
-		size_t l = mbrlen(s,n,NULL);
-		if (l==(size_t)-1) { if (p) *p = 0xFFFD; return 1; }
-		wchar_t wc = (unsigned char)s[0] & (0x7F >> l);
-		for (size_t i = 1; i < l; i++)
-				wc = (wc << 6) | ((unsigned char)s[i] & 0x3F);
-		if (p) *p = wc;
-		return (int)l;
+static inline int wctomb(char *s, wchar_t wc) {
+		// No stateful logic needed unless you want to handle the -1 returns for partials
+		return wcrtomb(s, wc, NULL);
 }
 
-int wctomb(char *s, wchar_t wc) {
+static inline int wcrtomb(char *s, wchar_t wc, mbstate_t *ps) {
+		(void)ps;
 		if (wc > 0x10FFFF) wc = 0xFFFD;
 		if (wc < 0x80) {
-				s[0] = (char)wc; 
+				s[0] = (char)wc;
 				return 1;
-		} else if (wc < 0x800) {
-				s[0] = 0xC0 | (wc >> 6);
+		}
+		if (wc < 0x800) {
+				s = 0xC0 | (wc >> 6);
 				s[1] = 0x80 | (wc & 0x3F);
 				return 2;
-		} else if (wc < 0x10000) {
-				s[0] = 0xE0 | (wc >> 12);
+		}
+		if (wc < 0x10000) {
+				s = 0xE0 | (wc >> 12);
 				s[1] = 0x80 | ((wc >> 6) & 0x3F);
 				s[2] = 0x80 | (wc & 0x3F);
 				return 3;
-		} else {
-				s[0] = 0xF0 | (wc >> 18);
-				s[1] = 0x80 | ((wc >> 12) & 0x3F);
-				s[2] = 0x80 | ((wc >> 6) & 0x3F);
-				s[3] = 0x80 | (wc & 0x3F);
-				return 4;
 		}
+		s = 0xF0 | (wc >> 18);
+		s[1] = 0x80 | ((wc >> 12) & 0x3F);
+		s[2] = 0x80 | ((wc >> 6) & 0x3F);
+		s[3] = 0x80 | (wc & 0x3F);
+		return 4;
 }
 
 
 /*–– String conversions ––*/
-size_t mbstowcs(wchar_t *pw, const char *s, size_t n) {
+static inline size_t mbstowcs(wchar_t *pw, const char *s, size_t n) {
 		size_t i=0, b;
 		while (i<n && *s) {
 				b = mbtowc(&pw[i], s, n - i);
@@ -98,7 +143,7 @@ size_t mbstowcs(wchar_t *pw, const char *s, size_t n) {
 		return i;
 }
 
-size_t wcstombs(char *s, const wchar_t *pw, size_t n) {
+static inline size_t wcstombs(char *s, const wchar_t *pw, size_t n) {
 		size_t i=0, t=0, l;
 		while (i<n && pw[i]) {
 				l = wctomb(s + t, pw[i]);
@@ -109,74 +154,73 @@ size_t wcstombs(char *s, const wchar_t *pw, size_t n) {
 }
 
 /*–– Single-byte ↔ wide ––*/
-wint_t btowc(int c) {
+static wint_t btowc(int c) {
 		return c == EOF ? WEOF : (wint_t)(unsigned char)c;
 }
 
-int wctob(wint_t wc) {
+static int wctob(wint_t wc) {
 		return wc == WEOF || wc > 0xFF ? EOF : (int)wc;
 }
 
-
 /*–– Orientation ––*/
-int fwide(void *stream, int mode) { (void)stream; return mode; }
+static inline int fwide(void *stream, int mode) { (void)stream; return mode; }
 
 /*–– Memory ops ––*/
-wchar_t *wmemcpy(wchar_t *d, const wchar_t *s, size_t n) {
+static inline wchar_t *wmemcpy(wchar_t *d, const wchar_t *s, size_t n) {
 		for (size_t i=0; i<n; i++) d[i] = s[i]; return d;
 }
-wchar_t *wmemmove(wchar_t *d, const wchar_t *s, size_t n) {
+static inline wchar_t *wmemmove(wchar_t *d, const wchar_t *s, size_t n) {
 		if (d < s) for (size_t i=0; i<n; i++) d[i]=s[i];
 		else				for (size_t i=n; i-->0;) d[i]=s[i];
 		return d;
 }
-wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n) {
+static inline wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n) {
 		for (size_t i=0; i<n; i++) if (s[i]==c) return (wchar_t*)&s[i];
 		return NULL;
 }
-int wmemcmp(const wchar_t *a, const wchar_t *b, size_t n) {
+static inline int wmemcmp(const wchar_t *a, const wchar_t *b, size_t n) {
 		for (size_t i=0; i<n; i++)
 				if (a[i]!=b[i]) return a[i]<b[i]?-1:1;
 		return 0;
 }
-wchar_t *wmemset(wchar_t *s, wchar_t c, size_t n) {
+static inline wchar_t *wmemset(wchar_t *s, wchar_t c, size_t n) {
 		for (size_t i=0; i<n; i++) s[i] = c; return s;
 }
 
 /*–– String ops ––*/
-size_t wcslen(const wchar_t *s) {
+static inline size_t wcslen(const wchar_t *s) {
 		const wchar_t *p=s; while (*p) ++p; return (size_t)(p-s);
 }
-wchar_t* wcscpy(wchar_t *d, const wchar_t *s) {
+static inline wchar_t* wcscpy(wchar_t *d, const wchar_t *s) {
 		wchar_t *p = d;
 		while ((*p++ = *s++)) { }
 		return d;
 }
 
-wchar_t *wcsncpy(wchar_t *d, const wchar_t *s, size_t n) {
+static inline wchar_t *wcsncpy(wchar_t *d, const wchar_t *s, size_t n) {
 		size_t i=0; for (; i<n && s[i]; i++) d[i]=s[i];
 		for (; i<n; i++) d[i]=0; return d;
 }
-int wcscmp(const wchar_t *a, const wchar_t *b) {
+static inline int wcscmp(const wchar_t *a, const wchar_t *b) {
 		while (*a && *a==*b) { a++; b++; }
 		return (*a<*b)? -1 : (*a>*b);
 }
-int wcsncmp(const wchar_t *a, const wchar_t *b, size_t n) {
+static inline int wcsncmp(const wchar_t *a, const wchar_t *b, size_t n) {
 		size_t i=0;
 		for (; i<n && a[i] && a[i]==b[i]; i++);
 		if (i==n) return 0;
 		return (a[i]<b[i])? -1 : 1;
 }
-wchar_t *wcschr(const wchar_t *s, wchar_t c) {
+static inline wchar_t *wcschr(const wchar_t *s, wchar_t c) {
 		for (; *s; s++) if (*s==c) return (wchar_t*)s;
 		return NULL;
 }
-wchar_t *wcsrchr(const wchar_t *s, wchar_t c) {
+static inline wchar_t *wcsrchr(const wchar_t *s, wchar_t c) {
 		const wchar_t *r=NULL;
 		for (; *s; s++) if (*s==c) r=s;
 		return (wchar_t*)r;
 }
-wchar_t *wcsstr(const wchar_t *h, const wchar_t *n) {
+static inline wchar_t *wcsstr(const wchar_t *h, const wchar_t *n) {
 		size_t l = wcslen(n);
 		if (!l) return (wchar_t*)h;
 		for (; *h; h++) if (!wcsncmp(h,n,l)) return (wchar_t*)h;
@@ -184,8 +228,8 @@ wchar_t *wcsstr(const wchar_t *h, const wchar_t *n) {
 }
 
 /*–– Collation & transform ––*/
-int		 wstrcoll(const wchar_t *a, const wchar_t *b) { return wcscmp(a,b); }
-size_t wcsxfrm(wchar_t *d, const wchar_t *s, size_t n) {
+static inline int		 wstrcoll(const wchar_t *a, const wchar_t *b) { return wcscmp(a,b); }
+static inline size_t wcsxfrm(wchar_t *d, const wchar_t *s, size_t n) {
 		size_t l = wcslen(s);
 		if (n>l) wcscpy(d,s);
 		return l;

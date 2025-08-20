@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-noreturn void __assert_fail (const char *, const char *, int, const char *);
+static inline noreturn void __assert_fail (const char *, const char *, int, const char *);
 
 #ifdef __cplusplus
 }

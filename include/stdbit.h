@@ -29,20 +29,20 @@ enum stdbit_endian {
 };
 
 /* Count leading zeros/ones, trailing zeros/ones, popcount */
-int countl_zero(uint32_t x)		{ return x ? __builtin_clz(x) : 32; }
-int countl_one(uint32_t x)		{ return x ? __builtin_clz(~x) : 32; }
-int countr_zero(uint32_t x)		{ return x ? __builtin_ctz(x) : 32; }
-int countr_one(uint32_t x)		{ return x ? __builtin_ctz(~x) : 32; }
-int popcount(uint32_t x)			{ return __builtin_popcount(x); }
+static inline int countl_zero(uint32_t x)		{ return x ? __builtin_clz(x) : 32; }
+static inline int countl_one(uint32_t x)		{ return x ? __builtin_clz(~x) : 32; }
+static inline int countr_zero(uint32_t x)		{ return x ? __builtin_ctz(x) : 32; }
+static inline int countr_one(uint32_t x)		{ return x ? __builtin_ctz(~x) : 32; }
+static inline int popcount(uint32_t x)			{ return __builtin_popcount(x); }
 
 /* Bit floor/ceil/width */
-uint32_t	bit_floor(uint32_t x)		{ return x ? (1u << (31 - __builtin_clz(x))) : 0; }
-uint32_t	bit_ceil(uint32_t x)		{ if (!x) return 0; int lz = __builtin_clz(x - 1); return 1u << (31 - lz); }
-int				bit_width(uint32_t x)		{ return x ? (32 - __builtin_clz(x)) : 0; }
+static inline uint32_t	bit_floor(uint32_t x)		{ return x ? (1u << (31 - __builtin_clz(x))) : 0; }
+static inline uint32_t	bit_ceil(uint32_t x)		{ if (!x) return 0; int lz = __builtin_clz(x - 1); return 1u << (31 - lz); }
+static inline int				bit_width(uint32_t x)		{ return x ? (32 - __builtin_clz(x)) : 0; }
 
 /* Rotate left/right */
-uint32_t	rotl(uint32_t x, int r)	{ const int m = r & 31; return (x << m) | (x >> ((32 - m) & 31)); }
-uint32_t	rotr(uint32_t x, int r)	{ const int m = r & 31; return (x >> m) | (x << ((32 - m) & 31)); }
+static inline uint32_t	rotl(uint32_t x, int r)	{ const int m = r & 31; return (x << m) | (x >> ((32 - m) & 31)); }
+static inline uint32_t	rotr(uint32_t x, int r)	{ const int m = r & 31; return (x >> m) | (x << ((32 - m) & 31)); }
 
 #ifdef __cplusplus
 }
