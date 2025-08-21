@@ -2,9 +2,10 @@
 #ifndef STDIO_H
 #define STDIO_H
 
-#ifndef EOF
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 #define EOF (-1)
-#endif
 
 #if defined(__cplusplus)
 	#define restrict __restrict__
