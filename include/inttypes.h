@@ -2,6 +2,7 @@
 #ifndef INTTYPES_H
 #define INTTYPES_H
 
+#include <errno.h>
 #include <stdint.h>
 
 #ifdef __cplusplus

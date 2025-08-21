@@ -2,9 +2,7 @@
 #ifndef WCHAR_H
 #define WCHAR_H
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +31,10 @@ extern "C" {
 #ifndef MB_CUR_MAX
 # define MB_CUR_MAX 1
 #endif
+#ifndef EOF
+#define EOF (-1)
+#endif
+
 #ifndef WEOF
 # define WEOF ((wint_t)-1)
 #endif
@@ -60,11 +62,6 @@ static inline size_t mbrlen(const char *s, size_t n, mbstate_t *ps) {
 	}
 	// Continuation logic for multi-call streams (not fully fleshed here, expand as needed)
 	return (size_t)-1;
-}
-
-static inline int mbtowc(wchar_t *pwc, const char *s, size_t n) {
-		static mbstate_t internal_state = {0,0,0};
-		return mbrtowc(pwc, s, n, &internal_state);
 }
 
 static inline int mbrtowc(wchar_t *pwc, const char *s, size_t n, mbstate_t *ps) {
@@ -101,9 +98,9 @@ static inline int mbrtowc(wchar_t *pwc, const char *s, size_t n, mbstate_t *ps) 
 		return (size_t)-1;
 }
 
-static inline int wctomb(char *s, wchar_t wc) {
-		// No stateful logic needed unless you want to handle the -1 returns for partials
-		return wcrtomb(s, wc, NULL);
+static inline int mbtowc(wchar_t *pwc, const char *s, size_t n) {
+		static mbstate_t internal_state = {0,0,0};
+		return mbrtowc(pwc, s, n, &internal_state);
 }
 
 static inline int wcrtomb(char *s, wchar_t wc, mbstate_t *ps) {
@@ -114,21 +111,26 @@ static inline int wcrtomb(char *s, wchar_t wc, mbstate_t *ps) {
 				return 1;
 		}
 		if (wc < 0x800) {
-				s = 0xC0 | (wc >> 6);
+				s[0] = 0xC0 | (wc >> 6);
 				s[1] = 0x80 | (wc & 0x3F);
 				return 2;
 		}
 		if (wc < 0x10000) {
-				s = 0xE0 | (wc >> 12);
+				s[0] = 0xE0 | (wc >> 12);
 				s[1] = 0x80 | ((wc >> 6) & 0x3F);
 				s[2] = 0x80 | (wc & 0x3F);
 				return 3;
 		}
-		s = 0xF0 | (wc >> 18);
+		s[0] = 0xF0 | (wc >> 18);
 		s[1] = 0x80 | ((wc >> 12) & 0x3F);
 		s[2] = 0x80 | ((wc >> 6) & 0x3F);
 		s[3] = 0x80 | (wc & 0x3F);
 		return 4;
+}
+
+static inline int wctomb(char *s, wchar_t wc) {
+		// No stateful logic needed unless you want to handle the -1 returns for partials
+		return wcrtomb(s, wc, NULL);
 }
 
 

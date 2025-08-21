@@ -30,7 +30,7 @@ typedef uint_least32_t char32_t;
 // UTF-8/UTF-16 conversion with proper surrogate pair handling
 static inline size_t mbrtoc16(char16_t *pc16, const char *s, size_t n, mbstate_t *ps) {
 		static unsigned internal_state;
-		if (!ps) ps = (void *)&internal_state;
+		if (!ps) ps = (mbstate_t *)&internal_state;
 		
 		unsigned *pending = (unsigned *)ps;
 		
@@ -60,7 +60,7 @@ static inline size_t mbrtoc16(char16_t *pc16, const char *s, size_t n, mbstate_t
 
 static inline size_t c16rtomb(char *s, char16_t c16, mbstate_t *ps) {
 		static unsigned internal_state;
-		if (!ps) ps = (void *)&internal_state;
+		if (!ps) ps = (mbstate_t *)&internal_state;
 		
 		unsigned *x = (unsigned *)ps;
 		wchar_t wc;
@@ -103,7 +103,7 @@ static inline size_t c16rtomb(char *s, char16_t c16, mbstate_t *ps) {
 // UTF-32 versions are simpler - no surrogate pairs
 static inline size_t mbrtoc32(char32_t *pc32, const char *s, size_t n, mbstate_t *ps) {
 		static unsigned internal_state;
-		if (!ps) ps = (void *)&internal_state;
+		if (!ps) ps = (mbstate_t *)&internal_state;
 		
 		if (!s) return mbrtoc32(0, "", 1, ps);
 		
@@ -116,7 +116,7 @@ static inline size_t mbrtoc32(char32_t *pc32, const char *s, size_t n, mbstate_t
 
 static inline size_t c32rtomb(char *s, char32_t c32, mbstate_t *ps) {
 		static unsigned internal_state;
-		if (!ps) ps = (void *)&internal_state;
+		if (!ps) ps = (mbstate_t *)&internal_state;
 		
 		if (!s) return c32rtomb((char[MB_CUR_MAX]){0}, 0, ps);
 		

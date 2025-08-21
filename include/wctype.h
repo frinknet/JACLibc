@@ -20,7 +20,7 @@ static inline int iswalpha(wint_t c)	{
 		return 0;
 }
 
-static inline int iswcntrl(wint_t c)	{ return (c >= 0 && c <= 0x1F) || c == 0x7F; {
+static inline int iswcntrl(wint_t c)	{ return (c >= 0 && c <= 0x1F) || c == 0x7F; }
 static inline int iswdigit(wint_t c)	{ return (c >= L'0' && c <= L'9'); }
 static inline int iswalnum(wint_t c)	{ return iswalpha(c) || iswdigit(c); }
 static inline int iswgraph(wint_t c)	{ return (c >  L' ' && c <= L'~'); }

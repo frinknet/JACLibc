@@ -102,9 +102,6 @@ extern double	js_code(const char *code, int len, ...);
 
 // Slep and async
 #ifndef JS_NO_ASYNCIFY
-#define JS_PAUSE JS_EXEC(js_property(__jacl_js_async, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
-#define JS_SLEEP JS_PAUSE; JS_EXEC(js_property(__jacl_js_async, "sleep"), ms);
-#define JS_RESUME js_resume
 void js_pause();
 void js_sleep(uint32_t ms);
 void js_resume(void);

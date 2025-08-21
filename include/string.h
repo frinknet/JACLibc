@@ -4,11 +4,12 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+void *malloc(size_t);
 
 /* — Memory Operations — */
 static inline void *memcpy(void *dest, const void *src, size_t n) {

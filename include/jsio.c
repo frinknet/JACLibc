@@ -310,6 +310,7 @@ static void js_notify(js_t* v) {}
 
 // Slep and async
 #ifndef JS_NO_ASYNCIFY
+static jmp_buf __jacl_async_env;
 static js_t* __jacl_js_async = (js_t*)JS_CODE(
 	let SP = 0,SM;
 	const SH = 64*1024,SO = {
@@ -320,12 +321,23 @@ static js_t* __jacl_js_async = (js_t*)JS_CODE(
 
 	return this.import(SO);
 );
+#define JS_PAUSE JS_EXEC(js_property(__jacl_js_async, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
+JS_EXPORT(sleep)
+void js_sleep(uint32_t ms) { 
+	if (setjmp(__jacl_async_env) == 0) {
+		JS_PAUSE;
+		JS_EXEC(js_property(__jacl_js_async, "sleep"), ms);
+	}
+}
 JS_EXPORT(pause)
 void js_pause() { JS_PAUSE; }
-JS_EXPORT(sleep)
-void js_sleep(uint32_t ms) { JS_SLEEP(ms); }
 JS_EXPORT(resume)
-void js_resume(void) {}
+void js_resume(void) {
+		longjmp(__jacl_async_env, 1);
+}
+#endif
+
+#undef JS_PAUSE
 #endif
 
 // Array operations

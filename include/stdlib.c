@@ -2,7 +2,7 @@
 #ifndef STDLIB_C
 #define STDLIB_C
 
-#include <stdlib.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -3,6 +3,7 @@
 #define LOCALE_H
 
 #include <stddef.h>
+#include <string.h>
 
 /* C99 localization */
 typedef struct {

@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
+#include <errno.h>
 #include <stdint.h>
 #include <stdatomic.h>
-#include <errno.h>
 #include <stdlib.h>
 #include <time.h>
 

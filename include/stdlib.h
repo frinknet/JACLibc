@@ -2,11 +2,11 @@
 #ifndef STDLIB_H
 #define STDLIB_H
 
-#include <stddef.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <string.h>
 #include <limits.h>
+//#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -98,9 +98,9 @@ typedef struct { int quot, rem; }				div_t;
 typedef struct { long quot, rem; }			ldiv_t;
 typedef struct { long long quot, rem;}	lldiv_t;
 
-div_t		div		(int n, int d)			 { return (div_t){ n/d, n%d }; }
-ldiv_t	ldiv	(long n, long d)		 { return (ldiv_t){ n/d, n%d }; }
-lldiv_t lldiv (long long n, long long d){ return (lldiv_t){ n/d, n%d }; }
+static inline div_t		div		(int n, int d)			 { return (div_t){ n/d, n%d }; }
+static inline ldiv_t	ldiv	(long n, long d)		 { return (ldiv_t){ n/d, n%d }; }
+static inline lldiv_t lldiv (long long n, long long d){ return (lldiv_t){ n/d, n%d }; }
 
 /* — Pseudo-Random — */
 static unsigned jacl_seed = 1;
