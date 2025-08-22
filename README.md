@@ -1,8 +1,8 @@
 ![logo](logo.svg)
 
-**JACLibc** \ˈja-kəl-ˌlib-sē\ ● *proper noun* — *fr. JACL, acron. “Just Adiquate Concise Libc” ● cf. alt. “Javascript Accessible Composeable Linkage” (rare, chiefly in marketing) occasionally faux Old French “jacalibre” — nimble code escaping monstrous build systems...*
+**JACLibc** \ˈja-kəl-ˌlib-sē\ ● *proper noun* — *fr. JACL, acron. “Jaunt Adequate Concise Library for C” ● cf. alt. “Javascript Accessible Composeable Linkage” (rare, chiefly in marketing) occasionally faux Old French “jacalibre” — nimble code escaping monstrous build systems...*
 
-1. A lean C standard library for WASM — escape hatch for the Emscripten-averse.  
+1. A lean, nimble, readable C standard library for WASM and embeded environments escape hatch for the Emscripten-averse.  
 2. (colloq.) Sanctuary for compiling with `clang` — no build-script penance required.
 3. Specialized for WASM with dreams of building others. 
 4. Think: `dietlibc` meets `mewlibc` with `musl` philosophy targeting WASI standards and C99/C11 compliance.
