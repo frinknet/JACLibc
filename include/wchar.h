@@ -2,30 +2,9 @@
 #ifndef WCHAR_H
 #define WCHAR_H
 
+#include <stdint.h>
+#include <stddef.h>
 #include <string.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/*–– Typedef guards ––*/
-#if defined(__WCHAR_TYPE__)||defined(WCHAR_TYPE)
-	/* use compiler’s wchar_t */
-#elif !defined(_WCHAR_T_DEFINED_)
-# define _WCHAR_T_DEFINED_
-	typedef uint32_t wchar_t;
-#endif
-#ifndef _WINT_T_DEFINED_
-# define _WINT_T_DEFINED_
-	typedef uint32_t wint_t;
-#endif
-#ifndef _MBSTATE_T_DEFINED_
-# define _MBSTATE_T_DEFINED_
-	typedef struct {
-		uint32_t wc;
-		int bytes, want;
-	} mbstate_t;
-#endif
 
 /*–– Constants ––*/
 #ifndef MB_CUR_MAX
@@ -45,57 +24,90 @@ extern "C" {
 # define WCHAR_MAX 0xFFFFFFFFu
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef __cplusplus
+#ifdef __WCHAR_TYPE__
+typedef __WCHAR_TYPE__ wchar_t;
+#else
+typedef long wchar_t;
+#endif
+#endif
+
+#ifdef __WINT_TYPE__
+typedef __WINT_TYPE__ wint_t;
+#else
+typedef unsigned int wint_t;
+#endif
+
+typedef struct { uint32_t wc; int bytes, want; } mbstate_t;
+
+static mbstate_t *get_fallback_state(mbstate_t *ps) {
+	static mbstate_t zero_state;
+
+	if (!ps) {
+		memset(&zero_state, 0, sizeof(zero_state));
+		return &zero_state;
+	}
+
+	return ps;
+}
+
 static inline size_t mbrlen(const char *s, size_t n, mbstate_t *ps) {
 	if (!s || n == 0) return 0;
-	mbstate_t *st = ps ? ps : &(mbstate_t){0};
 
+	mbstate_t *st = get_fallback_state(ps);
 	unsigned char c = (unsigned char)s[0];
-	if (st->bytes == 0) { // new character
-		if (c < 0x80) return 1;
-		if ((c & 0xE0) == 0xC0) { st->wc = c & 0x1F; st->want = 2; }
-		else if ((c & 0xF0) == 0xE0) { st->wc = c & 0x0F; st->want = 3; }
-		else if ((c & 0xF8) == 0xF0) { st->wc = c & 0x07; st->want = 4; }
-		else return (size_t)-1;
-		st->bytes = 1;
-		if (n < st->want) return (size_t)-2;
-		return st->want;
-	}
-	// Continuation logic for multi-call streams (not fully fleshed here, expand as needed)
-	return (size_t)-1;
+
+	if (c < 0x80) return 1;
+	if ((c & 0xE0) == 0xC0) { st->wc = c & 0x1F; st->want = 2; }
+	else if ((c & 0xF0) == 0xE0) { st->wc = c & 0x0F; st->want = 3; }
+	else if ((c & 0xF8) == 0xF0) { st->wc = c & 0x07; st->want = 4; }
+	else return (size_t)-1;
+
+	st->bytes = 1;
+
+	if (n < (size_t)st->want) return (size_t)-2;
+
+	return st->want;
 }
 
 static inline int mbrtowc(wchar_t *pwc, const char *s, size_t n, mbstate_t *ps) {
-		if (!s || n == 0) return 0;
-		mbstate_t *st = ps ? ps : &(mbstate_t){0};
-		unsigned char c = (unsigned char) s[0];
-		// Single-byte ASCII
-		if (c < 0x80) { if (pwc) *pwc = c; return 1; }
-		// Two to four byte sequences
-		if ((c & 0xE0) == 0xC0 && n >= 2) {
-				if (pwc) *pwc = ((c & 0x1F) << 6) | ((unsigned char)s[1] & 0x3F);
-				return 2;
-		}
-		if ((c & 0xF0) == 0xE0 && n >= 3) {
-				if (pwc) *pwc = ((c & 0x0F) << 12) |
-												((unsigned char)s[1] & 0x3F) << 6 |
-												(unsigned char)s[2] & 0x3F;
-				return 3;
-		}
-		if ((c & 0xF8) == 0xF0 && n >= 4) {
-				if (pwc) *pwc = ((c & 0x07) << 18) |
-												((unsigned char)s[1] & 0x3F) << 12 |
-												((unsigned char)s[2] & 0x3F) << 6 |
-												(unsigned char)s[3] & 0x3F;
-				return 4;
-		}
-		// Fragmented input: update state, signal incomplete
-		st->wc = c;
-		st->bytes = 1;
-		st->want = (c & 0xE0) == 0xC0 ? 2 :
-							 (c & 0xF0) == 0xE0 ? 3 :
-							 (c & 0xF8) == 0xF0 ? 4 : 1;
-		if (n < st->want) return (size_t)-2;
-		return (size_t)-1;
+	if (!s || n == 0) return 0;
+
+	mbstate_t *st = get_fallback_state(ps);
+	unsigned char c = (unsigned char)s[0];
+
+	// Single-byte
+	if (c < 0x80) { if (pwc) *pwc = c; return 1; }
+	// Two-byte (110xxxxx 10xxxxxx)
+	if ((c & 0xE0) == 0xC0 && n >= 2) {
+			if (pwc) *pwc = ((c & 0x1F) << 6) | ((unsigned char)s[1] & 0x3F);
+
+			return 2;
+	}
+	// Three-byte (1110xxxx 10xxxxxx 10xxxxxx)
+	if ((c & 0xF0) == 0xE0 && n >= 3) {
+			if (pwc) *pwc = ((c & 0x0F) << 12) | (((unsigned char)s[1] & 0x3F) << 6) | ((unsigned char)s[2] & 0x3F);
+
+			return 3;
+	}
+	// Four-byte (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
+	if ((c & 0xF8) == 0xF0 && n >= 4) {
+			if (pwc) *pwc = ((c & 0x07) << 18) | (((unsigned char)s[1] & 0x3F) << 12) | (((unsigned char)s[2] & 0x3F) << 6) | ((unsigned char)s[3] & 0x3F);
+
+			return 4;
+	}
+	// Incomplete sequence
+	st->wc = c;
+	st->bytes = 1;
+	st->want = (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 1;
+
+	if (n < (size_t)st->want) return (size_t)-2;
+
+	return (size_t)-1;
 }
 
 static inline int mbtowc(wchar_t *pwc, const char *s, size_t n) {

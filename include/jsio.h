@@ -19,11 +19,9 @@ extern "C" {
 #ifdef __wasm__
 #define JS_EXPORT(name) __attribute__((used, export_name(#name)))
 #define JS_IMPORT(name) __attribute__((import_module("env"), import_name(#name)))
-#define JS_START JS_EXPORT(_start)
 #else
 #define JS_EXPORT(name)
 #define JS_IMPORT(name)
-#define JS_START
 #endif
 
 //S Type enumeration
@@ -70,7 +68,6 @@ bool js_includes(js_t* r, js_t* v);
 bool js_ispublic(js_t* v);
 
 // Setters for key and value
-js_t* js_key(js_t* x, const char* key);
 js_t* js_string(js_t* x, const char* s);
 js_t* js_number(js_t* x, double n);
 js_t* js_boolean(js_t* x, bool n);

@@ -2,206 +2,102 @@
 #ifndef STDIO_H
 #define STDIO_H
 
+#include <stddef.h>
+#include <stdarg.h>
+#include <wchar.h>
+#include <assert.h>
+
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
 #define EOF (-1)
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 	#define restrict __restrict__
 #elif !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
 	#define restrict	 /* nothing */
 #endif
-
-#include <stddef.h>
-#include <stdarg.h>
-#include <wchar.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // — FILE Type Stub —
-typedef int FILE;
+typedef struct _FILE FILE;
+
 
 // — Standard Streams —
-extern FILE* stdin;		/* TODO: hook to async storage */
+extern FILE* stdin;
 extern FILE* stdout;
 extern FILE* stderr;
 
 // — JS-Implemented I/O Hooks (stubbed until async IndexedDB) —
-static inline FILE* fopen(const char* path, const char* mode) {
-		(void)path; (void)mode;
-		return NULL;	/* TODO */
-}
-static inline size_t fread(void* ptr, size_t size, size_t nmemb, FILE* stream) {
-		(void)ptr; (void)size; (void)nmemb; (void)stream;
-		return 0;			/* TODO */
-}
-static inline size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream) {
-		(void)ptr; (void)size; (void)nmemb; (void)stream;
-		return 0;			/* TODO */
-}
-static inline int fclose(FILE* stream) {
-		(void)stream;
-		return 0;			/* TODO */
-}
-static inline int fflush(FILE* stream) {
-		(void)stream;
-		return 0;			/* TODO */
-}
+FILE* fopen(const char* path, const char* mode);
+size_t fread(void* ptr, size_t size, size_t nmemb, FILE* stream);
+size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream);
+int fclose(FILE* stream);
+int fflush(FILE* stream);
 
 // — Character I/O (stub) —
-static inline int fputc(int c, FILE* s) { (void)s; return c; }
-static inline int getc(FILE* s)					{ (void)s; return EOF; }
-static inline int putc(int c, FILE* s)	{ (void)s; return c; }
-static inline int ungetc(int c, FILE* s) { (void)s; return c; }
-static inline int getchar(void)					{ return EOF; }
-static inline int putchar(int c)				{ return c; }
-static inline int puts(const char* s)		{ (void)s; return EOF; }
-static inline int fgetc(FILE *s) { return getc(s); }
-static inline int fputs(const char *s, FILE *stream) { (void)stream; while (*s) putchar(*s++); return 0; }
-static inline char* fgets(char *s, int n, FILE *stream) {
-	(void)stream;
-	int i = 0, c;
-
-	while (i + 1 < n && (c = getchar()) != EOF && c != '\n') { s[i++] = c; }
-
-	if (c == '\n') s[i++] = '\n';
-
-	s[i] = '\0';
-
-	return i ? s : NULL;
-}
+int fputc(int c, FILE* s);
+int getc(FILE* s);
+int putc(int c, FILE* s);
+int ungetc(int c, FILE* s);
+int getchar(void);
+int putchar(int c);
+int puts(const char* s);
+int fgetc(FILE *s);
+int fputs(const char *s, FILE *stream);
+char* fgets(char *s, int n, FILE *stream);
 
 // — Formatted I/O (console only) —
-static inline int vprintf(const char *fmt, va_list ap) { return __builtin_vprintf(fmt, ap); }
-static inline int vsnprintf(char *s, size_t n, const char *fmt, va_list ap) {
-	int r = __builtin_vsnprintf(s, n, fmt, ap);
-
-	if (r < 0 || (size_t)r >= n) s[n - 1] = '\0';
-
-	return r;
-}
-static inline int snprintf(char *s, size_t n, const char *fmt, ...) {
-	va_list ap;
-
-	va_start(ap, fmt);
-
-	int r = vsnprintf(s, n, fmt, ap);
-
-	va_end(ap);
-
-	return r;
-}
-static inline int printf(const char* fmt, ...) {
-		va_list ap; va_start(ap, fmt);
-		int r = vprintf(fmt, ap);
-		va_end(ap);
-		return r;
-}
-static inline int fprintf(FILE* s, const char* fmt, ...) {
-		(void)s;
-		va_list ap; va_start(ap, fmt);
-		int r = vprintf(fmt, ap);
-		va_end(ap);
-		return r;
-}
+int vprintf(const char *fmt, va_list ap);
+int vsnprintf(char *s, size_t n, const char *fmt, va_list ap);
+int snprintf(char *s, size_t n, const char *fmt, ...);
+int printf(const char* fmt, ...);
+int fprintf(FILE* s, const char* fmt, ...);
+int sprintf(char *s, const char *fmt, ...);
 
 // — Buffering (no-op) —
-static inline int setvbuf(FILE* s, char* b, int m, size_t sz) {
-		(void)s; (void)b; (void)m; (void)sz;
-		return 0;
-}
-static inline void setbuf(FILE* s, char* buf) {
-		(void)s; (void)buf;
-}
+int setvbuf(FILE* s, char* b, int m, size_t sz);
+void setbuf(FILE* s, char* buf);
 
 // — File Positioning & Status (stub) —
-static inline int fseek(FILE* s, long off, int whence) {
-		(void)s; (void)off; (void)whence;
-		return -1;
-}
-static inline long ftell(FILE* s) {
-		(void)s;
-		return -1L;
-}
-static inline void rewind(FILE* s) {
-		(void)s;
-}
-static inline int feof(FILE* s) {
-		(void)s;
-		return 0;
-}
-static inline int ferror(FILE* s) {
-		(void)s;
-		return 0;
-}
-static inline void clearerr(FILE* s) {
-		(void)s;
-}
+int fseek(FILE* s, long off, int whence);
+long ftell(FILE* s);
+int feof(FILE* s);
+int ferror(FILE* s);
+void clearerr(FILE* s);
 
 // — Unlocked Character I/O (POSIX) —
-static inline int getchar_unlocked(void) { return getchar(); }
-static inline int putchar_unlocked(int c) { return putchar(c); }
-static inline int fgetc_unlocked(FILE *s) { return fgetc(s); }
-static inline int fputc_unlocked(int c, FILE *s) { return fputc(c, s); }
-static inline char *fgets_unlocked(char *s, int n, FILE *stream) { return fgets(s, n, stream); }
-static inline int fputs_unlocked(const char *s, FILE *stream) { return fputs(s, stream); }
+int getchar_unlocked(void);
+int putchar_unlocked(int c);
+int fgetc_unlocked(FILE *s);
+int fputc_unlocked(int c, FILE *s);
+char *fgets_unlocked(char *s, int n, FILE *stream);
+int fputs_unlocked(const char *s, FILE *stream);
 
 // — Wide-character support (stub) —
-static inline int fputwc(wchar_t wc, FILE *s) { (void)s; return (int)wc; }
-static inline int fgetwc(FILE *s) { (void)s; return WEOF; }
-static inline wint_t putwc(wchar_t wc, FILE *s) { return fputwc(wc, s); }
-static inline wint_t getwc(FILE *s) { return fgetwc(s); }
+int fputwc(wchar_t wc, FILE *s);
+int fgetwc(FILE *s);
+wint_t putwc(wchar_t wc, FILE *s);
+wint_t getwc(FILE *s);
 
 // — Error state helpers (stub) —
-static inline void clearerr_unlocked(FILE *s) { clearerr(s); }
-static inline int feof_unlocked(FILE *s) { return feof(s); }
-static inline int ferror_unlocked(FILE *s) { return ferror(s); }
+void clearerr_unlocked(FILE *s);
+int feof_unlocked(FILE *s);
+int ferror_unlocked(FILE *s);
 
 // — Misc Error Reporting (stub) —
-static inline void perror(const char* s) {
-		(void)s;
-}
+void perror(const char* s);
 
 /* Scans */
-static inline int scanf(const char * restrict fmt, ...) {
-		va_list ap; va_start(ap, fmt);
-		int r = __builtin_vscanf(fmt, ap);
-
-		va_end(ap);
-
-		return r;
-}
-static inline int fscanf(FILE* restrict f, const char * restrict fmt, ...) {
-		va_list ap; va_start(ap, fmt);
-		int r = __builtin_vfscanf(f, fmt, ap);
-
-		va_end(ap);
-
-		return r;
-}
-static inline int vscanf(const char * restrict fmt, va_list ap) {
-		return __builtin_vscanf(fmt, ap);
-}
-/*— at the top, after va_list declarations —*/
-static inline int sscanf(const char * restrict s, const char * restrict fmt, ...)
-{
-		va_list ap;
-		va_start(ap, fmt);
-		int r = __builtin_vsscanf(s, fmt, ap);
-		va_end(ap);
-		return r;
-}
-
-static inline int vfscanf(FILE * restrict f, const char * restrict fmt, va_list ap)
-{
-		return __builtin_vfscanf(f, fmt, ap);
-}
-static inline int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap) {
-		return __builtin_vsscanf(s, fmt, ap);
-}
+int scanf(const char * restrict fmt, ...);
+int fscanf(FILE* restrict f, const char * restrict fmt, ...);
+int vscanf(const char * restrict fmt, va_list ap);
+int sscanf(const char * restrict s, const char * restrict fmt, ...);
+int vfscanf(FILE * restrict f, const char * restrict fmt, va_list ap);
+int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap);
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+// (c) 2025 FRINKnet & Friends – MIT licenceA
 #ifndef THREADS_H
 #define THREADS_H
 
@@ -21,7 +21,7 @@ typedef int (*thrd_start_t)(void*);
 
 /* Thread functions */
 static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) { return pthread_create(thr, NULL, (void*(*)(void*))func, arg); }
-static inline _Noreturn void thrd_exit(int res) { pthread_exit((void*)(intptr_t)res); }
+static inline _Noreturn void thrd_exit(int res) { pthread_exit((void*)(intptr_t)res); __builtin_unreachable(); }
 static inline int thrd_join(thrd_t thr, int *res) {
 	void *r;
 

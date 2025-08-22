@@ -12,13 +12,9 @@ extern "C" {
 #endif
 
 /* C11 Unicode character types */
-#ifndef __CHAR16_TYPE__
+#ifndef __cplusplus
 typedef uint_least16_t char16_t;
-# define __CHAR16_TYPE__
-#endif
-#ifndef __CHAR32_TYPE__
 typedef uint_least32_t char32_t;
-# define __CHAR32_TYPE__
 #endif
 
 /* Limits */

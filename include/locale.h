@@ -7,16 +7,16 @@
 
 /* C99 localization */
 typedef struct {
-		char *decimal_point;
-		char *thousands_sep;
-		char *grouping;
-		char *int_curr_symbol;
-		char *currency_symbol;
-		char *mon_decimal_point;
-		char *mon_thousands_sep;
-		char *mon_grouping;
-		char *positive_sign;
-		char *negative_sign;
+		const char *decimal_point;
+		const char *thousands_sep;
+		const char *grouping;
+		const char *int_curr_symbol;
+		const char *currency_symbol;
+		const char *mon_decimal_point;
+		const char *mon_thousands_sep;
+		const char *mon_grouping;
+		const char *positive_sign;
+		const char *negative_sign;
 		char int_frac_digits;
 		char frac_digits;
 		char p_cs_precedes;
@@ -34,7 +34,7 @@ static inline char *setlocale(int category, const char *locale) {
 	return (locale == NULL) ? c_locale : (strcmp(locale, "") == 0 || strcmp(locale, "C") == 0) ? c_locale : NULL;
 }
 
-static inline static lconv __jacl_lconv_default = {
+static lconv __jacl_lconv_default = {
 	.decimal_point			= ".",
 	.thousands_sep			= "",
 	.grouping						= "",
