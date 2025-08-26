@@ -1,6 +1,4 @@
 // (c) 2025 FRINKnet & Friends – MIT licence
-#ifndef MATH_C
-#define MATH_C
 
 #include <math.h>
 
@@ -8,150 +6,13 @@
 extern "C" {
 #endif
 
-int isnan(double x)											{ return __builtin_isnan(x); }
-int isinf(double x)											{ return __builtin_isinf(x); }
-int isfinite(double x)									{ return __builtin_isfinite(x); }
-int isnormal(double x)									{ return __builtin_isnormal(x); }
-int isgreater(double x, double y)				{ return __builtin_isgreater(x,y); }
-int isgreaterequal(double x, double y)	{ return __builtin_isgreaterequal(x,y); }
-int isless(double x, double y)					{ return __builtin_isless(x,y); }
-int islessequal(double x, double y)			{ return __builtin_islessequal(x,y); }
-int islessgreater(double x, double y)		{ return __builtin_islessgreater(x,y); }
-int isunordered(double x, double y)			{ return __builtin_isunordered(x,y); }
-
-int signbit(double x)										{ return __builtin_signbit(x); }
-int fpclassify(double x)								{ return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, x); }
-
-/* Generator macros for 1-, 2-, and 3-arg functions */
-#ifdef __wasm__
-#define MATH1(name)																										\
-	double name(double x)					 { return __builtin_##name(x); } \
-	float  name##f(float x)				 { return __builtin_##name##f(x); } \
-	long double name##l(long double x) { return (long double)__builtin_##name((double)x); }
-
-#define MATH2(name)																										\
-	double name(double x, double y)				{ return __builtin_##name(x,y); } \
-	float  name##f(float x, float y)			{ return __builtin_##name##f(x,y); } \
-	long double name##l(long double x, long double y) { return (long double)__builtin_##name((double)x,(double)y); }
-
-#define MATH3(name)																										\
-	double name(double x, double y, double z)					 { return __builtin_##name(x,y,z); } \
-	float  name##f(float x, float y, float z)						{ return __builtin_##name##f(x,y,z); } \
-	long double name##l(long double x, long double y, long double z) { return (long double)__builtin_##name((double)x,(double)y,(double)z); }
-#else
-#define MATH1(name)																										\
-	double name(double x)					 { return __builtin_##name(x); } \
-	float  name##f(float x)				 { return __builtin_##name##f(x); } \
-	long double name##l(long double x) { return __builtin_##name##l(x); }
-
-#define MATH2(name)																										\
-	double name(double x, double y)				{ return __builtin_##name(x,y); } \
-	float  name##f(float x, float y)			{ return __builtin_##name##f(x,y); } \
-	long double name##l(long double x, long double y) { return __builtin_##name##l(x,y); }
-
-#define MATH3(name)																										\
-	double name(double x, double y, double z)					 { return __builtin_##name(x,y,z); } \
-	float  name##f(float x, float y, float z)						{ return __builtin_##name##f(x,y,z); } \
-	long double name##l(long double x, long double y, long double z) { return __builtin_##name##l(x,y,z); }
-#endif
-
-/* Basic operations */
-MATH1(fabs);
-MATH1(ceil);
-MATH1(floor);
-MATH1(trunc);
-MATH1(round);
-MATH1(rint);
-MATH1(nearbyint);
-MATH2(copysign);
-MATH2(fdim);
-MATH2(fmax);
-MATH2(fmin);
-MATH3(fma);
-
-double nan(const char *s)			 { return __builtin_nan(s); }
-float  nanf(const char *s)		 { return __builtin_nanf(s); }
-long double nanl(const char *s){ return __builtin_nanl(s); }
-
-long	 lround(double x)			{ return __builtin_lround(x); }
-long long llround(double x) { return __builtin_llround(x); }
-long	 lrint(double x)			{ return __builtin_lrint(x); }
-long long llrint(double x)	{ return __builtin_llrint(x); }
-
-/* Exponential & logarithmic */
-MATH1(exp);
-MATH1(exp2);
-MATH1(expm1);
-MATH1(log);
-MATH1(log2);
-MATH1(log10);
-MATH1(log1p);
-MATH1(logb);
-MATH2(ldexp);
-MATH2(scalbn);
-MATH2(scalbln);
-MATH1(ilogb);
-
-double frexp(double x, int *exp)				 { return __builtin_frexp(x, exp); }
-float  frexpf(float x, int *exp)				 { return __builtin_frexpf(x, exp); }
-long double frexpl(long double x, int *exp){ return __builtin_frexpl(x, exp); }
-
-double modf(double x, double *ip)							{ return __builtin_modf(x, ip); }
-float  modff(float x, float *ip)							{ return __builtin_modff(x, ip); }
-long double modfl(long double x, long double *ip){ return __builtin_modfl(x, ip); }
-
-/* Power & root */
-MATH2(pow);
-MATH1(sqrt);
-MATH1(cbrt);
-MATH2(hypot);
-
-/* Trigonometric */
-MATH1(sin);
-MATH1(cos);
-MATH1(tan);
-MATH1(asin);
-MATH1(acos);
-MATH1(atan);
-MATH2(atan2);
-
-/* Hyperbolic */
-MATH1(sinh);
-MATH1(cosh);
-MATH1(tanh);
-MATH1(asinh);
-MATH1(acosh);
-MATH1(atanh);
-
-/* Error & gamma */
-MATH1(erf);
-MATH1(erfc);
-MATH1(lgamma);
-MATH1(tgamma);
-
-/* Remainder & quotient */
-MATH2(fmod);
-MATH2(remainder);
-
-double remquo(double x, double y, int *q)							{ return __builtin_remquo(x, y, q); }
-float  remquof(float x, float y, int *q)							{ return __builtin_remquof(x, y, q); }
-long double remquol(long double x, long double y, int *q){ return __builtin_remquol(x, y, q); }
-
-/* Next */
-MATH2(nextafter);
-MATH2(nexttoward);
-
-#undef MATH1
-#undef MATH2
-#undef MATH3
-
 double j0(double x) {
 	double ax = fabs(x);
 
 	if (ax < 8.0) {
 		double y = x * x;
 		double n = 57568490574.0 + y * (-13362590354.0 + y * (651619640.7 + y * (-11214424.18 + y * (77392.33017 + y * (-184.9052456)))));
-		double d = 57568490411.0 + y * (1029532985.0 + y * (9494680.718 + y * (59272.64853 + y * (267.8532712 + y * 1.0))));
+		double d = 57568490411.0 + y * (1029532985.0 + y * (9494680.718 + y * (59272.64853 + y * (267.8532712 + y))));
 
 		return n / d;
 	} else {
@@ -249,10 +110,6 @@ double yn(int n, double x) {
 	return by;
 }
 
-extern int signgam;
-
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* MATH_H */

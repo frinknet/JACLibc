@@ -73,11 +73,11 @@ static inline void *memmem(const void *hay, size_t hl, const void *ndl, size_t n
 
 /* — UTF-8–aware String Length & Copy — */
 static inline size_t strlen(const char *s) {
-		const char *p = s;
+	size_t len = 0;
 
-		while (*p) p++;
+	while (s[len]) len++;
 
-		return (size_t)(p - s);
+	return len;
 }
 
 static inline size_t strnlen(const char *s, size_t n) {

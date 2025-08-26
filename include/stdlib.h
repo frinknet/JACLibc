@@ -13,17 +13,37 @@ extern "C" {
 #endif
 
 /* — Configuration — */
-#define JACL_DEFAULT_HEAP_SIZE		(64 * 1024)
-#define JACL_FASTBIN_MAX	64
-#define JACL_ALIGNMENT		8
-#define JACL_FL_INDEX_BITS			4
-#define JACL_FL_INDEX_COUNT			 (1u << JACL_FL_INDEX_BITS)
-#define JACL_ALIGN_UP(sz)		 (((sz) + JACL_ALIGNMENT - 1) & ~(JACL_ALIGNMENT - 1))
+#ifndef JACL_HEAP_SIZE
+#define JACL_HEAP_SIZE (1u<<20)
+#endif
+#ifndef JACL_SMALL_MAX	
+#define JACL_SMALL_MAX 128u
+#endif
+#ifndef JACL_TLS_CHUNK
+#define JACL_TLS_CHUNK 4096u
+#endif
+#ifndef JACL_ALIGNMENT
+#define JACL_ALIGNMENT 8u
+#endif
+
+
+/* — Builtin compatibility — */
+#if defined(__GNUC__) || defined(__clang__)
+	#define __jacl_trap() __builtin_trap()
+#elif defined(_MSC_VER)
+	#include <intrin.h>
+	#define __jacl_trap() __debugbreak()
+#else
+	#define __jacl_trap() (*(volatile int*)0 = 0)
+#endif
+
+
 
 void* malloc(size_t n);
 void free(void* ptr);
 void* calloc(size_t nmemb, size_t size);
 void* realloc(void* ptr, size_t size);
+void *aligned_alloc(size_t a, size_t s);
 
 /* — Integer Conversion & Parsing — */
 static inline int atoi(const char *nptr) { int v=0; sscanf(nptr, "%d", &v); return v; }
@@ -112,24 +132,27 @@ static inline int rand(void) { jacl_seed = jacl_seed * 1103515245u + 12345u; ret
 void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *));
 void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*,const void*));
 
-/* — Aligned Alloc (C11) — */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-/* C11 guarantee of aligned_alloc() */
-static inline void *aligned_alloc(size_t a, size_t s) {
-	(void)a; (void)s;
-	return NULL;
-}
-#elif defined(__has_builtin)
-#if __has_builtin(__builtin_aligned_alloc)
-static inline void *aligned_alloc(size_t a, size_t s) { return __builtin_aligned_alloc(a, s); }
-#endif
-#endif
-
 /* — Control & Env — */
-static inline void abort(void) { __builtin_trap(); }
-static inline void exit(int st)	{ (void)st; abort(); }
-static inline char* getenv(const char* n)	{ return NULL; }
-static inline int		system(const char* c)	{ return -1; }
+static inline void abort(void) {
+	raise(SIGABRT);  // Standard attempt
+	
+	#if defined(__x86_64__) || defined(__i386__)
+			__asm__ volatile ("ud2");  // Invalid opcode
+	#elif defined(__aarch64__) || defined(__arm__)
+			__asm__ volatile ("brk #0");	// Breakpoint
+	#elif defined(__riscv)
+			__asm__ volatile ("ebreak");	// Environment break
+	#elif defined(__wasm__) || defined(__EMSCRIPTEN__)
+			__asm__ volatile ("unreachable");  // WASM trap
+	#else
+			*(volatile int*)0 = 0;	// Universal fallback
+	#endif
+
+	for(;;) {}	// The heat death of the universe
+}
+static inline void exit(int status) { (void)status; abort(); }
+static inline char* getenv(const char* name) { (void)name; return NULL; }
+static inline int system(const char* command) { (void)command; return -1; }
 
 static inline char *strdup(const char *s) {
 	size_t n = strlen(s) + 1;

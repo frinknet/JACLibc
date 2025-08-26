@@ -48,14 +48,13 @@ typedef struct js_t {
 		struct js_t*	parent;  // parent
 } js_t;
 
-
 // Node Lifecycle
 js_t *js_public(void);
 void js_attach(js_t* c, js_t* p);
 void js_detach(js_t* c);
 void js_replace(js_t* o, js_t* n);
 js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen);
-void js_free(js_t* v);
+void js_delete(js_t* v);
 
 // Indexing
 js_t* js_index(js_t* a, int i);
@@ -82,23 +81,24 @@ js_t* js_boolean(js_t* x, bool n);
 
 #ifdef __wasm__
 JS_IMPORT(js)
-extern double	js_code(const char *code, int len, ...);
+extern uintptr_t	js_code(const char *code, int len, ...);
 #define JS_CODE(...) js_code(#__VA_ARGS__, sizeof(#__VA_ARGS__) - 1)
 #else
 #define JS_CODE(...)
-#define JS_NO_EXTERNALS
+#define NO_JS_EXTERNALS
 #endif
 
-#ifndef JS_NO_EXTERNALS
+#ifndef NO_JS_EXTERNALS
 #define JS_EXEC(fn, ...) js_code("[f,...a]=arguments;return this.import(this.export(f)(...a.map(this.export)))", 76, fn, __VA_ARGS__)
-#define JS_NO_NOTIFY 
-#define JS_NO_ASYNCIFY 
+#define NO_JS_NOTIFY
+#define NO_JS_ASYNCIFY
+#define NO_JS_START
 #else
 #define JS_EXEC(fn, ...)
 #endif
 
 // Slep and async
-#ifndef JS_NO_ASYNCIFY
+#ifndef NO_JS_ASYNCIFY
 void js_pause();
 void js_sleep(uint32_t ms);
 void js_resume(void);
@@ -144,6 +144,15 @@ js_t* js_property(js_t* o, const char* key);
 // JS Parser
 js_t* js_parse(const char* s);
 char* js_strigify(js_t* v);
+
+#ifndef NO_JS_START
+JS_EXPORT(_start) void js_start();
+JS_EXPORT(_attach) void js_attach(js_t* c, js_t* p);
+JS_EXPORT(_attach) void js_detach(js_t* c);
+JS_EXPORT(_replace) void js_replace(js_t* o, js_t* n);
+JS_EXPORT(_create) js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen);
+JS_EXPORT(_delete) void js_delete(js_t* x);
+#endif
 
 #ifdef __cplusplus
 }

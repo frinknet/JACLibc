@@ -1,5 +1,7 @@
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef PTHREAD_H
 #define PTHREAD_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,23 +12,32 @@ extern "C" {
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/types.h>
 
 #if defined(_WIN32)
 	#define PTHREAD_WIN32
 	#include <windows.h>
 	#include <process.h>
-
 #elif defined(__wasm__)
 	#define PTHREAD_WASM
-
 #elif defined(__unix__) || defined(__APPLE__)
 	#define PTHREAD_POSIX
 	#include <unistd.h>
-	#include <sys/syscall.h>
-	#include <linux/futex.h>
-	#include <sys/time.h>
+	#include <signal.h>
+	#include <sys/wait.h>
+	#ifdef __linux__
+		#include <sys/mman.h>
+		/* Try to use standard library syscall() if available */
+		#if defined(__GLIBC__) || defined(__has_include)
+			#if defined(__GLIBC__) || __has_include(<sys/syscall.h>)
+				#include <sys/syscall.h>
+				#define HAS_SYSCALL_H 1
+			#endif
+		#endif
+	#endif
 #endif
 
+/* Error codes */
 #ifndef ENOSYS
 	#define ENOSYS 38
 #endif
@@ -36,189 +47,776 @@ extern "C" {
 #ifndef ENOMEM
 	#define ENOMEM 12
 #endif
+#ifndef EINVAL
+	#define EINVAL 22
+#endif
+#ifndef EBUSY
+	#define EBUSY 16
+#endif
+#ifndef ETIMEDOUT
+	#define ETIMEDOUT 110
+#endif
 
-/*―― Types ――*/
-typedef struct { void *handle; uintptr_t id; void *stack; } pthread_t;
-typedef struct { atomic_int state; } pthread_mutex_t;
-typedef struct { atomic_int waiters; atomic_int futex; } pthread_cond_t;
-typedef uintptr_t pthread_key_t;
+/* ================================================================ */
+/* Architecture-independent syscall wrapper                        */
+/* ================================================================ */
 
-/*―― Minimal usleep stub ――*/
-static inline void usleep(unsigned usec) { (void)usec; }
-
-/*―― Threads ――*/
-static inline int pthread_create(pthread_t *t, const void *attr,
-																 void *(*start)(void*), void *arg) {
-		(void)attr;
-#ifdef PTHREAD_WIN32
-		t->handle = (void*)_beginthreadex(NULL, 0,
-				(unsigned(__stdcall*)(void*))start, arg, 0,
-				(unsigned*)&t->id);
-		return t->handle ? 0 : EAGAIN;
-#elif defined(PTHREAD_WASM)
-		return ENOSYS;
+#if defined(__linux__) && defined(HAS_SYSCALL_H)
+	/* Use standard library syscall() when available */
+	#include <sys/syscall.h>
+	extern long syscall(long number, ...);
+	#define pthread_syscall syscall
+#elif defined(__linux__)
+	/* Fallback: use gettid() for thread ID, fork() for thread creation */
+	#define pthread_syscall(...) (-1)
+	#ifdef SYS_gettid
+		extern pid_t gettid(void);
+	#else
+		#define gettid() getpid()
+	#endif
 #else
-		const int SS = 1024*1024;
-		void *stk = malloc(SS);
-		if (!stk) return ENOMEM;
-		long tid = syscall(SYS_clone,
-				CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD,
-				(char*)stk+SS, NULL, NULL, 0);
-		if (tid>0) { t->id=tid; t->handle=NULL; t->stack=stk; return 0; }
-		free(stk);
+	#define pthread_syscall(...) (-1)
+#endif
+
+/* Linux-specific constants (when available) */
+#ifdef __linux__
+	#ifndef CLONE_VM
+		#define CLONE_VM 0x00000100
+	#endif
+	#ifndef CLONE_FS
+		#define CLONE_FS 0x00000200
+	#endif
+	#ifndef CLONE_FILES
+		#define CLONE_FILES 0x00000400
+	#endif
+	#ifndef CLONE_SIGHAND
+		#define CLONE_SIGHAND 0x00000800
+	#endif
+	#ifndef CLONE_THREAD
+		#define CLONE_THREAD 0x00010000
+	#endif
+	
+	#ifndef FUTEX_WAIT
+		#define FUTEX_WAIT 0
+	#endif
+	#ifndef FUTEX_WAKE
+		#define FUTEX_WAKE 1
+	#endif
+#endif
+
+/* ================================================================ */
+/* Types and Constants                                              */
+/* ================================================================ */
+
+#ifdef PTHREAD_WIN32
+typedef struct {
+	HANDLE handle;
+	DWORD id;
+	void *result;
+} pthread_t;
+
+typedef struct {
+	CRITICAL_SECTION cs;
+	int type;
+} pthread_mutex_t;
+
+typedef struct {
+	CONDITION_VARIABLE cv;
+} pthread_cond_t;
+
+typedef DWORD pthread_key_t;
+
+#elif defined(PTHREAD_WASM)
+typedef struct { int dummy; } pthread_t;
+typedef struct { _Atomic int state; int type; } pthread_mutex_t;
+typedef struct { _Atomic int waiters; _Atomic int signals; } pthread_cond_t;
+typedef int pthread_key_t;
+
+#else
+typedef struct {
+	pid_t tid;
+	void *stack;
+	size_t stack_size;
+	void *result;
+	_Atomic int finished;
+	_Atomic int detached;
+	_Atomic int joined;
+} pthread_t;
+
+typedef struct {
+	_Atomic int futex;
+	pid_t owner;
+	int type;
+	int recursive_count;
+} pthread_mutex_t;
+
+typedef struct {
+	_Atomic int futex;
+	_Atomic int waiters;
+} pthread_cond_t;
+
+typedef unsigned int pthread_key_t;
+#endif
+
+/* Thread attributes */
+typedef struct {
+	int detached;
+	size_t stack_size;
+	void *stack_addr;
+} pthread_attr_t;
+
+/* Mutex attributes */
+typedef struct {
+	int type;
+} pthread_mutexattr_t;
+
+/* Condition attributes */
+typedef struct {
+	int dummy;
+} pthread_condattr_t;
+
+/* Once flag */
+typedef struct {
+	_Atomic int done;
+} pthread_once_t;
+#define PTHREAD_ONCE_INIT {ATOMIC_VAR_INIT(0)}
+
+/* Constants */
+#define PTHREAD_CREATE_JOINABLE 0
+#define PTHREAD_CREATE_DETACHED 1
+#define PTHREAD_MUTEX_NORMAL    0
+#define PTHREAD_MUTEX_RECURSIVE 1
+#define PTHREAD_MUTEX_ERRORCHECK 2
+
+/* ================================================================ */
+/* Portable thread creation helpers                                */
+/* ================================================================ */
+
+#ifndef PTHREAD_WIN32
+/* Get current thread ID in a portable way */
+static inline pid_t pthread_gettid(void) {
+#if defined(__linux__) && defined(HAS_SYSCALL_H) && defined(SYS_gettid)
+	return (pid_t)pthread_syscall(SYS_gettid);
+#elif defined(__linux__)
+	return gettid();
+#elif defined(__APPLE__)
+	return (pid_t)pthread_mach_thread_np(pthread_self()); /* Will be defined if needed */
+#else
+	return getpid(); /* Fallback */
+#endif
+}
+
+/* Portable futex operations */
+static inline int pthread_futex_wait(void *addr, int val) {
+#if defined(__linux__) && defined(HAS_SYSCALL_H) && defined(SYS_futex)
+	return pthread_syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL, NULL, 0);
+#else
+	/* Fallback: busy wait with small delay */
+	(void)addr; (void)val;
+	struct timespec ts = {0, 1000000}; /* 1ms */
+	nanosleep(&ts, NULL);
+	return 0;
+#endif
+}
+
+static inline int pthread_futex_wake(void *addr, int num) {
+#if defined(__linux__) && defined(HAS_SYSCALL_H) && defined(SYS_futex)
+	return pthread_syscall(SYS_futex, addr, FUTEX_WAKE, num, NULL, NULL, 0);
+#else
+	/* Fallback: no-op */
+	(void)addr; (void)num;
+	return 0;
+#endif
+}
+
+/* Portable thread creation */
+static inline pid_t pthread_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
+#if defined(__linux__) && defined(HAS_SYSCALL_H) && defined(SYS_clone)
+	/* Use clone() syscall for real threading */
+	return (pid_t)pthread_syscall(SYS_clone,
+		CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD,
+		(char*)stack + stack_size, NULL, NULL, 0);
+#else
+	/* Fallback: use fork() - limited shared memory but portable */
+	(void)stack; (void)stack_size; /* Ignore stack parameters */
+	pid_t pid = fork();
+	if (pid == 0) {
+		/* Child - call thread function and exit */
+		fn(arg);
+		exit(0);
+	}
+	return pid;
+#endif
+}
+#endif
+
+/* ================================================================ */
+/* Thread Functions                                                 */
+/* ================================================================ */
+
+#ifdef PTHREAD_WIN32
+struct win_thread_arg {
+	void *(*start_routine)(void *);
+	void *arg;
+	pthread_t *thread_ptr;
+};
+
+static unsigned __stdcall win_thread_start(void *arg) {
+	struct win_thread_arg *ta = (struct win_thread_arg *)arg;
+	void *result = ta->start_routine(ta->arg);
+	ta->thread_ptr->result = result;
+	free(ta);
+	return (unsigned)(uintptr_t)result;
+}
+
+static inline int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                                void *(*start_routine)(void *), void *arg) {
+	if (!thread || !start_routine) return EINVAL;
+	
+	struct win_thread_arg *ta = malloc(sizeof(*ta));
+	if (!ta) return ENOMEM;
+	
+	ta->start_routine = start_routine;
+	ta->arg = arg;
+	ta->thread_ptr = thread;
+	thread->result = NULL;
+	
+	thread->handle = (HANDLE)_beginthreadex(NULL,
+		attr ? (unsigned)attr->stack_size : 0,
+		win_thread_start, ta, 0, &thread->id);
+	
+	if (!thread->handle) {
+		free(ta);
 		return EAGAIN;
-#endif
+	}
+	return 0;
 }
 
-static inline int pthread_join(pthread_t t, void **res) {
-#ifdef PTHREAD_WIN32
-		WaitForSingleObject((HANDLE)t.handle, INFINITE);
-		if (res) *res = NULL;
-		CloseHandle((HANDLE)t.handle);
-		return 0;
 #elif defined(PTHREAD_WASM)
-		return ENOSYS;
-#else
-		while (syscall(SYS_tgkill, getpid(), t.id, 0) == 0)
-				usleep(1000);
-		free(t.stack);
-		if (res) *res = NULL;
-		return 0;
-#endif
+static inline int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                                void *(*start_routine)(void *), void *arg) {
+	(void)thread; (void)attr; (void)start_routine; (void)arg;
+	return ENOSYS;
 }
 
-static inline void pthread_exit(void *res) {
+#else
+/* POSIX - Portable implementation */
+struct posix_thread_arg {
+	void *(*start_routine)(void *);
+	void *arg;
+	pthread_t *thread_ptr;
+};
+
+/* This function runs in the new thread */
+static int thread_entry(void *arg) {
+	struct posix_thread_arg *ta = (struct posix_thread_arg *)arg;
+	void *result = ta->start_routine(ta->arg);
+	
+	/* Store result and mark as finished */
+	ta->thread_ptr->result = result;
+	atomic_store(&ta->thread_ptr->finished, 1);
+	
+	free(ta);
+	
+	/* Exit thread */
+#if defined(__linux__) && defined(HAS_SYSCALL_H) && defined(SYS_exit)
+	pthread_syscall(SYS_exit, (long)(uintptr_t)result);
+#else
+	exit((int)(uintptr_t)result);
+#endif
+	return 0; /* Never reached */
+}
+
+static inline int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                                void *(*start_routine)(void *), void *arg) {
+	if (!thread || !start_routine) return EINVAL;
+	
+	struct posix_thread_arg *ta = malloc(sizeof(*ta));
+	if (!ta) return ENOMEM;
+	
+	size_t stack_size = (attr && attr->stack_size) ? attr->stack_size : 1024*1024;
+	void *stack = NULL;
+	
+	/* Try to allocate stack */
+#ifdef __linux__
+	stack = mmap(NULL, stack_size, PROT_READ | PROT_WRITE,
+	             MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
+	if (stack == MAP_FAILED) stack = NULL;
+#endif
+	
+	if (!stack) {
+		stack = malloc(stack_size);
+		if (!stack) {
+			free(ta);
+			return ENOMEM;
+		}
+	}
+	
+	ta->start_routine = start_routine;
+	ta->arg = arg;
+	ta->thread_ptr = thread;
+	
+	thread->stack = stack;
+	thread->stack_size = stack_size;
+	thread->result = NULL;
+	atomic_store(&thread->finished, 0);
+	atomic_store(&thread->detached, (attr && attr->detached) ? 1 : 0);
+	atomic_store(&thread->joined, 0);
+	
+	/* Create thread using platform-appropriate method */
+	pid_t tid = pthread_clone_thread(stack, stack_size, thread_entry, ta);
+	
+	if (tid > 0) {
+		thread->tid = tid;
+		return 0;
+	} else {
+#ifdef __linux__
+		if (stack != malloc(stack_size)) {
+			munmap(stack, stack_size);
+		} else
+#endif
+		free(stack);
+		free(ta);
+		return EAGAIN;
+	}
+}
+#endif
+
+/* Common thread functions */
+static inline int pthread_join(pthread_t thread, void **retval) {
 #ifdef PTHREAD_WIN32
-		_endthreadex((uintptr_t)res);
+	DWORD result = WaitForSingleObject(thread.handle, INFINITE);
+	if (result == WAIT_OBJECT_0) {
+		if (retval) *retval = thread.result;
+		CloseHandle(thread.handle);
+		return 0;
+	}
+	return EINVAL;
+
 #elif defined(PTHREAD_WASM)
-		(void)res;
+	(void)thread; (void)retval;
+	return ENOSYS;
+
 #else
-		syscall(SYS_exit, (uintptr_t)res);
+	if (atomic_load(&thread.detached)) return EINVAL;
+	
+	/* Ensure we only join once */
+	int expected = 0;
+	if (!atomic_compare_exchange_strong(&thread.joined, &expected, 1)) {
+		return EINVAL; /* Already joined */
+	}
+	
+	/* Wait for thread to finish */
+	while (!atomic_load(&thread.finished)) {
+		struct timespec ts = {0, 1000000}; /* 1ms */
+		nanosleep(&ts, NULL);
+	}
+	
+	if (retval) *retval = thread.result;
+	
+#ifdef __linux__
+	if (munmap(thread.stack, thread.stack_size) != 0) {
+		free(thread.stack);
+	}
+#else
+	free(thread.stack);
+#endif
+	
+	return 0;
 #endif
 }
 
-/*―― Mutex ――*/
-#define PTHREAD_MUTEX_UNLOCKED 0
-#define PTHREAD_MUTEX_LOCKED	 1
-
-static inline int pthread_mutex_init(pthread_mutex_t *m, const void *_) {
-		(void)_;
-		atomic_store(&m->state, PTHREAD_MUTEX_UNLOCKED);
-		return 0;
-}
-
-static inline int pthread_mutex_lock(pthread_mutex_t *m) {
-		int e = PTHREAD_MUTEX_UNLOCKED;
-		while (!atomic_compare_exchange_weak(&m->state, &e, PTHREAD_MUTEX_LOCKED)) {
-				e = PTHREAD_MUTEX_UNLOCKED;
+static inline void pthread_exit(void *retval) {
 #ifdef PTHREAD_WIN32
-				Sleep(0);
+	_endthreadex((unsigned)(uintptr_t)retval);
+#elif defined(PTHREAD_WASM)
+	(void)retval;
 #else
-				usleep(100);
+#if defined(__linux__) && defined(HAS_SYSCALL_H) && defined(SYS_exit)
+	pthread_syscall(SYS_exit, (long)(uintptr_t)retval);
+#else
+	exit((int)(uintptr_t)retval);
 #endif
+#endif
+}
+
+static inline pthread_t pthread_self(void) {
+	pthread_t self = {0};
+#ifdef PTHREAD_WIN32
+	self.handle = GetCurrentThread();
+	self.id = GetCurrentThreadId();
+#elif defined(PTHREAD_WASM)
+	/* Not meaningful */
+#else
+	self.tid = pthread_gettid();
+#endif
+	return self;
+}
+
+static inline int pthread_equal(pthread_t t1, pthread_t t2) {
+#ifdef PTHREAD_WIN32
+	return t1.id == t2.id;
+#elif defined(PTHREAD_WASM)
+	return 1;
+#else
+	return t1.tid == t2.tid;
+#endif
+}
+
+static inline int pthread_detach(pthread_t thread) {
+#ifdef PTHREAD_WIN32
+	return CloseHandle(thread.handle) ? 0 : EINVAL;
+#elif defined(PTHREAD_WASM)
+	(void)thread;
+	return ENOSYS;
+#else
+	atomic_store(&thread.detached, 1);
+	return 0;
+#endif
+}
+
+/* ================================================================ */
+/* Mutex Functions                                                  */
+/* ================================================================ */
+
+static inline int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) {
+	if (!mutex) return EINVAL;
+
+#ifdef PTHREAD_WIN32
+	InitializeCriticalSection(&mutex->cs);
+	mutex->type = (attr && attr->type) ? attr->type : PTHREAD_MUTEX_NORMAL;
+	return 0;
+#else
+	atomic_store(&mutex->futex, 0);
+	mutex->owner = 0;
+	mutex->type = (attr && attr->type) ? attr->type : PTHREAD_MUTEX_NORMAL;
+	mutex->recursive_count = 0;
+	return 0;
+#endif
+}
+
+static inline int pthread_mutex_lock(pthread_mutex_t *mutex) {
+	if (!mutex) return EINVAL;
+
+#ifdef PTHREAD_WIN32
+	EnterCriticalSection(&mutex->cs);
+	return 0;
+
+#elif defined(PTHREAD_WASM)
+	/* Simple spinlock for WASM */
+	int expected = 0;
+	while (!atomic_compare_exchange_weak(&mutex->futex, &expected, 1)) {
+		expected = 0;
+		/* Busy wait */
+	}
+	return 0;
+
+#else
+	/* POSIX with futex optimization on Linux */
+	if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
+		pid_t current_tid = pthread_gettid();
+		if (mutex->owner == current_tid) {
+			mutex->recursive_count++;
+			return 0;
+		}
+	}
+	
+	/* Try to acquire the lock */
+	int expected = 0;
+	int backoff = 1000; /* nanoseconds */
+	
+	while (!atomic_compare_exchange_weak(&mutex->futex, &expected, 1)) {
+		expected = 0;
+		
+		/* Try futex wait, fall back to sleep */
+		if (pthread_futex_wait(&mutex->futex, 1) != 0) {
+			/* Futex failed, use exponential backoff */
+			struct timespec ts = {0, backoff};
+			nanosleep(&ts, NULL);
+			if (backoff < 1000000) backoff *= 2;
+		}
+	}
+	
+	if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
+		mutex->owner = pthread_gettid();
+		mutex->recursive_count = 1;
+	}
+	
+	return 0;
+#endif
+}
+
+static inline int pthread_mutex_trylock(pthread_mutex_t *mutex) {
+	if (!mutex) return EINVAL;
+
+#ifdef PTHREAD_WIN32
+	return TryEnterCriticalSection(&mutex->cs) ? 0 : EBUSY;
+#else
+	int expected = 0;
+	if (atomic_compare_exchange_strong(&mutex->futex, &expected, 1)) {
+		if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
+			mutex->owner = pthread_gettid();
+			mutex->recursive_count = 1;
 		}
 		return 0;
-}
-
-static inline int pthread_mutex_unlock(pthread_mutex_t *m) {
-		atomic_store(&m->state, PTHREAD_MUTEX_UNLOCKED);
-		return 0;
-}
-
-static inline int pthread_mutex_destroy(pthread_mutex_t *m) {
-		(void)m;
-		return 0;
-}
-
-/*―― Condition ――*/
-static inline int pthread_cond_init(pthread_cond_t *c, const void *_) {
-		(void)_;
-		atomic_store(&c->waiters, 0);
-		atomic_store(&c->futex, 0);
-		return 0;
-}
-
-static inline int pthread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m) {
-#ifdef PTHREAD_WIN32
-		SleepConditionVariableCS((PCONDITION_VARIABLE)c,
-				(LPCRITICAL_SECTION)m, INFINITE);
-		return 0;
-#elif defined(PTHREAD_WASM)
-		return 0;
-#else
-		atomic_fetch_add(&c->waiters, 1);
-		pthread_mutex_unlock(m);
-		syscall(SYS_futex, &c->futex, FUTEX_WAIT, 0, NULL, NULL, 0);
-		pthread_mutex_lock(m);
-		atomic_fetch_sub(&c->waiters, 1);
-		return 0;
+	}
+	return EBUSY;
 #endif
 }
 
-static inline int pthread_cond_signal(pthread_cond_t *c) {
+static inline int pthread_mutex_unlock(pthread_mutex_t *mutex) {
+	if (!mutex) return EINVAL;
+
 #ifdef PTHREAD_WIN32
-		WakeConditionVariable((PCONDITION_VARIABLE)c);
-		return 0;
-#elif defined(PTHREAD_WASM)
-		return 0;
+	LeaveCriticalSection(&mutex->cs);
+	return 0;
 #else
-		if (atomic_load(&c->waiters) > 0) {
-				atomic_store(&c->futex, 1);
-				syscall(SYS_futex, &c->futex, FUTEX_WAKE, 1, NULL, NULL, 0);
+	if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
+		if (mutex->recursive_count > 1) {
+			mutex->recursive_count--;
+			return 0;
 		}
-		return 0;
+		mutex->owner = 0;
+		mutex->recursive_count = 0;
+	}
+	
+	atomic_store(&mutex->futex, 0);
+	
+	/* Wake up waiting threads */
+	pthread_futex_wake(&mutex->futex, 1);
+	
+	return 0;
 #endif
 }
 
-static inline int pthread_cond_broadcast(pthread_cond_t *c) {
+static inline int pthread_mutex_destroy(pthread_mutex_t *mutex) {
+	if (!mutex) return EINVAL;
 #ifdef PTHREAD_WIN32
-		WakeAllConditionVariable((PCONDITION_VARIABLE)c);
-		return 0;
-#elif defined(PTHREAD_WASM)
-		return 0;
+	DeleteCriticalSection(&mutex->cs);
+#endif
+	return 0;
+}
+
+/* ================================================================ */
+/* Condition Variables                                              */
+/* ================================================================ */
+
+static inline int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
+	(void)attr;
+	if (!cond) return EINVAL;
+
+#ifdef PTHREAD_WIN32
+	InitializeConditionVariable(&cond->cv);
+	return 0;
 #else
-		atomic_store(&c->futex, 1);
-		syscall(SYS_futex, &c->futex, FUTEX_WAKE, INT_MAX, NULL, NULL, 0);
-		return 0;
+	atomic_store(&cond->futex, 0);
+	atomic_store(&cond->waiters, 0);
+	return 0;
 #endif
 }
 
-static inline int pthread_cond_destroy(pthread_cond_t *c) {
-		(void)c;
-		return 0;
-}
+static inline int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
+	if (!cond || !mutex) return EINVAL;
 
-/*―― TLS ――*/
-#define MAX_TLS 64
-static atomic_uint tls_ctr = 0;
-static void *tls_arr[MAX_TLS];
-
-static inline int pthread_key_create(pthread_key_t *k, void (*_)(void*)) {
-		(void)_;
-		*k = atomic_fetch_add(&tls_ctr, 1);
-		return (*k < MAX_TLS) ? 0 : EAGAIN;
-}
-
-static inline int pthread_key_delete(pthread_key_t k) {
-		(void)k;
-		return 0;
-}
-
-static inline int pthread_setspecific(pthread_key_t k, const void *v) {
-		if (k < MAX_TLS) {
-				tls_arr[k] = (void*)v;
-				return 0;
+#ifdef PTHREAD_WIN32
+	return SleepConditionVariableCS(&cond->cv, &mutex->cs, INFINITE) ? 0 : EINVAL;
+#elif defined(PTHREAD_WASM)
+	return ENOSYS;
+#else
+	atomic_fetch_add(&cond->waiters, 1);
+	int old_futex = atomic_load(&cond->futex);
+	
+	pthread_mutex_unlock(mutex);
+	
+	/* Wait using futex or polling fallback */
+	if (pthread_futex_wait(&cond->futex, old_futex) != 0) {
+		/* Polling fallback */
+		while (atomic_load(&cond->futex) == old_futex) {
+			struct timespec ts = {0, 1000000}; /* 1ms */
+			nanosleep(&ts, NULL);
 		}
-		return EINVAL;
+	}
+	
+	pthread_mutex_lock(mutex);
+	atomic_fetch_sub(&cond->waiters, 1);
+	return 0;
+#endif
 }
 
-static inline void *pthread_getspecific(pthread_key_t k) {
-		return (k < MAX_TLS) ? tls_arr[k] : NULL;
+static inline int pthread_cond_signal(pthread_cond_t *cond) {
+	if (!cond) return EINVAL;
+
+#ifdef PTHREAD_WIN32
+	WakeConditionVariable(&cond->cv);
+	return 0;
+#elif defined(PTHREAD_WASM)
+	return ENOSYS;
+#else
+	if (atomic_load(&cond->waiters) > 0) {
+		atomic_fetch_add(&cond->futex, 1);
+		pthread_futex_wake(&cond->futex, 1);
+	}
+	return 0;
+#endif
+}
+
+static inline int pthread_cond_broadcast(pthread_cond_t *cond) {
+	if (!cond) return EINVAL;
+
+#ifdef PTHREAD_WIN32
+	WakeAllConditionVariable(&cond->cv);
+	return 0;
+#elif defined(PTHREAD_WASM)
+	return ENOSYS;
+#else
+	int waiters = atomic_load(&cond->waiters);
+	if (waiters > 0) {
+		atomic_fetch_add(&cond->futex, 1);
+		pthread_futex_wake(&cond->futex, waiters);
+	}
+	return 0;
+#endif
+}
+
+static inline int pthread_cond_destroy(pthread_cond_t *cond) {
+	(void)cond;
+	return 0;
+}
+
+/* ================================================================ */
+/* Thread-Local Storage                                             */
+/* ================================================================ */
+
+#define MAX_TLS_KEYS 64
+
+#ifdef PTHREAD_WIN32
+static inline int pthread_key_create(pthread_key_t *key, void (*destructor)(void*)) {
+	(void)destructor;
+	if (!key) return EINVAL;
+	*key = TlsAlloc();
+	return (*key != TLS_OUT_OF_INDEXES) ? 0 : EAGAIN;
+}
+
+static inline int pthread_key_delete(pthread_key_t key) {
+	return TlsFree(key) ? 0 : EINVAL;
+}
+
+static inline int pthread_setspecific(pthread_key_t key, const void *value) {
+	return TlsSetValue(key, (void*)value) ? 0 : EINVAL;
+}
+
+static inline void *pthread_getspecific(pthread_key_t key) {
+	return TlsGetValue(key);
+}
+
+#else
+/* POSIX/WASM - Use __thread when available */
+static _Atomic unsigned int tls_key_counter = ATOMIC_VAR_INIT(0);
+
+#if defined(__GNUC__) || defined(__clang__) || defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+	/* Use C11 _Thread_local or GCC __thread */
+	#ifdef __STDC_NO_THREADS__
+		static __thread void *tls_values[MAX_TLS_KEYS];
+	#else
+		static _Thread_local void *tls_values[MAX_TLS_KEYS];
+	#endif
+#else
+	/* Fallback - not thread-safe */
+	static void *tls_values[MAX_TLS_KEYS];
+#endif
+
+static inline int pthread_key_create(pthread_key_t *key, void (*destructor)(void*)) {
+	(void)destructor; /* Simplified - no destructor support */
+	if (!key) return EINVAL;
+	*key = atomic_fetch_add(&tls_key_counter, 1);
+	return (*key < MAX_TLS_KEYS) ? 0 : EAGAIN;
+}
+
+static inline int pthread_key_delete(pthread_key_t key) {
+	(void)key;
+	return 0;
+}
+
+static inline int pthread_setspecific(pthread_key_t key, const void *value) {
+	if (key >= MAX_TLS_KEYS) return EINVAL;
+	tls_values[key] = (void*)value;
+	return 0;
+}
+
+static inline void *pthread_getspecific(pthread_key_t key) {
+	return (key < MAX_TLS_KEYS) ? tls_values[key] : NULL;
+}
+#endif
+
+/* ================================================================ */
+/* Once Functions and Attributes                                   */
+/* ================================================================ */
+
+static inline int pthread_once(pthread_once_t *once_control, void (*init_routine)(void)) {
+	if (!once_control || !init_routine) return EINVAL;
+	
+	int expected = 0;
+	if (atomic_compare_exchange_strong(&once_control->done, &expected, 1)) {
+		init_routine();
+	}
+	return 0;
+}
+
+/* Attribute functions */
+static inline int pthread_attr_init(pthread_attr_t *attr) {
+	if (!attr) return EINVAL;
+	attr->detached = 0;
+	attr->stack_size = 0;
+	attr->stack_addr = NULL;
+	return 0;
+}
+
+static inline int pthread_attr_destroy(pthread_attr_t *attr) {
+	(void)attr;
+	return 0;
+}
+
+static inline int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate) {
+	if (!attr) return EINVAL;
+	attr->detached = (detachstate == PTHREAD_CREATE_DETACHED);
+	return 0;
+}
+
+static inline int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize) {
+	if (!attr) return EINVAL;
+	attr->stack_size = stacksize;
+	return 0;
+}
+
+static inline int pthread_mutexattr_init(pthread_mutexattr_t *attr) {
+	if (!attr) return EINVAL;
+	attr->type = PTHREAD_MUTEX_NORMAL;
+	return 0;
+}
+
+static inline int pthread_mutexattr_destroy(pthread_mutexattr_t *attr) {
+	(void)attr;
+	return 0;
+}
+
+static inline int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type) {
+	if (!attr) return EINVAL;
+	attr->type = type;
+	return 0;
+}
+
+static inline int pthread_condattr_init(pthread_condattr_t *attr) {
+	if (!attr) return EINVAL;
+	attr->dummy = 0;
+	return 0;
+}
+
+static inline int pthread_condattr_destroy(pthread_condattr_t *attr) {
+	(void)attr;
+	return 0;
 }
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* PTHREAD_H */
-

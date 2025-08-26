@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-/* Ensure C99 complex support */
+/* C99 complex support */
 #ifndef complex
 # define complex _Complex
 #endif
@@ -16,79 +16,174 @@ extern "C" {
 # define I _Complex_I
 #endif
 
-/* Magnitude */
-static inline float       cabsf(float complex       z) { return __builtin_cabsf(z); }
-static inline double      cabs (double complex      z) { return __builtin_cabs (z); }
-static inline long double cabsl(long double complex z) { return __builtin_cabsl(z); }
+/* Macro: emits 3 type-specialized functions for C17 complex API */
+#define __jacl_cmath(F) \
+	__jacl_##F(float,				f) \
+	__jacl_##F(double,			) \
+	__jacl_##F(long double, l)
 
-/* Phase */
-static inline float complex cargf(float complex       z) { return __builtin_cargf(z); }
-static inline double complex carg (double complex      z) { return __builtin_carg (z); }
-static inline long double complex cargl(long double complex z) { return __builtin_cargl(z); }
+/* ---------- Portable implementations (no builtins) ---------- */
 
-/* Trigonometric */
-static inline float complex ccosf(float complex       z) { return __builtin_ccosf(z); }
-static inline double complex ccos (double complex      z) { return __builtin_ccos (z); }
-static inline long double complex ccosl(long double complex z) { return __builtin_ccosl(z); }
+/* Magnitude: sqrt(creal(z)^2 + cimag(z)^2) */
+#define __jacl_cabs(type, suf) \
+	static inline type cabs##suf(type complex z) { \
+		type r = (type)creal##suf(z); \
+		type i = (type)cimag##suf(z); \
+		return hypot##suf(r, i); \
+	}
 
-static inline float complex csinf(float complex       z) { return __builtin_csinf(z); }
-static inline double complex csin (double complex      z) { return __builtin_csin (z); }
-static inline long double complex csinl(long double complex z) { return __builtin_csinl(z); }
+/* Phase: atan2(cimag(z), creal(z)) */
+#define __jacl_carg(type, suf) \
+	static inline type carg##suf(type complex z) { \
+		type r = (type)creal##suf(z); \
+		type i = (type)cimag##suf(z); \
+		return atan2##suf(i, r); \
+	}
 
-static inline float complex ctanf(float complex       z) { return __builtin_ctanf(z); }
-static inline double complex ctan (double complex      z) { return __builtin_ctan (z); }
-static inline long double complex ctanl(long double complex z) { return __builtin_ctanl(z); }
+/* Trigonometric: ccos(z) = cos(creal(z)) * cosh(cimag(z)) - I * sin(creal(z)) * sinh(cimag(z)) */
+#define __jacl_ccos(type, suf) \
+	static inline type complex ccos##suf(type complex z) { \
+		type r = (type)creal##suf(z); \
+		type i = (type)cimag##suf(z); \
+		return cos##suf(r) * cosh##suf(i) - I * (sin##suf(r) * sinh##suf(i)); \
+	}
 
-/* Inverse trigonometric */
-static inline float complex cacosf(float complex       z) { return __builtin_cacosf(z); }
-static inline double complex cacos (double complex      z) { return __builtin_cacos (z); }
-static inline long double complex cacosl(long double complex z) { return __builtin_cacosl(z); }
+/* csin(z) = sin(creal(z)) * cosh(cimag(z)) + I * cos(creal(z)) * sinh(cimag(z)) */
+#define __jacl_csin(type, suf) \
+	static inline type complex csin##suf(type complex z) { \
+		type r = (type)creal##suf(z); \
+		type i = (type)cimag##suf(z); \
+		return sin##suf(r) * cosh##suf(i) + I * (cos##suf(r) * sinh##suf(i)); \
+	}
 
-static inline float complex casinf(float complex       z) { return __builtin_casinf(z); }
-static inline double complex casin (double complex      z) { return __builtin_casin (z); }
-static inline long double complex casinl(long double complex z) { return __builtin_casinl(z); }
+/* ctan(z) = csin(z) / ccos(z) */
+#define __jacl_ctan(type, suf) \
+	static inline type complex ctan##suf(type complex z) { \
+		type complex c = ccos##suf(z); \
+		if (c == (type complex)0) return (type complex)(0.0 / 0.0); /* NaN */ \
+		return csin##suf(z) / c; \
+	}
 
-static inline float complex catanf(float complex       z) { return __builtin_catanf(z); }
-static inline double complex catan (double complex      z) { return __builtin_catan (z); }
-static inline long double complex catanl(long double complex z) { return __builtin_catanl(z); }
+/* Inverse Trigonometric: cacos(z) = -I * clog(z + I * csqrt(1 - z*z)) */
+#define __jacl_cacos(type, suf) \
+	static inline type complex cacos##suf(type complex z) { \
+		type complex temp = csqrt##suf((type complex)1 - z * z); \
+		return -I * clog##suf(z + I * temp); \
+	}
 
-/* Hyperbolic */
-static inline float complex ccoshf(float complex       z) { return __builtin_ccoshf(z); }
-static inline double complex ccosh (double complex      z) { return __builtin_ccosh (z); }
-static inline long double complex ccoshl(long double complex z) { return __builtin_ccoshl(z); }
+/* casin(z) = -I * clog(I * z + csqrt(1 - z*z)) */
+#define __jacl_casin(type, suf) \
+	static inline type complex casin##suf(type complex z) { \
+		type complex temp = csqrt##suf((type complex)1 - z * z); \
+		return -I * clog##suf(I * z + temp); \
+	}
 
-static inline float complex csinhf(float complex       z) { return __builtin_csinhf(z); }
-static inline double complex csinh (double complex      z) { return __builtin_csinh (z); }
-static inline long double complex csinhl(long double complex z) { return __builtin_csinhl(z); }
+/* catan(z) = (I / 2) * clog((I + z) / (I - z)) */
+#define __jacl_catan(type, suf) \
+	static inline type complex catan##suf(type complex z) { \
+		return (I / (type)2) * clog##suf((I + z) / (I - z)); \
+	}
 
-static inline float complex ctanhf(float complex       z) { return __builtin_ctanhf(z); }
-static inline double complex ctanh (double complex      z) { return __builtin_ctanh (z); }
-static inline long double complex ctanhl(long double complex z) { return __builtin_ctanhl(z); }
+/* Hyperbolic: ccosh(z) = cosh(creal(z)) * cos(cimag(z)) + I * sinh(creal(z)) * sin(cimag(z)) */
+#define __jacl_ccosh(type, suf) \
+	static inline type complex ccosh##suf(type complex z) { \
+		type r = (type)creal##suf(z); \
+		type i = (type)cimag##suf(z); \
+		return cosh##suf(r) * cos##suf(i) + I * (sinh##suf(r) * sin##suf(i)); \
+	}
 
-/* Exponential, logarithm, power, root, projection */
-static inline float complex cexpf (float complex       z) { return __builtin_cexpf (z); }
-static inline double complex cexp  (double complex      z) { return __builtin_cexp  (z); }
-static inline long double complex cexpl (long double complex z) { return __builtin_cexpl(z); }
+/* csinh(z) = sinh(creal(z)) * cos(cimag(z)) + I * cosh(creal(z)) * sin(cimag(z)) */
+#define __jacl_csinh(type, suf) \
+	static inline type complex csinh##suf(type complex z) { \
+		type r = (type)creal##suf(z); \
+		type i = (type)cimag##suf(z); \
+		return sinh##suf(r) * cos##suf(i) + I * (cosh##suf(r) * sin##suf(i)); \
+	}
 
-static inline float complex clogf (float complex       z) { return __builtin_clogf (z); }
-static inline double complex clog  (double complex      z) { return __builtin_clog  (z); }
-static inline long double complex clogl (long double complex z) { return __builtin_clogl(z); }
+/* ctanh(z) = csinh(z) / ccosh(z) */
+#define __jacl_ctanh(type, suf) \
+	static inline type complex ctanh##suf(type complex z) { \
+		type complex c = ccosh##suf(z); \
+		if (c == (type complex)0) return (type complex)(0.0 / 0.0); /* NaN */ \
+		return csinh##suf(z) / c; \
+	}
 
-static inline float complex cpowf (float complex       z, float complex       w) { return __builtin_cpowf (z, w); }
-static inline double complex cpow  (double complex      z, double complex      w) { return __builtin_cpow  (z, w); }
-static inline long double complex cpowl (long double complex z, long double complex w) { return __builtin_cpowl(z, w); }
+/* Inverse Hyperbolic: cacosh(z) = clog(z + csqrt(z+1) * csqrt(z-1)) */
+#define __jacl_cacosh(type, suf) \
+	static inline type complex cacosh##suf(type complex z) { \
+		return clog##suf(z + csqrt##suf(z + (type complex)1) * csqrt##suf(z - (type complex)1)); \
+	}
 
-static inline float complex csqrtf(float complex       z) { return __builtin_csqrtf(z); }
-static inline double complex csqrt (double complex      z) { return __builtin_csqrt (z); }
-static inline long double complex csqrtl(long double complex z) { return __builtin_csqrtl(z); }
+/* casinh(z) = clog(z + csqrt(z*z + 1)) */
+#define __jacl_casinh(type, suf) \
+	static inline type complex casinh##suf(type complex z) { \
+		return clog##suf(z + csqrt##suf(z * z + (type complex)1)); \
+	}
 
-static inline float complex cprojf(float complex       z) { return __builtin_cprojf(z); }
-static inline double complex cproj  (double complex      z) { return __builtin_cproj  (z); }
-static inline long double complex cprojl (long double complex z) { return __builtin_cprojl(z); }
+/* catanh(z) = 0.5 * clog((1 + z) / (1 - z)) */
+#define __jacl_catanh(type, suf) \
+	static inline type complex catanh##suf(type complex z) { \
+		return (type complex)0.5 * clog##suf(((type complex)1 + z) / ((type complex)1 - z)); \
+	}
+
+/* Exponential: cexp(z) = exp(creal(z)) * (cos(cimag(z)) + I * sin(cimag(z))) */
+#define __jacl_cexp(type, suf) \
+	static inline type complex cexp##suf(type complex z) { \
+		type r = (type)creal##suf(z); \
+		type i = (type)cimag##suf(z); \
+		type e = exp##suf(r); \
+		return e * cos##suf(i) + I * (e * sin##suf(i)); \
+	}
+
+/* Logarithm: clog(z) = log(cabs(z)) + I * carg(z) */
+#define __jacl_clog(type, suf) \
+	static inline type complex clog##suf(type complex z) { \
+		return log##suf(cabs##suf(z)) + I * carg##suf(z); \
+	}
+
+/* Power: cpow(z, w) = cexp(w * clog(z)) */
+#define __jacl_cpow(type, suf) \
+	static inline type complex cpow##suf(type complex z, type complex w) { \
+		return cexp##suf(w * clog##suf(z)); \
+	}
+
+/* Square root: csqrt(z) = cexp(0.5 * clog(z)) (principal branch) */
+#define __jacl_csqrt(type, suf) \
+	static inline type complex csqrt##suf(type complex z) { \
+		return cexp##suf((type complex)0.5 * clog##suf(z)); \
+	}
+
+/* Projection: cproj(z) = z if finite, else infinite projection on Riemann sphere */
+#define __jacl_cproj(type, suf) \
+	static inline type complex cproj##suf(type complex z) { \
+		if (isfinite(creal##suf(z)) && isfinite(cimag##suf(z))) return z; \
+		if (isnan(creal##suf(z)) || isnan(cimag##suf(z))) return z; \
+		return (type complex)INFINITY + (type)0.0 * cimag##suf(z); \
+	}
+
+/* ---------- Emit all functions ---------- */
+__jacl_cmath(cabs)
+__jacl_cmath(carg)
+__jacl_cmath(ccos)
+__jacl_cmath(csin)
+__jacl_cmath(ctan)
+__jacl_cmath(cacos)
+__jacl_cmath(casin)
+__jacl_cmath(catan)
+__jacl_cmath(ccosh)
+__jacl_cmath(csinh)
+__jacl_cmath(ctanh)
+__jacl_cmath(cacosh)
+__jacl_cmath(casinh)
+__jacl_cmath(catanh)
+__jacl_cmath(cexp)
+__jacl_cmath(clog)
+__jacl_cmath(cpow)
+__jacl_cmath(csqrt)
+__jacl_cmath(cproj)
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* COMPLEX_H */
-

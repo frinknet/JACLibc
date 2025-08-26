@@ -1,4 +1,4 @@
-// (c) 2025 FRINKnet & Friends - MIT licence
+// (c) 2025 FRINKnet & Friends - MIT licence #ifndef JSIO_C
 #ifndef JSIO_C
 #define JSIO_C
 
@@ -10,10 +10,19 @@ extern "C" {
 #endif
 
 // Public Root
-static js_t* JS_PUBLIC;
+static js_t* JS_PUBLIC_ROOT;
+
+#ifndef NO_JS_EXTERNALS
+#define JS_EXEC(fn, ...) js_code("[f,...a]=arguments;return this.import(this.export(f)(...a.map(this.export)))", 76, fn, __VA_ARGS__)
+#define NO_JS_NOTIFY 
+#define NO_JS_ASYNCIFY 
+#define NO_JS_START 
+#else
+#define JS_EXEC(fn, ...)
+#endif
 
 // Notify
-#ifdef JS_NO_NOTIFY
+#ifdef NO_JS_NOTIFY
 static void js_notify(js_t* v) {}
 #else
 static void js_notify(js_t* v) {
@@ -23,12 +32,10 @@ static void js_notify(js_t* v) {
 }
 #endif
 
-void main();
+int main(void);
 
 // Node Lifecycle
-JS_EXPORT("nodeRoot")
-js_t *js_public(void) { return JS_PUBLIC; }
-JS_EXPORT(nodeAttach)
+js_t *js_public(void) { return JS_PUBLIC_ROOT; }
 void js_attach(js_t* c, js_t* p) {
 	if (!c || !p) return;
 
@@ -48,7 +55,6 @@ void js_attach(js_t* c, js_t* p) {
 
 	js_notify(c);
 }
-JS_EXPORT(nodeDetatch)
 void js_detach(js_t* c) {
 	if (!c || !c->parent) return;
 
@@ -70,7 +76,6 @@ void js_detach(js_t* c) {
 
 	js_notify(curr ? (prev? prev : c->parent) : c->parent);
 }
-JS_EXPORT(nodeReplace)
 void js_replace(js_t* o, js_t* n) {
 	if (!o || !n) return;
 
@@ -94,9 +99,8 @@ void js_replace(js_t* o, js_t* n) {
 	o->parent = NULL;
 
 	js_notify(n);
-	js_free(o);
+	js_delete(o);
 }
-JS_EXPORT(nodeCreate)
 js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen) {
 	size_t len = sizeof(js_t) + klen + (type == JS_TYPE_STRING ? vlen + 1 : 0);
 	js_t* x	= (js_t*)malloc(len);
@@ -106,16 +110,15 @@ js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen) {
 
 	return x;
 }
-JS_EXPORT(nodeDestroy)
-void js_free(js_t* x) {
-	if (!x && x != JS_PUBLIC) return;
+void js_delete(js_t* x) {
+	if (!x && x != JS_PUBLIC_ROOT) return;
 
 	js_detach(x);
 
 	for (js_t* c = x->first, *t; c; c = t) {
 		t = c->next;
 
-		js_free(c);
+		js_delete(c);
 	}
 
 	free(x->key);
@@ -188,7 +191,7 @@ bool js_includes(js_t* r, js_t* v) {
 	return false;
 }
 bool js_ispublic(js_t* v) {
-	return js_includes(JS_PUBLIC, v);
+	return js_includes(JS_PUBLIC_ROOT, v);
 }
 
 // Setters for key and value
@@ -292,20 +295,21 @@ static js_t* __jacl_js_async;
 __attribute__((used))
 static double __jacl_js_init;
 
-JS_EXPORT(_start)
-void _start(){
+#ifdef __wasm__
+void js_start(){
 	if (__jacl_js_init) return;
 	
-	#ifndef JS_NO_EXTERNALS
+	#ifndef NO_JS_IO
 	__jacl_js_init = JS_CODE(
 		const
 		A={
 			has:(o,k)=>!!S(o,k),
 			get:(o,k)=>X(S(o,k)),
 			getPrototypeOf:o=>('a'===RT(o)?Array:Object).prototype,
-			deleteProperty:(o,k)=>!this.exports.nodeDestroy(S(o,k)),
+			deleteProperty:(o,k)=>!JS._delete(S(o,k)),
 			set:(o,k,v)=>!!W(o,k,v)
 		},
+		B=this.exports,
 		D=(x=>m =>x.decode(m))(new TextDecoder),
 		E=(x=>m =>x.encode(m))(new TextEncoder),
 		F=[],
@@ -321,14 +325,14 @@ void _start(){
 			const
 			o=p?S(p,k):0,
 			t=V(v),
-			n=this.exports.nodeCreate(t,k.length,v.length);
+			n=G._create(t,k.length,v.length);
 			if(p && k)WK(x,k);
 			if(t==='c')WC(x,v);
 			else if(t==='d')WD(x,v);
 			else if(t==='b')WB(x,v);
 			else if(t==='f')WF(x,v);
 			else for(let x in v)W(n,t==='e'?x:0,v[x]); 
-			o?this.exports.nodeReplace(o,n):this.exports.nodeAttach(n,p);
+			o?JS._replace(o,n):JS._attach(n,p);
 		},
 		X=p=>{switch(T(p)){
 			case'0':return null;
@@ -342,6 +346,11 @@ void _start(){
 		}},
 		Y=p=>R32(p+28),
 		Z=p=>R32(p+24),
+		JS=Object.keys(B).filter(x=>x[0]==='_').reduce((o,f)=>{
+			o[f]=B[f].bind(B);
+			delete this.exports[f];
+			return o;
+		}, {}),
 		R8=p=>M.getUint8(p),
 		W8=(p,v)=>M.setUint8(p,v),
 		R32=p=>M.getUint32(p),
@@ -362,7 +371,7 @@ void _start(){
 		WF=(p,v)=>WD(p, F.includes(v)?F.indexOf(v):F.push(v)-1),
 		RG=p=>new Proxy(p,A);
 	
-		this.data=X(this.exports.nodeRoot());
+		this.data=X(JS._root());
 		this.export=X;
 		this.import=v=>W(0,0,v);
 		this.listen=(pt,fn)=>H.push([new RegExp(pt),fn]);
@@ -370,7 +379,7 @@ void _start(){
 	);
 	#endif
 	
-	#ifndef JS_NO_ASYNCIFY
+	#ifndef NO_JS_ASYNCIFY
 	static jmp_buf __jacl_async_env;
 	__jacl_js_async = (js_t*)JS_CODE(
 		let SP = 0,SM;
@@ -387,9 +396,10 @@ void _start(){
 	//call main
 	main();
 }
+#endif
 
 // Slep and async
-#ifndef JS_NO_ASYNCIFY
+#ifndef NO_JS_ASYNCIFY
 #define JS_PAUSE JS_EXEC(js_property(__jacl_js_async, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
 JS_EXPORT(sleep)
 void js_sleep(uint32_t ms) { 
