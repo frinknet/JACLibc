@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <limits.h>
+#include <signal.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,7 +39,6 @@ extern "C" {
 #endif
 
 
-
 void* malloc(size_t n);
 void free(void* ptr);
 void* calloc(size_t nmemb, size_t size);
@@ -51,36 +51,93 @@ static inline long atol(const char *nptr) { long v=0; sscanf(nptr, "%ld", &v); r
 static inline long long atoll(const char *nptr) { long long v=0; sscanf(nptr, "%lld", &v); return v; }
 static inline double atof(const char *nptr) { double v=0; sscanf(nptr, "%lg", &v); return v; }
 static inline long strtol(const char *nptr, char **endptr, int base) {
-	long v = 0; int n = 0;
-
-	if (base == 10) sscanf(nptr, "%ld%n", &v, &n);
-	if (endptr) *endptr = (char*)&nptr[n];
-
-	return v;
+		if (!nptr) {
+				if (endptr) *endptr = (char*)nptr;
+				return 0;
+		}
+		
+		const char *start = nptr;
+		
+		// Skip whitespace
+		while (*nptr == ' ' || *nptr == '\t' || *nptr == '\n') nptr++;
+		
+		// Handle sign
+		int sign = 1;
+		if (*nptr == '-') {
+				sign = -1;
+				nptr++;
+		} else if (*nptr == '+') {
+				nptr++;
+		}
+		
+		// Validate base
+		if (base < 0 || base == 1 || base > 36) {
+				if (endptr) *endptr = (char*)start;
+				return 0;
+		}
+		
+		// ONLY auto-detect if base == 0
+		if (base == 0) {
+				if (*nptr == '0') {
+						if (*(nptr + 1) == 'x' || *(nptr + 1) == 'X') {
+								base = 16;
+								nptr += 2;
+						} else {
+								base = 8;
+						}
+				} else {
+						base = 10;
+				}
+		} else if (base == 16) {
+				// Handle 0x prefix for explicit base 16
+				if (*nptr == '0' && (*(nptr + 1) == 'x' || *(nptr + 1) == 'X')) {
+						nptr += 2;
+				}
+		}
+		// For base 10, don't do any prefix detection!
+		
+		long result = 0;
+		int digits_found = 0;
+		
+		while (*nptr) {
+				int digit = -1;
+				char c = *nptr;
+				
+				if (c >= '0' && c <= '9') {
+						digit = c - '0';
+				} else if (c >= 'A' && c <= 'Z') {
+						digit = c - 'A' + 10;
+				} else if (c >= 'a' && c <= 'z') {
+						digit = c - 'a' + 10;
+				}
+				
+				if (digit < 0 || digit >= base) break;
+				
+				result = result * base + digit;
+				digits_found++;
+				nptr++;
+		}
+		
+		if (endptr) {
+				*endptr = (char*)(digits_found > 0 ? nptr : start);
+		}
+		
+		return digits_found > 0 ? sign * result : 0;
 }
+
 static inline unsigned long strtoul(const char *nptr, char **endptr, int base) {
-	unsigned long v = 0; int n = 0;
-
-	if (base == 10) sscanf(nptr, "%lu%n", &v, &n);
-	if (endptr) *endptr = (char*)&nptr[n];
-
-	return v;
+		// Same logic as strtol but return unsigned and handle sign differently
+		long result = strtol(nptr, endptr, base);
+		return (unsigned long)result;
 }
 static inline long long strtoll(const char *nptr, char **endptr, int base) {
-	long long v = 0; int n = 0;
-
-	if (base == 10) sscanf(nptr, "%lld%n", &v, &n);
-	if (endptr) *endptr = (char*)&nptr[n];
-
-	return v;
+		// Same parsing logic, just return long long
+		long result = strtol(nptr, endptr, base);
+		return (long long)result;
 }
 static inline unsigned long long strtoull(const char *nptr, char **endptr, int base) {
-	unsigned long long v = 0; int n = 0;
-
-	if (base == 10) sscanf(nptr, "%llu%n", &v, &n);
-	if (endptr) *endptr = (char*)&nptr[n];
-
-	return v;
+		long result = strtol(nptr, endptr, base);
+		return (unsigned long long)result;
 }
 static inline float strtof(const char *nptr, char **endptr) {
 	float v=0; int n=0;
@@ -123,10 +180,15 @@ static inline ldiv_t	ldiv	(long n, long d)		 { return (ldiv_t){ n/d, n%d }; }
 static inline lldiv_t lldiv (long long n, long long d){ return (lldiv_t){ n/d, n%d }; }
 
 /* — Pseudo-Random — */
-static unsigned jacl_seed = 1;
+#define RAND_MAX 0x7FFF  // Standard value (32767)
 
-static inline void srand(unsigned s) { jacl_seed = s ? s : 1; }
-static inline int rand(void) { jacl_seed = jacl_seed * 1103515245u + 12345u; return (int)((jacl_seed >> 16) & 0x7FFF); }
+static unsigned __jacl_seed = 1;
+
+static inline void srand(unsigned s) { __jacl_seed = s ? s : 1; }
+static inline int rand(void) { 
+	__jacl_seed = __jacl_seed * 1103515245u + 12345u; 
+	return (int)((__jacl_seed >> 16) & RAND_MAX);
+}
 
 /* — Sorting & Searching — */
 void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *));

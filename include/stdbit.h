@@ -32,101 +32,35 @@ extern "C" {
 #  include <intrin.h>
 #endif
 
-static inline int __jacl_clz32(uint32_t x)
-{
-	if (!x) return 32;
-#if defined(__x86_64__) || defined(__i386__)
-	unsigned long idx;
-	__asm__("bsr %1,%0" : "=&r"(idx) : "r"(x));
-	return 31 - (int)idx;
-#elif defined(__aarch64__) || defined(__arm__)
-	unsigned r;
-	__asm__("clz %w0,%w1" : "=r"(r) : "r"(x));
-	return (int)r;
-#elif defined(__riscv)
-	unsigned r;
-	__asm__("clz %0,%1" : "=r"(r) : "r"(x));
-	return (int)r;
-#elif defined(__wasm__)
-	unsigned r;
-	__asm__("i32.clz %0,%1" : "=r"(r) : "r"(x));
-	return (int)r;
-#elif __JACL_HAVE_BUILTIN_CLZ
-	return __builtin_clz(x);
-#elif defined(_MSC_VER)
-	unsigned long idx;
-	_BitScanReverse(&idx,x);
-	return 31 - (int)idx;
-#else
-	int n=0;
-	if (x<=0x0000FFFFu){n+=16; x<<=16;}
-	if (x<=0x00FFFFFFu){n+= 8; x<<= 8;}
-	if (x<=0x0FFFFFFFu){n+= 4; x<<= 4;}
-	if (x<=0x3FFFFFFFu){n+= 2; x<<= 2;}
-	if (x<=0x7FFFFFFFu){n+= 1;}
-	return n;
-#endif
+
+static inline int __jacl_ctz32(uint32_t x) {
+		if (!x) return 32;
+		static const int table[32] = {
+				0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
+				31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
+		};
+		return table[((x & -x) * 0x077CB531U) >> 27];
 }
 
-static inline int __jacl_ctz32(uint32_t x)
-{
-	if (!x) return 32;
-#if defined(__x86_64__) || defined(__i386__)
-	unsigned long idx;
-	__asm__("bsf %1,%0" : "=&r"(idx) : "r"(x));
-	return (int)idx;
-#elif defined(__aarch64__) || defined(__arm__)
-	unsigned r;
-	__asm__("rbit %w0,%w1\n\tclz %w0,%w0" : "=&r"(r) : "r"(x));
-	return (int)r;
-#elif defined(__riscv)
-	unsigned r;
-	__asm__("ctz %0,%1" : "=r"(r) : "r"(x));
-	return (int)r;
-#elif defined(__wasm__)
-	unsigned r;
-	__asm__("i32.ctz %0,%1" : "=r"(r) : "r"(x));
-	return (int)r;
-#elif __JACL_HAVE_BUILTIN_CTZ
-	return __builtin_ctz(x);
-#elif defined(_MSC_VER)
-	unsigned long idx;
-	_BitScanForward(&idx,x);
-	return (int)idx;
-#else
-	int n=0;
-	if ((x&0x0000FFFFu)==0){n+=16; x>>=16;}
-	if ((x&0x000000FFu)==0){n+= 8; x>>= 8;}
-	if ((x&0x0000000Fu)==0){n+= 4; x>>= 4;}
-	if ((x&0x00000003u)==0){n+= 2; x>>= 2;}
-	if ((x&0x00000001u)==0){n+= 1;}
-	return n;
-#endif
+static inline int __jacl_clz32(uint32_t x) {
+		if (!x) return 32;
+		static const int table[32] = {
+				31, 22, 30, 21, 18, 10, 29, 2, 20, 17, 15, 13, 9, 6, 28, 1,
+				23, 19, 11, 3, 16, 14, 7, 24, 12, 4, 8, 25, 5, 26, 27, 0
+		};
+		x |= x >> 1;	x |= x >> 2;	x |= x >> 4;
+		x |= x >> 8;	x |= x >> 16;
+		return table[(x * 0x07C4ACDDU) >> 27];
 }
 
-static inline int __jacl_pop32(uint32_t x)
-{
-#if defined(__x86_64__) || defined(__i386__)
-	unsigned r;
-	__asm__("popcnt %1,%0" : "=r"(r) : "r"(x));
-	return (int)r;
-#elif defined(__riscv)
-	unsigned r;
-	__asm__("cpop %0,%1" : "=r"(r) : "r"(x));
-	return (int)r;
-#elif defined(__wasm__)
-	unsigned r;
-	__asm__("i32.popcnt %0,%1" : "=r"(r) : "r"(x));
-	return (int)r;
-#elif __JACL_HAVE_BUILTIN_POP
-	return __builtin_popcount(x);
-#else
-	/* Brian Kernighan */
-	x = x - ((x>>1)&0x55555555u);
-	x = (x&0x33333333u) + ((x>>2)&0x33333333u);
-	x = (x + (x>>4)) & 0x0F0F0F0Fu;
-	return (x*0x01010101u)>>24;
-#endif
+static inline int __jacl_pop32(uint32_t x) {
+	x = x - ((x >> 1) & 0x55555555u);
+	x = (x & 0x33333333u) + ((x >> 2) & 0x33333333u);
+	x = (x + (x >> 4)) & 0x0F0F0F0Fu;
+	x = x + (x >> 8);
+	x = x + (x >> 16);
+
+	return x & 0x3Fu;
 }
 
 #define __jacl_bitgen(width,type,suf)																						\

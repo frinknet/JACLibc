@@ -17,12 +17,10 @@ extern "C" {
 #endif
 
 /* Wide character type (required by C standard) */
-#ifndef __cplusplus
-	#if defined(_WIN32)
-		typedef unsigned short wchar_t;  /* Windows uses 16-bit wchar_t */
-	#else
-		typedef unsigned int wchar_t;		 /* Unix-like systems use 32-bit */
-	#endif
+#ifdef __WINT_TYPE__
+typedef __WINT_TYPE__ wint_t;
+#else
+typedef unsigned int wint_t;
 #endif
 
 /* NULL pointer constant */

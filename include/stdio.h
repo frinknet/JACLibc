@@ -6,11 +6,11 @@
 #include <stdarg.h>
 #include <wchar.h>
 #include <assert.h>
-#include <errno.h>	// For errno in implementations
-#include <limits.h> // For BUFSIZ, etc.
-#include <stdint.h> // For uintptr_t in %p
+#include <errno.h>
+#include <limits.h>
+#include <stdint.h>
+#include <sys/types.h>
 
-// — Macros (C17 7.21.1) —
 #ifndef BUFSIZ
 #define BUFSIZ 1024
 #endif
@@ -54,7 +54,17 @@ extern "C" {
 #endif
 
 // — Types (C17 7.21.1) —
-typedef struct _FILE FILE;
+typedef struct __jacl_file {
+		int _flags;					 // File status flags
+		char *_ptr;					 // Current position in buffer	
+		char *_base;				 // Base of buffer
+		char *_end;					 // End of buffer
+		size_t _bufsiz;			 // Buffer size
+		int _fd;						 // File descriptor
+		int _cnt;						 // Characters left in buffer
+		unsigned char *_tmpfname; // Temp file name (if any)
+} FILE;
+
 typedef long long fpos_t;  // Stub for fpos_t (implementation-defined)
 
 // — Standard Streams —
@@ -92,6 +102,7 @@ int ungetc(int c, FILE* stream);
 int fprintf(FILE* restrict stream, const char* restrict fmt, ...);
 int fscanf(FILE* restrict stream, const char* restrict fmt, ...);
 int printf(const char* restrict fmt, ...);
+int fprintf(FILE* restrict stream, const char* restrict fmt, ...);
 int scanf(const char* restrict fmt, ...);
 int snprintf(char* restrict s, size_t n, const char* restrict fmt, ...);
 int sprintf(char* restrict s, const char* restrict fmt, ...);
@@ -137,10 +148,9 @@ void clearerr_unlocked(FILE *stream);
 int feof_unlocked(FILE *stream);
 int ferror_unlocked(FILE *stream);
 
-// — Wide Character I/O —
+// — Get / Put Helpers —
 wint_t fgetwc(FILE *stream);
 wint_t fputwc(wchar_t wc, FILE *stream);
-int fwide(FILE *stream, int mode);
 wint_t getwc(FILE *stream);
 wint_t putwc(wchar_t wc, FILE *stream);
 

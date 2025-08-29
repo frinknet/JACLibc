@@ -2,6 +2,7 @@
 #ifndef STRING_H
 #define STRING_H
 
+#include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -126,28 +127,6 @@ static inline int strncmp(const char *a, const char *b, size_t n) {
 		return (a[i] < b[i]) ? -1 : 1;
 }
 
-static inline char _jacl_tolower(char c) {
-		return (c >= 'A' && c <= 'Z') ? c + 32 : c;
-}
-
-static inline int strcasecmp(const char *a, const char *b) {
-		while (*a && *b) {
-				char ca = _jacl_tolower(*a++);
-				char cb = _jacl_tolower(*b++);
-				if (ca != cb) return (ca < cb) ? -1 : 1;
-		}
-		return (*a < *b) ? -1 : (*a > *b);
-}
-
-static inline int strncasecmp(const char *a, const char *b, size_t n) {
-		for (size_t i = 0; i < n && a[i] && b[i]; i++) {
-				char ca = _jacl_tolower(a[i]);
-				char cb = _jacl_tolower(b[i]);
-				if (ca != cb) return (ca < cb) ? -1 : 1;
-		}
-		return 0;
-}
-
 static inline int strcoll(const char *a, const char *b) {
 		return strcmp(a, b);
 }
@@ -165,32 +144,77 @@ static _Thread_local char _jacl_errbuf[64];
 static __thread char _jacl_errbuf[64];
 #endif
 
-static inline int strerror_r(int err, char *buf, size_t buflen) {
-		static const char *msgs[] = { "Success", "Perm", "NoEnt", "Acc", "BadF" };	
-		const char *m = (unsigned)err < (sizeof msgs/sizeof *msgs) ? msgs[err] : "Unknown";
-		size_t l = strlen(m);
-		if (l >= buflen) l = buflen - 1;
-		memcpy(buf, m, l);
-		buf[l] = '\0';
-		return 0;
+static inline char *strerror(int err) {
+		const char *msg;
+
+		switch (err) {
+				case 0: msg = "Success"; break;
+				case EPERM: msg = "Operation not permitted"; break;
+				case ENOENT: msg = "No such file or directory"; break;
+				case ESRCH: msg = "No such process"; break;
+				case EINTR: msg = "Interrupted system call"; break;
+				case EIO: msg = "I/O error"; break;
+				case ENXIO: msg = "No such device or address"; break;
+				case E2BIG: msg = "Argument list too long"; break;
+				case ENOEXEC: msg = "Exec format error"; break;
+				case EBADF: msg = "Bad file descriptor"; break;
+				case ECHILD: msg = "No child processes"; break;
+				case EAGAIN: msg = "Try again"; break;
+				case ENOMEM: msg = "Out of memory"; break;
+				case EACCES: msg = "Permission denied"; break;
+				case EFAULT: msg = "Bad address"; break;
+				case ENOSYS: msg = "Function not implemented"; break;
+				case EDOM: msg = "Math argument out of domain"; break;
+				case ERANGE: msg = "Math result out of range"; break;
+				default: msg = "Unknown error"; break;
+		}
+		
+		size_t len = strlen(msg);
+		if (len >= sizeof(_jacl_errbuf)) len = sizeof(_jacl_errbuf) - 1;
+		memcpy(_jacl_errbuf, msg, len);
+		_jacl_errbuf[len] = '\0';
+		return _jacl_errbuf;
 }
 
-static inline char *strerror(int err) {
-		strerror_r(err, _jacl_errbuf, sizeof _jacl_errbuf);
-		return _jacl_errbuf;
+static inline int strerror_r(int err, char *buf, size_t buflen) {
+		if (!buf || buflen == 0) return EINVAL;
+		
+		// Reuse existing strerror() - it handles all the switch logic
+		const char *msg = strerror(err);
+		size_t len = strlen(msg);
+		
+		if (len >= buflen) {
+				// Buffer too small - copy what fits and null terminate
+				if (buflen > 0) {
+						memcpy(buf, msg, buflen - 1);
+						buf[buflen - 1] = '\0';
+				}
+				return ERANGE;
+		}
+		
+		// Buffer is large enough - copy entire message including null terminator
+		memcpy(buf, msg, len + 1);
+		return 0;
 }
 
 /* — Search & Tokenization — */
 static inline char *strchr(const char *s, int c) {
-		for (; *s; s++) if (*s == (char)c) return (char *)s;
+		for (;; s++) {
+				if (*s == (char)c) return (char *)s;
+				if (!*s) break;
+		}
 		return NULL;
 }
 
 static inline char *strrchr(const char *s, int c) {
 		const char *r = NULL;
-		for (; *s; s++) if (*s == (char)c) r = s;
+		for (;; s++) {
+				if (*s == (char)c) r = s;
+				if (!*s) break;
+		}
 		return (char *)r;
 }
+
 
 static inline char *strstr(const char *h, const char *n) {
 		size_t nl = strlen(n);

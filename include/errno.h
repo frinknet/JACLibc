@@ -134,11 +134,16 @@
 
 #define EWOULDBLOCK		EAGAIN
 
+/* Header-only errno implementation */
+static inline int* __errno_location(void) {
 #if defined(__wasm_threads__)
-	extern _Thread_local int errno;
+		static _Thread_local int errno_value = 0;
 #else
-	extern int errno;
+		static int errno_value = 0;
 #endif
+		return &errno_value;
+}
+
+#define errno (*__errno_location())
 
 #endif /* ERRNO_H */
-

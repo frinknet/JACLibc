@@ -1,384 +1,315 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef STDATOMIC_H
 #define STDATOMIC_H
-
 #include <stdbool.h>
 #include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Memory‐order constants */
+/* C11/C23 feature detection */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#  define __STDC_VERSION_STDATOMIC_H__ 202311L
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#  define __STDC_VERSION_STDATOMIC_H__ 201112L
+#endif
+
+/* Memory ordering enumeration */
 typedef enum {
-    memory_order_relaxed = __ATOMIC_RELAXED,
-    memory_order_consume = __ATOMIC_CONSUME,
-    memory_order_acquire = __ATOMIC_ACQUIRE,
-    memory_order_release = __ATOMIC_RELEASE,
-    memory_order_acq_rel = __ATOMIC_ACQ_REL,
-    memory_order_seq_cst = __ATOMIC_SEQ_CST
+	memory_order_relaxed = 0,
+	memory_order_consume = 1,
+	memory_order_acquire = 2,
+	memory_order_release = 3,
+	memory_order_acq_rel = 4,
+	memory_order_seq_cst = 5
 } memory_order;
 
-/* Detect WASM with real atomics support */
-#if defined(__wasm__) && defined(__WASM_ATOMICS__)
-    #define WASM_REAL_ATOMICS
-#elif defined(__wasm__)
-    #define WASM_FAKE_ATOMICS
+/* Platform detection for WebAssembly */
+#ifdef __wasm__
+#ifndef __WASM_ATOMICS__
+#define FAKE_ATOMICS
+#endif
 #endif
 
-#ifdef WASM_FAKE_ATOMICS  /* WASM single-threaded mock implementation */
+#ifdef FAKE_ATOMICS
+#define ATOMIC(type) type
+#else
+#define ATOMIC(type) _Atomic(type)
+#endif
 
-typedef bool            atomic_bool;
-typedef char            atomic_char;
-typedef signed char     atomic_schar;
-typedef unsigned char   atomic_uchar;
-typedef short           atomic_short;
-typedef unsigned short  atomic_ushort;
-typedef int             atomic_int;
-typedef unsigned int    atomic_uint;
-typedef long            atomic_long;
-typedef unsigned long   atomic_ulong;
-typedef long long       atomic_llong;
-typedef unsigned long long atomic_ullong;
-typedef void*           atomic_voidptr;
-typedef struct { bool _Value; } atomic_flag;
+typedef ATOMIC(bool) atomic_bool;
+typedef ATOMIC(char) atomic_char;
+typedef ATOMIC(signed char) atomic_schar;
+typedef ATOMIC(unsigned char) atomic_uchar;
+typedef ATOMIC(short) atomic_short;
+typedef ATOMIC(unsigned short) atomic_ushort;
+typedef ATOMIC(int) atomic_int;
+typedef ATOMIC(unsigned int) atomic_uint;
+typedef ATOMIC(long) atomic_long;
+typedef ATOMIC(unsigned long) atomic_ulong;
+typedef ATOMIC(long long) atomic_llong;
+typedef ATOMIC(unsigned long long) atomic_ullong;
+typedef ATOMIC(void*) atomic_voidptr;
+typedef struct { ATOMIC(bool) _Value; } atomic_flag;
 
-#define ATOMIC_FLAG_INIT         { false }
-#define ATOMIC_VAR_INIT(x)       (x)
+// Memory Barrier 
+#ifdef FAKE_ATOMICS
 
-/* Generic atomic operations - WASM stubs */
-#define atomic_init(obj, val)           (*(obj) = (val))
-#define atomic_load(obj)                (*(obj))
-#define atomic_store(obj, val)          (*(obj) = (val))
-#define atomic_exchange(obj, val)       ({ typeof(*(obj)) _old = *(obj); *(obj) = (val); _old; })
-#define atomic_fetch_add(obj, val)      ({ typeof(*(obj)) _old = *(obj); *(obj) += (val); _old; })
-#define atomic_fetch_sub(obj, val)      ({ typeof(*(obj)) _old = *(obj); *(obj) -= (val); _old; })
-#define atomic_fetch_and(obj, val)      ({ typeof(*(obj)) _old = *(obj); *(obj) &= (val); _old; })
-#define atomic_fetch_or(obj, val)       ({ typeof(*(obj)) _old = *(obj); *(obj) |= (val); _old; })
-#define atomic_fetch_xor(obj, val)      ({ typeof(*(obj)) _old = *(obj); *(obj) ^= (val); _old; })
+static inline void __jacl_spin_lock(void *ptr) { (void)ptr; }
+static inline void __jacl_spin_unlock(void *ptr) { (void)ptr; }
 
-#define atomic_compare_exchange_weak(obj, expected, desired) \
-    ({ bool _ret = (*(obj) == *(expected)); if (_ret) *(obj) = (desired); else *(expected) = *(obj); _ret; })
+static inline void __jacl_barrier_acquire(void) {}
+static inline void __jacl_barrier_release(void) {}
+static inline void __jacl_barrier_seq_cst(void) {}
 
-#define atomic_compare_exchange_strong(obj, expected, desired) \
-    atomic_compare_exchange_weak(obj, expected, desired)
+#else
 
-/* All explicit versions just ignore memory order in fake mode */
-#define atomic_load_explicit(obj, mo)              atomic_load(obj)
-#define atomic_store_explicit(obj, val, mo)        atomic_store(obj, val)
-#define atomic_exchange_explicit(obj, val, mo)     atomic_exchange(obj, val)
-#define atomic_fetch_add_explicit(obj, val, mo)    atomic_fetch_add(obj, val)
-#define atomic_fetch_sub_explicit(obj, val, mo)    atomic_fetch_sub(obj, val)
-#define atomic_fetch_and_explicit(obj, val, mo)    atomic_fetch_and(obj, val)
-#define atomic_fetch_or_explicit(obj, val, mo)     atomic_fetch_or(obj, val)
-#define atomic_fetch_xor_explicit(obj, val, mo)    atomic_fetch_xor(obj, val)
-
-#define atomic_compare_exchange_weak_explicit(obj, expected, desired, succ, fail) \
-    atomic_compare_exchange_weak(obj, expected, desired)
-#define atomic_compare_exchange_strong_explicit(obj, expected, desired, succ, fail) \
-    atomic_compare_exchange_strong(obj, expected, desired)
-
-static inline bool atomic_flag_test_and_set(atomic_flag *f) {
-    bool old = f->_Value; f->_Value = true; return old;
+static volatile unsigned char __jacl_spinlock_table[64] = {0};
+static inline void __jacl_spin_lock(void *ptr) {
+	union { void *p; uintptr_t u; } addr_conv = { .p = ptr };
+	uintptr_t addr = addr_conv.u;
+	unsigned idx = ((addr >> 3) ^ (addr >> 9)) & 63;
+	volatile unsigned char *lock = &__jacl_spinlock_table[idx];
+#if defined(__x86_64__) || defined(__i386__)
+	while (__sync_lock_test_and_set(lock, 1)) { while (*lock) { /* spin */ } }
+#else
+	unsigned char expected = 0; while (1) { if (*lock == 0) { expected = 0; if (__atomic_compare_exchange_n(lock, &expected, 1, false, 5, 5)) break; } for (volatile int i = 0; i < 10; i++); }
+#endif
 }
-static inline bool atomic_flag_test_and_set_explicit(atomic_flag *f, memory_order mo) {
-    return atomic_flag_test_and_set(f);
+static inline void __jacl_spin_unlock(void *ptr) {
+	union { void *p; uintptr_t u; } addr_conv = { .p = ptr };
+	uintptr_t addr = addr_conv.u;
+	unsigned idx = ((addr >> 3) ^ (addr >> 9)) & 63;
+	volatile unsigned char *lock = &__jacl_spinlock_table[idx];
+#if defined(__x86_64__) || defined(__i386__)
+	__sync_lock_release(lock);
+#else
+	__atomic_store_n(lock, 0, 5);
+#endif
 }
-static inline void atomic_flag_clear(atomic_flag *f) {
-    f->_Value = false;
+static inline void __jacl_barrier_acquire(void) {
+#if defined(__x86_64__) || defined(__i386__)
+	__asm__ volatile ("" ::: "memory");
+#elif defined(__aarch64__)
+	__asm__ volatile ("dmb ishld" ::: "memory");
+#elif defined(__arm__)
+	__asm__ volatile ("dmb" ::: "memory");
+#else
+	__asm__ volatile ("" ::: "memory");
+#endif
 }
-static inline void atomic_flag_clear_explicit(atomic_flag *f, memory_order mo) {
-    atomic_flag_clear(f);
+static inline void __jacl_barrier_release(void) {
+#if defined(__x86_64__) || defined(__i386__)
+	__asm__ volatile ("" ::: "memory");
+#elif defined(__aarch64__)
+	__asm__ volatile ("dmb ishst" ::: "memory");
+#elif defined(__arm__)
+	__asm__ volatile ("dmb" ::: "memory");
+#else
+	__asm__ volatile ("" ::: "memory");
+#endif
 }
+static inline void __jacl_barrier_seq_cst(void) {
+#if defined(__x86_64__) || defined(__i386__)
+	__asm__ volatile ("mfence" ::: "memory");
+#elif defined(__aarch64__) || defined(__arm__)
+	__asm__ volatile ("dmb ish" ::: "memory");
+#else
+	__asm__ volatile ("" ::: "memory");
+#endif
+}
+
+#endif /* FAKE_ATOMICS */
+
+#ifdef FAKE_ATOMICS
 static inline void atomic_thread_fence(memory_order mo) { (void)mo; }
 static inline void atomic_signal_fence(memory_order mo) { (void)mo; }
-
-#elif defined(WASM_REAL_ATOMICS)  /* WASM with real atomic instructions */
-
-typedef _Atomic(bool)            atomic_bool;
-typedef _Atomic(char)            atomic_char;
-typedef _Atomic(signed char)     atomic_schar;
-typedef _Atomic(unsigned char)   atomic_uchar;
-typedef _Atomic(short)           atomic_short;
-typedef _Atomic(unsigned short)  atomic_ushort;
-typedef _Atomic(int)             atomic_int;
-typedef _Atomic(unsigned int)    atomic_uint;
-typedef _Atomic(long)            atomic_long;
-typedef _Atomic(unsigned long)   atomic_ulong;
-typedef _Atomic(long long)       atomic_llong;
-typedef _Atomic(unsigned long long) atomic_ullong;
-typedef _Atomic(void*)           atomic_voidptr;
-typedef struct { atomic_bool _Value; } atomic_flag;
-
-#define ATOMIC_FLAG_INIT         { false }
-#define ATOMIC_VAR_INIT(x)       (x)
-
-/* WASM atomic instructions - currently only sequential consistency */
-/* Note: WASM atomics are always sequentially consistent by design */
-static inline void atomic_init_int(atomic_int *obj, int val) {
-    /* Use i32.atomic.store for initialization */
-    __asm__ volatile ("i32.atomic.store %0, %1" : "=m"(*obj) : "r"(val) : "memory");
-}
-
-static inline int atomic_load_int(const atomic_int *obj) {
-    int result;
-    __asm__ volatile ("i32.atomic.load %0, %1" : "=r"(result) : "m"(*obj) : "memory");
-    return result;
-}
-
-static inline void atomic_store_int(atomic_int *obj, int val) {
-    __asm__ volatile ("i32.atomic.store %0, %1" : "=m"(*obj) : "r"(val) : "memory");
-}
-
-static inline int atomic_exchange_int(atomic_int *obj, int val) {
-    int result;
-    __asm__ volatile ("i32.atomic.rmw.xchg %0, %1, %2" : "=r"(result), "=m"(*obj) : "r"(val) : "memory");
-    return result;
-}
-
-static inline int atomic_fetch_add_int(atomic_int *obj, int val) {
-    int result;
-    __asm__ volatile ("i32.atomic.rmw.add %0, %1, %2" : "=r"(result), "=m"(*obj) : "r"(val) : "memory");
-    return result;
-}
-
-static inline int atomic_fetch_sub_int(atomic_int *obj, int val) {
-    int result;
-    __asm__ volatile ("i32.atomic.rmw.sub %0, %1, %2" : "=r"(result), "=m"(*obj) : "r"(val) : "memory");
-    return result;
-}
-
-static inline int atomic_fetch_and_int(atomic_int *obj, int val) {
-    int result;
-    __asm__ volatile ("i32.atomic.rmw.and %0, %1, %2" : "=r"(result), "=m"(*obj) : "r"(val) : "memory");
-    return result;
-}
-
-static inline int atomic_fetch_or_int(atomic_int *obj, int val) {
-    int result;
-    __asm__ volatile ("i32.atomic.rmw.or %0, %1, %2" : "=r"(result), "=m"(*obj) : "r"(val) : "memory");
-    return result;
-}
-
-static inline int atomic_fetch_xor_int(atomic_int *obj, int val) {
-    int result;
-    __asm__ volatile ("i32.atomic.rmw.xor %0, %1, %2" : "=r"(result), "=m"(*obj) : "r"(val) : "memory");
-    return result;
-}
-
-static inline bool atomic_compare_exchange_weak_int(atomic_int *obj, int *expected, int desired) {
-    int old_val = *expected;
-    int result;
-    __asm__ volatile ("i32.atomic.rmw.cmpxchg %0, %1, %2, %3" 
-                      : "=r"(result), "=m"(*obj) 
-                      : "r"(old_val), "r"(desired) 
-                      : "memory");
-    if (result == old_val) {
-        return true;
-    } else {
-        *expected = result;
-        return false;
-    }
-}
-
-static inline bool atomic_compare_exchange_strong_int(atomic_int *obj, int *expected, int desired) {
-    return atomic_compare_exchange_weak_int(obj, expected, desired);
-}
-
-/* Generic macros that dispatch to type-specific implementations */
-#define atomic_init(obj, val) \
-    _Generic((obj), \
-        atomic_int*: atomic_init_int, \
-        default: atomic_init_int \
-    )(obj, val)
-
-#define atomic_load(obj) \
-    _Generic((obj), \
-        const atomic_int*: atomic_load_int, \
-        atomic_int*: atomic_load_int, \
-        default: atomic_load_int \
-    )(obj)
-
-#define atomic_store(obj, val) \
-    _Generic((obj), \
-        atomic_int*: atomic_store_int, \
-        default: atomic_store_int \
-    )(obj, val)
-
-#define atomic_exchange(obj, val) \
-    _Generic((obj), \
-        atomic_int*: atomic_exchange_int, \
-        default: atomic_exchange_int \
-    )(obj, val)
-
-#define atomic_fetch_add(obj, val) \
-    _Generic((obj), \
-        atomic_int*: atomic_fetch_add_int, \
-        default: atomic_fetch_add_int \
-    )(obj, val)
-
-#define atomic_fetch_sub(obj, val) \
-    _Generic((obj), \
-        atomic_int*: atomic_fetch_sub_int, \
-        default: atomic_fetch_sub_int \
-    )(obj, val)
-
-#define atomic_fetch_and(obj, val) \
-    _Generic((obj), \
-        atomic_int*: atomic_fetch_and_int, \
-        default: atomic_fetch_and_int \
-    )(obj, val)
-
-#define atomic_fetch_or(obj, val) \
-    _Generic((obj), \
-        atomic_int*: atomic_fetch_or_int, \
-        default: atomic_fetch_or_int \
-    )(obj, val)
-
-#define atomic_fetch_xor(obj, val) \
-    _Generic((obj), \
-        atomic_int*: atomic_fetch_xor_int, \
-        default: atomic_fetch_xor_int \
-    )(obj, val)
-
-#define atomic_compare_exchange_weak(obj, expected, desired) \
-    _Generic((obj), \
-        atomic_int*: atomic_compare_exchange_weak_int, \
-        default: atomic_compare_exchange_weak_int \
-    )(obj, expected, desired)
-
-#define atomic_compare_exchange_strong(obj, expected, desired) \
-    _Generic((obj), \
-        atomic_int*: atomic_compare_exchange_strong_int, \
-        default: atomic_compare_exchange_strong_int \
-    )(obj, expected, desired)
-
-/* Explicit memory order versions - WASM ignores ordering (always seq_cst) */
-#define atomic_load_explicit(obj, mo)              atomic_load(obj)
-#define atomic_store_explicit(obj, val, mo)        atomic_store(obj, val)
-#define atomic_exchange_explicit(obj, val, mo)     atomic_exchange(obj, val)
-#define atomic_fetch_add_explicit(obj, val, mo)    atomic_fetch_add(obj, val)
-#define atomic_fetch_sub_explicit(obj, val, mo)    atomic_fetch_sub(obj, val)
-#define atomic_fetch_and_explicit(obj, val, mo)    atomic_fetch_and(obj, val)
-#define atomic_fetch_or_explicit(obj, val, mo)     atomic_fetch_or(obj, val)
-#define atomic_fetch_xor_explicit(obj, val, mo)    atomic_fetch_xor(obj, val)
-
-#define atomic_compare_exchange_weak_explicit(obj, expected, desired, succ, fail) \
-    atomic_compare_exchange_weak(obj, expected, desired)
-#define atomic_compare_exchange_strong_explicit(obj, expected, desired, succ, fail) \
-    atomic_compare_exchange_strong(obj, expected, desired)
-
-static inline bool atomic_flag_test_and_set(atomic_flag *f){
-    return atomic_exchange(&f->_Value, true);
-}
-static inline bool atomic_flag_test_and_set_explicit(atomic_flag *f, memory_order mo){
-    return atomic_flag_test_and_set(f);
-}
-static inline void atomic_flag_clear(atomic_flag *f){
-    atomic_store(&f->_Value, false);
-}
-static inline void atomic_flag_clear_explicit(atomic_flag *f, memory_order mo){
-    atomic_flag_clear(f);
-}
-
-/* WASM atomic fence - uses memory.atomic.fence */
+#else
 static inline void atomic_thread_fence(memory_order mo) {
-    (void)mo; /* WASM only has seq_cst fences */
-    __asm__ volatile ("memory.atomic.fence" ::: "memory");
+	switch (mo) {
+		case memory_order_acquire: __jacl_barrier_acquire(); break;
+		case memory_order_release: __jacl_barrier_release(); break;
+		case memory_order_acq_rel: __jacl_barrier_acquire(); __jacl_barrier_release(); break;
+		case memory_order_seq_cst: __jacl_barrier_acquire(); __jacl_barrier_release(); __jacl_barrier_seq_cst(); break;
+		default: __asm__ volatile ("" ::: "memory"); break;
+	}
 }
-static inline void atomic_signal_fence(memory_order mo) {
-    __asm__ volatile ("" ::: "memory"); /* Compiler barrier only */
+static inline void atomic_signal_fence(memory_order mo) { 
+	switch (mo) {
+		case memory_order_relaxed: break;
+		default: __asm__ volatile ("" ::: "memory"); break;
+	}
 }
-
-#else /* Non-WASM: use native atomics */
-
-#if !defined(__has_builtin)
-# define __has_builtin(x) 0
 #endif
-#if !(__has_builtin(__atomic_load_n) && __has_builtin(__atomic_store_n))
-# error "Compiler must support __atomic builtins"
+
+#ifdef FAKE_ATOMICS
+
+// Single-threaded fake
+#define JACL_ATOMIC_SIZES \
+	JACL_ATOMIC_BUNDLE(8,  uint8_t ) \
+	JACL_ATOMIC_BUNDLE(16, uint16_t) \
+	JACL_ATOMIC_BUNDLE(32, uint32_t) \
+	JACL_ATOMIC_BUNDLE(64, uint64_t)
+#define JACL_ATOMIC_BUNDLE(bits, type) \
+	static inline type __jacl_atomic_load_##bits(volatile type *ptr, memory_order mo) {(void)mo;return *ptr;} \
+	static inline void __jacl_atomic_store_##bits(volatile type *ptr, type val, memory_order mo) {(void)mo;*ptr=val;} \
+	static inline type __jacl_atomic_exchange_##bits(volatile type *ptr, type val, memory_order mo) {(void)mo;type old=*ptr;*ptr=val;return old;} \
+	static inline type __jacl_atomic_fetch_add_##bits(volatile type *ptr, type val, memory_order mo) {(void)mo;type old=*ptr;*ptr+=val;return old;} \
+	static inline bool __jacl_atomic_cmpxchg_##bits(volatile type *ptr, type *expected, type desired, memory_order mo) {(void)mo;if(*ptr==*expected){*ptr=desired;return true;}*expected=*ptr;return false;}
+
+#elif defined(__x86_64__) || defined(__i386__)
+
+// x86/x64 with inline assembly
+#define JACL_ATOMIC_SIZES \
+	JACL_ATOMIC_BUNDLE(8,  uint8_t,  "b") \
+	JACL_ATOMIC_BUNDLE(16, uint16_t, "w") \
+	JACL_ATOMIC_BUNDLE(32, uint32_t, "l") \
+	JACL_ATOMIC_BUNDLE(64, uint64_t, "q")
+#define JACL_ATOMIC_BUNDLE(bits, type, suffix) \
+	static inline type __jacl_atomic_load_##bits(volatile type *ptr, memory_order mo) {atomic_thread_fence(mo);return *ptr;} \
+	static inline void __jacl_atomic_store_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);*ptr=val;} \
+	static inline type __jacl_atomic_exchange_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);__asm__ volatile("xchg" suffix " %0,%1":"=r"(val),"+m"(*ptr):"0"(val):"memory");return val;} \
+	static inline type __jacl_atomic_fetch_add_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);__asm__ volatile("lock xadd" suffix " %0,%1":"=r"(val),"+m"(*ptr):"0"(val):"memory");return val;} \
+	static inline bool __jacl_atomic_cmpxchg_##bits(volatile type *ptr, type *expected, type desired, memory_order mo) {atomic_thread_fence(mo);type old=*expected;__asm__ volatile("lock cmpxchg" suffix " %2,%1":"=a"(old),"+m"(*ptr):"r"(desired),"0"(old):"memory");if(old==*expected)return true;*expected=old;return false;}
+
+#elif defined(__arm__) || defined(__aarch64__)
+
+// ARM with LDREX/STREX
+#define JACL_ATOMIC_SIZES \
+	JACL_ATOMIC_BUNDLE(8,  uint8_t,  "ldrexb", "strexb") \
+	JACL_ATOMIC_BUNDLE(16, uint16_t, "ldrexh", "strexh") \
+	JACL_ATOMIC_BUNDLE(32, uint32_t, "ldrex",  "strex") \
+	JACL_ATOMIC_BUNDLE(64, uint64_t, "ldrex",  "strex")
+#define JACL_ATOMIC_BUNDLE(bits, type, ldr, str) \
+	static inline type __jacl_atomic_load_##bits(volatile type *ptr, memory_order mo) {atomic_thread_fence(mo);return *ptr;} \
+	static inline void __jacl_atomic_store_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);*ptr=val;} \
+	static inline type __jacl_atomic_exchange_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);type old;unsigned s;do{__asm__ volatile(ldr" %0,[%2]\n"str" %1,%3,[%2]\n":"=&r"(old),"=&r"(s):"r"(ptr),"r"(val):"memory");}while(s);return old;} \
+	static inline type __jacl_atomic_fetch_add_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);type old;unsigned s;do{__asm__ volatile(ldr" %0,[%2]\nadd %0,%0,%3\n"str" %1,%0,[%2]\n":"=&r"(old),"=&r"(s):"r"(ptr),"r"(val):"memory");}while(s);return old;} \
+	static inline bool __jacl_atomic_cmpxchg_##bits(volatile type *ptr, type *expected, type desired, memory_order mo) {atomic_thread_fence(mo);type old;unsigned s;bool ok=false;do{__asm__ volatile(ldr" %0,[%2]\n":"=&r"(old):"m"(*ptr),"r"(ptr):"memory");if(old==*expected){__asm__ volatile(str" %1,%3,[%2]\n":"=&r"(s):"r"(ptr),"r"(desired):"memory");ok=(s==0);break;}}while(0);if(ok)return true;*expected=old;return false;}
+
+#else
+
+// Spinlock fallback for unknown compilers
+#define JACL_ATOMIC_SIZES \
+	JACL_ATOMIC_BUNDLE(8,  uint8_t ) \
+	JACL_ATOMIC_BUNDLE(16, uint16_t) \
+	JACL_ATOMIC_BUNDLE(32, uint32_t) \
+	JACL_ATOMIC_BUNDLE(64, uint64_t)
+#define JACL_ATOMIC_BUNDLE(bits, type) \
+	static inline type __jacl_atomic_load_##bits(volatile type *ptr, memory_order mo) {atomic_thread_fence(mo); __jacl_spin_lock(ptr); type val=*ptr; __jacl_spin_unlock(ptr); return val;} \
+	static inline void __jacl_atomic_store_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo); __jacl_spin_lock(ptr); *ptr=val; __jacl_spin_unlock(ptr);} \
+	static inline type __jacl_atomic_exchange_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo); __jacl_spin_lock(ptr); type old=*ptr; *ptr=val; __jacl_spin_unlock(ptr); return old;} \
+	static inline type __jacl_atomic_fetch_add_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo); __jacl_spin_lock(ptr); type old=*ptr; *ptr+=val; __jacl_spin_unlock(ptr); return old;} \
+	static inline bool __jacl_atomic_cmpxchg_##bits(volatile type *ptr, type *expected, type desired, memory_order mo) {atomic_thread_fence(mo); __jacl_spin_lock(ptr); if(*ptr==*expected){*ptr=desired; __jacl_spin_unlock(ptr); return true;} *expected=*ptr; __jacl_spin_unlock(ptr); return false;}
+
+#endif /* FAKE_ATOMICS */
+
+// Special Long  handling
+#if ULONG_MAX == UINT64_MAX
+#define __JACL_ATOMIC_DISPATCH_LONG(fn) __jacl_atomic_##fn##_64
+#else
+#define __JACL_ATOMIC_DISPATCH_LONG(fn) __jacl_atomic_##fn##_32
 #endif
 
-typedef _Atomic(bool)            atomic_bool;
-typedef _Atomic(char)            atomic_char;
-typedef _Atomic(signed char)     atomic_schar;
-typedef _Atomic(unsigned char)   atomic_uchar;
-typedef _Atomic(short)           atomic_short;
-typedef _Atomic(unsigned short)  atomic_ushort;
-typedef _Atomic(int)             atomic_int;
-typedef _Atomic(unsigned int)    atomic_uint;
-typedef _Atomic(long)            atomic_long;
-typedef _Atomic(unsigned long)   atomic_ulong;
-typedef _Atomic(long long)       atomic_llong;
-typedef _Atomic(unsigned long long) atomic_ullong;
-typedef _Atomic(void*)           atomic_voidptr;
-typedef struct { atomic_bool _Value; } atomic_flag;
+// Generic dispatch main macro
+#define __JACL_ATOMIC_DISPATCH(fn, obj) \
+	_Generic((obj), \
+		atomic_uchar*: __jacl_atomic_##fn##_8, \
+		atomic_schar*: __jacl_atomic_##fn##_8, \
+		atomic_ushort*: __jacl_atomic_##fn##_16, \
+		atomic_short*: __jacl_atomic_##fn##_16, \
+		atomic_uint*: __jacl_atomic_##fn##_32, \
+		atomic_int*: __jacl_atomic_##fn##_32, \
+		atomic_ulong*: __JACL_ATOMIC_DISPATCH_LONG(fn), \
+		atomic_long*: __JACL_ATOMIC_DISPATCH_LONG(fn), \
+		atomic_ullong*: __jacl_atomic_##fn##_64, \
+		atomic_llong*: __jacl_atomic_##fn##_64, \
+		default: __jacl_atomic_##fn##_32 \
+	)
 
-#define ATOMIC_FLAG_INIT         { false }
-#define ATOMIC_VAR_INIT(x)       (x)
+// Generic dispatch macros
+#define __JACL_ATOMIC_DISPATCH_LOAD(obj, mo) __JACL_ATOMIC_DISPATCH(load, obj)((volatile void*)(obj), (mo))
+#define __JACL_ATOMIC_DISPATCH_STORE(obj, val, mo) __JACL_ATOMIC_DISPATCH(store, obj)((volatile void*)(obj), (val), (mo))
+#define __JACL_ATOMIC_DISPATCH_EXCHANGE(obj, val, mo) __JACL_ATOMIC_DISPATCH(exchange, obj)((volatile void*)(obj), (val), (mo))
+#define __JACL_ATOMIC_DISPATCH_FETCH_ADD(obj, val, mo) __JACL_ATOMIC_DISPATCH(fetch_add, obj)((volatile void*)(obj), (val), (mo))
+#define __JACL_ATOMIC_DISPATCH_CMPXCHG(obj, expected, desired, mo) __JACL_ATOMIC_DISPATCH(cmpxchg, obj)((volatile void*)(obj), (void*)(expected), (desired), (mo))
 
-/* Generic atomic operations using compiler builtins */
-#define atomic_init(obj, val)       __atomic_store_n(obj, val, memory_order_relaxed)
-#define atomic_load(obj)            __atomic_load_n(obj, memory_order_seq_cst)
-#define atomic_store(obj, val)      __atomic_store_n(obj, val, memory_order_seq_cst)
-#define atomic_exchange(obj, val)   __atomic_exchange_n(obj, val, memory_order_seq_cst)
-#define atomic_fetch_add(obj, val)  __atomic_fetch_add(obj, val, memory_order_seq_cst)
-#define atomic_fetch_sub(obj, val)  __atomic_fetch_sub(obj, val, memory_order_seq_cst)
-#define atomic_fetch_and(obj, val)  __atomic_fetch_and(obj, val, memory_order_seq_cst)
-#define atomic_fetch_or(obj, val)   __atomic_fetch_or(obj, val, memory_order_seq_cst)
-#define atomic_fetch_xor(obj, val)  __atomic_fetch_xor(obj, val, memory_order_seq_cst)
+/// Generate all atomic functions
+JACL_ATOMIC_SIZES
 
-#define atomic_compare_exchange_weak(obj, expected, desired) \
-    __atomic_compare_exchange_n(obj, expected, desired, true, memory_order_seq_cst, memory_order_seq_cst)
+#undef JACL_ATOMIC_BUNDLE
+#undef JACL_ATOMIC_SIZES
 
-#define atomic_compare_exchange_strong(obj, expected, desired) \
-    __atomic_compare_exchange_n(obj, expected, desired, false, memory_order_seq_cst, memory_order_seq_cst)
+// Standard C11/C23 atomic operations
+#define atomic_init(obj, val) (*(obj) = (val))
+#define atomic_load_explicit(obj, mo) __JACL_ATOMIC_DISPATCH_LOAD(obj, mo)
+#define atomic_store_explicit(obj, val, mo) __JACL_ATOMIC_DISPATCH_STORE(obj, val, mo)
+#define atomic_exchange_explicit(obj, val, mo) __JACL_ATOMIC_DISPATCH_EXCHANGE(obj, val, mo)
+#define atomic_fetch_add_explicit(obj, val, mo) __JACL_ATOMIC_DISPATCH_FETCH_ADD(obj, val, mo)
+#define atomic_fetch_sub_explicit(obj, val, mo) __JACL_ATOMIC_DISPATCH_FETCH_ADD(obj, -(val), mo)
+#define atomic_compare_exchange_strong_explicit(obj, expected, desired, succ, fail) __JACL_ATOMIC_DISPATCH_CMPXCHG(obj, expected, desired, succ)
+#define atomic_load(obj) atomic_load_explicit(obj, memory_order_seq_cst)
+#define atomic_store(obj, val) atomic_store_explicit(obj, val, memory_order_seq_cst)
+#define atomic_exchange(obj, val) atomic_exchange_explicit(obj, val, memory_order_seq_cst)
+#define atomic_fetch_add(obj, val) atomic_fetch_add_explicit(obj, val, memory_order_seq_cst)
+#define atomic_fetch_sub(obj, val) atomic_fetch_sub_explicit(obj, val, memory_order_seq_cst)
+#define atomic_compare_exchange_strong(obj, expected, desired) atomic_compare_exchange_strong_explicit(obj, expected, desired, memory_order_seq_cst, memory_order_seq_cst)
+#define atomic_compare_exchange_weak(obj, expected, desired) atomic_compare_exchange_strong(obj, expected, desired)
+#define atomic_compare_exchange_weak_explicit(obj, expected, desired, succ, fail) atomic_compare_exchange_strong_explicit(obj, expected, desired, succ, fail)
 
-/* Explicit memory order versions */
-#define atomic_load_explicit(obj, mo)              __atomic_load_n(obj, mo)
-#define atomic_store_explicit(obj, val, mo)        __atomic_store_n(obj, val, mo)
-#define atomic_exchange_explicit(obj, val, mo)     __atomic_exchange_n(obj, val, mo)
-#define atomic_fetch_add_explicit(obj, val, mo)    __atomic_fetch_add(obj, val, mo)
-#define atomic_fetch_sub_explicit(obj, val, mo)    __atomic_fetch_sub(obj, val, mo)
-#define atomic_fetch_and_explicit(obj, val, mo)    __atomic_fetch_and(obj, val, mo)
-#define atomic_fetch_or_explicit(obj, val, mo)     __atomic_fetch_or(obj, val, mo)
-#define atomic_fetch_xor_explicit(obj, val, mo)    __atomic_fetch_xor(obj, val, mo)
+// Bitwise operations
+static inline uint32_t __jacl_atomic_fetch_and_32(volatile uint32_t *ptr, uint32_t val, memory_order mo) { atomic_thread_fence(mo); uint32_t expected = *ptr; while (!__jacl_atomic_cmpxchg_32(ptr, &expected, expected & val, mo)) {}; return expected; }
+static inline uint32_t __jacl_atomic_fetch_or_32(volatile uint32_t *ptr, uint32_t val, memory_order mo) { atomic_thread_fence(mo); uint32_t expected = *ptr; while (!__jacl_atomic_cmpxchg_32(ptr, &expected, expected | val, mo)) {}; return expected; }
+static inline uint32_t __jacl_atomic_fetch_xor_32(volatile uint32_t *ptr, uint32_t val, memory_order mo) { atomic_thread_fence(mo); uint32_t expected = *ptr; while (!__jacl_atomic_cmpxchg_32(ptr, &expected, expected ^ val, mo)) {}; return expected; }
 
-#define atomic_compare_exchange_weak_explicit(obj, expected, desired, succ, fail) \
-    __atomic_compare_exchange_n(obj, expected, desired, true, succ, fail)
+#define atomic_fetch_and_explicit(obj, val, mo) \
+	_Generic((obj), \
+		atomic_uint*: __jacl_atomic_fetch_and_32, \
+		default: __jacl_atomic_fetch_and_32 \
+	)((volatile void*)(obj), (val), (mo))
+#define atomic_fetch_or_explicit(obj, val, mo) \
+	_Generic((obj), \
+		atomic_uint*: __jacl_atomic_fetch_or_32, \
+		default: __jacl_atomic_fetch_or_32 \
+	)((volatile void*)(obj), (val), (mo))
+#define atomic_fetch_xor_explicit(obj, val, mo) \
+	_Generic((obj), \
+		atomic_uint*: __jacl_atomic_fetch_xor_32, \
+		default: __jacl_atomic_fetch_xor_32 \
+	)((volatile void*)(obj), (val), (mo))
+#define atomic_fetch_and(obj, val) atomic_fetch_and_explicit(obj, val, memory_order_seq_cst)
+#define atomic_fetch_or(obj, val) atomic_fetch_or_explicit(obj, val, memory_order_seq_cst)
+#define atomic_fetch_xor(obj, val) atomic_fetch_xor_explicit(obj, val, memory_order_seq_cst)
 
-#define atomic_compare_exchange_strong_explicit(obj, expected, desired, succ, fail) \
-    __atomic_compare_exchange_n(obj, expected, desired, false, succ, fail)
-
-static inline bool atomic_flag_test_and_set(atomic_flag *f){
-    return __atomic_test_and_set(&f->_Value, memory_order_seq_cst);
+/* Atomic flag operations */
+static inline bool atomic_flag_test_and_set(atomic_flag *f) { 
+		return (bool)__jacl_atomic_exchange_8((volatile uint8_t*)&f->_Value, 1, memory_order_seq_cst); 
 }
-static inline bool atomic_flag_test_and_set_explicit(atomic_flag *f, memory_order mo){
-    return __atomic_test_and_set(&f->_Value, mo);
+static inline bool atomic_flag_test_and_set_explicit(atomic_flag *f, memory_order mo) { 
+		return (bool)__jacl_atomic_exchange_8((volatile uint8_t*)&f->_Value, 1, mo); 
 }
-static inline void atomic_flag_clear(atomic_flag *f){
-    __atomic_clear(&f->_Value, memory_order_seq_cst);
+static inline void atomic_flag_clear(atomic_flag *f) { 
+		__jacl_atomic_store_8((volatile uint8_t*)&f->_Value, 0, memory_order_seq_cst); 
 }
-static inline void atomic_flag_clear_explicit(atomic_flag *f, memory_order mo){
-    __atomic_clear(&f->_Value, mo);
+static inline void atomic_flag_clear_explicit(atomic_flag *f, memory_order mo) { 
+		__jacl_atomic_store_8((volatile uint8_t*)&f->_Value, 0, mo); 
 }
 
-#define atomic_thread_fence(mo)      __atomic_thread_fence(mo)
-#define atomic_signal_fence(mo)      __atomic_signal_fence(mo)
 
-#endif /* Platform selection */
+/* Lock-free macros */
+#define ATOMIC_BOOL_LOCK_FREE 2
+#define ATOMIC_CHAR_LOCK_FREE 2
+#define ATOMIC_CHAR16_T_LOCK_FREE 2
+#define ATOMIC_CHAR32_T_LOCK_FREE 2
+#define ATOMIC_WCHAR_T_LOCK_FREE 2
+#define ATOMIC_SHORT_LOCK_FREE 2
+#define ATOMIC_INT_LOCK_FREE 2
+#define ATOMIC_LONG_LOCK_FREE 2
+#define ATOMIC_LLONG_LOCK_FREE 2
+#define ATOMIC_POINTER_LOCK_FREE 2
 
-/* Lock-free macros (always claim lock-free for simplicity) */
-#define ATOMIC_BOOL_LOCK_FREE       2
-#define ATOMIC_CHAR_LOCK_FREE       2
-#define ATOMIC_CHAR16_T_LOCK_FREE   2
-#define ATOMIC_CHAR32_T_LOCK_FREE   2
-#define ATOMIC_WCHAR_T_LOCK_FREE    2
-#define ATOMIC_SHORT_LOCK_FREE      2
-#define ATOMIC_INT_LOCK_FREE        2
-#define ATOMIC_LONG_LOCK_FREE       2
-#define ATOMIC_LLONG_LOCK_FREE      2
-#define ATOMIC_POINTER_LOCK_FREE    2
+#define ATOMIC_FLAG_INIT {false}
+#define ATOMIC_VAR_INIT(x) (x)
 
 #ifdef __cplusplus
 }

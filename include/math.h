@@ -120,30 +120,14 @@ static inline int __jacl_fpclassify(double x) {
 	__jacl_##F(long double, l, uint64_t)
 
 // Definitions: nan, fabs, copysign
-#define __jacl_nan(type, suf) \
-static inline type nan##suf(const char*s){(void)s; __jacl_f64u u={.u=0x7ff8000000000000ULL}; return (type)u.f;}
-#define __jacl_fabs(type, suf) \
-static inline type fabs##suf(type x){ type y=x<(type)0?-x:x; return y==(type)0?(type)0:y;}
-#define __jacl_copysign(type,suf,UT,SIGN,ABS) \
-static inline type copysign##suf(type x, type y){ \
-	union{type f; UT u;} a={x}, b={y}; \
-	a.u = (a.u & (UT)(ABS)) | (b.u & (UT)(SIGN)); \
-	return a.f; \
-}
+#define __jacl_nan(type, suf) static inline type nan##suf(const char*s){(void)s; __jacl_f64u u={.u=0x7ff8000000000000ULL}; return (type)u.f;}
+#define __jacl_fabs(type, suf) static inline type fabs##suf(type x){ type y=x<(type)0?-x:x; return y==(type)0?(type)0:y;}
+#define __jacl_copysign(type,suf,UT,SIGN,ABS) static inline type copysign##suf(type x, type y){ union{type f; UT u;} a={x}, b={y}; a.u = (a.u & (UT)(ABS)) | (b.u & (UT)(SIGN)); return a.f; }
 
 // Rounding: ceil, floor, trunc, round, rint, nearbyint
-#define __jacl_ceil(type, suf, mant_bits) \
-static inline type ceil##suf(type x) { \
-	type t = trunc##suf(x); \
-	return (t < x) ? t + (type)1 : t; \
-}
-#define __jacl_floor(type, suf, mant_bits) \
-static inline type floor##suf(type x) { \
-	type t = trunc##suf(x); \
-	return (t > x) ? t - (type)1 : t; \
-}
-#define __jacl_trunc(type, suf, mant_bits) \
-static inline type trunc##suf(type x) { \
+#define __jacl_ceil(type, suf, mant_bits) static inline type ceil##suf(type x) { type t = trunc##suf(x); return (t < x) ? t + (type)1 : t; }
+#define __jacl_floor(type, suf, mant_bits) static inline type floor##suf(type x) { type t = trunc##suf(x); return (t > x) ? t - (type)1 : t; }
+#define __jacl_trunc(type, suf, mant_bits)static inline type trunc##suf(type x) { \
 	if (!(x == x)) return x; \
 	type ax = x < (type)0 ? -x : x; \
 	if (ax >= (type)(1ULL << (mant_bits))) return x; \
@@ -160,71 +144,38 @@ static inline type round##suf(type x) { \
 		t += (x > (type)0 ? (type)1 : (type)-1); \
 	return t; \
 }
-#define __jacl_rint(type, suf) \
-static inline type rint##suf(type x){return round##suf(x);}
-#define __jacl_nearbyint(type, suf) \
-static inline type nearbyint##suf(type x){return round##suf(x);}
+#define __jacl_rint(type, suf) static inline type rint##suf(type x){return round##suf(x);}
+#define __jacl_nearbyint(type, suf) static inline type nearbyint##suf(type x){return round##suf(x);}
 
 // Relation: fdim, fmax, fmin, fma
-#define __jacl_fdim(type, suf) \
-static inline type fdim##suf(type x, type y){ return x>y ? x-y : (type)0; }
-#define __jacl_fmax(type, suf) \
-static inline type fmax##suf(type x, type y){ return (x < y || isnan(x)) ? y : x; }
-#define __jacl_fmin(type, suf) \
-static inline type fmin##suf(type x, type y){ return (x > y || isnan(x)) ? y : x; }
-#define __jacl_fma(type, suf) \
-static inline type fma##suf(type x,type y,type z){ return x*y+z; }
+#define __jacl_fdim(type, suf) static inline type fdim##suf(type x, type y){ return x>y ? x-y : (type)0; }
+#define __jacl_fmax(type, suf) static inline type fmax##suf(type x, type y){ return (x < y || isnan(x)) ? y : x; }
+#define __jacl_fmin(type, suf) static inline type fmin##suf(type x, type y){ return (x > y || isnan(x)) ? y : x; }
+#define __jacl_fma(type, suf) static inline type fma##suf(type x,type y,type z){ return x*y+z; }
 
 // Exponents: exp, exp2, 2xpm1, log, log2, log10, log1p, pow
-#define __jacl_exp(type,suf) \
-static inline type exp##suf(type x){ type s=1.0, t=1.0; for (int i=1;i<20;++i){t*=x/i;s+=t;} return s; }
-#define __jacl_exp2(type,suf) \
-static inline type exp2##suf(type x){ return exp##suf(x*M_LN2); }
-#define __jacl_expm1(type,suf) \
-static inline type expm1##suf(type x){ return exp##suf(x)-1.0; }
-#define __jacl_log(type,suf) \
-static inline type log##suf(type x){ \
-	if (x<=0.0) return (type)NAN; \
-	type y = (x-1.0)/(x+1.0), t = y*y, s = y; \
-	for (int i=3;i<20;i+=2){y*=t;s+=y/i;}return 2.0*s; }
-#define __jacl_log2(type,suf) \
-static inline type log2##suf(type x){ return log##suf(x)/M_LN2; }
-#define __jacl_log10(type,suf) \
-static inline type log10##suf(type x){ return log##suf(x)/M_LN10; }
-#define __jacl_log1p(type,suf) \
-static inline type log1p##suf(type x){ return log##suf(1+x); }
-#define __jacl_pow(type,suf) \
-static inline type pow##suf(type x,type y){ return exp##suf(y*log##suf(x)); }
+#define __jacl_exp(type,suf) static inline type exp##suf(type x){ type s=1.0, t=1.0; for (int i=1;i<20;++i){t*=x/i;s+=t;} return s; }
+#define __jacl_exp2(type,suf) static inline type exp2##suf(type x){ return exp##suf(x*M_LN2); }
+#define __jacl_expm1(type,suf) static inline type expm1##suf(type x){ return exp##suf(x)-1.0; }
+#define __jacl_log(type,suf) static inline type log##suf(type x){ if (x<=0.0) return (type)NAN; type y = (x-1.0)/(x+1.0), t = y*y, s = y; for (int i=3;i<20;i+=2){y*=t;s+=y/i;}return 2.0*s; }
+#define __jacl_log2(type,suf) static inline type log2##suf(type x){ return log##suf(x)/M_LN2; }
+#define __jacl_log10(type,suf) static inline type log10##suf(type x){ return log##suf(x)/M_LN10; }
+#define __jacl_log1p(type,suf) static inline type log1p##suf(type x){ return log##suf(1+x); }
+#define __jacl_pow(type,suf) static inline type pow##suf(type x,type y){ return exp##suf(y*log##suf(x)); }
 
 // Scaling: ldexp, scalbn, scalbln, logb, ilogb, frexp
-#define __jacl_ldexp(type,suf) \
-static inline type ldexp##suf(type x, int e) { \
-		return x * exp2##suf((type)e); \
-}
-#define __jacl_scalbn(type,suf) \
-static inline type scalbn##suf(type x, int n) { \
-	return ldexp##suf(x, n); \
-}
-#define __jacl_scalbln(type,suf) \
-static inline type scalbln##suf(type x, long n) { \
-	return ldexp##suf(x, (int)n); \
-}
-#define __jacl_logb(type,suf) \
-static inline type logb##suf(type x) { \
+#define __jacl_ldexp(type,suf) static inline type ldexp##suf(type x, int e) { return x * exp2##suf((type)e); }
+#define __jacl_scalbn(type,suf) static inline type scalbn##suf(type x, int n) { return ldexp##suf(x, n); }
+#define __jacl_scalbln(type,suf) static inline type scalbln##suf(type x, long n) { return ldexp##suf(x, (int)n); }
+#define __jacl_logb(type,suf) static inline type logb##suf(type x) { \
 	if (!(x == x)) return (type)NAN; \
 	if (x == (type)0) return (type)(-INFINITY); \
 	if (!isfinite(x)) return (type)INFINITY; \
 	type ax = x < (type)0 ? -x : x; \
 	return floor##suf(log2##suf(ax)); \
 }
-#define __jacl_ilogb(type,suf) \
-static inline int ilogb##suf(type x) { \
-	if (!(x == x)) return FP_ILOGBNAN; \
-	if (x == (type)0) return FP_ILOGB0; \
-	return (int)logb##suf(x); \
-}
-#define __jacl_frexp(type,suf) \
-static inline type frexp##suf(type x, int *e) { \
+#define __jacl_ilogb(type,suf) static inline int ilogb##suf(type x) { if (!(x == x)) return FP_ILOGBNAN; if (x == (type)0) return FP_ILOGB0; return (int)logb##suf(x); }
+#define __jacl_frexp(type,suf) static inline type frexp##suf(type x, int *e) { \
 	if (x == (type)0 || !(x == x) || !isfinite(x)) { *e = 0; return x; } \
 	int k = (int)floor##suf(log2##suf((x < (type)0 ? -x : x))); \
 	type m = x * exp2##suf((type)-k); \
@@ -234,97 +185,50 @@ static inline type frexp##suf(type x, int *e) { \
 }
 
 // Roots: sqrt, cbrt, hypot
-#define __jacl_sqrt(type,suf) \
-static inline type sqrt##suf(type x){ \
-	if(x<0) return (type)NAN; \
-	type g=x; for(int i=0;i<8;++i) g=(g+x/g)/2; return g; }
-#define __jacl_cbrt(type,suf) \
-static inline type cbrt##suf(type x){return pow##suf(x,1.0/3.0);}
-#define __jacl_hypot(type,suf) \
-static inline type hypot##suf(type x,type y){return sqrt##suf(x*x+y*y);}
+#define __jacl_sqrt(type,suf) static inline type sqrt##suf(type x){	if(x<0) return (type)NAN; type g=x; for(int i=0;i<8;++i) g=(g+x/g)/2; return g; }
+#define __jacl_cbrt(type,suf) static inline type cbrt##suf(type x){return pow##suf(x,1.0/3.0);}
+#define __jacl_hypot(type,suf) static inline type hypot##suf(type x,type y){return sqrt##suf(x*x+y*y);}
 
 // Triganometry: sin, cos, tan, asin, acos, atan, atan2
-#define __jacl_sin(type,suf) \
-static inline type sin##suf(type x){ \
-	type t=x, s=x; for (int i=3;i<20;i+=2){t*=-x*x/(i*(i-1));s+=t;} return s; }
-#define __jacl_cos(type,suf) \
-static inline type cos##suf(type x){return sin##suf(x+M_PI_2);}
-#define __jacl_tan(type,suf) \
-static inline type tan##suf(type x){return sin##suf(x)/cos##suf(x);}
-#define __jacl_asin(type,suf) \
-static inline type asin##suf(type x){ \
-	if(fabs##suf(x)>1.0) return (type)NAN; \
-	type s=x, t=x; for (int i=3;i<20;i+=2){t*=x*x*(i-2)/(i*(i-1));s+=t/i;} return s; }
-#define __jacl_acos(type,suf) \
-static inline type acos##suf(type x){ return M_PI_2-asin##suf(x);}
-#define __jacl_atan(type,suf) \
-static inline type atan##suf(type x){ return asin##suf(x/sqrt##suf(1.0+x*x)); }
-#define __jacl_atan2(type,suf) \
-static inline type atan2##suf(type y,type x){ \
-	if(x==0) return copysign##suf(M_PI_2,y); \
-	type a=atan##suf(y/x); if(x<0)a+=(y>=0?M_PI:-M_PI); return a; }
+#define __jacl_sin(type,suf) static inline type sin##suf(type x){ type t=x, s=x; for (int i=3;i<20;i+=2){t*=-x*x/(i*(i-1));s+=t;} return s; }
+#define __jacl_cos(type,suf) static inline type cos##suf(type x){return sin##suf(x+M_PI_2);}
+#define __jacl_tan(type,suf) static inline type tan##suf(type x){return sin##suf(x)/cos##suf(x);}
+#define __jacl_asin(type,suf) static inline type asin##suf(type x){ if(fabs##suf(x)>1.0) return (type)NAN; type s=x, t=x; for (int i=3;i<20;i+=2){t*=x*x*(i-2)/(i*(i-1));s+=t/i;} return s; }
+#define __jacl_acos(type,suf) static inline type acos##suf(type x){ return M_PI_2-asin##suf(x);}
+#define __jacl_atan(type,suf) static inline type atan##suf(type x){ return asin##suf(x/sqrt##suf(1.0+x*x)); }
+#define __jacl_atan2(type,suf) static inline type atan2##suf(type y,type x){ if(x==0) return copysign##suf(M_PI_2,y); type a=atan##suf(y/x); if(x<0)a+=(y>=0?M_PI:-M_PI); return a; }
 
 // Hyperbolic: sinh, cosh, tanh, asinh, acosh, atanh
-#define __jacl_sinh(type,suf) \
-static inline type sinh##suf(type x){return(exp##suf(x)-exp##suf(-x))/2;}
-#define __jacl_cosh(type,suf) \
-static inline type cosh##suf(type x){return(exp##suf(x)+exp##suf(-x))/2;}
-#define __jacl_tanh(type,suf) \
-static inline type tanh##suf(type x){ return sinh##suf(x)/cosh##suf(x);}
-#define __jacl_asinh(type,suf) \
-static inline type asinh##suf(type x){ return log##suf(x+sqrt##suf(x*x+1.0)); }
-#define __jacl_acosh(type,suf) \
-static inline type acosh##suf(type x){ return log##suf(x+sqrt##suf(x*x-1.0)); }
-#define __jacl_atanh(type,suf) \
-static inline type atanh##suf(type x){ return 0.5*log##suf((1.0+x)/(1.0-x)); }
+#define __jacl_sinh(type,suf) static inline type sinh##suf(type x){return(exp##suf(x)-exp##suf(-x))/2;}
+#define __jacl_cosh(type,suf) static inline type cosh##suf(type x){return(exp##suf(x)+exp##suf(-x))/2;}
+#define __jacl_tanh(type,suf) static inline type tanh##suf(type x){ return sinh##suf(x)/cosh##suf(x);}
+#define __jacl_asinh(type,suf) static inline type asinh##suf(type x){ return log##suf(x+sqrt##suf(x*x+1.0)); }
+#define __jacl_acosh(type,suf) static inline type acosh##suf(type x){ return log##suf(x+sqrt##suf(x*x-1.0)); }
+#define __jacl_atanh(type,suf) static inline type atanh##suf(type x){ return 0.5*log##suf((1.0+x)/(1.0-x)); }
 
 // Error and Gamma: erf, erfc, tgamma, lgamma
-#define __jacl_erf(type,suf) \
-static inline type erf##suf(type x){ \
-	type t=1.0,s=x; for(int i=1;i<10;++i){t*=-x*x/i;s+=t/(2*i+1);} return (2.0/sqrt##suf(M_PI))*s;}
-#define __jacl_erfc(type,suf) \
-static inline type erfc##suf(type x){ return 1.0-erf##suf(x); }
-#define __jacl_tgamma(type,suf) \
-static inline type tgamma##suf(type x){ \
-	if(x<0) return (type)NAN; if(x==1.0||x==2.0) return 1.0; \
-	return sqrt##suf(2.0*M_PI/x)*pow##suf(x/M_E,x)*exp##suf(1.0/(12.0*x)); }
-#define __jacl_lgamma(type,suf) \
-static inline type lgamma##suf(type x){ return log##suf(tgamma##suf(x)); }
+#define __jacl_erf(type,suf) static inline type erf##suf(type x){		type t=1.0,s=x; for(int i=1;i<10;++i){t*=-x*x/i;s+=t/(2*i+1);} return (2.0/sqrt##suf(M_PI))*s;}
+#define __jacl_erfc(type,suf) static inline type erfc##suf(type x){ return 1.0-erf##suf(x); }
+#define __jacl_tgamma(type,suf) static inline type tgamma##suf(type x){		if(x<0) return (type)NAN; if(x==1.0||x==2.0) return 1.0;	return sqrt##suf(2.0*M_PI/x)*pow##suf(x/M_E,x)*exp##suf(1.0/(12.0*x)); }
+#define __jacl_lgamma(type,suf) static inline type lgamma##suf(type x){ return log##suf(tgamma##suf(x)); }
 
 // Remainder and Quotient: fmod, remainder, remquo
-#define __jacl_fmod(type,suf) \
-static inline type fmod##suf(type x,type y){ return x-y*trunc##suf(x/y);}
-#define __jacl_remainder(type,suf) \
-static inline type remainder##suf(type x,type y){return x-y*round##suf(x/y);}
-#define __jacl_remquo(type,suf) \
-static inline type remquo##suf(type x,type y,int* q){ \
-	type qq=round##suf(x/y); *q=(int)qq; return x-y*qq; }
+#define __jacl_fmod(type,suf) static inline type fmod##suf(type x,type y){ return x-y*trunc##suf(x/y);}
+#define __jacl_remainder(type,suf) static inline type remainder##suf(type x,type y){return x-y*round##suf(x/y);}
+#define __jacl_remquo(type,suf) static inline type remquo##suf(type x,type y,int* q){		type qq=round##suf(x/y); *q=(int)qq; return x-y*qq; }
 
 /* FP Manipulation: nextafter, nexttoward */
-#define __jacl_nextafter(type,suf,UT) \
-static inline type nextafter##suf(type x, type y){ \
-	if (x==y) return x; \
-	union{type f; UT u;} a={x}; \
-	if (x<y) ++a.u; else --a.u; \
-	return a.f; \
-}
-#define __jacl_nexttoward(type,suf) \
-static inline type nexttoward##suf(type x, long double y){ return nextafter##suf(x,(type)y); }
+#define __jacl_nextafter(type,suf,UT) static inline type nextafter##suf(type x, type y){	if (x==y) return x;		union{type f; UT u;} a={x};		if (x<y) ++a.u; else --a.u;		return a.f; }
+#define __jacl_nexttoward(type,suf) static inline type nexttoward##suf(type x, long double y){ return nextafter##suf(x,(type)y); }
 
 //	Decomposition: modf
-#define __jacl_modf(type,suf) \
-static inline type modf##suf(type x, type* iptr){ \
-	type t = trunc##suf(x); \
-	*iptr = t; \
-	return x - t; \
-}
+#define __jacl_modf(type,suf) static inline type modf##suf(type x, type* iptr){		type t = trunc##suf(x);		*iptr = t;	return x - t; }
 
 #ifdef USE_FAST_MATH
 
 /* Estrin-evaluated minimax exp for double */
 #undef __jacl_exp
-#define __jacl_exp(type,suf) \
-static inline type exp##suf(type x) { \
+#define __jacl_exp(type,suf) static inline type exp##suf(type x) { \
 	/* range-reduce x = n·ln2 + r, r∈[−½ln2,½ln2] */ \
 	int n = (int)floor##suf(x * M_LOG2E + (x>0?0.5:-0.5)); \
 	type r = x - (type)n * M_LN2; \
@@ -340,8 +244,7 @@ static inline type exp##suf(type x) { \
 
 /* Estrin-evaluated minimax sin for double */
 #undef __jacl_sin
-#define __jacl_sin(type,suf) \
-static inline type sin##suf(type x) { \
+#define __jacl_sin(type,suf) static inline type sin##suf(type x) { \
 	/* range-reduce to r∈[−π/2,π/2] */ \
 	int q; \
 	type r = remquo##suf(x, M_PI, &q); \
@@ -363,75 +266,48 @@ static inline type sin##suf(type x) { \
 
 // Trig
 #undef __jacl_tan
-#define __jacl_tan(type,suf)												\
-static inline type tan##suf(type x) {								\
-	return _mm_cvtss_f32(_mm_tan_ps(_mm_set_ss((float)x))); \
-}
+#define __jacl_tan(type,suf) static inline type tan##suf(type x) { return _mm_cvtss_f32(_mm_tan_ps(_mm_set_ss((float)x))); }
 
 // Hyperbolic
 #undef __jacl_sinh
-#define __jacl_sinh(type,suf)												\
-static inline type sinh##suf(type x) {							\
-	return _mm_cvtss_f32(_mm_sinh_ps(_mm_set_ss((float)x))); \
-}
+#define __jacl_sinh(type,suf) static inline type sinh##suf(type x) { return _mm_cvtss_f32(_mm_sinh_ps(_mm_set_ss((float)x))); }
 #undef __jacl_cosh
-#define __jacl_cosh(type,suf)												\
-static inline type cosh##suf(type x) {							\
-	return _mm_cvtss_f32(_mm_cosh_ps(_mm_set_ss((float)x))); \
-}
+#define __jacl_cosh(type,suf) static inline type cosh##suf(type x) { return _mm_cvtss_f32(_mm_cosh_ps(_mm_set_ss((float)x))); }
 
 // Exp/log
 #undef __jacl_log
-#define __jacl_log(type,suf)												\
-static inline type log##suf(type x) {								\
-	return _mm_cvtsd_f64(_mm_log_pd(_mm_set_sd((double)x))); \
-}
+#define __jacl_log(type,suf) static inline type log##suf(type x) {	return _mm_cvtsd_f64(_mm_log_pd(_mm_set_sd((double)x))); }
 
 // Power, sqrt, hypot
 #undef __jacl_sqrt
-#define __jacl_sqrt(type,suf)												\
-static inline type sqrt##suf(type x) {							\
-	return _mm_cvtsd_f64(_mm_sqrt_pd(_mm_set_sd((double)x))); \
-}
+#define __jacl_sqrt(type,suf) static inline type sqrt##suf(type x) { return _mm_cvtsd_f64(_mm_sqrt_pd(_mm_set_sd((double)x))); }
 #undef __jacl_hypot
-#define __jacl_hypot(type,suf)											\
-static inline type hypot##suf(type x,type y) {			\
-	__m128d a = _mm_set_sd(x), b = _mm_set_sd(y);			\
-	return _mm_cvtsd_f64(_mm_hypot_pd(a,b));					\
-}
+#define __jacl_hypot(type,suf) static inline type hypot##suf(type x,type y) { __m128d a = _mm_set_sd(x), b = _mm_set_sd(y); return _mm_cvtsd_f64(_mm_hypot_pd(a,b)); }
 
 // Special functions
 #undef __jacl_pow
-#define __jacl_pow(type,suf)												\
-static inline type pow##suf(type x,type y) {				\
-	__m128d a = _mm_set_sd(x), b = _mm_set_sd(y);			\
-	return _mm_cvtsd_f64(_mm_pow_pd(a,b));						\
-}
+#define __jacl_pow(type,suf) static inline type pow##suf(type x,type y) { __m128d a = _mm_set_sd(x), b = _mm_set_sd(y); return _mm_cvtsd_f64(_mm_pow_pd(a,b)); }
 #undef __jacl_erf
-#define __jacl_erf(type,suf)												\
-static inline type erf##suf(type x) {								\
-	return _mm_cvtss_f32(_mm_erf_ps(_mm_set_ss((float)x))); \
-}
+#define __jacl_erf(type,suf) static inline type erf##suf(type x) { return _mm_cvtss_f32(_mm_erf_ps(_mm_set_ss((float)x))); }
 #undef __jacl_tgamma
-#define __jacl_tgamma(type,suf)											\
-static inline type tgamma##suf(type x) {						\
-	return _mm_cvtss_f32(_mm_tgamma_ps(_mm_set_ss((float)x))); \
-}
+#define __jacl_tgamma(type,suf) static inline type tgamma##suf(type x) { return _mm_cvtss_f32(_mm_tgamma_ps(_mm_set_ss((float)x))); }
 
 #endif /* USE_SIMD */
 
 // Now declare
 __jacl_math(nan)
 __jacl_math(fabs)
+__jacl_umeta(copysign)
+
+__jacl_mbit(trunc)
+__jacl_math(fmod)
 
 __jacl_mbit(ceil)
 __jacl_mbit(floor)
-__jacl_mbit(trunc)
 __jacl_mbit(round)
 
 __jacl_math(rint)
 __jacl_math(nearbyint)
-__jacl_umeta(copysign)
 __jacl_math(fdim)
 __jacl_math(fmax)
 __jacl_math(fmin)
@@ -477,7 +353,6 @@ __jacl_math(erfc)
 __jacl_math(tgamma)
 __jacl_math(lgamma)
 
-__jacl_math(fmod)
 __jacl_math(remainder)
 __jacl_math(remquo)
 

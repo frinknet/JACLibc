@@ -1,4 +1,5 @@
-fndef SETJMP_H
+/* (c) 2025 FRINKnet & Friends – MIT licence */
+#ifndef SETJMP_H
 #define SETJMP_H
 #pragma once
 

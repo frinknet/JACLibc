@@ -9,6 +9,7 @@ extern "C" {
 
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
 
 #if defined(_WIN32)
 	#define STRINGS_WIN32
@@ -20,9 +21,7 @@ extern "C" {
 	#include <ctype.h>
 #endif
 
-/* ================================================================ */
-/* POSIX string functions                                           */
-/* ================================================================ */
+void bzero(void *s, size_t n);
 
 /* Case-insensitive string comparison */
 static inline int strcasecmp(const char *s1, const char *s2) {
@@ -47,24 +46,34 @@ static inline int strcasecmp(const char *s1, const char *s2) {
 
 /* Case-insensitive string comparison (n characters) */
 static inline int strncasecmp(const char *s1, const char *s2, size_t n) {
-	if (!s1 || !s2 || n == 0) return (s1 == s2) ? 0 : (s1 ? 1 : -1);
-	
+		// Handle zero-length comparison first
+		if (n == 0) return 0;
+		
+		// Then handle NULL pointers
+		if (!s1 || !s2) return (s1 == s2) ? 0 : (s1 ? 1 : -1);
+		
 #ifdef STRINGS_WIN32
-	return _strnicmp(s1, s2, n);
+		return _strnicmp(s1, s2, n);
 #else
-	const unsigned char *p1 = (const unsigned char *)s1;
-	const unsigned char *p2 = (const unsigned char *)s2;
-	
-	for (size_t i = 0; i < n && *p1 && *p2; i++) {
-		int c1 = tolower(*p1);
-		int c2 = tolower(*p2);
-		if (c1 != c2) return c1 - c2;
-		p1++;
-		p2++;
-	}
-	return (n == 0) ? 0 : (tolower(*p1) - tolower(*p2));
+		const unsigned char *p1 = (const unsigned char *)s1;
+		const unsigned char *p2 = (const unsigned char *)s2;
+		size_t i;
+		for (i = 0; i < n && *p1 && *p2; i++) {
+				int c1 = tolower(*p1);
+				int c2 = tolower(*p2);
+				if (c1 != c2) return c1 - c2;
+				p1++;
+				p2++;
+		}
+		
+		// If we compared n characters successfully, they're equal
+		if (i == n) return 0;
+		
+		// Otherwise, one string ended before n characters
+		return tolower(*p1) - tolower(*p2);
 #endif
 }
+
 
 /* Find first set bit (1-based indexing) */
 static inline int ffs(int mask) {
