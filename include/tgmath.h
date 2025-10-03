@@ -1,19 +1,23 @@
 // (c) 2025 FRINKnet & Friends – MIT licence
 #ifndef TGMATH_H
 #define TGMATH_H
+#pragma once
 
+/*
+* This libc requires C11 or later  because of _Generic.
+* While C99 wanted this header it didn't provide the construct to make it viable.
+* Use <math.h> or explicit casts for legacy C code.
+*/
+
+#include <config.h>
 #include <math.h>
 #include <complex.h>
 
-#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L
-#error "tgmath.h requires C11 (_Generic)"
+#if !JACL_HAS_C11
+#error "tgmath.h requires C11 or later"
 #endif
 
-/*
- * C99/C11 type-generic math macros:
- * float, double, long double,
- * float complex, double complex, long double complex.
- */
+#if JACL_HAS_C11
 
 // Absolute value
 #define fabs(x)					_Generic((x), \
@@ -141,4 +145,3 @@
 #define fma(x,y,z)			_Generic((x)+(y)+(z), float: fmaf, double: fma, long double: fmal)(x,y,z)
 
 #endif /* TGMATH_H */
-

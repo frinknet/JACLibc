@@ -3,24 +3,22 @@
 #define SYS_MMAN_H
 #pragma once
 
+#include <config.h>
+#include <stddef.h>
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stddef.h>
-#include <sys/types.h>
-
-#if defined(_WIN32)
+#if JACL_OS_WINDOWS
 	#include <windows.h>
-#elif defined(__wasm__)
-	/* WASM doesn't support memory mapping */
+	#include <io.h>
+#elif JACL_ARCH_WASM
+/* WASM doesn't support memory mapping */
 #else
 	#include <unistd.h>
-	#ifdef __has_include
-		#if __has_include(<sys/syscall.h>)
-			#include <sys/syscall.h>
-		#endif
-	#endif
+	#include <sys/syscall.h>
 #endif
 
 /* ================================================================ */
@@ -29,7 +27,7 @@ extern "C" {
 
 #define PROT_NONE  0x00  /* No access */
 #define PROT_READ  0x01  /* Read access */
-#define PROT_WRITE 0x02  /* Write access */  
+#define PROT_WRITE 0x02  /* Write access */
 #define PROT_EXEC  0x04  /* Execute access */
 
 /* ================================================================ */
@@ -43,7 +41,7 @@ extern "C" {
 #define MAP_ANON       MAP_ANONYMOUS  /* BSD compatibility */
 
 /* Linux-specific flags */
-#ifdef __linux__
+#if JACL_OS_LINUX
 #define MAP_GROWSDOWN  0x0100  /* Stack grows down */
 #define MAP_DENYWRITE  0x0800  /* Do not permit writes to file */
 #define MAP_EXECUTABLE 0x1000  /* Mark as executable */
@@ -77,7 +75,7 @@ extern "C" {
 #define MADV_DONTNEED   4   /* Don't need these pages */
 
 /* Linux-specific advisory flags */
-#ifdef __linux__
+#if JACL_OS_LINUX
 #define MADV_REMOVE     9   /* Remove pages from backing store */
 #define MADV_DONTFORK   10  /* Don't inherit across fork */
 #define MADV_DOFORK     11  /* Do inherit across fork */
@@ -98,14 +96,14 @@ extern "C" {
 /* Function implementations                                         */
 /* ================================================================ */
 
-#if defined(_WIN32)
+#if JACL_OS_WINDOWS
 /* ================================================================ */
 /* Windows implementation using Win32 APIs                         */
 /* ================================================================ */
 
 static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
 	(void)addr; /* Windows chooses the address */
-	
+
 	/* Convert protection flags */
 	DWORD win_prot = PAGE_NOACCESS;
 	if ((prot & (PROT_READ | PROT_WRITE)) == (PROT_READ | PROT_WRITE)) {
@@ -117,37 +115,37 @@ static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 	} else if (prot & PROT_EXEC) {
 		win_prot = PAGE_EXECUTE;
 	}
-	
+
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 	HANDLE hMapping;
 	void *result;
-	
+
 	if (flags & MAP_ANONYMOUS) {
 		/* Anonymous mapping */
-		hMapping = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, win_prot, 
+		hMapping = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, win_prot,
 		                             (DWORD)(length >> 32), (DWORD)length, NULL);
 	} else {
 		/* File mapping */
 		hFile = (HANDLE)_get_osfhandle(fd);
 		if (hFile == INVALID_HANDLE_VALUE) return MAP_FAILED;
-		
+
 		hMapping = CreateFileMappingA(hFile, NULL, win_prot,
-		                             (DWORD)((offset + length) >> 32), 
+		                             (DWORD)((offset + length) >> 32),
 		                             (DWORD)(offset + length), NULL);
 	}
-	
+
 	if (!hMapping) return MAP_FAILED;
-	
+
 	DWORD access = 0;
 	if (prot & PROT_WRITE) access = FILE_MAP_WRITE;
 	else if (prot & PROT_READ) access = FILE_MAP_READ;
 	if (prot & PROT_EXEC) access |= FILE_MAP_EXECUTE;
-	
-	result = MapViewOfFile(hMapping, access, (DWORD)(offset >> 32), 
+
+	result = MapViewOfFile(hMapping, access, (DWORD)(offset >> 32),
 	                       (DWORD)offset, length);
-	
+
 	CloseHandle(hMapping);
-	
+
 	return result ? result : MAP_FAILED;
 }
 
@@ -159,7 +157,7 @@ static inline int munmap(void *addr, size_t length) {
 static inline int mprotect(void *addr, size_t len, int prot) {
 	DWORD old_protect;
 	DWORD new_protect = PAGE_NOACCESS;
-	
+
 	if ((prot & (PROT_READ | PROT_WRITE)) == (PROT_READ | PROT_WRITE)) {
 		new_protect = (prot & PROT_EXEC) ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
 	} else if (prot & PROT_WRITE) {
@@ -169,7 +167,7 @@ static inline int mprotect(void *addr, size_t len, int prot) {
 	} else if (prot & PROT_EXEC) {
 		new_protect = PAGE_EXECUTE;
 	}
-	
+
 	return VirtualProtect(addr, len, new_protect, &old_protect) ? 0 : -1;
 }
 
@@ -208,7 +206,7 @@ static inline int mincore(void *addr, size_t length, unsigned char *vec) {
 	return -1;
 }
 
-#elif defined(__wasm__)
+#elif JACL_ARCH_WASM
 /* ================================================================ */
 /* WebAssembly - Memory mapping not supported                      */
 /* ================================================================ */
@@ -269,7 +267,7 @@ static inline int mincore(void *addr, size_t length, unsigned char *vec) {
 
 static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
 #ifdef SYS_mmap
-	long result = syscall(SYS_mmap, (long)addr, (long)length, (long)prot, 
+	long result = syscall(SYS_mmap, (long)addr, (long)length, (long)prot,
 	                      (long)flags, (long)fd, (long)offset);
 	return (void*)result;
 #else
@@ -366,5 +364,4 @@ static inline int mincore(void *addr, size_t length, unsigned char *vec) {
 #ifdef __cplusplus
 }
 #endif
-#endif /* SYS_MMAN_H */
-
+#endif // SYS_MMAN_H

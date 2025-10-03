@@ -10,25 +10,31 @@ extern "C" {
 #include <stddef.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <signal.h>   // sigset_t, SIG_SETMASK
+#include <time.h>     // struct timespec
 
-#if defined(_WIN32)
-	#define POLL_WIN32
+#if JACL_OS_WINDOWS
+	#define POLL_WIN32 1
 	#include <windows.h>
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
 	#include <io.h>
-#elif defined(__wasm__)
-	#define POLL_WASM
+#elif JACL_ARCH_WASM
+	#define POLL_DUMMY 1
 #else
-	#define POLL_POSIX
+	#define POLL_POSIX 1
 	#include <unistd.h>
 	#include <sys/stat.h>
-	#ifdef __has_include
-		#if __has_include(<sys/syscall.h>)
-			#include <sys/syscall.h>
-		#endif
-	#endif
+	#include <sys/syscall.h>
 #endif
+
+#define APPEND_EVENT(flag, name) \
+	if ((events & (flag)) && pos < bufsize - 1) { \
+		if (pos > 0 && pos < bufsize - 1) { buf[pos++] = '|'; } \
+		const char *n = (name); \
+		while (*n && pos < bufsize - 1) { buf[pos++] = *n++; } \
+		buf[pos] = '\0'; \
+	}
 
 /* ================================================================ */
 /* Types                                                            */
@@ -59,7 +65,7 @@ struct pollfd {
 #define POLLHUP     0x0200  /* Device has been disconnected */
 #define POLLNVAL    0x0400  /* Invalid fd member */
 
-#ifdef __linux__
+#if JACL_OS_LINUX
 #define POLLRDHUP   0x2000  /* Stream socket peer closed connection */
 #define POLLMSG     0x0800  /* Unused on Linux */
 #define POLLREMOVE  0x1000  /* Remove from being monitored (unused) */
@@ -71,7 +77,7 @@ struct pollfd {
 /* Windows file descriptor type detection                          */
 /* ================================================================ */
 
-#ifdef POLL_WIN32
+#if POLL_WIN32
 typedef enum {
 	WIN_FD_INVALID,
 	WIN_FD_SOCKET,
@@ -83,7 +89,7 @@ typedef enum {
 static inline win_fd_type_t win32_get_fd_type(int fd) {
 	HANDLE h = (HANDLE)_get_osfhandle(fd);
 	if (h == INVALID_HANDLE_VALUE) return WIN_FD_INVALID;
-	
+
 	DWORD type = GetFileType(h);
 	switch (type) {
 		case FILE_TYPE_PIPE:
@@ -106,11 +112,11 @@ static inline win_fd_type_t win32_get_fd_type(int fd) {
 
 static inline int win32_poll_pipe(HANDLE h, short events, int timeout_ms) {
 	short revents = 0;
-	
+
 	if (events & (POLLIN | POLLRDNORM)) {
 		DWORD bytes_avail = 0;
 		DWORD total_bytes = 0;
-		
+
 		/* Use PeekNamedPipe to check if data is available */
 		if (PeekNamedPipe(h, NULL, 0, NULL, &bytes_avail, &total_bytes)) {
 			if (bytes_avail > 0) {
@@ -137,24 +143,24 @@ static inline int win32_poll_pipe(HANDLE h, short events, int timeout_ms) {
 			}
 		}
 	}
-	
+
 	if (events & (POLLOUT | POLLWRNORM)) {
 		/* For pipes, we assume write is always ready (simplification) */
 		/* A more sophisticated implementation would use overlapped I/O */
 		revents |= POLLOUT;
 	}
-	
+
 	return revents;
 }
 
 static inline int win32_poll_file(HANDLE h, short events) {
 	(void)h;
 	short revents = 0;
-	
+
 	/* Regular files are always ready for reading and writing */
 	if (events & (POLLIN | POLLRDNORM)) revents |= POLLIN;
 	if (events & (POLLOUT | POLLWRNORM)) revents |= POLLOUT;
-	
+
 	return revents;
 }
 #endif
@@ -163,7 +169,7 @@ static inline int win32_poll_file(HANDLE h, short events) {
 /* Function implementations                                         */
 /* ================================================================ */
 
-#ifdef POLL_WIN32
+#if POLL_WIN32
 /* ================================================================ */
 /* Enhanced Windows implementation                                  */
 /* ================================================================ */
@@ -173,7 +179,7 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 		errno = EINVAL;
 		return -1;
 	}
-	
+
 	if (nfds == 0) {
 		if (timeout > 0) {
 			Sleep((DWORD)timeout);
@@ -184,39 +190,39 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 		}
 		return 0;
 	}
-	
+
 	/* Separate different file descriptor types */
 	nfds_t socket_count = 0;
 	nfds_t other_count = 0;
 	int ready_count = 0;
-	
+
 	/* First pass: classify file descriptors and handle immediate cases */
 	for (nfds_t i = 0; i < nfds; i++) {
 		fds[i].revents = 0;
-		
+
 		if (fds[i].fd < 0) {
 			fds[i].revents = POLLNVAL;
 			ready_count++;
 			continue;
 		}
-		
+
 		win_fd_type_t fd_type = win32_get_fd_type(fds[i].fd);
-		
+
 		switch (fd_type) {
 			case WIN_FD_SOCKET:
 				socket_count++;
 				break;
-				
+
 			case WIN_FD_FILE:
 				/* Regular files are always ready */
 				fds[i].revents = win32_poll_file((HANDLE)_get_osfhandle(fds[i].fd), fds[i].events);
 				if (fds[i].revents) ready_count++;
 				break;
-				
+
 			case WIN_FD_PIPE:
 				other_count++;
 				break;
-				
+
 			case WIN_FD_CONSOLE:
 				/* Console input/output - simplified handling */
 				if (fds[i].events & (POLLIN | POLLRDNORM)) {
@@ -232,32 +238,32 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 				}
 				if (fds[i].revents) ready_count++;
 				break;
-				
+
 			default:
 				fds[i].revents = POLLNVAL;
 				ready_count++;
 				break;
 		}
 	}
-	
+
 	/* Handle sockets using WSAPoll if available */
 	if (socket_count > 0) {
 		/* Try WSAPoll first */
 		typedef int (WSAAPI *WSAPollFunc)(LPWSAPOLLFD fdArray, ULONG fds, INT timeout);
-		
+
 		HMODULE ws2_32 = GetModuleHandleA("ws2_32.dll");
 		WSAPollFunc WSAPollPtr = NULL;
-		
+
 		if (ws2_32) {
 			WSAPollPtr = (WSAPollFunc)GetProcAddress(ws2_32, "WSAPoll");
 		}
-		
+
 		if (WSAPollPtr) {
 			/* Use WSAPoll for sockets */
 			WSAPOLLFD *wsafds = (WSAPOLLFD *)_alloca(socket_count * sizeof(WSAPOLLFD));
 			nfds_t *socket_indices = (nfds_t *)_alloca(socket_count * sizeof(nfds_t));
 			nfds_t sock_idx = 0;
-			
+
 			/* Build WSAPoll array */
 			for (nfds_t i = 0; i < nfds; i++) {
 				if (win32_get_fd_type(fds[i].fd) == WIN_FD_SOCKET) {
@@ -265,20 +271,20 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 					wsafds[sock_idx].fd = (SOCKET)_get_osfhandle(fds[i].fd);
 					wsafds[sock_idx].events = 0;
 					wsafds[sock_idx].revents = 0;
-					
+
 					if (fds[i].events & (POLLIN | POLLRDNORM | POLLRDBAND)) {
 						wsafds[sock_idx].events |= POLLRDNORM | POLLRDBAND;
 					}
 					if (fds[i].events & POLLOUT) wsafds[sock_idx].events |= POLLWRNORM;
 					if (fds[i].events & POLLPRI) wsafds[sock_idx].events |= POLLPRI;
-					
+
 					sock_idx++;
 				}
 			}
-			
+
 			int sock_timeout = (ready_count > 0 || other_count > 0) ? 0 : timeout;
 			int sock_result = WSAPollPtr(wsafds, (ULONG)socket_count, sock_timeout);
-			
+
 			if (sock_result > 0) {
 				/* Convert results back */
 				for (nfds_t i = 0; i < socket_count; i++) {
@@ -291,7 +297,7 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 					if (wsafds[i].revents & POLLERR) fds[orig_idx].revents |= POLLERR;
 					if (wsafds[i].revents & POLLHUP) fds[orig_idx].revents |= POLLHUP;
 					if (wsafds[i].revents & POLLNVAL) fds[orig_idx].revents |= POLLNVAL;
-					
+
 					if (fds[orig_idx].revents != 0) ready_count++;
 				}
 			} else if (sock_result < 0) {
@@ -300,14 +306,14 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 			}
 		}
 	}
-	
+
 	/* Handle pipes and other special file types */
 	if (other_count > 0) {
 		int pipe_timeout = (ready_count > 0) ? 0 : timeout;
-		
+
 		for (nfds_t i = 0; i < nfds; i++) {
 			if (fds[i].revents != 0) continue; /* Already handled */
-			
+
 			if (win32_get_fd_type(fds[i].fd) == WIN_FD_PIPE) {
 				HANDLE h = (HANDLE)_get_osfhandle(fds[i].fd);
 				short pipe_revents = win32_poll_pipe(h, fds[i].events, pipe_timeout);
@@ -316,24 +322,24 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 			}
 		}
 	}
-	
+
 	return ready_count;
 }
 
 static inline int ppoll(struct pollfd fds[], nfds_t nfds, const struct timespec *timeout_ts, const sigset_t *sigmask) {
 	(void)sigmask; /* Signal masking not supported on Windows */
-	
+
 	int timeout_ms = -1;
 	if (timeout_ts) {
 		timeout_ms = (int)(timeout_ts->tv_sec * 1000 + timeout_ts->tv_nsec / 1000000);
 	}
-	
+
 	return poll(fds, nfds, timeout_ms);
 }
 
-#elif defined(POLL_WASM)
+#elif POLL_DUMMY
 /* ================================================================ */
-/* WebAssembly - Polling not supported                             */
+/* WebAssembly - Polling not supported                              */
 /* ================================================================ */
 
 static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
@@ -358,12 +364,12 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 		errno = EINVAL;
 		return -1;
 	}
-	
+
 	/* Handle regular files correctly - they should always be ready */
 	int ready_count = 0;
 	for (nfds_t i = 0; i < nfds; i++) {
 		fds[i].revents = 0;
-		
+
 		if (fds[i].fd < 0) {
 			if (fds[i].fd == -1) {
 				/* -1 means ignore this entry */
@@ -374,7 +380,7 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 				continue;
 			}
 		}
-		
+
 		/* Check if it's a regular file */
 		struct stat st;
 		if (fstat(fds[i].fd, &st) == 0) {
@@ -392,33 +398,24 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 			}
 		}
 	}
-	
+
 	/* If we have ready regular files and timeout is 0, return immediately */
 	if (ready_count > 0 && timeout == 0) {
 		return ready_count;
 	}
-	
+
 	/* Use syscall for the actual polling */
-#if defined(SYS_poll) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
+	#if defined(SYS_poll)
 		int result = (int)syscall(SYS_poll, fds, nfds, timeout);
-		
-		/* Add our regular file results */
-		if (result >= 0) {
-			return result + ready_count;
-		}
+
+		if (result >= 0) return result + ready_count;
+
 		return result;
+	#else
+		errno = ENOSYS;
+
+		return -1;
 	#endif
-#endif
-	
-	/* Fallback to standard library */
-	extern int poll(struct pollfd fds[], nfds_t nfds, int timeout);
-	int result = poll(fds, nfds, timeout);
-	
-	if (result >= 0) {
-		return result + ready_count;
-	}
-	return result;
 }
 
 static inline int ppoll(struct pollfd fds[], nfds_t nfds, const struct timespec *timeout_ts, const sigset_t *sigmask) {
@@ -426,35 +423,25 @@ static inline int ppoll(struct pollfd fds[], nfds_t nfds, const struct timespec 
 		errno = EINVAL;
 		return -1;
 	}
-	
-#if defined(SYS_ppoll) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
+
+	#if defined(SYS_ppoll)
 		return (int)syscall(SYS_ppoll, fds, nfds, timeout_ts, sigmask, sizeof(sigset_t));
 	#endif
-#endif
-	
+
 	/* Fallback using poll and signal masking */
 	sigset_t old_sigmask;
 	int timeout_ms = -1;
-	
+
 	if (timeout_ts) {
 		timeout_ms = (int)(timeout_ts->tv_sec * 1000 + timeout_ts->tv_nsec / 1000000);
 	}
-	
-	if (sigmask) {
-		extern int pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset);
-		if (pthread_sigmask(SIG_SETMASK, sigmask, &old_sigmask) != 0) {
-			return -1;
-		}
-	}
-	
+
+	if (sigmask && pthread_sigmask(SIG_SETMASK, sigmask, &old_sigmask) != 0) return -1;
+
 	int result = poll(fds, nfds, timeout_ms);
-	
-	if (sigmask) {
-		extern int pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset);
-		pthread_sigmask(SIG_SETMASK, &old_sigmask, NULL);
-	}
-	
+
+	if (sigmask) pthread_sigmask(SIG_SETMASK, &old_sigmask, NULL);
+
 	return result;
 }
 
@@ -492,49 +479,43 @@ static inline int pollfd_has_hangup(const struct pollfd *pfd) {
 	return pfd && (pfd->revents & POLLHUP);
 }
 
-/* Enhanced validation with better error messages */
+// Enhanced validation with better error messages
 static inline int poll_validate(const struct pollfd fds[], nfds_t nfds) {
 	if (!fds && nfds > 0) {
 		errno = EINVAL;
 		return -1;
 	}
-	
+
 	/* Check for obviously invalid file descriptors */
 	for (nfds_t i = 0; i < nfds; i++) {
 		if (fds[i].fd < -1) {
 			errno = EINVAL;
 			return -1;
 		}
-		
+
 		/* Check for invalid event flags */
-		short valid_events = POLLIN | POLLOUT | POLLPRI | POLLRDNORM | 
-		                    POLLRDBAND | POLLWRNORM | POLLWRBAND;
-#ifdef __linux__
-		valid_events |= POLLRDHUP | POLLMSG;
-#endif
-		
+		short valid_events = POLLIN | POLLOUT | POLLPRI | POLLRDNORM | POLLRDBAND | POLLWRNORM | POLLWRBAND;
+
+		#if JACL_OS_LINUX
+			valid_events |= POLLRDHUP | POLLMSG;
+		#endif
+
 		if (fds[i].events & ~valid_events) {
 			errno = EINVAL;
 			return -1;
 		}
 	}
-	
+
 	return 0;
 }
 
-/* Thread-safe event string conversion */
+// Thread-safe event string conversion
 static inline int poll_events_to_string_r(short events, char *buf, size_t bufsize) {
 	if (!buf || bufsize == 0) return -1;
-	
+
 	buf[0] = '\0';
 	size_t pos = 0;
-	
-#define APPEND_EVENT(flag, name) \
-	if ((events & flag) && pos < bufsize - 1) { \
-		int len = snprintf(buf + pos, bufsize - pos, "%s%s", pos > 0 ? "|" : "", name); \
-		if (len > 0) pos += (size_t)len; \
-	}
-	
+
 	APPEND_EVENT(POLLIN, "POLLIN");
 	APPEND_EVENT(POLLOUT, "POLLOUT");
 	APPEND_EVENT(POLLPRI, "POLLPRI");
@@ -545,24 +526,25 @@ static inline int poll_events_to_string_r(short events, char *buf, size_t bufsiz
 	APPEND_EVENT(POLLRDBAND, "POLLRDBAND");
 	APPEND_EVENT(POLLWRNORM, "POLLWRNORM");
 	APPEND_EVENT(POLLWRBAND, "POLLWRBAND");
-#ifdef __linux__
-	APPEND_EVENT(POLLRDHUP, "POLLRDHUP");
-#endif
-	
-#undef APPEND_EVENT
-	
+
+	#if JACL_OS_LINUX
+		APPEND_EVENT(POLLRDHUP, "POLLRDHUP");
+	#endif
+
 	return 0;
 }
 
-/* Backwards compatibility (non-thread-safe) */
+// Backwards compatibility (non-thread-safe)
 static inline const char *poll_events_to_string(short events) {
 	static char buf[256];
 	poll_events_to_string_r(events, buf, sizeof(buf));
 	return buf;
 }
 
+#undef APPEND_EVENT
+
 #ifdef __cplusplus
 }
 #endif
-#endif /* POLL_H */
 
+#endif // POLL_H

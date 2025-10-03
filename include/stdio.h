@@ -1,15 +1,21 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef STDIO_H
 #define STDIO_H
+#pragma once
 
-#include <stddef.h>
-#include <stdarg.h>
-#include <wchar.h>
-#include <assert.h>
-#include <errno.h>
-#include <limits.h>
-#include <stdint.h>
-#include <sys/types.h>
+#include <config.h>
+#include <stddef.h>  // size_t, ptrdiff_t, NULL
+#include <stdarg.h>  // va_list, va_start(), va_end(), va_arg()
+#include <sys/types.h>  // FILE
+#include <wchar.h>   // wchar_t, wint_t, WEOF
+#include <assert.h>  // assert()
+#include <errno.h>   // errno, EINVAL, EBADF, ERANGE, etc.
+#include <limits.h>  // INT_MAX, LONG_MAX, CHAR_BIT
+#include <stdint.h>  // uint8_t, int32_t, uint64_t, etc.
+
+#if JACL_HAS_C23
+#define __STDC_VERSION_STDIO_H__ 202311L
+#endif
 
 #ifndef BUFSIZ
 #define BUFSIZ 1024
@@ -45,7 +51,7 @@
 
 #ifdef __cplusplus
 	#define restrict __restrict__
-#elif !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
+#elif !JACL_HAS_C99
 	#define restrict	 /* nothing */
 #endif
 
@@ -53,26 +59,14 @@
 extern "C" {
 #endif
 
-// — Types (C17 7.21.1) —
-typedef struct __jacl_file {
-		int _flags;					 // File status flags
-		char *_ptr;					 // Current position in buffer	
-		char *_base;				 // Base of buffer
-		char *_end;					 // End of buffer
-		size_t _bufsiz;			 // Buffer size
-		int _fd;						 // File descriptor
-		int _cnt;						 // Characters left in buffer
-		unsigned char *_tmpfname; // Temp file name (if any)
-} FILE;
-
 typedef long long fpos_t;  // Stub for fpos_t (implementation-defined)
 
-// — Standard Streams —
+/* Standard Streams */
 extern FILE* stdin;
 extern FILE* stdout;
 extern FILE* stderr;
 
-// — File Operations —
+/* File Operations */
 FILE* fopen(const char* restrict path, const char* restrict mode);
 int fclose(FILE* stream);
 int fflush(FILE* stream);
@@ -82,11 +76,11 @@ FILE *tmpfile(void);
 char *tmpnam(char *s);
 char *tempnam(const char *dir, const char *pfx);
 
-// — File Access —
+/* File Access */
 size_t fread(void* restrict ptr, size_t size, size_t nmemb, FILE* restrict stream);
 size_t fwrite(const void* restrict ptr, size_t size, size_t nmemb, FILE* restrict stream);
 
-// — Direct I/O —
+/* Direct I/O */
 int fgetc(FILE* stream);
 int fputc(int c, FILE* stream);
 char* fgets(char* restrict s, int n, FILE* restrict stream);
@@ -98,44 +92,44 @@ int putchar(int c);
 int puts(const char* s);
 int ungetc(int c, FILE* stream);
 
-// — Formatted I/O —
+/* Formatted I/O */
 int fprintf(FILE* restrict stream, const char* restrict fmt, ...);
 int fscanf(FILE* restrict stream, const char* restrict fmt, ...);
 int printf(const char* restrict fmt, ...);
 int fprintf(FILE* restrict stream, const char* restrict fmt, ...);
 int scanf(const char* restrict fmt, ...);
-int snprintf(char* restrict s, size_t n, const char* restrict fmt, ...);
 int sprintf(char* restrict s, const char* restrict fmt, ...);
 int sscanf(const char* restrict s, const char* restrict fmt, ...);
 int vfprintf(FILE* restrict stream, const char* restrict fmt, va_list ap);
 int vfscanf(FILE* restrict stream, const char* restrict fmt, va_list ap);
 int vprintf(const char* restrict fmt, va_list ap);
 int vscanf(const char* restrict fmt, va_list ap);
-int vsnprintf(char* restrict s, size_t n, const char* restrict fmt, va_list ap);
 int vsprintf(char* restrict s, const char* restrict fmt, va_list ap);
 int vsscanf(const char* restrict s, const char* restrict fmt, va_list ap);
 
-// — Character Class Tests (not in stdio, but related) —
-// (Omit if not needed; C17 has these in <ctype.h>)
+#if JACL_HAS_C99
+int snprintf(char* restrict s, size_t n, const char* restrict fmt, ...);
+int vsnprintf(char* restrict s, size_t n, const char* restrict fmt, va_list ap);
+#endif
 
-// — Error Handling —
+/* Error Handling */
 void clearerr(FILE* stream);
 int feof(FILE* stream);
 int ferror(FILE* stream);
 void perror(const char* s);
 
-// — File Positioning —
+/* File Positioning */
 int fgetpos(FILE* restrict stream, fpos_t* restrict pos);
 int fseek(FILE* stream, long offset, int whence);
 int fsetpos(FILE* stream, const fpos_t* pos);
 long ftell(FILE* stream);
 void rewind(FILE* stream);
 
-// — Operations on Files (buffering) —
+/* Operations on Files (buffering) */
 void setbuf(FILE* restrict stream, char* restrict buf);
 int setvbuf(FILE* restrict stream, char* restrict buf, int mode, size_t size);
 
-// — Unlocked I/O (POSIX extensions, C17 compatible) —
+/* Unlocked I/O (POSIX extensions, C17 compatible) */
 int fgetc_unlocked(FILE *stream);
 int fputc_unlocked(int c, FILE *stream);
 char *fgets_unlocked(char *s, int n, FILE *stream);
@@ -148,11 +142,39 @@ void clearerr_unlocked(FILE *stream);
 int feof_unlocked(FILE *stream);
 int ferror_unlocked(FILE *stream);
 
-// — Get / Put Helpers —
+#if JACL_HAS_C99
+
+/* Get / Put Helpers */
 wint_t fgetwc(FILE *stream);
 wint_t fputwc(wchar_t wc, FILE *stream);
 wint_t getwc(FILE *stream);
 wint_t putwc(wchar_t wc, FILE *stream);
+
+/* Wide Char Support */
+wchar_t *fgetws(wchar_t * restrict ws, int n, FILE * restrict stream);
+int fputws(const wchar_t * restrict ws, FILE * restrict stream);
+wint_t getwchar(void);
+wint_t putwchar(wchar_t wc);
+
+#endif /* JACL_HAS_C99 */
+
+#if JACL_HAS_POSIX
+
+int fileno(FILE *stream);
+FILE *popen(const char *command, const char *mode);
+int pclose(FILE *stream);
+FILE *funopen(const void *, int (*)(void *, char *, int), int (*)(void *, const char *, int), long (*)(void *, long, int), int (*)(void *));
+
+#endif /* JACL_HAS_POSIX */
+
+#if JACL_HAS_THREADS
+
+void flockfile(FILE *stream);
+int ftrylockfile(FILE *stream);
+void funlockfile(FILE *stream);
+
+#endif /* JACL_HAS_THREADS */
+
 
 #ifdef __cplusplus
 }

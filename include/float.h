@@ -1,6 +1,7 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef FLOAT_H
 #define FLOAT_H
+#pragma once
 
 // — Single‐precision (float) —
 #define FLT_RADIX       2
@@ -14,7 +15,6 @@
 #define FLT_EPSILON     1.19209290e-07F
 #define FLT_MIN         1.17549435e-38F
 #define FLT_TRUE_MIN    1.40129846e-45F
-#define FLT_MAX_10_EXP  38
 
 // — Double‐precision (double) —
 #define DBL_MANT_DIG    53
@@ -34,13 +34,14 @@
 #define LDBL_DIG       DBL_DIG
 #define LDBL_MIN_EXP   DBL_MIN_EXP
 #define LDBL_MAX_EXP   DBL_MAX_EXP
+#define LDBL_MIN_10_EXP DBL_MIN_10_EXP
 #define LDBL_MAX_10_EXP DBL_MAX_10_EXP
 #define LDBL_MAX       DBL_MAX
 #define LDBL_EPSILON   DBL_EPSILON
 #define LDBL_MIN       DBL_MIN
 #define LDBL_TRUE_MIN  DBL_TRUE_MIN
 
-// — General — 
+// — General —
 #define DECIMAL_DIG    17
 #define FLT_ROUNDS     1  // round-to-nearest
 

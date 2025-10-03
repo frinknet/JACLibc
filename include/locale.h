@@ -1,7 +1,10 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef LOCALE_H
 #define LOCALE_H
+#pragma once
 
+#include <config.h>
+#include <limits.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -28,12 +31,14 @@ typedef struct {
 } lconv;
 
 static inline char *setlocale(int category, const char *locale) {
-	//TODO: Just return "C" for minimal support
+	//TODO: Allow setlocale on all platforms (this will take  some  thought)
+	// Just return "C" for minimal support
 	static char c_locale[] = "C";
 
 	return (locale == NULL) ? c_locale : (strcmp(locale, "") == 0 || strcmp(locale, "C") == 0) ? c_locale : NULL;
 }
 
+#if JACL_HAS_C99
 static lconv __jacl_lconv_default = {
 	.decimal_point			= ".",
 	.thousands_sep			= "",
@@ -54,6 +59,28 @@ static lconv __jacl_lconv_default = {
 	.p_sign_posn				= CHAR_MAX,
 	.n_sign_posn				= CHAR_MAX
 };
+#else
+static lconv __jacl_lconv_default = {
+	".",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	CHAR_MAX,
+	CHAR_MAX,
+	CHAR_MAX,
+	CHAR_MAX,
+	CHAR_MAX,
+	CHAR_MAX,
+	CHAR_MAX,
+	CHAR_MAX
+};
+#endif
 
 static inline lconv *localeconv(void) { return &__jacl_lconv_default; }
 
@@ -64,4 +91,4 @@ static inline lconv *localeconv(void) { return &__jacl_lconv_default; }
 #define LC_NUMERIC	 4
 #define LC_TIME			 5
 
-#endif /* LOCALE_H */
+#endif // LOCALE_H

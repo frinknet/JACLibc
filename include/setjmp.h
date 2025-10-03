@@ -7,22 +7,23 @@
 extern "C" {
 #endif
 
+#include <config.h>
 #include <signal.h>
 
-#ifdef __wasm__
+#ifdef JACL_ARCH_WASM
 /* WebAssembly: No real setjmp/longjmp support */
 typedef struct { int dummy; } jmp_buf[1];
 typedef jmp_buf sigjmp_buf;
 
 #define setjmp(env) 0
 #define longjmp(env, val) __builtin_trap()
-#define sigsetjmp(env, savemask) 0	
+#define sigsetjmp(env, savemask) 0
 #define siglongjmp(env, val) __builtin_trap()
 
 #else /* Native platforms */
 
 /* Architecture-specific jmp_buf layouts */
-#if defined(__x86_64__) || defined(_M_X64)
+#if JACL_ARCH_X64
 typedef struct {
 	unsigned long __rip;	/* return address */
 	unsigned long __rsp;	/* stack pointer */
@@ -36,7 +37,7 @@ typedef struct {
 	sigset_t __saved_mask;
 } jmp_buf[1];
 
-#elif defined(__i386__) || defined(_M_IX86)
+#elif JACL_ARCH_X86
 typedef struct {
 	unsigned int __eip;		/* return address */
 	unsigned int __esp;		/* stack pointer */
@@ -48,7 +49,7 @@ typedef struct {
 	sigset_t __saved_mask;
 } jmp_buf[1];
 
-#elif defined(__aarch64__)
+#elif JACL_ARCH_ARM64
 typedef struct {
 	unsigned long __x19_x28[10]; /* x19-x28 callee-saved */
 	unsigned long __lr;			 /* x30 link register */
@@ -58,7 +59,7 @@ typedef struct {
 	sigset_t __saved_mask;
 } jmp_buf[1];
 
-#elif defined(__riscv)
+#elif JACL_ARCH_RISCV
 typedef struct {
 	unsigned long __ra;		/* return address */
 	unsigned long __sp;		/* stack pointer */
@@ -75,74 +76,71 @@ typedef struct {
 typedef jmp_buf sigjmp_buf;
 
 /* x86_64 implementation */
-#if defined(__x86_64__) || defined(_M_X64)
+#if JACL_ARCH_X64
 static inline int setjmp(jmp_buf env) {
 	int result;
+
 	__asm__ volatile (
-		"movq	 %%rsp, 8(%0)\n\t"		/* save stack pointer */
-		"movq	 %%rbp, 16(%0)\n\t"		/* save frame pointer */
-		"movq	 %%rbx, 24(%0)\n\t"		/* save callee-saved registers */
-		"movq	 %%r12, 32(%0)\n\t"
-		"movq	 %%r13, 40(%0)\n\t"
-		"movq	 %%r14, 48(%0)\n\t"
-		"movq	 %%r15, 56(%0)\n\t"
-		"movq	 $1f, (%0)\n\t"			/* save return address */
-		"xorl	 %%eax, %%eax\n\t"		/* return 0 first time */
-		"jmp	 2f\n"
-		"1:\n\t"						/* longjmp returns here */
-		"movl	 $1, %%eax\n"			/* return 1 from longjmp */
-		"2:"
-		: "=m" (*env), "=a" (result)
-		:
+		"movq		 %%rsp, 8(%0)\n\t"
+		"movq		 %%rbp, 16(%0)\n\t"
+		"movq		 %%rbx, 24(%0)\n\t"
+		"movq		 %%r12, 32(%0)\n\t"
+		"movq		 %%r13, 40(%0)\n\t"
+		"movq		 %%r14, 48(%0)\n\t"
+		"movq		 %%r15, 56(%0)\n\t"
+		"movq		 (%%rsp), %%rax\n\t"
+		"movq		 %%rax, (%0)\n\t"
+		"xorl		 %%eax, %%eax"
+		: "=a" (result)
+		: "r" (env)
 		: "memory"
 	);
+
 	return result;
 }
 
 static inline void longjmp(jmp_buf env, int val) {
-	__asm__ volatile (
-		"movq	 56(%0), %%r15\n\t"		/* restore registers */
-		"movq	 48(%0), %%r14\n\t"
-		"movq	 40(%0), %%r13\n\t"
-		"movq	 32(%0), %%r12\n\t"
-		"movq	 24(%0), %%rbx\n\t"
-		"movq	 16(%0), %%rbp\n\t"
-		"movq	 8(%0), %%rsp\n\t"		/* restore stack pointer */
-		"testl	 %1, %1\n\t"			/* check if val == 0 */
-		"jnz	 1f\n\t"
-		"movl	 $1, %1\n"				/* if val == 0, make it 1 */
-		"1:\n\t"
-		"movl	 %1, %%eax\n\t"			/* set return value */
-		"jmpq	 *(%0)"					/* jump to saved address */
-		:
-		: "r" (env), "r" (val)
-		: "rax", "memory"
-	);
-	__builtin_unreachable();
+		__asm__ volatile (
+				"movq		 56(%0), %%r15\n\t"
+				"movq		 48(%0), %%r14\n\t"
+				"movq		 40(%0), %%r13\n\t"
+				"movq		 32(%0), %%r12\n\t"
+				"movq		 24(%0), %%rbx\n\t"
+				"movq		 16(%0), %%rbp\n\t"
+				"movq		 8(%0), %%rsp\n\t"
+				"testl	 %1, %1\n\t"
+				"jnz		 1f\n\t"
+				"movl		 $1, %1\n"
+				"1:\n\t"
+				"movl		 %1, %%eax\n\t"
+				"jmpq		 *(%0)"
+				:
+				: "r" (env), "r" (val)
+				: "rax", "memory"
+		);
+		__builtin_unreachable();
 }
 
-/* i386 implementation */  
-#elif defined(__i386__) || defined(_M_IX86)
+/* i386 implementation */
+#elif JACL_ARCH_X86
 static inline int setjmp(jmp_buf env) {
 	int result;
 	__asm__ volatile (
-		"movl	 %%esp, 4(%0)\n\t"		/* save stack pointer */
-		"movl	 %%ebp, 8(%0)\n\t"		/* save frame pointer */
-		"movl	 %%ebx, 12(%0)\n\t"		/* save callee-saved registers */
-		"movl	 %%esi, 16(%0)\n\t"
-		"movl	 %%edi, 20(%0)\n\t"
-		"movl	 $1f, (%0)\n\t"			/* save return address */
-		"xorl	 %%eax, %%eax\n\t"		/* return 0 first time */
-		"jmp	 2f\n"
-		"1:\n\t"						/* longjmp returns here */
-		"movl	 $1, %%eax\n"			/* return 1 from longjmp */
-		"2:"
-		: "=m" (*env), "=a" (result)
-		:
+		"movl		 %%esp, 4(%0)\n\t"
+		"movl		 %%ebp, 8(%0)\n\t"
+		"movl		 %%ebx, 12(%0)\n\t"
+		"movl		 %%esi, 16(%0)\n\t"
+		"movl		 %%edi, 20(%0)\n\t"
+		"movl		 (%%esp), %%eax\n\t"
+		"movl		 %%eax, (%0)\n\t"
+		"xorl		 %%eax, %%eax"
+		: "=a" (result)
+		: "r" (env)
 		: "memory"
 	);
 	return result;
 }
+
 
 static inline void longjmp(jmp_buf env, int val) {
 	__asm__ volatile (
@@ -165,28 +163,28 @@ static inline void longjmp(jmp_buf env, int val) {
 }
 
 /* AArch64 implementation */
-#elif defined(__aarch64__)
+#elif JACL_ARCH_ARM64
 static inline int setjmp(jmp_buf env) {
-	int result;
-	__asm__ volatile (
-		"stp x19, x20, [%0, #0]\n\t"
-		"stp x21, x22, [%0, #16]\n\t"
-		"stp x23, x24, [%0, #32]\n\t"
-		"stp x25, x26, [%0, #48]\n\t"
-		"stp x27, x28, [%0, #64]\n\t"
-		"str x30, [%0, #80]\n\t"		/* save link register */
-		"mov x1, sp\n\t"
-		"str x1, [%0, #88]\n\t"			/* save stack pointer */
-		"stp d8,	d9,  [%0, #96]\n\t"	/* save FP registers */
-		"stp d10, d11, [%0, #112]\n\t"
-		"stp d12, d13, [%0, #128]\n\t"
-		"stp d14, d15, [%0, #144]\n\t"
-		"mov %w1, #0"					/* return 0 */
-		: "=r" (env), "=r" (result)
-		:
-		: "x1", "memory"
-	);
-	return result;
+		int result;
+		__asm__ volatile (
+				"stp x19, x20, [%0, #0]\n\t"
+				"stp x21, x22, [%0, #16]\n\t"
+				"stp x23, x24, [%0, #32]\n\t"
+				"stp x25, x26, [%0, #48]\n\t"
+				"stp x27, x28, [%0, #64]\n\t"
+				"str x30, [%0, #80]\n\t"
+				"mov x1, sp\n\t"
+				"str x1, [%0, #88]\n\t"
+				"stp d8,	d9,  [%0, #96]\n\t"
+				"stp d10, d11, [%0, #112]\n\t"
+				"stp d12, d13, [%0, #128]\n\t"
+				"stp d14, d15, [%0, #144]\n\t"
+				"mov %w1, #0"
+				: "=r" (result)								// ← FIXED: only result as output
+				: "r" (env)										// ← FIXED: env as input
+				: "x1", "memory"
+		);
+		return result;
 }
 
 static inline void longjmp(jmp_buf env, int val) {
@@ -214,7 +212,7 @@ static inline void longjmp(jmp_buf env, int val) {
 }
 
 /* RISC-V implementation */
-#elif defined(__riscv)
+#elif JACL_ARCH_RISCV
 static inline int setjmp(jmp_buf env) {
 	__asm__ volatile (
 		"sd ra,	0(%0)\n\t"
@@ -242,7 +240,7 @@ static inline int setjmp(jmp_buf env) {
 static inline void longjmp(jmp_buf env, int val) {
 	__asm__ volatile (
 		"ld ra,	0(%0)\n\t"
-		"ld sp,	8(%0)\n\t" 
+		"ld sp,	8(%0)\n\t"
 		"ld s0,  16(%0)\n\t"
 		"ld s1,  24(%0)\n\t"
 		"ld s2,  32(%0)\n\t"
@@ -268,13 +266,27 @@ static inline void longjmp(jmp_buf env, int val) {
 #endif
 
 /* Signal versions (simplified - don't actually handle signals) */
-#define sigsetjmp(env, savemask) setjmp(env)
-#define siglongjmp(env, val) longjmp(env, val)
+#if JACL_HAS_POSIX
 
-#endif /* !__wasm__ */
+static inline int sigsetjmp(sigjmp_buf env, int savemask) {
+	env[0].__mask_was_saved = 0;
+
+	if (savemask && sigprocmask(SIG_SETMASK, NULL, &env[0].__saved_mask) == 0) env[0].__mask_was_saved = 1;
+
+	return setjmp(env);
+}
+
+static inline void siglongjmp(sigjmp_buf env, int val) {
+	if (env[0].__mask_was_saved) sigprocmask(SIG_SETMASK, &env[0].__saved_mask, NULL);
+
+	longjmp(env, val);
+}
+
+#endif /* JACL_HAS_POSIX */
+
+#endif /* !JACL_ARCH_WASM */
 
 #ifdef __cplusplus
 }
 #endif
 #endif /* SETJMP_H */
-

@@ -1,6 +1,11 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef ISO646_H
 #define ISO646_H
+#pragma once
+
+#if !JACL_HAS_C99
+  #error "iso646.h requires C99"
+#endif
 
 /* Alternative operator spellings */
 #ifndef __cplusplus

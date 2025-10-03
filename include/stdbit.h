@@ -1,14 +1,16 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+	// (c) 2025 FRINKnet & Friends – MIT licence
 #ifndef STDBIT_H
 #define STDBIT_H
 #pragma once
 
+#include <config.h>
 #include <stdint.h>
+
 #ifdef __cplusplus
-extern "C" { 
+extern "C" {
 #endif
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#if JACL_HAS_C23
 #  define __STDC_VERSION_STDBIT_H__ 202311L
 #endif
 
@@ -31,7 +33,6 @@ extern "C" {
 #elif defined(_MSC_VER)
 #  include <intrin.h>
 #endif
-
 
 static inline int __jacl_ctz32(uint32_t x) {
 		if (!x) return 32;
@@ -63,38 +64,38 @@ static inline int __jacl_pop32(uint32_t x) {
 	return x & 0x3Fu;
 }
 
-#define __jacl_bitgen(width,type,suf)																						\
-static inline int stdc_leading_zeros_##suf(type v){															\
-		if (!v) return width;																												\
-		if (width <= 32) {																													\
-				return __jacl_clz32((uint32_t)v) - (32 - width);											 \
-		} else {																																		\
-				uint32_t hi = (uint32_t)(v >> 32);																		 \
-				return hi ? __jacl_clz32(hi) : 32 + __jacl_clz32((uint32_t)v);				 \
-		}																																						\
-}																																								\
-static inline int stdc_leading_ones_##suf (type v){														 \
-		return stdc_leading_zeros_##suf((type)~v);																 \
-}																																								\
-static inline int stdc_trailing_zeros_##suf(type v){													 \
-		if (!v) return width;																												\
-		if (width <= 32) {																													\
-				return __jacl_ctz32((uint32_t)v);																				\
-		} else {																																		\
-				uint32_t lo = (uint32_t)v;																						 \
-				return lo ? __jacl_ctz32(lo) : 32 + __jacl_ctz32((uint32_t)(v>>32));	 \
-		}																																						\
-}																																								\
-static inline int stdc_trailing_ones_##suf (type v){													 \
-		return stdc_trailing_zeros_##suf((type)~v);																 \
-}																																								\
-static inline int stdc_count_ones_##suf(type v){															 \
-		if (width <= 32) {																													\
-				return __jacl_pop32((uint32_t)v);																				\
-		} else {																																		\
-				return __jacl_pop32((uint32_t)v) + __jacl_pop32((uint32_t)(v>>32));		 \
-		}																																						\
-}																																								\
+#define __jacl_bitgen(width,type,suf) \
+static inline int stdc_leading_zeros_##suf(type v){ \
+		if (!v) return width; \
+		if (width <= 32) { \
+				return __jacl_clz32((uint32_t)v) - (32 - width); \
+		} else { \
+				uint32_t hi = (uint32_t)(v >> 32); \
+				return hi ? __jacl_clz32(hi) : 32 + __jacl_clz32((uint32_t)v); \
+		} \
+} \
+static inline int stdc_leading_ones_##suf(type v){ \
+		return stdc_leading_zeros_##suf((type)~v); \
+} \
+static inline int stdc_trailing_zeros_##suf(type v){ \
+		if (!v) return width; \
+		if (width <= 32) { \
+				return __jacl_ctz32((uint32_t)v); \
+		} else { \
+				uint32_t lo = (uint32_t)v; \
+				return lo ? __jacl_ctz32(lo) : 32 + __jacl_ctz32((uint32_t)(v>>32)); \
+		} \
+} \
+static inline int stdc_trailing_ones_##suf(type v){ \
+		return stdc_trailing_zeros_##suf((type)~v); \
+} \
+static inline int stdc_count_ones_##suf(type v){ \
+		if (width <= 32) { \
+				return __jacl_pop32((uint32_t)v); \
+		} else { \
+				return __jacl_pop32((uint32_t)v) + __jacl_pop32((uint32_t)(v>>32)); \
+		} \
+} \
 static inline int stdc_count_zeros_##suf(type v){															 \
 		return (int)width - stdc_count_ones_##suf(v);															 \
 }																																								\
@@ -120,7 +121,7 @@ __jacl_bitgen(64, unsigned long long,	ull)
 
 #undef __jacl_bitgen
 
-#if __STDC_VERSION__ >= 201112L
+#if JACL_HAS_C11
 	#define __jacl_tgm(fn,x) _Generic((x),								 \
 		unsigned char:				 fn##_uc,									 \
 		unsigned short:				 fn##_us,									 \
@@ -139,7 +140,7 @@ __jacl_bitgen(64, unsigned long long,	ull)
 	#define stdc_bit_floor(x)				__jacl_tgm(stdc_bit_floor,			x)
 	#define stdc_bit_ceil(x)				__jacl_tgm(stdc_bit_ceil,				x)
 	#define stdc_has_single_bit(x)	__jacl_tgm(stdc_has_single_bit, x)
-	
+
 	#undef __jacl_tgm
 #endif
 

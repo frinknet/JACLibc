@@ -1,31 +1,24 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef _WCHAR_H
 #define _WCHAR_H
+#pragma once
 
+#include <config.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h> // FILE
 
 // Constants
-#ifndef MB_CUR_MAX
-#define MB_CUR_MAX 1
-#endif
+#define MB_CUR_MAX 4
 
 #ifndef EOF
 #define EOF (-1)
 #endif
 
-#ifndef WEOF
 #define WEOF ((wint_t)-1)
-#endif
-
-#ifndef WCHAR_MIN
 #define WCHAR_MIN 0
-#endif
-
-#ifndef WCHAR_MAX
 #define WCHAR_MAX 0xFFFFFFFFu
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,12 +32,11 @@ typedef long wchar_t;
 #endif
 #endif
 
-// Forward declaration only - no typedef to avoid conflict
-struct FILE;
+typedef unsigned int wint_t;
 
 typedef struct { uint32_t wc; int bytes, want; } mbstate_t;
 
-static mbstate_t *get_fallback_state(mbstate_t *ps) {
+static inline mbstate_t *get_fallback_state(mbstate_t *ps) {
 		static mbstate_t zero_state;
 		if (!ps) {
 				memset(&zero_state, 0, sizeof(zero_state));
@@ -71,27 +63,27 @@ static inline int mbrtowc(wchar_t *pwc, const char *s, size_t n, mbstate_t *ps) 
 		if (!s || n == 0) return 0;
 		mbstate_t *st = get_fallback_state(ps);
 		unsigned char c = (unsigned char)s[0];
-		
-		if (c < 0x80) { 
-				if (pwc) *pwc = c; 
-				return 1; 
+
+		if (c < 0x80) {
+				if (pwc) *pwc = c;
+				return 1;
 		}
-		
+
 		if ((c & 0xE0) == 0xC0 && n >= 2) {
 				if (pwc) *pwc = ((c & 0x1F) << 6) | ((unsigned char)s[1] & 0x3F);
 				return 2;
 		}
-		
+
 		if ((c & 0xF0) == 0xE0 && n >= 3) {
 				if (pwc) *pwc = ((c & 0x0F) << 12) | (((unsigned char)s[1] & 0x3F) << 6) | ((unsigned char)s[2] & 0x3F);
 				return 3;
 		}
-		
+
 		if ((c & 0xF8) == 0xF0 && n >= 4) {
 				if (pwc) *pwc = ((c & 0x07) << 18) | (((unsigned char)s[1] & 0x3F) << 12) | (((unsigned char)s[2] & 0x3F) << 6) | ((unsigned char)s[3] & 0x3F);
 				return 4;
 		}
-		
+
 		st->wc = c;
 		st->bytes = 1;
 		st->want = (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 1;
@@ -105,28 +97,50 @@ static inline int mbtowc(wchar_t *pwc, const char *s, size_t n) {
 }
 
 static inline int wcrtomb(char *s, wchar_t wc, mbstate_t *ps) {
-		(void)ps;
-		if (wc > 0x10FFFF) wc = 0xFFFD;
-		if (wc < 0x80) {
-				s[0] = (char)wc;
-				return 1;
-		}
-		if (wc < 0x800) {
-				s[0] = 0xC0 | (wc >> 6);
-				s[1] = 0x80 | (wc & 0x3F);
-				return 2;
-		}
-		if (wc < 0x10000) {
-				s[0] = 0xE0 | (wc >> 12);
-				s[1] = 0x80 | ((wc >> 6) & 0x3F);
-				s[2] = 0x80 | (wc & 0x3F);
-				return 3;
-		}
-		s[0] = 0xF0 | (wc >> 18);
-		s[1] = 0x80 | ((wc >> 12) & 0x3F);
-		s[2] = 0x80 | ((wc >> 6) & 0x3F);
-		s[3] = 0x80 | (wc & 0x3F);
-		return 4;
+	mbstate_t *st = get_fallback_state(ps);
+
+	if (!s) {
+		// Query: return bytes for initial shift state (always 1 for UTF-8)
+		st->wc = 0;
+		st->bytes = 0;
+		st->want = 0;
+
+		return 1;
+	}
+
+	if (wc > 0x10FFFF) wc = 0xFFFD;
+
+	if (wc < 0x80) {
+		s[0] = (char)wc;
+		st->wc = 0;
+
+		return 1;
+	}
+
+	if (wc < 0x800) {
+		s[0] = 0xC0 | (wc >> 6);
+		s[1] = 0x80 | (wc & 0x3F);
+		st->wc = 0;
+
+		return 2;
+	}
+
+	if (wc < 0x10000) {
+		s[0] = 0xE0 | (wc >> 12);
+		s[1] = 0x80 | ((wc >> 6) & 0x3F);
+		s[2] = 0x80 | (wc & 0x3F);
+		st->wc = 0;
+
+		return 3;
+	}
+
+	s[0] = 0xF0 | (wc >> 18);
+	s[1] = 0x80 | ((wc >> 12) & 0x3F);
+	s[2] = 0x80 | ((wc >> 6) & 0x3F);
+	s[3] = 0x80 | (wc & 0x3F);
+	st->wc = 0;
+
+	return 4;
 }
 
 static inline int wctomb(char *s, wchar_t wc) {
@@ -153,13 +167,17 @@ static inline size_t wcstombs(char *s, const wchar_t *pw, size_t n) {
 		return t;
 }
 
-static inline int fwide(struct FILE *stream, int mode) { 
-		(void)stream; 
-		return mode; 
+static inline int fwide(FILE *stream, int mode) {
+	if (!stream) return 0;
+
+	// Set orientation on first call if unset
+	if (stream->_orientation == 0 && mode != 0) stream->_orientation = (mode > 0) ? 1 : -1;
+
+	return stream->_orientation;
 }
 
 static inline wchar_t *wmemcpy(wchar_t *d, const wchar_t *s, size_t n) {
-		for (size_t i=0; i<n; i++) d[i] = s[i]; 
+		for (size_t i=0; i<n; i++) d[i] = s[i];
 		return d;
 }
 
@@ -181,13 +199,13 @@ static inline int wmemcmp(const wchar_t *a, const wchar_t *b, size_t n) {
 }
 
 static inline wchar_t *wmemset(wchar_t *s, wchar_t c, size_t n) {
-		for (size_t i=0; i<n; i++) s[i] = c; 
+		for (size_t i=0; i<n; i++) s[i] = c;
 		return s;
 }
 
 static inline size_t wcslen(const wchar_t *s) {
-		const wchar_t *p=s; 
-		while (*p) ++p; 
+		const wchar_t *p=s;
+		while (*p) ++p;
 		return (size_t)(p-s);
 }
 
@@ -198,9 +216,9 @@ static inline wchar_t* wcscpy(wchar_t *d, const wchar_t *s) {
 }
 
 static inline wchar_t *wcsncpy(wchar_t *d, const wchar_t *s, size_t n) {
-		size_t i=0; 
+		size_t i=0;
 		for (; i<n && s[i]; i++) d[i]=s[i];
-		for (; i<n; i++) d[i]=0; 
+		for (; i<n; i++) d[i]=0;
 		return d;
 }
 
@@ -234,8 +252,8 @@ static inline wchar_t *wcsstr(const wchar_t *h, const wchar_t *n) {
 		return NULL;
 }
 
-static inline int wcscoll(const wchar_t *a, const wchar_t *b) { 
-		return wcscmp(a,b); 
+static inline int wcscoll(const wchar_t *a, const wchar_t *b) {
+		return wcscmp(a,b);
 }
 
 static inline size_t wcsxfrm(wchar_t *d, const wchar_t *s, size_t n) {

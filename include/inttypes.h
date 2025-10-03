@@ -1,9 +1,16 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef INTTYPES_H
 #define INTTYPES_H
+#pragma once
 
+#include <config.h>
 #include <errno.h>
 #include <stdint.h>
+#include <stdlib.h>
+
+#if !JACL_HAS_C99
+  #error "inttypes.h requires C99"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,28 +24,22 @@ typedef uintmax_t  umax_t;
 typedef struct { imax_t quot; imax_t rem; } imaxdiv_t;
 
 static inline imaxdiv_t imaxdiv(imax_t numer, imax_t denom) {
-		imaxdiv_t r;
-		r.quot = numer / denom;
-		r.rem  = numer % denom;
-		return r;
+	imaxdiv_t r;
+	r.quot = numer / denom;
+	r.rem  = numer % denom;
+
+	return r;
 }
 
 /* Conversion functions */
 static inline intmax_t strtoimax(const char *nptr, char **endptr, int base) {
-		errno = 0;
-		long long v = strtoll(nptr, endptr, base);
-		if ((v == LLONG_MIN || v == LLONG_MAX) && errno == ERANGE)
-				errno = ERANGE;
-		return (intmax_t)v;
+	return (intmax_t)strtoll(nptr, endptr, base);
 }
 
 static inline uintmax_t strtoumax(const char *nptr, char **endptr, int base) {
-		errno = 0;
-		unsigned long long v = strtoull(nptr, endptr, base);
-		if (v == ULLONG_MAX && errno == ERANGE)
-				errno = ERANGE;
-		return (uintmax_t)v;
+	return (uintmax_t)strtoull(nptr, endptr, base);
 }
+
 /* Format specifiers for printf */
 #define PRId8		 "hhd"
 #define PRIi8		 "hhi"
@@ -58,7 +59,8 @@ static inline uintmax_t strtoumax(const char *nptr, char **endptr, int base) {
 #define PRIu32	 "u"
 #define PRIx32	 "x"
 #define PRIX32	"X"
-#if UINTPTR_MAX > 0xFFFFFFFFu
+
+#if JACL_64BIT && !JACL_OS_WINDOWS
 	#define PRId64 "ld"
 	#define PRIi64 "li"
 	#define PRIo64 "lo"
@@ -81,14 +83,23 @@ static inline uintmax_t strtoumax(const char *nptr, char **endptr, int base) {
 #define PRIxMAX  PRIx64
 #define PRIXMAX  PRIX64
 
-#define PRIdPTR  PRId64
-#define PRIiPTR  PRIi64
-#define PRIoPTR  PRIo64
-#define PRIuPTR  PRIu64
-#define PRIxPTR  PRIx64
-#define PRIXPTR PRIX64
+#if JACL_32BIT
+  #define PRIdPTR PRId32
+  #define PRIiPTR PRIi32
+  #define PRIoPTR PRIo32
+  #define PRIuPTR PRIu32
+  #define PRIxPTR PRIx32
+  #define PRIXPTR PRIX32
+#else
+  #define PRIdPTR PRId64
+  #define PRIiPTR PRIi64
+  #define PRIoPTR PRIo64
+  #define PRIuPTR PRIu64
+  #define PRIxPTR PRIx64
+  #define PRIXPTR PRIX64
+#endif
 
-/* Scanf macros */
+	/* Scanf macros */
 #define SCNd8		 "hhd"
 #define SCNi8		 "hhi"
 #define SCNo8		 "hho"
@@ -104,7 +115,8 @@ static inline uintmax_t strtoumax(const char *nptr, char **endptr, int base) {
 #define SCNo32	 "o"
 #define SCNu32	 "u"
 #define SCNx32	 "x"
-#if UINTPTR_MAX > 0xFFFFFFFFu
+
+#if JACL_64BIT && !JACL_OS_WINDOWS
 	#define SCNd64 "ld"
 	#define SCNi64 "li"
 	#define SCNo64 "lo"
@@ -124,15 +136,22 @@ static inline uintmax_t strtoumax(const char *nptr, char **endptr, int base) {
 #define SCNuMAX  SCNu64
 #define SCNxMAX  SCNx64
 
-#define SCNdPTR  SCNd64
-#define SCNiPTR  SCNi64
-#define SCNoPTR  SCNo64
-#define SCNuPTR  SCNu64
-#define SCNxPTR  SCNx64
+#if JACL_32BIT
+  #define SCNdPTR SCNd32
+  #define SCNiPTR SCNi32
+  #define SCNoPTR SCNo32
+  #define SCNuPTR SCNu32
+  #define SCNxPTR SCNx32
+#else
+  #define SCNdPTR SCNd64
+  #define SCNiPTR SCNi64
+  #define SCNoPTR SCNo64
+  #define SCNuPTR SCNu64
+  #define SCNxPTR SCNx64
+#endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* INTTYPES_H */
-
+#endif // INTTYPES_H

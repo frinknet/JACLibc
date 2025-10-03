@@ -1,20 +1,16 @@
 // (c) 2025 FRINKnet & Friends – MIT licence
 #ifndef _SIGNAL_H
 #define _SIGNAL_H
+#pragma once
 
-#include <sys/types.h>
-
-// C23 version identification (required by C23 §7.14)
-#if __STDC_VERSION__ >= 202311L
-#define __STDC_VERSION_SIGNAL_H__ 202311L
-#endif
-
+#include <config.h>
 #include <stddef.h>
 #include <sys/types.h>
-
-// Include errno.h for POSIX functions that set errno
-#if defined(_POSIX_C_SOURCE) || defined(_GNU_SOURCE) || defined(_BSD_SOURCE) || !defined(__STRICT_ANSI__)
 #include <errno.h>
+
+// C23 version identification (required by C23 §7.14)
+#if JACL_HAS_C23
+#define __STDC_VERSION_SIGNAL_H__ 202311L
 #endif
 
 #ifdef __cplusplus
@@ -46,7 +42,7 @@ typedef void (*sig_t)(int);							/* Generic fallback */
 #define SIGTERM  15		/* Termination request */
 
 // — POSIX Extensions (when feature test macros are defined) —
-#if defined(_POSIX_C_SOURCE) || defined(_GNU_SOURCE) || defined(_BSD_SOURCE) || !defined(__STRICT_ANSI__)
+#if JACL_HAS_POSIX
 
 // POSIX types
 typedef unsigned long sigset_t;
@@ -162,8 +158,7 @@ int sigwaitinfo(const sigset_t *restrict set, siginfo_t *restrict info);
 
 // Forward declaration to avoid circular dependency with time.h
 struct timespec;
-int sigtimedwait(const sigset_t *restrict set, siginfo_t *restrict info,
-								 const struct timespec *restrict timeout);
+int sigtimedwait(const sigset_t *restrict set, siginfo_t *restrict info, const struct timespec *restrict timeout);
 
 #else
 
@@ -176,7 +171,7 @@ int raise(int sig);
 sig_t signal(int sig, sig_t func);
 
 // — C11+ Thread Safety Extensions —
-#if __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__)
+#if JACL_HAS_C11 && !defined(__STDC_NO_THREADS__)
 
 // Thread-safe signal operations (C11+)
 #define signal_atomic_store(obj, val) ((void)(*(obj) = (val)))
@@ -187,7 +182,7 @@ sig_t signal(int sig, sig_t func);
 #endif /* C11+ threading */
 
 // — C23 Modern Features —
-#if __STDC_VERSION__ >= 202311L
+#if JACL_HAS_C23
 
 // C23 attribute support for deprecated functions
 #define __JACLIBC_DEPRECATED [[deprecated]]
@@ -201,7 +196,7 @@ sig_t signal(int sig, sig_t func);
 #endif /* C23 */
 
 // — Performance Optimizations (C99+ inline functions with safety checks) —
-#if __STDC_VERSION__ >= 199901L && defined(_POSIX_C_SOURCE)
+#if JACL_HAS_C99 && JACL_HAS_POSIX
 
 // Fast inline signal set operations for performance-critical code
 static inline int __sigisemptyset(const sigset_t *set) {

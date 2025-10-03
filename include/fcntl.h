@@ -7,28 +7,20 @@
 extern "C" {
 #endif
 
+#include <config.h>
 #include <sys/types.h>
 #include <stdarg.h>
 
-#if defined(_WIN32)
-	#define FCNTL_WIN32
+#if JACL_OS_WINDOWS
+	#define FCNTL_WIN32 1
 	#include <windows.h>
 	#include <io.h>
-#elif defined(__wasm__)
-	#define FCNTL_WASM
+#elif defined(JACL_ARCH_WASM)
+	#define FCNTL_WASM 1
 #else
-	#define FCNTL_POSIX
+	#define FCNTL_POSIX 1
 	#include <unistd.h>
-	#ifdef __has_include
-		#if __has_include(<sys/syscall.h>)
-			#include <sys/syscall.h>
-		#endif
-	#endif
-#endif
-
-/* Large file support */
-#if defined(_LARGEFILE64_SOURCE) || defined(_GNU_SOURCE)
-	#define FCNTL_LARGEFILE64 1
+	#include <sys/syscall.h>
 #endif
 
 /* ================================================================ */
@@ -69,7 +61,7 @@ extern "C" {
 #define O_RSYNC     0x40000 /* Synchronous reads */
 
 /* Linux-specific flags */
-#ifdef __linux__
+#if JACL_OS_LINUX
 #define O_DIRECT    0x80000  /* Direct I/O */
 #define O_NOATIME   0x100000 /* Don't update access time */
 #define O_PATH      0x200000 /* Path only (no file access) */
@@ -96,7 +88,7 @@ extern "C" {
 #define F_DUPFD_CLOEXEC 1030  /* Duplicate FD with O_CLOEXEC */
 
 /* Open file description locks (Linux) */
-#ifdef __linux__
+#if JACL_OS_LINUX
 #define F_OFD_GETLK  36  /* Get OFD lock */
 #define F_OFD_SETLK  37  /* Set OFD lock */
 #define F_OFD_SETLKW 38  /* Set OFD lock (wait) */
@@ -113,7 +105,7 @@ extern "C" {
 #define F_SETSIG    10  /* Set signal sent when I/O possible */
 
 /* Linux-specific extensions */
-#ifdef __linux__
+#if JACL_OS_LINUX
 #define F_SETLEASE  1024  /* Set lease */
 #define F_GETLEASE  1025  /* Get lease */
 #define F_NOTIFY    1026  /* Notify on directory changes */
@@ -152,7 +144,7 @@ extern "C" {
 /* File sealing constants                                           */
 /* ================================================================ */
 
-#ifdef __linux__
+#if JACL_OS_LINUX
 #define F_SEAL_SEAL    0x0001  /* Prevent further sealing */
 #define F_SEAL_SHRINK  0x0002  /* Prevent shrinking */
 #define F_SEAL_GROW    0x0004  /* Prevent growing */
@@ -191,7 +183,7 @@ extern "C" {
 #define SEEK_END    2   /* Seek from end */
 #endif
 
-#ifdef __linux__
+#if JACL_OS_LINUX
 #define SEEK_DATA   3   /* Seek to next data region */
 #define SEEK_HOLE   4   /* Seek to next hole */
 #endif
@@ -210,7 +202,7 @@ struct flock {
 };
 
 /* Large file support */
-#ifdef FCNTL_LARGEFILE64
+#if FCNTL_HAS_LFS
 struct flock64 {
 	short l_type;
 	short l_whence;
@@ -230,7 +222,7 @@ struct f_owner_ex {
 /* Function implementations                                         */
 /* ================================================================ */
 
-#ifdef FCNTL_WIN32
+#if FCNTL_WIN32
 /* ================================================================ */
 /* Windows implementation using Win32 APIs                         */
 /* ================================================================ */
@@ -240,7 +232,7 @@ static inline void win32_convert_flags(int flags, DWORD *access, DWORD *creation
 	*access = 0;
 	*creation = 0;
 	*attrs = FILE_ATTRIBUTE_NORMAL;
-	
+
 	/* Access modes */
 	switch (flags & O_ACCMODE) {
 		case O_RDONLY:
@@ -257,7 +249,7 @@ static inline void win32_convert_flags(int flags, DWORD *access, DWORD *creation
 			*access = GENERIC_EXECUTE;
 			break;
 	}
-	
+
 	/* Creation flags */
 	if (flags & O_CREAT) {
 		if (flags & O_EXCL) {
@@ -274,7 +266,7 @@ static inline void win32_convert_flags(int flags, DWORD *access, DWORD *creation
 			*creation = OPEN_EXISTING;     /* Open existing only */
 		}
 	}
-	
+
 	/* Directory flag */
 	if (flags & O_DIRECTORY) {
 		*attrs |= FILE_FLAG_BACKUP_SEMANTICS;
@@ -283,21 +275,21 @@ static inline void win32_convert_flags(int flags, DWORD *access, DWORD *creation
 
 static inline int open(const char *pathname, int flags, ...) {
 	if (!pathname) return -1;
-	
+
 	DWORD access, creation, attrs;
 	win32_convert_flags(flags, &access, &creation, &attrs);
-	
-	HANDLE hFile = CreateFileA(pathname, access, 
+
+	HANDLE hFile = CreateFileA(pathname, access,
 		FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
 		creation, attrs, NULL);
-	
+
 	if (hFile == INVALID_HANDLE_VALUE) return -1;
-	
+
 	/* Convert Windows HANDLE to integer file descriptor */
 	int fd_flags = 0;
 	if (flags & O_APPEND) fd_flags |= _O_APPEND;
 	if (flags & O_RDONLY) fd_flags |= _O_RDONLY;
-	
+
 	int fd = _open_osfhandle((intptr_t)hFile, fd_flags);
 	return fd;
 }
@@ -306,12 +298,12 @@ static inline int openat(int dirfd, const char *pathname, int flags, ...) {
 	/* Windows doesn't have openat, simulate if possible */
 	(void)dirfd;
 	if (!pathname) return -1;
-	
+
 	/* If pathname is absolute, ignore dirfd */
 	if (pathname[0] == '/' || (pathname[0] && pathname[1] == ':')) {
 		return open(pathname, flags);
 	}
-	
+
 	/* Otherwise, not easily supported on Windows */
 	return -1;
 }
@@ -328,7 +320,7 @@ static inline int close(int fd) {
 static inline int fcntl(int fd, int cmd, ...) {
 	va_list args;
 	va_start(args, cmd);
-	
+
 	switch (cmd) {
 		case F_DUPFD: {
 			int min_fd = va_arg(args, int);
@@ -336,7 +328,7 @@ static inline int fcntl(int fd, int cmd, ...) {
 			va_end(args);
 			return (new_fd >= min_fd) ? new_fd : -1;
 		}
-		
+
 		case F_DUPFD_CLOEXEC: {
 			int min_fd = va_arg(args, int);
 			int new_fd = _dup(fd);
@@ -349,7 +341,7 @@ static inline int fcntl(int fd, int cmd, ...) {
 			}
 			return -1;
 		}
-		
+
 		case F_GETFD:
 			va_end(args);
 			/* Check if handle is inheritable */
@@ -361,7 +353,7 @@ static inline int fcntl(int fd, int cmd, ...) {
 				}
 			}
 			return 0;
-		
+
 		case F_SETFD: {
 			int flags = va_arg(args, int);
 			va_end(args);
@@ -369,12 +361,12 @@ static inline int fcntl(int fd, int cmd, ...) {
 			DWORD win_flags = (flags & FD_CLOEXEC) ? 0 : HANDLE_FLAG_INHERIT;
 			return SetHandleInformation(h, HANDLE_FLAG_INHERIT, win_flags) ? 0 : -1;
 		}
-		
+
 		case F_GETFL:
 			va_end(args);
 			/* Cannot easily determine original open flags on Windows */
 			return 0;
-		
+
 		case F_SETFL: {
 			int flags = va_arg(args, int);
 			va_end(args);
@@ -382,7 +374,7 @@ static inline int fcntl(int fd, int cmd, ...) {
 			(void)flags;
 			return 0;
 		}
-		
+
 		default:
 			va_end(args);
 			return -1;
@@ -447,7 +439,7 @@ static inline int posix_fallocate(int fd, off_t offset, off_t len) {
 
 static inline int open(const char *pathname, int flags, ...) {
 	if (!pathname) return -1;
-	
+
 	mode_t mode = 0;
 	if (flags & O_CREAT) {
 		va_list args;
@@ -455,21 +447,13 @@ static inline int open(const char *pathname, int flags, ...) {
 		mode = va_arg(args, mode_t);
 		va_end(args);
 	}
-	
-#if defined(SYS_open) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
-		return (int)syscall(SYS_open, pathname, flags, mode);
-	#endif
-#endif
-	
-	/* Fallback to standard library */
-	extern int open(const char *pathname, int flags, ...);
-	return open(pathname, flags, mode);
+
+	return (int)syscall(SYS_open, pathname, flags, mode);
 }
 
 static inline int openat(int dirfd, const char *pathname, int flags, ...) {
 	if (!pathname) return -1;
-	
+
 	mode_t mode = 0;
 	if (flags & O_CREAT) {
 		va_list args;
@@ -477,16 +461,8 @@ static inline int openat(int dirfd, const char *pathname, int flags, ...) {
 		mode = va_arg(args, mode_t);
 		va_end(args);
 	}
-	
-#if defined(SYS_openat) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
-		return (int)syscall(SYS_openat, dirfd, pathname, flags, mode);
-	#endif
-#endif
-	
-	/* Fallback to standard library */
-	extern int openat(int dirfd, const char *pathname, int flags, ...);
-	return openat(dirfd, pathname, flags, mode);
+
+	return (int)syscall(SYS_openat, dirfd, pathname, flags, mode);
 }
 
 static inline int creat(const char *pathname, mode_t mode) {
@@ -494,15 +470,7 @@ static inline int creat(const char *pathname, mode_t mode) {
 }
 
 static inline int close(int fd) {
-#if defined(SYS_close) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
-		return (int)syscall(SYS_close, fd);
-	#endif
-#endif
-	
-	/* Fallback to standard library */
-	extern int close(int fd);
-	return close(fd);
+	return (int)syscall(SYS_close, fd);
 }
 
 static inline int fcntl(int fd, int cmd, ...) {
@@ -510,15 +478,15 @@ static inline int fcntl(int fd, int cmd, ...) {
 	long arg = 0;
 	struct flock *lock = NULL;
 	struct f_owner_ex *owner = NULL;
-	
+
 	va_start(args, cmd);
-	
+
 	/* Get argument based on command type */
 	switch (cmd) {
 		case F_GETLK:
 		case F_SETLK:
 		case F_SETLKW:
-#ifdef __linux__
+#if JACL_OS_LINUX
 		case F_OFD_GETLK:
 		case F_OFD_SETLK:
 		case F_OFD_SETLKW:
@@ -535,41 +503,19 @@ static inline int fcntl(int fd, int cmd, ...) {
 			arg = va_arg(args, long);
 			break;
 	}
-	
+
 	va_end(args);
-	
-#if defined(SYS_fcntl) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
-		return (int)syscall(SYS_fcntl, fd, cmd, arg);
-	#endif
-#endif
-	
-	/* Fallback to standard library */
-	extern int fcntl(int fd, int cmd, ...);
-	return fcntl(fd, cmd, arg);
+
+	return (int)syscall(SYS_fcntl, fd, cmd, arg);
 }
 
 /* POSIX advisory functions */
 static inline int posix_fadvise(int fd, off_t offset, off_t len, int advice) {
-#if defined(SYS_fadvise64) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
-		return (int)syscall(SYS_fadvise64, fd, offset, len, advice);
-	#endif
-#endif
-	
-	extern int posix_fadvise(int fd, off_t offset, off_t len, int advice);
-	return posix_fadvise(fd, offset, len, advice);
+	return (int)syscall(SYS_fadvise64, fd, offset, len, advice);
 }
 
 static inline int posix_fallocate(int fd, off_t offset, off_t len) {
-#if defined(SYS_fallocate) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
-		return (int)syscall(SYS_fallocate, fd, 0, offset, len);
-	#endif
-#endif
-	
-	extern int posix_fallocate(int fd, off_t offset, off_t len);
-	return posix_fallocate(fd, offset, len);
+	return (int)syscall(SYS_fallocate, fd, 0, offset, len);
 }
 
 /* Additional POSIX functions */
@@ -578,24 +524,15 @@ static inline int dup(int oldfd) {
 }
 
 static inline int dup2(int oldfd, int newfd) {
-#if defined(SYS_dup2) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
-		return (int)syscall(SYS_dup2, oldfd, newfd);
-	#endif
-#endif
-	
-	extern int dup2(int oldfd, int newfd);
-	return dup2(oldfd, newfd);
+	return (int)syscall(SYS_dup2, oldfd, newfd);
 }
 
-#ifdef __linux__
+#if JACL_OS_LINUX
 static inline int dup3(int oldfd, int newfd, int flags) {
-#if defined(SYS_dup3) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
+	#if defined(SYS_dup3)
 		return (int)syscall(SYS_dup3, oldfd, newfd, flags);
 	#endif
-#endif
-	
+
 	/* Fallback using dup2 and fcntl */
 	if (dup2(oldfd, newfd) == -1) return -1;
 	if (flags & O_CLOEXEC) {
@@ -606,14 +543,14 @@ static inline int dup3(int oldfd, int newfd, int flags) {
 #endif
 
 /* Large file support */
-#ifdef FCNTL_LARGEFILE64
+#if JACL_HAS_LFS
 static inline int fcntl64(int fd, int cmd, ...) {
 	va_list args;
 	long arg = 0;
 	struct flock64 *lock = NULL;
-	
+
 	va_start(args, cmd);
-	
+
 	switch (cmd) {
 		case F_GETLK:
 		case F_SETLK:
@@ -625,39 +562,29 @@ static inline int fcntl64(int fd, int cmd, ...) {
 			arg = va_arg(args, long);
 			break;
 	}
-	
+
 	va_end(args);
-	
-#if defined(SYS_fcntl64) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
+
+	#if defined(SYS_fcntl64)
 		return (int)syscall(SYS_fcntl64, fd, cmd, arg);
 	#endif
-#endif
-	
+
 	/* Fallback to regular fcntl */
 	return fcntl(fd, cmd, arg);
 }
 
 static inline int posix_fadvise64(int fd, off64_t offset, off64_t len, int advice) {
-#if defined(SYS_fadvise64_64) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
-		return (int)syscall(SYS_fadvise64_64, fd, offset, len, advice);
-	#endif
-#endif
-	
-	return posix_fadvise(fd, (off_t)offset, (off_t)len, advice);
+	return (int)syscall(SYS_fadvise64_64, fd, offset, len, advice);
 }
 
 static inline int posix_fallocate64(int fd, off64_t offset, off64_t len) {
-#if defined(SYS_fallocate) && defined(__has_include)
-	#if __has_include(<sys/syscall.h>)
+	#if defined(SYS_fallocate)
 		return (int)syscall(SYS_fallocate, fd, 0, offset, len);
 	#endif
-#endif
-	
+
 	return posix_fallocate(fd, (off_t)offset, (off_t)len);
 }
-#endif /* FCNTL_LARGEFILE64 */
+#endif /* JACL_HAS_LFS */
 
 #endif
 
@@ -702,16 +629,16 @@ static inline int fcntl_clear_nonblock(int fd) {
 static inline int fcntl_dupfd_cloexec(int fd, int min_fd) {
 	int new_fd = fcntl(fd, F_DUPFD_CLOEXEC, min_fd);
 	if (new_fd != -1) return new_fd;
-	
+
 	/* Fallback for systems without F_DUPFD_CLOEXEC */
 	new_fd = fcntl(fd, F_DUPFD, min_fd);
 	if (new_fd == -1) return -1;
-	
+
 	if (fcntl_set_cloexec(new_fd) == -1) {
 		close(new_fd);
 		return -1;
 	}
-	
+
 	return new_fd;
 }
 

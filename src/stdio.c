@@ -2,8 +2,7 @@
 #ifndef STDIO_C
 #define STDIO_C
 
-#include <stdio.h>	// C17-compliant prototypes
-#include <stddef.h>
+#include <stddef.h>	// C17-compliant prototypes
 #include <stdarg.h>
 #include <wchar.h>
 #include <assert.h>
@@ -45,10 +44,16 @@ extern "C" {
 #endif
 
 // — FILE Type (opaque) —
-typedef struct _FILE FILE;
 extern FILE* stdin;
 extern FILE* stdout;
 extern FILE* stderr;
+
+// — Static Function Prototypes —
+static int print_num(char * restrict *out, uintptr_t num, int base, int sign, int width);
+static int print_float(char * restrict *out, double num, int prec);
+static int scan_num(const char **in, uintptr_t *out, int base, int sign);
+static int scan_float(const char **in, double *out);
+static void skip_ws(const char **in);
 
 // — JS-Implemented I/O Hooks —
 FILE* fopen(const char* restrict path, const char* restrict mode) {
@@ -77,14 +82,14 @@ int fflush(FILE* stream) {
 }
 
 // — Character I/O —
+int fgetc(FILE* stream) { (void)stream; errno = ENODATA; return EOF; }
 int fputc(int c, FILE* stream) { (void)stream; return (unsigned char)c; }
-int getc(FILE* stream) { (void)stream; errno = ENODATA; return EOF; }
 int putc(int c, FILE* stream) { return fputc(c, stream); }
+int getc(FILE* stream) { return fgetc(stream); }
 int ungetc(int c, FILE* stream) { (void)stream; return (unsigned char)c; }
 int getchar(void) { return getc(stdin); }
 int putchar(int c) { return putc(c, stdout); }
 int puts(const char* s) { while (*s) if (putchar(*s++) == EOF) return EOF; return putchar('\n') == EOF ? EOF : 0; }
-int fgetc(FILE* stream) { return getc(stream); }
 int fputs(const char* restrict s, FILE* restrict stream) { while (*s) if (putc(*s++, stream) == EOF) return EOF; return 0; }
 char* fgets(char* restrict s, int n, FILE* restrict stream) {
 		int i = 0, c;
@@ -94,34 +99,73 @@ char* fgets(char* restrict s, int n, FILE* restrict stream) {
 		return (i || c != EOF) ? s : NULL;
 }
 
-// — Formatted Output (expanded with basic %f stub) —
-static int print_float(char **out, double num, int prec) {
+// — Printf helpers —
+static int print_num(char * restrict *out, uintptr_t num, int base, int sign, int width) {
+		char digits[] = "0123456789abcdef";
+		char buffer[32];
+		int len = 0, negative = 0;
+
+		if (sign && (intptr_t)num < 0) {
+				negative = 1;
+				num = (uintptr_t)(-(intptr_t)num);
+		}
+
+		if (num == 0) {
+				buffer[len++] = '0';
+		} else {
+				while (num > 0) {
+						buffer[len++] = digits[num % base];
+						num /= base;
+				}
+		}
+
+		if (negative) buffer[len++] = '-';
+		while (len < width) buffer[len++] = ' ';
+
+		if (out && *out) {
+				for (int i = len - 1; i >= 0; i--) {
+						*(*out)++ = buffer[i];
+				}
+		}
+
+		return len;
+}
+static int print_float(char * restrict *out, double num, int prec) {
 		// Basic integer part only; TODO: full float
-		long inum = (long)num; int len = print_num(out ? &out : NULL, inum, 10, 1, 0);
+		long inum = (long)num; int len = print_num(out, inum, 10, 1, 0);
+
 		if (prec > 0) { if (out) *(*out)++ = '.'; len++; /* Stub decimals */ }
 		return len;
 }
-
+static void skip_ws(const char **in) {
+		if (!in || !*in) return;
+		while (**in == ' ' || **in == '\t' || **in == '\n' || **in == '\r' || **in == '\f' || **in == '\v') {
+				(*in)++;
+		}
+}
 static int vformat(char * restrict out, size_t n, const char * restrict fmt, va_list ap) {
 		char *start = out, ch; int len = 0, width = 0, prec = -1;
+
 		while ((ch = *fmt++)) {
 				if (ch != '%') { if (out && len < (int)n - 1) *out++ = ch; len++; continue; }
 				width = 0; while (*fmt >= '0' && *fmt <= '9') width = width * 10 + (*fmt++ - '0');
 				if (*fmt == '.') { fmt++; prec = 0; while (*fmt >= '0' && *fmt <= '9') prec = prec * 10 + (*fmt++ - '0'); }
 				switch (*fmt++) {
+						case '%': if (out && len < (int)n - 1) *out++ = '%'; len++; break;
 						case 'c': { int c = va_arg(ap, int); if (out && len < (int)n - 1) *out++ = (char)c; len++; break; }
 						case 's': { const char *s = va_arg(ap, const char*); while (*s && len < (int)n - 1) { if (out) *out++ = *s++; len++; } break; }
 						case 'd': len += print_num(out ? &out : NULL, va_arg(ap, int), 10, 1, width); break;
 						case 'u': len += print_num(out ? &out : NULL, va_arg(ap, unsigned), 10, 0, width); break;
 						case 'x': len += print_num(out ? &out : NULL, va_arg(ap, unsigned), 16, 0, width); break;
-						case 'p': len += print_num(out ? &out : NULL, (uintptr_t)va_arg(ap, void*), 16, 0, width); break;
+						case 'p': { union { void *ptr; uintptr_t u; } pun; pun.ptr = va_arg(ap, void*); len += print_num(out ? &out : NULL, pun.u, 16, 0, width); break; }
 						case 'f': len += print_float(out ? &out : NULL, va_arg(ap, double), prec < 0 ? 6 : prec); break;	// Basic %f
-						case '%': if (out && len < (int)n - 1) *out++ = '%'; len++; break;
 						default: if (out && len < (int)n - 1) *out++ = ch; len++; break;
 				}
 				prec = -1;
 		}
+
 		if (out && n) out[len < (int)n ? len : n-1] = '\0';
+
 		return len;
 }
 
@@ -150,6 +194,50 @@ int vfprintf(FILE * restrict stream, const char * restrict fmt, va_list ap) {
 }
 
 // — Formatted Input (with basic %f stub) —
+static int scan_num(const char **in, uintptr_t *out, int base, int sign) {
+		const char *start = *in;
+		uintptr_t result = 0;
+		int negative = 0, digits = 0;
+
+		while (**in == ' ' || **in == '\t' || **in == '\n' || **in == '\r' || **in == '\f' || **in == '\v') {
+				(*in)++;
+		}
+
+		if (sign && **in == '-') {
+				negative = 1;
+				(*in)++;
+		} else if (**in == '+') {
+				(*in)++;
+		}
+
+		while (**in) {
+				int digit_val = -1;
+				if (**in >= '0' && **in <= '9') {
+						digit_val = **in - '0';
+				} else if (base == 16 && **in >= 'a' && **in <= 'f') {
+						digit_val = **in - 'a' + 10;
+				} else if (base == 16 && **in >= 'A' && **in <= 'F') {
+						digit_val = **in - 'A' + 10;
+				}
+
+				if (digit_val >= 0 && digit_val < base) {
+						result = result * base + digit_val;
+						digits++;
+						(*in)++;
+				} else {
+						break;
+				}
+		}
+
+		if (digits > 0) {
+				if (negative) result = (uintptr_t)(-(intptr_t)result);
+				*out = result;
+				return digits;
+		}
+
+		*in = start;
+		return 0;
+}
 static int scan_float(const char **in, double *out) {
 		// Basic stub: parse integer part only
 		uintptr_t num; int digits = scan_num(in, &num, 10, 1);
@@ -157,7 +245,6 @@ static int scan_float(const char **in, double *out) {
 		if (digits) *out = (double)num;
 		return digits;
 }
-
 static int vscan(const char **input, const char * restrict fmt, va_list ap, int is_file) {
 		const char *in = input ? *input : NULL; int count = 0, suppress = 0;
 		while (*fmt) {
@@ -225,7 +312,6 @@ wint_t fputwc(wchar_t wc, FILE *stream) { (void)stream; return wc; }
 wint_t fgetwc(FILE *stream) { (void)stream; return WEOF; }
 wint_t putwc(wchar_t wc, FILE *stream) { return fputwc(wc, stream); }
 wint_t getwc(FILE *stream) { return fgetwc(stream); }
-int fwide(FILE *stream, int mode) { (void)stream; return mode > 0 ? 1 : (mode < 0 ? -1 : 0); }	// Stub orientation
 
 // — Error Helpers —
 void clearerr_unlocked(FILE *stream) { clearerr(stream); }

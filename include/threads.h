@@ -3,6 +3,7 @@
 #define THREADS_H
 #pragma once
 
+#include <config.h>
 #include <stdbool.h>
 #include <time.h>
 
@@ -11,7 +12,7 @@ extern "C" {
 #endif
 
 /* C23 feature test macro */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#if JACL_HAS_C23
 #  define __STDC_VERSION_THREADS_H__ 202311L
 #endif
 
@@ -40,13 +41,39 @@ typedef void (*tss_dtor_t)(void*);
 #define TSS_DTOR_ITERATIONS 4
 #endif
 
-#ifdef __wasm__
-/* ================================================================ */
-/* Raw WebAssembly (no Emscripten) - Limited threading						 */
-/* Thread creation must be done by JavaScript host								 */
-/* ================================================================ */
+#if !JACL_HAS_THREADS
+typedef int thrd_t, mtx_t, cnd_t, tss_t;
+typedef struct { int done; } once_flag;
 
-#ifdef __wasm_atomics__
+#define ONCE_FLAG_INIT {0}
+
+#define thrd_create(t,f,a)				(thrd_error)
+#define thrd_exit(r)							__builtin_trap()
+#define thrd_join(t,r)						(thrd_error)
+#define thrd_detach(t)						(thrd_error)
+#define thrd_current()						(0)
+#define thrd_equal(a,b)						((a) == (b))
+#define thrd_yield()							((void)0)
+#define thrd_sleep(d,r)						(-1)
+#define mtx_init(m,t)							(thrd_error)
+#define mtx_lock(m)								(thrd_error)
+#define mtx_trylock(m)						(thrd_busy)
+#define mtx_timedlock(m,ts)				(thrd_error)
+#define mtx_unlock(m)							(thrd_error)
+#define mtx_destroy(m)						((void)0)
+#define cnd_init(c)								(thrd_error)
+#define cnd_signal(c)							(thrd_error)
+#define cnd_broadcast(c)					(thrd_error)
+#define cnd_wait(c,m)							(thrd_error)
+#define cnd_timedwait(c,m,ts)			(thrd_error)
+#define cnd_destroy(c)						((void)0)
+#define call_once(f,fn)						((void)0)
+#define tss_create(k,d)						(thrd_error)
+#define tss_delete(k)							((void)0)
+#define tss_set(k,v)							(thrd_error)
+#define tss_get(k)								(NULL)
+
+#if JACL_ARCH_WASM
 /* Basic atomic synchronization only */
 #include <stdatomic.h>
 
@@ -59,34 +86,34 @@ typedef struct { _Atomic int done; } once_flag;
 #define ONCE_FLAG_INIT {ATOMIC_VAR_INIT(0)}
 
 /* Thread management - NOT supported in raw WASM */
-static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) { 
+static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
 		(void)thr; (void)func; (void)arg;
-		return thrd_error; 
+		return thrd_error;
 }
-static inline _Noreturn void thrd_exit(int res) { 
+static inline _Noreturn void thrd_exit(int res) {
 		(void)res;
-		__builtin_trap(); 
+		__builtin_trap();
 }
-static inline int thrd_join(thrd_t thr, int *res) { 
+static inline int thrd_join(thrd_t thr, int *res) {
 		(void)thr; (void)res;
-		return thrd_error; 
+		return thrd_error;
 }
-static inline int thrd_detach(thrd_t thr) { 
+static inline int thrd_detach(thrd_t thr) {
 		(void)thr;
-		return thrd_error; 
+		return thrd_error;
 }
-static inline thrd_t thrd_current(void) { 
-		return 0; /* Host must provide */ 
+static inline thrd_t thrd_current(void) {
+		return 0; /* Host must provide */
 }
 static inline int thrd_equal(thrd_t lhs, thrd_t rhs) {
 		return lhs == rhs;
 }
-static inline void thrd_yield(void) { 
-		/* no-op */ 
+static inline void thrd_yield(void) {
+		/* no-op */
 }
-static inline int thrd_sleep(const struct timespec *duration, struct timespec *remaining) { 
+static inline int thrd_sleep(const struct timespec *duration, struct timespec *remaining) {
 		(void)duration; (void)remaining;
-		return -1; /* not supported */ 
+		return -1; /* not supported */
 }
 
 /* Mutex - atomic-based implementation */
@@ -121,27 +148,27 @@ static inline int mtx_unlock(mtx_t *mtx) {
 		return thrd_success;
 }
 
-static inline void mtx_destroy(mtx_t *mtx) { 
+static inline void mtx_destroy(mtx_t *mtx) {
 		if (mtx) atomic_store(&mtx->locked, 0);
 }
 
 /* Condition variables - very limited */
-static inline int cnd_init(cnd_t *cnd) { 
+static inline int cnd_init(cnd_t *cnd) {
 		if (!cnd) return thrd_error;
 		atomic_store(&cnd->value, 0);
 		return thrd_success;
 }
 
-static inline int cnd_signal(cnd_t *cnd) { 
+static inline int cnd_signal(cnd_t *cnd) {
 		if (!cnd) return thrd_error;
 		atomic_fetch_add(&cnd->value, 1);
 		return thrd_success;
 }
 
-static inline int cnd_broadcast(cnd_t *cnd) { 
+static inline int cnd_broadcast(cnd_t *cnd) {
 		if (!cnd) return thrd_error;
 		atomic_fetch_add(&cnd->value, 1000000);
-		return thrd_success; 
+		return thrd_success;
 }
 
 static inline int cnd_wait(cnd_t *cnd, mtx_t *mtx) {
@@ -160,7 +187,7 @@ static inline int cnd_timedwait(cnd_t *cnd, mtx_t *mtx, const struct timespec *t
 		return cnd_wait(cnd, mtx);
 }
 
-static inline void cnd_destroy(cnd_t *cnd) { 
+static inline void cnd_destroy(cnd_t *cnd) {
 		if (cnd) atomic_store(&cnd->value, 0);
 }
 
@@ -173,55 +200,21 @@ static inline void call_once(once_flag *flag, void (*func)(void)) {
 }
 
 /* Thread-local storage - not supported */
-static inline int tss_create(tss_t *key, tss_dtor_t dtor) { 
+static inline int tss_create(tss_t *key, tss_dtor_t dtor) {
 		(void)key; (void)dtor;
-		return thrd_error; 
+		return thrd_error;
 }
-static inline void tss_delete(tss_t key) { 
-		(void)key; 
-}
-static inline int tss_set(tss_t key, void *val) { 
-		(void)key; (void)val;
-		return thrd_error; 
-}
-static inline void *tss_get(tss_t key) { 
+static inline void tss_delete(tss_t key) {
 		(void)key;
-		return NULL; 
 }
-
-#else
-/* WASM without atomics - no threading at all */
-typedef int thrd_t, mtx_t, cnd_t, tss_t;
-typedef struct { int done; } once_flag;
-
-#define ONCE_FLAG_INIT {0}
-
-#define thrd_create(t,f,a)				(thrd_error)
-#define thrd_exit(r)							__builtin_trap()
-#define thrd_join(t,r)						(thrd_error)
-#define thrd_detach(t)						(thrd_error)
-#define thrd_current()						(0)
-#define thrd_equal(a,b)						((a) == (b))
-#define thrd_yield()							((void)0)
-#define thrd_sleep(d,r)						(-1)
-#define mtx_init(m,t)							(thrd_error)
-#define mtx_lock(m)								(thrd_error)
-#define mtx_trylock(m)						(thrd_busy)
-#define mtx_timedlock(m,ts)				(thrd_error)
-#define mtx_unlock(m)							(thrd_error)
-#define mtx_destroy(m)						((void)0)
-#define cnd_init(c)								(thrd_error)
-#define cnd_signal(c)							(thrd_error)
-#define cnd_broadcast(c)					(thrd_error)
-#define cnd_wait(c,m)							(thrd_error)
-#define cnd_timedwait(c,m,ts)			(thrd_error)
-#define cnd_destroy(c)						((void)0)
-#define call_once(f,fn)						((void)0)
-#define tss_create(k,d)						(thrd_error)
-#define tss_delete(k)							((void)0)
-#define tss_set(k,v)							(thrd_error)
-#define tss_get(k)								(NULL)
-#endif
+static inline int tss_set(tss_t key, void *val) {
+		(void)key; (void)val;
+		return thrd_error;
+}
+static inline void *tss_get(tss_t key) {
+		(void)key;
+		return NULL;
+}
 
 #else
 /* ================================================================ */
@@ -259,10 +252,10 @@ static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
 		if (!thr || !func) return thrd_error;
 		struct __thrd_start_arg *start_arg = malloc(sizeof(*start_arg));
 		if (!start_arg) return thrd_nomem;
-		
+
 		start_arg->func = func;
 		start_arg->arg = arg;
-		
+
 		int result = pthread_create(thr, NULL, __thrd_start_func, start_arg);
 		if (result != 0) {
 				free(start_arg);
@@ -306,17 +299,17 @@ static inline int thrd_sleep(const struct timespec *duration, struct timespec *r
 /* Mutex functions */
 static inline int mtx_init(mtx_t *mtx, int type) {
 		if (!mtx) return thrd_error;
-		
+
 		pthread_mutexattr_t attr;
 		if (pthread_mutexattr_init(&attr) != 0) return thrd_error;
-		
+
 		if (type & mtx_recursive) {
 				if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE) != 0) {
 						pthread_mutexattr_destroy(&attr);
 						return thrd_error;
 				}
 		}
-		
+
 		int result = pthread_mutex_init(mtx, &attr);
 		pthread_mutexattr_destroy(&attr);
 		return result == 0 ? thrd_success : thrd_error;
@@ -409,7 +402,7 @@ static inline void *tss_get(tss_t key) {
 		return pthread_getspecific(key);
 }
 
-#endif /* !__wasm__ */
+#endif /* !JACL_HAS_THREADS */
 
 #ifdef __cplusplus
 }

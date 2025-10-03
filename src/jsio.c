@@ -3,22 +3,11 @@
 #define JSIO_C
 
 #include <jsio.h>
-#include <stdio.h>
+#include <setjmp.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-// Public Root
-static js_t* JS_PUBLIC_ROOT;
-
-#ifndef NO_JS_EXTERNALS
-#define JS_EXEC(fn, ...) js_code("[f,...a]=arguments;return this.import(this.export(f)(...a.map(this.export)))", 76, fn, __VA_ARGS__)
-#define NO_JS_NOTIFY 
-#define NO_JS_ASYNCIFY 
-#define NO_JS_START 
-#else
-#define JS_EXEC(fn, ...)
 #endif
 
 // Notify
@@ -27,15 +16,18 @@ static void js_notify(js_t* v) {}
 #else
 static void js_notify(js_t* v) {
 	if (!js_ispublic(v)) return;
-	
+
 	js_code("this.trigger(this.export(arguments[0]))", 39, JS_STRING(js_path(v)));
 }
 #endif
 
-int main(void);
+#define JS_PUBLIC_ROOT __jacl_public_root()
+static js_t *__jacl_public_root(void) {
+	static js_t* root = NULL;
+	return root;
+}
 
 // Node Lifecycle
-js_t *js_public(void) { return JS_PUBLIC_ROOT; }
 void js_attach(js_t* c, js_t* p) {
 	if (!c || !p) return;
 
@@ -111,7 +103,7 @@ js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen) {
 	return x;
 }
 void js_delete(js_t* x) {
-	if (!x && x != JS_PUBLIC_ROOT) return;
+	if (!x || x == JS_PUBLIC_ROOT) return;
 
 	js_detach(x);
 
@@ -126,6 +118,16 @@ void js_delete(js_t* x) {
 	if (x->type == JS_TYPE_STRING) free(x->value.str);
 
 	free(x);
+}
+void js_publish(js_t* n) {
+	if(js_includes(JS_PUBLIC_ROOT, n)) return;
+
+	js_attach(n, JS_PUBLIC_ROOT);
+}
+void js_unpublish(js_t* n) {
+	if(!js_includes(JS_PUBLIC_ROOT, n)) return;
+
+	js_detach(n);
 }
 
 // Indexing
@@ -156,7 +158,9 @@ int js_indexof(js_t* a, js_t* v) {
 
 // Node
 js_t* js_root(js_t* v) {
-	for (js_t* cur = v; cur; cur = cur->parent)
+	js_t* cur = v;
+
+	while (cur->parent) cur = cur->parent;
 
 	return cur;
 }
@@ -280,7 +284,7 @@ js_t* js_shift(js_t* a) {
 		return c;
 }
 
-// Object Property 
+// Object Property
 js_t* js_property(js_t* o, const char* key) {
 	if (!o || !key || o->type != JS_TYPE_OBJECT) return NULL;
 
@@ -290,50 +294,84 @@ js_t* js_property(js_t* o, const char* key) {
 	return NULL;
 }
 
-__attribute__((used))
-static js_t* __jacl_js_async;
-__attribute__((used))
-static double __jacl_js_init;
+#if JACL_ARCH_WASM
 
-#ifdef __wasm__
+#if JACL_OS_JSRUN
+static js_t *__jacl_js_async(js_t* set) {
+	static js_t* init = NULL;
+
+	if (set) init = set;
+
+	return init;
+}
+#define JS_ASYNC __jacl_js_async()
+#else
+#define NO_JS_ASYNCIFY
+#endif
+
+// Declare both possible signatures as weak symbols
+extern int main(void) __attribute__((weak));
+extern int main(int argc, char *argv[]) __attribute__((weak));
+
 void js_start(){
-	if (__jacl_js_init) return;
-	
 	#ifndef NO_JS_IO
-	__jacl_js_init = JS_CODE(
+	js_t* __jacl_js_init = JS_CODE(
 		const
+		//accessor
 		A={
 			has:(o,k)=>!!S(o,k),
 			get:(o,k)=>X(S(o,k)),
-			getPrototypeOf:o=>('a'===RT(o)?Array:Object).prototype,
-			deleteProperty:(o,k)=>!JS._delete(S(o,k)),
+			getPrototypeOf:o=>('a'===T(o)?Array:Object).prototype,
+			deleteProperty:(o,k)=>!G._delete(S(o,k)),
 			set:(o,k,v)=>!!W(o,k,v)
 		},
+		//bound
 		B=this.exports,
+		//decode
 		D=(x=>m =>x.decode(m))(new TextDecoder),
+		//encode
 		E=(x=>m =>x.encode(m))(new TextEncoder),
+		//functions
 		F=[],
+		//guarded
+		G=Object.keys(B).filter(x=>x[0]==='_').reduce((o,f)=>{
+			o[f]=B[f].bind(B);
+			delete B[f];
+			return o;
+		}, {}),
+		//handlers
 		H=[],
-		I=(a,i)=>{ for(let p=Y(a),c=0;p&&c<i;p=Z(p),++c);return p},
+		//iterate
+		I=(a,i)=>{for(let p=Y(a),c=0;p&&c<i;p=Z(p),++c);return p},
+		//juicing
+		J={1:[,console.log],2:[,console.error]},
+		//length
 		L=p=>R32(p+16),
-		M=new DataView(this.exports.memory.buffer),
+		//memory
+		M=new DataView(B.memory.buffer),
+		//property
 		P=(o,k)=>{for(let p=Y(o);p;p=Z(p))if(S(RK(p))===k)return p},
-		S=(o,k)=>'a'===RT(o)?I(o,k):P(o,k),
+		//search
+		S=(o,k)=>'a'===T(o)?I(o,k):P(o,k),
+		//type
 		T=p=>String.fromCharCode(R8(p)),
+		//valuetype
 		V=v=>v===null?'0':Array.isArray(v)?'a':{boolean:'b',string:'c',number:'d',object:'e',function:'f'}[typeof v],
+		//write
 		W=(p,k,v)=>{
 			const
 			o=p?S(p,k):0,
 			t=V(v),
 			n=G._create(t,k.length,v.length);
-			if(p && k)WK(x,k);
-			if(t==='c')WC(x,v);
-			else if(t==='d')WD(x,v);
-			else if(t==='b')WB(x,v);
-			else if(t==='f')WF(x,v);
-			else for(let x in v)W(n,t==='e'?x:0,v[x]); 
-			o?JS._replace(o,n):JS._attach(n,p);
+			if(p && k)WK(n,k);
+			if(t==='c')WC(n,v);
+			else if(t==='d')WD(n,v);
+			else if(t==='b')WB(n,v);
+			else if(t==='f')WF(n,v);
+			else for(let x in v)W(n,t==='e'?x:0,v[x]);
+			o?G._replace(o,n):G._attach(n,p);
 		},
+		//extract
 		X=p=>{switch(T(p)){
 			case'0':return null;
 			case'a':return RG(p);
@@ -344,75 +382,161 @@ void js_start(){
 			case'f':return RF(p);
 			default:return undefined;
 		}},
+		//first
 		Y=p=>R32(p+28),
+		//next
 		Z=p=>R32(p+24),
-		JS=Object.keys(B).filter(x=>x[0]==='_').reduce((o,f)=>{
-			o[f]=B[f].bind(B);
-			delete this.exports[f];
-			return o;
-		}, {}),
+
+		//read/write
 		R8=p=>M.getUint8(p),
 		W8=(p,v)=>M.setUint8(p,v),
 		R32=p=>M.getUint32(p),
 		W32=(p,v)=>M.setUint32(p,v),
 		R64=p=>M.getFloat64(p),
-		W64=(p,v)=>M.getFloat64(p),
+	 	W64=(p,v)=>M.setFloat64(p,v),
+
+		//string
 		RS=p=>D(Uint8Array.from(function*(i,b){for(; (b=R8(i)); ++i) yield b}(p))),
-		WS=(p,s)=>[...E(s), 0].forEach((b, i) => W8(p + i, b)),
+		WS=(p,s)=>[...E(s),0].forEach((b,i)=>W8(p+i,b)),
+		//key
 		RK=p=>RS(R32(p+20)),
-		WK=(p,v)=>WS(R32(p+20)),
+		WK=(p,v)=>WS(R32(p+20),v),
+		//bool
 		RB=p=>!!RD(p),
 		WB=(p,v)=>WD(p,!!v),
+		//char
 		RC=p=>RS(R32(p+8)),
-		WC=p=>WS(R32(p+8)),
+		WC=(p,v)=>WS(R32(p+8),v),
+		//digits
 		RD=p=>R64(p+8),
 		WD=(p,v)=>W64(p+8,v),
+		//functions
 		RF=p=>F[RD(p)],
-		WF=(p,v)=>WD(p, F.includes(v)?F.indexOf(v):F.push(v)-1),
+		WF=(p,v)=>WD(p,F.includes(v)?F.indexOf(v):F.push(v)-1),
+		//gathered
 		RG=p=>new Proxy(p,A);
-	
-		this.data=X(JS._root());
+
+		this.pipe=(p,r,w)=>r?(J[p]=[r,w]):J[p];
+		this.data=X(G._root());
 		this.export=X;
 		this.import=v=>W(0,0,v);
 		this.listen=(pt,fn)=>H.push([new RegExp(pt),fn]);
-		this.trigger=async pt=>H.forEach(async([re,fn])=>re.test(path)&&fn(path));
+		this.trigger=async pt=>H.forEach(async([re,fn])=>re.test(pt)&&fn(pt));
 	);
 	#endif
-	
+
 	#ifndef NO_JS_ASYNCIFY
-	static jmp_buf __jacl_async_env;
-	__jacl_js_async = (js_t*)JS_CODE(
+	__jacl_js_async((js_t*)JS_CODE(
 		let SP = 0,SM;
 		const SH = 64*1024,SO = {
 			pause:sp=>{SP=sp;SM=new Uint8Array(this.exports.memory.buffer,SP,SH);throw 'PAUSE'},
 			sleep:ms=>setTimeout(SO.resume,ms),
 			resume:()=>{new Uint8Array(this.exports.memory.buffer,SP,SH).set(SM);this.exports.resume();}
 		};
-	
+
 		return this.import(SO);
-	);
+	));
 	#endif
 
 	//call main
 	main();
 }
+
+#ifndef JS_MAX_FDS
+#define JS_MAX_FDS 64
+#endif
+
+typedef struct {
+  char buffer[BUFSIZ];
+  size_t pos;
+  int mode;
+} fd_buf_t;
+
+static fd_buf_t fd_bufs[JS_MAX_FDS] = {0};
+static bool fd_inits[JS_MAX_FDS] = {0};
+
+static ssize_t js_read(int fd, void *buf, size_t count) {
+  if (fd < 0 || fd >= JS_MAX_FDS || !buf) {
+    errno = EBADF;
+
+    return -1;
+  }
+
+	if (count == 0) return 0;
+
+  js_t* result = js_code("this.import(this.pipe(arguments[0])[0](arguments[1]))", 53, fd, count);
+
+  if (!result || result->type != JS_TYPE_STRING) return 0;
+
+  size_t copy_len = (result->length < count) ? result->length : count;
+
+  memcpy(buf, result->value.str, copy_len);
+
+  return copy_len;
+}
+static ssize_t js_write(int fd, const void *buf, size_t count) {
+  if (fd < 0 || fd >= JS_MAX_FDS || !buf) {
+    errno = EBADF;
+    return -1;
+  }
+
+  if (count == 0) return 0;
+
+  // Initialize on first use
+  if (!fd_inits[fd]) {
+    fd_bufs[fd].mode = (fd == STDERR_FILENO)
+      ? _IONBF
+      : (fd <= STDERR_FILENO)
+        ? _IOLBF
+        : _IOFBF;
+    fd_inits[fd] = true;
+  }
+
+  fd_buf_t* fdb = &fd_bufs[fd];
+  const char* data = (const char*)buf;
+
+  for (size_t i = 0; i < count; i++) {
+    char c = data[i];
+
+    // Append first
+    fdb->buffer[fdb->pos++] = c;
+
+    // Then decide to flush
+    if ((fdb->mode == _IONBF) || (fdb->mode == _IOLBF && c == '\n') || (fdb->pos >= BUFSIZ - 1)) {
+      fdb->buffer[fdb->pos] = '\0';
+
+      js_code("this.pipe(arguments[0])[1](this.export(arguments[1]))", 58, fd, JS_STRING(fdb->buffer));
+
+      fdb->pos = 0;
+    }
+  }
+
+  return count;
+}
 #endif
 
 // Slep and async
 #ifndef NO_JS_ASYNCIFY
-#define JS_PAUSE JS_EXEC(js_property(__jacl_js_async, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
+#define JS_ASYNC_ENV *__jacl_async_env()
+static jmp_buf* __jacl_async_env(void) {
+	static jmp_buf env;
+
+	return &env;
+}
+
+#define JS_PAUSE JS_EXEC(js_property(JS_ASYNC, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
 JS_EXPORT(sleep)
-void js_sleep(uint32_t ms) { 
-	if (setjmp(__jacl_async_env) == 0) {
+void js_sleep(uint32_t ms) {
+	if (setjmp(JS_ASYNC_ENV) == 0) {
 		JS_PAUSE;
-		JS_EXEC(js_property(__jacl_js_async, "sleep"), ms);
+		JS_EXEC(js_property(JS_ASYNC, "sleep"), ms);
 	}
 }
 JS_EXPORT(pause)
 void js_pause() { JS_PAUSE; }
 JS_EXPORT(resume)
 void js_resume(void) {
-		longjmp(__jacl_async_env, 1);
+		longjmp(JS_ASYNC_ENV, 1);
 }
 #undef JS_PAUSE
 #endif
@@ -491,9 +615,9 @@ js_t* js_parse(const char* s) {
 
 	return js_parse_value(s, &i);
 }
-char* js_strigify(js_t* v) {
+char* js_stringify(js_t* v) {
 	if (!v) return strdup("null");
-	
+
 	switch (v->type) {
 	case JS_TYPE_NULL:
 		return strdup("null");
@@ -501,14 +625,18 @@ char* js_strigify(js_t* v) {
 		return strdup(v->value.num ? "true" : "false");
 	case JS_TYPE_NUMBER: {
 		char* buf = (char*)malloc(32);
+
 		snprintf(buf, 32, "%.17g", v->value.num);
+
 		return buf;
 	}
 	case JS_TYPE_STRING: {
 		size_t len = strlen(v->value.str);
 		char* buf = (char*)malloc(len * 2 + 3); // worst case: all chars escaped + quotes + null
 		char* p = buf;
+
 		*p++ = '"';
+
 		for (char* s = v->value.str; *s; s++) {
 			if (*s == '"' || *s == '\\') {
 				*p++ = '\\';
@@ -520,28 +648,36 @@ char* js_strigify(js_t* v) {
 				*p++ = *s;
 			}
 		}
+
 		*p++ = '"';
 		*p = '\0';
+
 		return buf;
 	}
 	case JS_TYPE_ARRAY: {
 		size_t cap = 64, pos = 0;
 		char* buf = (char*)malloc(cap);
 		buf[pos++] = '[';
-		
+
 		for (js_t* c = v->first; c; c = c->next) {
 			if (c != v->first) {
 				if (pos >= cap - 1) { cap *= 2; buf = (char*)realloc(buf, cap); }
 				buf[pos++] = ',';
 			}
-			char* child = js_strigify(c);
+
+			char* child = js_stringify(c);
 			size_t child_len = strlen(child);
-			while (pos + child_len >= cap) { cap *= 2; buf = (char*)realloc(buf, cap); }
+
+			while (pos + child_len >= cap) {
+				cap *= 2;
+				buf = (char*)realloc(buf, cap);
+			}
+
 			strcpy(buf + pos, child);
 			pos += child_len;
 			free(child);
 		}
-		
+
 		if (pos >= cap - 1) { cap *= 2; buf = (char*)realloc(buf, cap); }
 		buf[pos++] = ']';
 		buf[pos] = '\0';
@@ -551,34 +687,49 @@ char* js_strigify(js_t* v) {
 		size_t cap = 64, pos = 0;
 		char* buf = (char*)malloc(cap);
 		buf[pos++] = '{';
-		
+
 		for (js_t* c = v->first; c; c = c->next) {
 			if (c != v->first) {
 				if (pos >= cap - 1) { cap *= 2; buf = (char*)realloc(buf, cap); }
 				buf[pos++] = ',';
 			}
-			
+
 			// Add key
 			size_t key_len = strlen(c->key);
-			while (pos + key_len + 3 >= cap) { cap *= 2; buf = (char*)realloc(buf, cap); }
+
+			while (pos + key_len + 3 >= cap) {
+				cap *= 2;
+				buf = (char*)realloc(buf, cap);
+			}
+
 			buf[pos++] = '"';
 			strcpy(buf + pos, c->key);
 			pos += key_len;
 			buf[pos++] = '"';
 			buf[pos++] = ':';
-			
+
 			// Add value
-			char* child = js_strigify(c);
+			char* child = js_stringify(c);
 			size_t child_len = strlen(child);
-			while (pos + child_len >= cap) { cap *= 2; buf = (char*)realloc(buf, cap); }
+
+			while (pos + child_len >= cap) {
+				cap *= 2;
+				buf = (char*)realloc(buf, cap);
+			}
+
 			strcpy(buf + pos, child);
 			pos += child_len;
 			free(child);
 		}
-		
-		if (pos >= cap - 1) { cap *= 2; buf = (char*)realloc(buf, cap); }
+
+		if (pos >= cap - 1) {
+			cap *= 2;
+			buf = (char*)realloc(buf, cap);
+		}
+
 		buf[pos++] = '}';
 		buf[pos] = '\0';
+
 		return buf;
 	}
 	default:

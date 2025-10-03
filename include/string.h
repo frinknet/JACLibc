@@ -1,10 +1,16 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef STRING_H
 #define STRING_H
+#pragma once
 
+#include <config.h>
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#if JACL_HAS_C23
+#define __STDC_VERSION_STRING_H__ 202311L
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,7 +18,7 @@ extern "C" {
 
 void *malloc(size_t);
 
-/* — Memory Operations — */
+/* emory Operations */
 static inline void *memcpy(void *dest, const void *src, size_t n) {
 		unsigned char *d = (unsigned char *)dest;
 		const unsigned char *s = (const unsigned char *)src;
@@ -62,7 +68,7 @@ static inline void *memchr(const void *s, int c, size_t n) {
 		return NULL;
 }
 
-#ifdef _GNU_SOURCE
+#ifdef JACL_HAS_POSIX
 static inline void *memmem(const void *hay, size_t hl, const void *ndl, size_t nl) {
 		if (nl > hl) return NULL;
 		const unsigned char *h = (const unsigned char *)hay;
@@ -72,7 +78,7 @@ static inline void *memmem(const void *hay, size_t hl, const void *ndl, size_t n
 }
 #endif
 
-/* — UTF-8–aware String Length & Copy — */
+/* UTF-8–aware String Length & Copy */
 static inline size_t strlen(const char *s) {
 	size_t len = 0;
 
@@ -114,7 +120,7 @@ static inline char *strncat(char *dest, const char *src, size_t n) {
 		return dest;
 }
 
-/* — Comparison & Collation (byte-safe, Unicode case-fold hooks) — */
+/* Comparison & Collation (byte-safe, Unicode case-fold hooks) */
 static inline int strcmp(const char *a, const char *b) {
 		while (*a && *a == *b) { a++; b++; }
 		return (*a < *b) ? -1 : (*a > *b);
@@ -137,8 +143,8 @@ static inline size_t strxfrm(char *dest, const char *src, size_t n) {
 		return l;
 }
 
-/* — Thread-safe strerror & strerror_r — */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+/* Thread-safe strerror & strerror_r */
+#if JACL_HAS_C11
 static _Thread_local char _jacl_errbuf[64];
 #else
 static __thread char _jacl_errbuf[64];
@@ -168,7 +174,7 @@ static inline char *strerror(int err) {
 				case ERANGE: msg = "Math result out of range"; break;
 				default: msg = "Unknown error"; break;
 		}
-		
+
 		size_t len = strlen(msg);
 		if (len >= sizeof(_jacl_errbuf)) len = sizeof(_jacl_errbuf) - 1;
 		memcpy(_jacl_errbuf, msg, len);
@@ -178,11 +184,11 @@ static inline char *strerror(int err) {
 
 static inline int strerror_r(int err, char *buf, size_t buflen) {
 		if (!buf || buflen == 0) return EINVAL;
-		
+
 		// Reuse existing strerror() - it handles all the switch logic
 		const char *msg = strerror(err);
 		size_t len = strlen(msg);
-		
+
 		if (len >= buflen) {
 				// Buffer too small - copy what fits and null terminate
 				if (buflen > 0) {
@@ -191,13 +197,13 @@ static inline int strerror_r(int err, char *buf, size_t buflen) {
 				}
 				return ERANGE;
 		}
-		
+
 		// Buffer is large enough - copy entire message including null terminator
 		memcpy(buf, msg, len + 1);
 		return 0;
 }
 
-/* — Search & Tokenization — */
+/* Search & Tokenization */
 static inline char *strchr(const char *s, int c) {
 		for (;; s++) {
 				if (*s == (char)c) return (char *)s;
@@ -257,8 +263,8 @@ static inline char *strtok(char *s, const char *delim) {
 		return strtok_r(s, delim, &tls_save);
 }
 
-/* — BSD-Style Safe Copy/Cat — */
-#if defined(_BSD_SOURCE) || defined(_SUSV2)
+/* BSD-Style Safe Copy/Cat */
+#if JACL_OS_BSD
 static inline size_t strlcpy(char *dest, const char *src, size_t n) {
 		size_t len = strlen(src);
 		size_t end = (len >= n) ? n - 1 : len;
@@ -278,8 +284,8 @@ static inline size_t strlcat(char *dest, const char *src, size_t n) {
 }
 #endif
 
-/* — POSIX basename simple no-alloc — */
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
+/* POSIX basename simple no-alloc */
+#if JACL_HAS_POSIX
 static inline const char *basename(const char *path) {
 		const char *p = strrchr(path, '/');
 		return p ? p + 1 : path;
@@ -288,7 +294,7 @@ static inline const char *basename(const char *path) {
 
 #ifdef __cplusplus
 }
-#if __has_include(<type_traits>)
+
 #include <type_traits>
 template<typename T> T *memcpy(T*, const T*, size_t) = delete;
 template<typename T> T *memmove(T*, const T*, size_t) = delete;

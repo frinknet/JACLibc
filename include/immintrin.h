@@ -3,6 +3,27 @@
 #define IMMINTRIN_H
 #pragma once
 
+/**
+ * NOTE: This is intentionally FAKE realizing that the big compilers will optimize with -O2 or -O3.
+ * You are better at writing code than wrangling architecture features so we play to your strength.
+ * However, we do check that the compiler is going to do that for you...
+ */
+
+#include "config.h"
+
+#if !JACL_HAS_C99
+  #error "immintrin.h requires C99 or later"
+#endif
+
+// Detect vector_size attribute support
+#if !__has_attribute(vector_size)
+  #error "immintrin.h requires a modern compiler with vector_size attribute for vector types"
+#endif
+
+#ifndef __SSE__
+  #warning "Compiling without SSE target - auto-vectorization may not occur"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -99,4 +120,4 @@ static inline __m128d _mm_fmadd_pd(__m128d a,__m128d b,__m128d c){ return a*b + 
 }
 #endif
 
-#endif /* IMMINTRIN_H */
+#endif // IMMINTRIN_H

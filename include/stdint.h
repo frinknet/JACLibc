@@ -1,8 +1,18 @@
-// (c) 2025 FRINKnet & Friends - MIT licence
-#ifndef _STDINT_H
-#define _STDINT_H
+/* (c) 2025 FRINKnet & Friends - MIT licence */
+#ifndef STDINT_H
+#define STDINT_H
+#pragma once
 
+#include <config.h>
 #include <stddef.h>  // For size_t, ptrdiff_t, wchar_t
+
+#if JACL_HAS_C23
+  #define __STDC_VERSION_STDINT_H__ 202311L
+#elif JACL_HAS_C11
+  #define __STDC_VERSION_STDINT_H__ 201112L
+#elif JACL_HAS_C99
+  #define __STDC_VERSION_STDINT_H__ 199901L
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,8 +49,13 @@ typedef int64_t							 int_least64_t;
 typedef uint64_t						 uint_least64_t;
 
 // Integer type capable of holding object pointers
+#if JACL_64BIT
+typedef int64_t							 intptr_t;
+typedef uint64_t						 uintptr_t;
+#else
 typedef int32_t							 intptr_t;
 typedef uint32_t						 uintptr_t;
+#endif
 
 // Greatest-width integer types
 typedef int64_t							 intmax_t;
@@ -75,9 +90,15 @@ typedef uint64_t						 uintmax_t;
 #define UINT_FAST64_MAX			 UINT64_MAX
 
 // Limits of integer types capable of holding object pointers
-#define INTPTR_MIN					 INT32_MIN
-#define INTPTR_MAX					 INT32_MAX
-#define UINTPTR_MAX					 UINT32_MAX
+#if JACL_64BIT
+	#define INTPTR_MIN   INT64_MIN
+	#define INTPTR_MAX   INT64_MAX
+	#define UINTPTR_MAX  UINT64_MAX
+#else
+	#define INTPTR_MIN   INT32_MIN
+	#define INTPTR_MAX   INT32_MAX
+	#define UINTPTR_MAX  UINT32_MAX
+#endif
 
 // Limits of greatest-width integer types
 #define INTMAX_MIN					 INT64_MIN
@@ -85,8 +106,14 @@ typedef uint64_t						 uintmax_t;
 #define UINTMAX_MAX					 UINT64_MAX
 
 // Limits of other integer types (MISSING FROM YOUR ORIGINAL)
-#define PTRDIFF_MIN					 INT32_MIN
-#define PTRDIFF_MAX					 INT32_MAX
+#if JACL_64BIT
+	#define PTRDIFF_MIN  INT64_MIN
+	#define PTRDIFF_MAX  INT64_MAX
+#else
+	#define PTRDIFF_MIN  INT32_MIN
+	#define PTRDIFF_MAX  INT32_MAX
+#endif
+
 #define SIG_ATOMIC_MIN			 INT32_MIN
 #define SIG_ATOMIC_MAX			 INT32_MAX
 
@@ -122,5 +149,4 @@ typedef uint64_t						 uintmax_t;
 }
 #endif
 
-#endif /* _STDINT_H */
-
+#endif /* STDINT_H */

@@ -1,14 +1,16 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef STDDEF_H
 #define STDDEF_H
 #pragma once
+
+#include <config.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Architecture-aware fundamental types */
-#if defined(__LP64__) || defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__) || defined(__riscv64)
+#if JACL_64BIT
 	typedef unsigned long size_t;
 	typedef long ptrdiff_t;
 #else
@@ -38,7 +40,7 @@ typedef unsigned int wint_t;
 #endif
 
 /* Maximum alignment type (C11 requirement) */
-#if __STDC_VERSION__ >= 201112L
+#if JACL_HAS_C11
 	typedef struct {
 		long long _ll;
 		long double _ld;
@@ -47,7 +49,7 @@ typedef unsigned int wint_t;
 #endif
 
 /* C language feature compatibility */
-#if __STDC_VERSION__ >= 199901L
+#if JACL_HAS_C99
 	#define __restrict restrict
 #elif defined(__GNUC__) || defined(__clang__)
 	#define __restrict __restrict__
@@ -55,7 +57,7 @@ typedef unsigned int wint_t;
 	#define __restrict
 #endif
 
-#if __STDC_VERSION__ >= 199901L || defined(__cplusplus)
+#if JACL_HAS_C99 || defined(__cplusplus)
 	#define __inline inline
 #elif defined(__GNUC__) || defined(__clang__)
 	#define __inline __inline__
@@ -63,7 +65,7 @@ typedef unsigned int wint_t;
 	#define __inline
 #endif
 
-#if __STDC_VERSION__ >= 201112L
+#if JACL_HAS_C11
 	/* C11 has native _Noreturn */
 #elif defined(__GNUC__) || defined(__clang__)
 	#define _Noreturn __attribute__((__noreturn__))
@@ -90,14 +92,9 @@ typedef unsigned int wint_t;
 	#define _XOPEN_SOURCE 700
 #endif
 
-/* Symbol redirection helper (GCC/Clang extension) */
-#if defined(__GNUC__) || defined(__clang__)
-	#define __REDIR(name, proto, alias) \
-		__typeof__(proto) name __asm__(#alias)
-#else
-	#define __REDIR(name, proto, alias) \
-		static inline __typeof__(proto) name { return alias; }
-#endif
+/* Symbol redirection helper */
+#define __REDIR(name, proto, alias) \
+	static inline __typeof__(proto) name { return alias; }
 
 #ifdef __cplusplus
 }

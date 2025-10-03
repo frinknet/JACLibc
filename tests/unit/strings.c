@@ -1,5 +1,5 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#include "../runner.h"
+#include <testing.h>
 #include <strings.h>
 
 TEST_SUITE(strings);

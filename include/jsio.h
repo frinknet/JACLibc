@@ -1,7 +1,9 @@
-// (c) 2025 FRINKnet & Friends - MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef JSIO_H
 #define JSIO_H
+#pragma once
 
+#include <config.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -16,9 +18,9 @@ extern "C" {
 #define JS_MAX_DEPTH 64
 #endif
 
-#ifdef __wasm__
+#if JACL_ARCH_WASM
 #define JS_EXPORT(name) __attribute__((used, export_name(#name)))
-#define JS_IMPORT(name) __attribute__((import_module("env"), import_name(#name)))
+#define JS_IMPORT(name) __attribute__((import_module("env"), import_name(#name))) extern
 #else
 #define JS_EXPORT(name)
 #define JS_IMPORT(name)
@@ -49,19 +51,20 @@ typedef struct js_t {
 } js_t;
 
 // Node Lifecycle
-js_t *js_public(void);
 void js_attach(js_t* c, js_t* p);
 void js_detach(js_t* c);
 void js_replace(js_t* o, js_t* n);
 js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen);
 void js_delete(js_t* v);
+void js_publish(js_t* n);
+void js_unpublish(js_t* n);
 
 // Indexing
 js_t* js_index(js_t* a, int i);
 int js_indexof(js_t* a, js_t* v);
 
 // Node path
-js_t* js_root(js_t* v);
+JS_EXPORT(_root) js_t* js_root(js_t* v);
 char* js_path(js_t* v);
 bool js_includes(js_t* r, js_t* v);
 bool js_ispublic(js_t* v);
@@ -79,9 +82,9 @@ js_t* js_boolean(js_t* x, bool n);
 #define JS_NUMBER(x) js_number(js_create(JS_TYPE_NUMBER,0,0), (double)(x))
 #define JS_BOOLEAN(x) js_boolean(js_create(JS_TYPE_BOOLEAN,0,0), (bool)(x))
 
-#ifdef __wasm__
+#if JACL_OS_JSRUN
 JS_IMPORT(js)
-extern uintptr_t	js_code(const char *code, int len, ...);
+uintptr_t	js_code(const char *code, int len, ...);
 #define JS_CODE(...) js_code(#__VA_ARGS__, sizeof(#__VA_ARGS__) - 1)
 #else
 #define JS_CODE(...)
@@ -92,7 +95,6 @@ extern uintptr_t	js_code(const char *code, int len, ...);
 #define JS_EXEC(fn, ...) js_code("[f,...a]=arguments;return this.import(this.export(f)(...a.map(this.export)))", 76, fn, __VA_ARGS__)
 #define NO_JS_NOTIFY
 #define NO_JS_ASYNCIFY
-#define NO_JS_START
 #else
 #define JS_EXEC(fn, ...)
 #endif
@@ -138,21 +140,26 @@ js_t* js_pop(js_t* a);
 void js_unshift(js_t* a, js_t* v);
 js_t* js_shift(js_t* a);
 
-// Object Property 
+// Object Property
 js_t* js_property(js_t* o, const char* key);
 
 // JS Parser
 js_t* js_parse(const char* s);
-char* js_strigify(js_t* v);
+char* js_stringify(js_t* v);
 
-#ifndef NO_JS_START
+// JS Start if wasm
+#if JACL_OS_JSRUN
 JS_EXPORT(_start) void js_start();
+ssize_t js_read(int fd, void* buf, size_t cnt);
+ssize_t js_write(int fd, const void* buf, size_t cnt);
+#endif
+
+// JS lifecycle
 JS_EXPORT(_attach) void js_attach(js_t* c, js_t* p);
-JS_EXPORT(_attach) void js_detach(js_t* c);
+JS_EXPORT(_detach) void js_detach(js_t* c);
 JS_EXPORT(_replace) void js_replace(js_t* o, js_t* n);
 JS_EXPORT(_create) js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen);
 JS_EXPORT(_delete) void js_delete(js_t* x);
-#endif
 
 #ifdef __cplusplus
 }

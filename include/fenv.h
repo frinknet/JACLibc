@@ -1,13 +1,17 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef FENV_H
 #define FENV_H
 #pragma once
 
+#include <config.h>
 #include <stdint.h>
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#if JACL_HAS_C99
 
 /* Exception flags */
 #define FE_INVALID		 (1u<<0)
@@ -31,18 +35,13 @@ static const fenv_t __jacl_fenv_default = { 0u, FE_TONEAREST };
 #define FE_DFL_ENV ((const fenv_t*)&__jacl_fenv_default)
 
 /* Emulated environment storage (thread-local when available) */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-	_Thread_local fenv_t __jacl_fenv = { 0u, FE_TONEAREST };
-#elif defined(__GNUC__) || defined(__clang__)
-	__thread fenv_t __jacl_fenv = { 0u, FE_TONEAREST };
-#elif defined(_MSC_VER)
-	__declspec(thread) fenv_t __jacl_fenv = { 0u, FE_TONEAREST };
+#if JACL_HAS_PTHREADS
+	    extern _Thread_local fenv_t __jacl_fenv;
 #else
-	/* Fallback: global (not thread-safe) */
-	fenv_t __jacl_fenv = { 0u, FE_TONEAREST };
+    extern fenv_t __jacl_fenv;  /* Global fallback for single-threaded */
 #endif
 
-/* Clear exception flags indicated by e */
+/* Inline API functions */
 static inline int feclearexcept(int e) {
 	__jacl_fenv.excepts &= (fexcept_t)~(unsigned)e;
 	return 0;
@@ -118,6 +117,7 @@ static inline int feupdateenv(const fenv_t *envp) {
 	}
 	return 0;
 }
+#endif
 
 #ifdef __cplusplus
 }

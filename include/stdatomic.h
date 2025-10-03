@@ -1,16 +1,25 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef STDATOMIC_H
 #define STDATOMIC_H
+#pragma once
+
+#include <config.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#if !JACL_HAS_C11
+#error "stdatomic.h requires C11 or later"
+#endif
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* C11/C23 feature detection */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#if JACL_HAS_C23
 #  define __STDC_VERSION_STDATOMIC_H__ 202311L
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#elif JACL_HAS_C11
 #  define __STDC_VERSION_STDATOMIC_H__ 201112L
 #endif
 
@@ -25,10 +34,8 @@ typedef enum {
 } memory_order;
 
 /* Platform detection for WebAssembly */
-#ifdef __wasm__
-#ifndef __WASM_ATOMICS__
+#if JACL_ARCH_WASM && !defined(__WASM_ATOMICS__)
 #define FAKE_ATOMICS
-#endif
 #endif
 
 #ifdef FAKE_ATOMICS
@@ -52,7 +59,7 @@ typedef ATOMIC(unsigned long long) atomic_ullong;
 typedef ATOMIC(void*) atomic_voidptr;
 typedef struct { ATOMIC(bool) _Value; } atomic_flag;
 
-// Memory Barrier 
+// Memory Barrier
 #ifdef FAKE_ATOMICS
 
 static inline void __jacl_spin_lock(void *ptr) { (void)ptr; }
@@ -70,53 +77,55 @@ static inline void __jacl_spin_lock(void *ptr) {
 	uintptr_t addr = addr_conv.u;
 	unsigned idx = ((addr >> 3) ^ (addr >> 9)) & 63;
 	volatile unsigned char *lock = &__jacl_spinlock_table[idx];
-#if defined(__x86_64__) || defined(__i386__)
-	while (__sync_lock_test_and_set(lock, 1)) { while (*lock) { /* spin */ } }
-#else
-	unsigned char expected = 0; while (1) { if (*lock == 0) { expected = 0; if (__atomic_compare_exchange_n(lock, &expected, 1, false, 5, 5)) break; } for (volatile int i = 0; i < 10; i++); }
-#endif
+
+	#if JACL_ARCH_X64 || JACL_ARCH_X86
+		while (__sync_lock_test_and_set(lock, 1)) { while (*lock) { /* spin */ } }
+	#else
+		unsigned char expected = 0; while (1) { if (*lock == 0) { expected = 0; if (__atomic_compare_exchange_n(lock, &expected, 1, false, 5, 5)) break; } for (volatile int i = 0; i < 10; i++); }
+	#endif
 }
 static inline void __jacl_spin_unlock(void *ptr) {
 	union { void *p; uintptr_t u; } addr_conv = { .p = ptr };
 	uintptr_t addr = addr_conv.u;
 	unsigned idx = ((addr >> 3) ^ (addr >> 9)) & 63;
 	volatile unsigned char *lock = &__jacl_spinlock_table[idx];
-#if defined(__x86_64__) || defined(__i386__)
-	__sync_lock_release(lock);
-#else
-	__atomic_store_n(lock, 0, 5);
-#endif
+
+	#if JACL_ARCH_X64 || JACL_ARCH_X86
+		__sync_lock_release(lock);
+	#else
+		__atomic_store_n(lock, 0, 5);
+	#endif
 }
 static inline void __jacl_barrier_acquire(void) {
-#if defined(__x86_64__) || defined(__i386__)
-	__asm__ volatile ("" ::: "memory");
-#elif defined(__aarch64__)
-	__asm__ volatile ("dmb ishld" ::: "memory");
-#elif defined(__arm__)
-	__asm__ volatile ("dmb" ::: "memory");
-#else
-	__asm__ volatile ("" ::: "memory");
-#endif
+	#if JACL_ARCH_X64 || JACL_ARCH_X86
+		__asm__ volatile ("" ::: "memory");
+	#elif JACL_ARCH_ARM64
+		__asm__ volatile ("dmb ishld" ::: "memory");
+	#elif JACL_ARCH_ARM32
+		__asm__ volatile ("dmb" ::: "memory");
+	#else
+		__asm__ volatile ("" ::: "memory");
+	#endif
 }
 static inline void __jacl_barrier_release(void) {
-#if defined(__x86_64__) || defined(__i386__)
-	__asm__ volatile ("" ::: "memory");
-#elif defined(__aarch64__)
-	__asm__ volatile ("dmb ishst" ::: "memory");
-#elif defined(__arm__)
-	__asm__ volatile ("dmb" ::: "memory");
-#else
-	__asm__ volatile ("" ::: "memory");
-#endif
+	#if JACL_ARCH_X64 || JACL_ARCH_X86
+		__asm__ volatile ("" ::: "memory");
+	#elif JACL_ARCH_ARM64
+		__asm__ volatile ("dmb ishst" ::: "memory");
+	#elif JACL_ARCH_ARM32
+		__asm__ volatile ("dmb" ::: "memory");
+	#else
+		__asm__ volatile ("" ::: "memory");
+	#endif
 }
 static inline void __jacl_barrier_seq_cst(void) {
-#if defined(__x86_64__) || defined(__i386__)
-	__asm__ volatile ("mfence" ::: "memory");
-#elif defined(__aarch64__) || defined(__arm__)
-	__asm__ volatile ("dmb ish" ::: "memory");
-#else
-	__asm__ volatile ("" ::: "memory");
-#endif
+	#if JACL_ARCH_X64 || JACL_ARCH_X86
+		__asm__ volatile ("mfence" ::: "memory");
+	#elif JACL_ARCH_ARM64 || JACL_ARCH_ARM32
+		__asm__ volatile ("dmb ish" ::: "memory");
+	#else
+		__asm__ volatile ("" ::: "memory");
+	#endif
 }
 
 #endif /* FAKE_ATOMICS */
@@ -134,7 +143,7 @@ static inline void atomic_thread_fence(memory_order mo) {
 		default: __asm__ volatile ("" ::: "memory"); break;
 	}
 }
-static inline void atomic_signal_fence(memory_order mo) { 
+static inline void atomic_signal_fence(memory_order mo) {
 	switch (mo) {
 		case memory_order_relaxed: break;
 		default: __asm__ volatile ("" ::: "memory"); break;
@@ -157,7 +166,7 @@ static inline void atomic_signal_fence(memory_order mo) {
 	static inline type __jacl_atomic_fetch_add_##bits(volatile type *ptr, type val, memory_order mo) {(void)mo;type old=*ptr;*ptr+=val;return old;} \
 	static inline bool __jacl_atomic_cmpxchg_##bits(volatile type *ptr, type *expected, type desired, memory_order mo) {(void)mo;if(*ptr==*expected){*ptr=desired;return true;}*expected=*ptr;return false;}
 
-#elif defined(__x86_64__) || defined(__i386__)
+#elif JACL_ARCH_X64 || JACL_ARCH_X86
 
 // x86/x64 with inline assembly
 #define JACL_ATOMIC_SIZES \
@@ -172,7 +181,7 @@ static inline void atomic_signal_fence(memory_order mo) {
 	static inline type __jacl_atomic_fetch_add_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);__asm__ volatile("lock xadd" suffix " %0,%1":"=r"(val),"+m"(*ptr):"0"(val):"memory");return val;} \
 	static inline bool __jacl_atomic_cmpxchg_##bits(volatile type *ptr, type *expected, type desired, memory_order mo) {atomic_thread_fence(mo);type old=*expected;__asm__ volatile("lock cmpxchg" suffix " %2,%1":"=a"(old),"+m"(*ptr):"r"(desired),"0"(old):"memory");if(old==*expected)return true;*expected=old;return false;}
 
-#elif defined(__arm__) || defined(__aarch64__)
+#elif JACL_ARCH_ARM32 || JACL_ARCH_ARM64
 
 // ARM with LDREX/STREX
 #define JACL_ATOMIC_SIZES \
@@ -282,17 +291,17 @@ static inline uint32_t __jacl_atomic_fetch_xor_32(volatile uint32_t *ptr, uint32
 #define atomic_fetch_xor(obj, val) atomic_fetch_xor_explicit(obj, val, memory_order_seq_cst)
 
 /* Atomic flag operations */
-static inline bool atomic_flag_test_and_set(atomic_flag *f) { 
-		return (bool)__jacl_atomic_exchange_8((volatile uint8_t*)&f->_Value, 1, memory_order_seq_cst); 
+static inline bool atomic_flag_test_and_set(atomic_flag *f) {
+		return (bool)__jacl_atomic_exchange_8((volatile uint8_t*)&f->_Value, 1, memory_order_seq_cst);
 }
-static inline bool atomic_flag_test_and_set_explicit(atomic_flag *f, memory_order mo) { 
-		return (bool)__jacl_atomic_exchange_8((volatile uint8_t*)&f->_Value, 1, mo); 
+static inline bool atomic_flag_test_and_set_explicit(atomic_flag *f, memory_order mo) {
+		return (bool)__jacl_atomic_exchange_8((volatile uint8_t*)&f->_Value, 1, mo);
 }
-static inline void atomic_flag_clear(atomic_flag *f) { 
-		__jacl_atomic_store_8((volatile uint8_t*)&f->_Value, 0, memory_order_seq_cst); 
+static inline void atomic_flag_clear(atomic_flag *f) {
+		__jacl_atomic_store_8((volatile uint8_t*)&f->_Value, 0, memory_order_seq_cst);
 }
-static inline void atomic_flag_clear_explicit(atomic_flag *f, memory_order mo) { 
-		__jacl_atomic_store_8((volatile uint8_t*)&f->_Value, 0, mo); 
+static inline void atomic_flag_clear_explicit(atomic_flag *f, memory_order mo) {
+		__jacl_atomic_store_8((volatile uint8_t*)&f->_Value, 0, mo);
 }
 
 
@@ -309,7 +318,10 @@ static inline void atomic_flag_clear_explicit(atomic_flag *f, memory_order mo) {
 #define ATOMIC_POINTER_LOCK_FREE 2
 
 #define ATOMIC_FLAG_INIT {false}
-#define ATOMIC_VAR_INIT(x) (x)
+
+#if !JACL_HAS_C23
+	#define ATOMIC_VAR_INIT(x) (x)  /* Removed in C23 */
+#endif
 
 #ifdef __cplusplus
 }

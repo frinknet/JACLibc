@@ -1,6 +1,7 @@
 // (c) 2025 FRINKnet & Friends - MIT licence
-#ifndef _SYS_WAIT_H
-#define _SYS_WAIT_H
+#ifndef SYS_WAIT_H
+#define SYS_WAIT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,13 +24,15 @@ typedef int pid_t;
 #define WUNTRACED 2
 
 // Stub function declarations (will not be implemented)
-static inline pid_t wait(int *status) { 
+static inline pid_t wait(int *status) {
     (void)status; // Suppress unused parameter warning
+
     return -1; // Return error - not implemented
 }
 
 static inline pid_t waitpid(pid_t pid, int *status, int options) {
     (void)pid; (void)status; (void)options;
+
     return -1; // Return error - not implemented
 }
 
@@ -37,5 +40,4 @@ static inline pid_t waitpid(pid_t pid, int *status, int options) {
 }
 #endif
 
-#endif /* _SYS_WAIT_H */
-
+#endif /* SYS_WAIT_H */

@@ -8,6 +8,7 @@
 #include <string.h>
 #include <limits.h>
 #include <stdbit.h>
+#include <sched.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -197,7 +198,7 @@ large_path:
 				/* Update next's prev_size if exists */
 				uint32_t next_off = off + h->size;
 				if (next_off < JACL_HEAP_SIZE) {
-						(__jacl_hdr_t*)(__jacl_heap + next_off)->prev_size = h->size;
+						((__jacl_hdr_t*)(__jacl_heap + next_off))->prev_size = h->size;
 				}
 				
 				h->flags = JACL_HDR_ALLOC;
@@ -210,23 +211,26 @@ large_path:
 
 void free(void* p) {
 		if (!p) return;
-		
+
 		__jacl_hdr_t* h = (__jacl_hdr_t*)p - 1;
+
 		if (h < (__jacl_hdr_t*)__jacl_heap || h >= (__jacl_hdr_t*)(__jacl_heap + JACL_HEAP_SIZE)) return;
 		if (!(h->flags & JACL_HDR_ALLOC)) return; /* Double free guard */
-		
+
 		/* Arena blocks leak by design (thread-safe) */
 		if (h->flags & JACL_HDR_ARENA) {
 				h->flags = 0;
 				return;
 		}
-		
+
 		h->flags = 0;
+
 		__jacl_lock_acquire(&__jacl_lock);
-		
+
 		/* Lazy coalesce: check next */
 		uint32_t off = (uint32_t)((uint8_t*)h - __jacl_heap);
 		uint32_t next_off = off + h->size;
+
 		if (next_off < JACL_HEAP_SIZE) {
 				__jacl_hdr_t* next = (__jacl_hdr_t*)(__jacl_heap + next_off);
 				if (!(next->flags & JACL_HDR_ALLOC)) {
@@ -235,11 +239,11 @@ void free(void* p) {
 						/* Update following's prev_size */
 						uint32_t after_off = off + h->size;
 						if (after_off < JACL_HEAP_SIZE) {
-								(__jacl_hdr_t*)(__jacl_heap + after_off)->prev_size = h->size;
+								((__jacl_hdr_t*)(__jacl_heap + after_off))->prev_size = h->size;
 						}
 				}
 		}
-		
+
 		/* Check prev */
 		if (off > 0 && h->prev_size > 0) {
 				uint32_t prev_off = off - h->prev_size;
@@ -250,15 +254,16 @@ void free(void* p) {
 						/* Update following's prev_size */
 						uint32_t after_off = prev_off + prev->size;
 						if (after_off < JACL_HEAP_SIZE) {
-								(__jacl_hdr_t*)(__jacl_heap + after_off)->prev_size = prev->size;
+								((__jacl_hdr_t*)(__jacl_heap + after_off))->prev_size = prev->size;
 						}
 						off = prev_off; /* Push merged block */
 				}
 		}
-		
+
 		__jacl_bin_push(off);
 		__jacl_lock_release(&__jacl_lock);
 }
+
 
 void* calloc(size_t nmemb, size_t size) {
 		if (nmemb && size > SIZE_MAX / nmemb) return NULL; /* Overflow check */
@@ -287,19 +292,23 @@ void* realloc(void* ptr, size_t size) {
 }
 
 void* aligned_alloc(size_t alignment, size_t size) {
-		if (alignment == 0 || (alignment & (alignment-1)) != 0) return NULL; /* Power of 2 */
-		if (size % alignment != 0) return NULL; /* Size multiple of alignment */
-		if (alignment <= JACL_ALIGNMENT) return malloc(size); /* Native alignment OK */
+		if (alignment == 0 || (alignment & (alignment-1)) != 0) return NULL;
+		if (size % alignment != 0) return NULL;
+		if (alignment <= JACL_ALIGNMENT) return malloc(size);
 		
-		/* Over-align: alloc extra, pad, stash original ptr */
 		size_t extra = alignment + sizeof(void*);
 		void* raw = malloc(size + extra);
 		if (!raw) return NULL;
 		
-		void* aligned = (void*)JACL_ALIGN_UP((uintptr_t)raw + sizeof(void*), alignment);
-		*(void**)((uint8_t*)aligned - sizeof(void*)) = raw; /* Stash original */
-		return aligned;
+		/* Use union to avoid casting warnings */
+		union { void* ptr; uintptr_t addr; } raw_conv, aligned_conv;
+		raw_conv.ptr = raw;
+		aligned_conv.addr = JACL_ALIGN_UP(raw_conv.addr + sizeof(void*), alignment);
+		
+		*(void**)((uint8_t*)aligned_conv.ptr - sizeof(void*)) = raw;
+		return aligned_conv.ptr;
 }
+
 
 #ifdef __cplusplus
 }

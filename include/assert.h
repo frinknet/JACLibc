@@ -1,7 +1,10 @@
-// (c) 2025 FRINKnet & Friends - MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef ASSERT_H
 #define ASSERT_H
+#pragma once
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdnoreturn.h>
 
 #undef assert
@@ -19,7 +22,10 @@
 extern "C" {
 #endif
 
-noreturn void __assert_fail(const char *expr, const char *file, int line, const char *func);
+noreturn static inline void __assert_fail(const char *expr, const char *file, int line, const char *func) {
+	fprintf(stderr, "Assertion failed: %s\nAt %s:%d, function: %s\n", expr, file, line, func);
+	__builtin_trap();
+}
 
 #ifdef __cplusplus
 }
