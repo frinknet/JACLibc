@@ -45,9 +45,6 @@
 #ifndef EOF
 #define EOF (-1)
 #endif
-#ifndef WEOF
-#define WEOF ((wint_t)-1)
-#endif
 
 #ifdef __cplusplus
 	#define restrict __restrict__

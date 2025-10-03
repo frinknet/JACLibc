@@ -10,13 +10,9 @@
 extern "C" {
 #endif
 
-/*――― Types & Constants ―――*/
-	typedef int wctype_t;
-	typedef int wctrans_t;
-
-#ifndef WEOF
-#define WEOF ((wint_t)-1)
-#endif
+/* Types & Constants */
+typedef int wctype_t;
+typedef int wctrans_t;
 
 /* C/POSIX Locale (ASCII-only) */
 // TODO: Revisit for full Unicode support once locale infrastructure exists.
