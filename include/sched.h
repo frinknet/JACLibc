@@ -3,6 +3,7 @@
 #define SCHED_H
 #pragma once
 
+#include <config.h>
 #include <time.h>
 #include <sys/types.h>
 

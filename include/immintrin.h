@@ -9,7 +9,7 @@
  * However, we do check that the compiler is going to do that for you...
  */
 
-#include "config.h"
+#include <config.h>
 
 #if !JACL_HAS_C99
   #error "immintrin.h requires C99 or later"

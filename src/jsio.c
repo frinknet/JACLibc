@@ -1,4 +1,4 @@
-// (c) 2025 FRINKnet & Friends - MIT licence #ifndef JSIO_C
+/* (c) 2025 FRINKnet & Friends - MIT licence */
 #ifndef JSIO_C
 #define JSIO_C
 

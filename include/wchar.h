@@ -4,17 +4,17 @@
 #pragma once
 
 #include <config.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/types.h> // FILE
+#include <stddef.h>
+#include <stdio.h> // FILE
+
+#if !JACL_HAS_C99
+#error "wchar.h requires C99 or later"
+#endif
 
 // Constants
 #define MB_CUR_MAX 4
-
-#ifndef EOF
-#define EOF (-1)
-#endif
 
 #define WEOF ((wint_t)-1)
 #define WCHAR_MIN 0
@@ -24,17 +24,23 @@
 extern "C" {
 #endif
 
-#ifndef __cplusplus
-#ifdef __WCHAR_TYPE__
-typedef __WCHAR_TYPE__ wchar_t;
-#else
-typedef long wchar_t;
-#endif
-#endif
-
+#ifndef __WINT_TYPE__
 typedef unsigned int wint_t;
+#else
+typedef __WINT_TYPE__ wint_t;
+#endif
 
 typedef struct { uint32_t wc; int bytes, want; } mbstate_t;
+
+#if JACL_HAS_C99
+
+// FIXME flesh out these
+wint_t fputwc(wchar_t wc, FILE *stream) { (void)stream; return wc; }
+wint_t fgetwc(FILE *stream) { (void)stream; return WEOF; }
+wint_t putwc(wchar_t wc, FILE *stream) { return fputwc(wc, stream); }
+wint_t getwc(FILE *stream) { return fgetwc(stream); }
+
+#endif /* JACL_HAS_C99 */
 
 static inline mbstate_t *get_fallback_state(mbstate_t *ps) {
 		static mbstate_t zero_state;

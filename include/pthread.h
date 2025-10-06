@@ -11,7 +11,7 @@
 #include <sys/types.h>
 
 #if JACL_HAS_C11
-	#include <stdatomics.h>
+	#include <stdatomic.h>
 #else
 	#define ATOMIC_VAR_INIT(x) (x)
 	#define atomic_load(ptr) (*(ptr))
@@ -21,6 +21,7 @@
 	#define atomic_compare_exchange_strong(ptr, expected, desired) \
 		((*(ptr) == *(expected)) ? (*(ptr) = (desired), 1) : (*(expected) = *(ptr), 0))
 	#define atomic_compare_exchange_weak atomic_compare_exchange_strong
+	#warning "WARNING: Before C11 threading happense without atomics"
 #endif
 
 #ifdef __cplusplus

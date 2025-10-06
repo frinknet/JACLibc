@@ -14,7 +14,6 @@ extern "C" {
 #if JACL_OS_WINDOWS
 	#define STAT_WIN32 1
 	#include <windows.h>
-	#include <sys/stat.h>  /* Use MSVC's stat.h as base */
 	#include <direct.h>
 	#include <io.h>
 #elif JACL_ARCH_WASM

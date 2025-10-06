@@ -3,13 +3,13 @@
 #define SYS_IOCTL_H
 
 #include <config.h>
+#include <stdarg.h> // va_start(), va_arg(), va_end()
 #include <errno.h> // ENOSYS
 #include <sys/types.h> // POSIX
 
 #if JACL_HAS_POSIX
 
 #include <sys/syscall.h> // syscall()
-#include <stdarg.h> // va_start(), va_arg(), va_end()
 
 /* Window size structure for terminal ioctls */
 struct winsize {

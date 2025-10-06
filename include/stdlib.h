@@ -20,21 +20,13 @@
 extern "C" {
 #endif
 
-/* — Configuration — */
-#ifndef JACL_HEAP_SIZE
-#define JACL_HEAP_SIZE (1u<<20)
-#endif
-#ifndef JACL_SMALL_MAX
-#define JACL_SMALL_MAX 128u
-#endif
-#ifndef JACL_TLS_CHUNK
-#define JACL_TLS_CHUNK 4096u
-#endif
-#ifndef JACL_ALIGNMENT
-#define JACL_ALIGNMENT 8u
-#endif
+/* Memory API */
+void* malloc(size_t n);
+void free(void* ptr);
+void* calloc(size_t nmemb, size_t size);
+void* realloc(void* ptr, size_t size);
 
-/* — Builtin compatibility — */
+/* Builtin compatibility  */
 #if defined(__GNUC__) || defined(__clang__)
 	#define __jacl_trap() __builtin_trap()
 #elif defined(_MSC_VER)
@@ -44,17 +36,16 @@ extern "C" {
 	#define __jacl_trap() (*(volatile int*)0 = 0)
 #endif
 
-typedef struct { int quot, rem; }				div_t;
-typedef struct { long quot, rem; }			ldiv_t;
+typedef struct {
+	int quot, rem;
+} div_t;
+typedef struct {
+	long quot, rem;
+} ldiv_t;
 
 #if JACL_HAS_C99
 typedef struct { long long quot, rem;}	lldiv_t;
 #endif
-
-void* malloc(size_t n);
-void free(void* ptr);
-void* calloc(size_t nmemb, size_t size);
-void* realloc(void* ptr, size_t size);
 
 #if JACL_HAS_C11
 void *aligned_alloc(size_t a, size_t s);

@@ -5,10 +5,10 @@
 
 #include <config.h>
 #include <stdlib.h>
-#include <string.h>
 #include <math.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -4,7 +4,6 @@
 #pragma once
 
 #include <config.h>
-#include <uchar.h>
 #include <wchar.h>
 #include <errno.h>
 

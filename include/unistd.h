@@ -8,9 +8,9 @@
 #include <stddef.h>         // size_t
 #include <stdnoreturn.h>    // noreturn
 #include <sys/types.h>      // pid_t, uid_t, gid_t, ssize_t, off_t
-#include <sys/ioctl.h>      // winsize, TIOCGWINSZ
 #include <sys/syscall.h>    // syscall()
-#include <sys/time.h>       // timespec
+#include <sys/ioctl.h>      // winsize, TIOCGWINSZ
+#include <time.h>           // timespec
 
 #ifdef __cplusplus
 extern "C" {

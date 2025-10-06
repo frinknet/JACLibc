@@ -3,7 +3,7 @@
 #define LIMITS_H
 #pragma once
 
-#include "config.h"
+#include <config.h>
 
 // — Character type limits —
 #define CHAR_BIT				8

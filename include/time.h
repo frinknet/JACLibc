@@ -3,7 +3,7 @@
 #define TIME_H
 #pragma once
 
-#include <time.h>
+#include <config.h>
 #include <stddef.h>
 #include <sys/types.h>
 
@@ -30,13 +30,13 @@ extern "C" {
 #define TIME_THREAD_ACTIVE 4
 
 /* POSIX timespec structure */
-struct timespec {
+typedef struct timespec {
     time_t tv_sec;   /* Seconds */
     long tv_nsec;    /* Nanoseconds */
-};
+} timespec;
 
 /* Standard tm structure */
-struct tm {
+typedef struct tm {
     int tm_sec;     /* Seconds (0-60) */
     int tm_min;     /* Minutes (0-59) */
     int tm_hour;    /* Hours (0-23) */
@@ -46,7 +46,7 @@ struct tm {
     int tm_wday;    /* Day of week (0-6, Sunday = 0) */
     int tm_yday;    /* Day of year (0-365) */
     int tm_isdst;   /* Daylight saving time flag */
-};
+} tm;
 
 #define CLOCK_REALTIME  0
 #define CLOCK_MONOTONIC 1
@@ -57,7 +57,7 @@ struct tm {
 
 #define WASM_EPOCH_TIME 1640995200
 
-static struct tm wasm_static_tm = {
+static tm wasm_static_tm = {
 	0, 0, 0, 1, 0, 122, 6, 0, 0
 };
 
@@ -70,18 +70,18 @@ static inline time_t time(time_t *tloc) {
 static inline double difftime(time_t time1, time_t time0) {
     return (double)(time1 - time0);
 }
-static inline time_t mktime(struct tm *tm) {
+static inline time_t mktime(tm *tm) {
     (void)tm; return WASM_EPOCH_TIME;
 }
-static inline struct tm *gmtime(const time_t *timer) {
+static inline tm *gmtime(const time_t *timer) {
     (void)timer; return &wasm_static_tm;
 }
-static inline struct tm *localtime(const time_t *timer) {
+static inline tm *localtime(const time_t *timer) {
     (void)timer; return &wasm_static_tm;
 }
 
 __JACL_DEPRECATED_MSG("Use strftime() instead")
-static inline char *asctime(const struct tm *tm) {
+static inline char *asctime(const tm *tm) {
     (void)tm;
     static char wasm_timestr[] = "Sat Jan 01 00:00:00 2022\n";
     return wasm_timestr;
@@ -94,7 +94,7 @@ static inline char *ctime(const time_t *timer) {
     return wasm_timestr;
 }
 
-static inline size_t strftime(char *s, size_t max, const char *fmt, const struct tm *tm) {
+static inline size_t strftime(char *s, size_t max, const char *fmt, const tm *tm) {
     (void)tm;
     if (!s || !fmt || max == 0) return 0;
 
@@ -124,14 +124,14 @@ static inline size_t strftime(char *s, size_t max, const char *fmt, const struct
     return pos;
 }
 
-static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
+static inline int nanosleep(const timespec *req, timespec *rem) {
     (void)req;
     if (rem) { rem->tv_sec = 0; rem->tv_nsec = 0; }
     return 0;
 }
 
 #if JACL_HAS_C11
-static inline int timespec_get(struct timespec *ts, int base) {
+static inline int timespec_get(timespec *ts, int base) {
     if (!ts || base != TIME_UTC) return 0;
     ts->tv_sec = WASM_EPOCH_TIME;
     ts->tv_nsec = 0;
@@ -140,7 +140,7 @@ static inline int timespec_get(struct timespec *ts, int base) {
 #endif
 
 #if JACL_HAS_C23
-static inline int timespec_getres(struct timespec *ts, int base) {
+static inline int timespec_getres(timespec *ts, int base) {
     if (!ts || base != TIME_UTC) return 0;
     ts->tv_sec = 0;
     ts->tv_nsec = 1000000; /* 1ms resolution */
@@ -148,27 +148,27 @@ static inline int timespec_getres(struct timespec *ts, int base) {
 }
 #endif
 
-static inline time_t timegm(struct tm *tm) {
+static inline time_t timegm(tm *tm) {
     (void)tm;
     return WASM_EPOCH_TIME;
 }
 
 static char wasm_r_buffer[32];
 
-static inline struct tm *gmtime_r(const time_t *timer, struct tm *result) {
+static inline tm *gmtime_r(const time_t *timer, tm *result) {
     (void)timer;
     if (result) *result = wasm_static_tm;
     return result;
 }
 
-static inline struct tm *localtime_r(const time_t *timer, struct tm *result) {
+static inline tm *localtime_r(const time_t *timer, tm *result) {
     (void)timer;
     if (result) *result = wasm_static_tm;
     return result;
 }
 
 __JACL_DEPRECATED_MSG("Use strftime() instead")
-static inline char *asctime_r(const struct tm *tm, char *buf) {
+static inline char *asctime_r(const tm *tm, char *buf) {
     (void)tm;
     if (buf) {
         const char *str = "Sat Jan 01 00:00:00 2022\n";
@@ -189,7 +189,7 @@ static inline char *ctime_r(const time_t *timer, char *buf) {
 /* ================================================================ */
 
 /* Static storage for time functions */
-static struct tm static_tm_storage;
+static tm static_tm_storage;
 static char time_string_buffer[32];
 
 /* Helper functions */
@@ -255,7 +255,7 @@ static inline double difftime(time_t time1, time_t time0) {
   return (double)(time1 - time0);
 }
 
-static inline time_t mktime(struct tm *tm) {
+static inline time_t mktime(tm *tm) {
   if (!tm) return -1;
 
   int year = tm->tm_year + 1900;
@@ -289,7 +289,7 @@ static inline time_t mktime(struct tm *tm) {
   return result;
 }
 
-static inline struct tm *gmtime(const time_t *timer) {
+static inline tm *gmtime(const time_t *timer) {
   if (!timer) return NULL;
 
   time_t t = *timer;
@@ -331,12 +331,12 @@ static inline struct tm *gmtime(const time_t *timer) {
   return &static_tm_storage;
 }
 
-static inline struct tm *localtime(const time_t *timer) {
+static inline tm *localtime(const time_t *timer) {
   return gmtime(timer);
 }
 
 __JACL_DEPRECATED_MSG("Use strftime() instead")
-static inline char *asctime(const struct tm *tm) {
+static inline char *asctime(const tm *tm) {
   if (!tm) return NULL;
 
   static const char *day_names[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
@@ -363,12 +363,12 @@ static inline char *asctime(const struct tm *tm) {
 
 __JACL_DEPRECATED_MSG("Use strftime() instead")
 static inline char *ctime(const time_t *timer) {
-  struct tm *tm = localtime(timer);
+  tm *tm = localtime(timer);
 
   return tm ? asctime(tm) : NULL;
 }
 
-static inline size_t strftime(char *s, size_t max, const char *fmt, const struct tm *tm) {
+static inline size_t strftime(char *s, size_t max, const char *fmt, const tm *tm) {
   if (!s || !fmt || !tm || max == 0) return 0;
 
   size_t pos = 0;
@@ -436,7 +436,7 @@ static inline size_t strftime(char *s, size_t max, const char *fmt, const struct
   return pos;
 }
 
-static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
+static inline int nanosleep(const timespec *req, timespec *rem) {
     if (!req) return -1;
 
 	#if JACL_OS_WINDOWS
@@ -462,7 +462,7 @@ static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
 }
 
 #if JACL_HAS_C11
-static inline int timespec_get(struct timespec *ts, int base) {
+static inline int timespec_get(timespec *ts, int base) {
   if (!ts || base != TIME_UTC) return 0;
 
 	#if JACL_OS_WINDOWS
@@ -485,7 +485,7 @@ static inline int timespec_get(struct timespec *ts, int base) {
 #endif
 
 #if JACL_HAS_C23
-static inline int timespec_getres(struct timespec *ts, int base) {
+static inline int timespec_getres(timespec *ts, int base) {
   if (!ts || base != TIME_UTC) return 0;
 
   ts->tv_sec = 0;
@@ -495,25 +495,25 @@ static inline int timespec_getres(struct timespec *ts, int base) {
 }
 #endif
 
-static inline time_t timegm(struct tm *tm) {
+static inline time_t timegm(tm *tm) {
   /* Same as mktime but assume UTC */
   return mktime(tm);
 }
 
-static inline struct tm *gmtime_r(const time_t *timer, struct tm *result) {
+static inline tm *gmtime_r(const time_t *timer, tm *result) {
   if (!result) return NULL;
 
-  struct tm *tmp = gmtime(timer);
+  tm *tmp = gmtime(timer);
 
   if (tmp) *result = *tmp;
 
   return tmp ? result : NULL;
 }
 
-static inline struct tm *localtime_r(const time_t *timer, struct tm *result) {
+static inline tm *localtime_r(const time_t *timer, tm *result) {
   if (!result) return NULL;
 
-  struct tm *tmp = localtime(timer);
+  tm *tmp = localtime(timer);
 
   if (tmp) *result = *tmp;
 
@@ -521,7 +521,7 @@ static inline struct tm *localtime_r(const time_t *timer, struct tm *result) {
 }
 
 __JACL_DEPRECATED_MSG("Use strftime() instead")
-static inline char *asctime_r(const struct tm *tm, char *buf) {
+static inline char *asctime_r(const tm *tm, char *buf) {
   if (!buf) return NULL;
 
   char *tmp = asctime(tm);

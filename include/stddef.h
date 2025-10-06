@@ -18,13 +18,6 @@ extern "C" {
 	typedef int ptrdiff_t;
 #endif
 
-/* Wide character type (required by C standard) */
-#ifdef __WINT_TYPE__
-typedef __WINT_TYPE__ wint_t;
-#else
-typedef unsigned int wint_t;
-#endif
-
 /* NULL pointer constant */
 #ifndef NULL
 	#ifdef __cplusplus
@@ -93,8 +86,15 @@ typedef unsigned int wint_t;
 #endif
 
 /* Symbol redirection helper */
-#define __REDIR(name, proto, alias) \
-	static inline __typeof__(proto) name { return alias; }
+#define __REDIR(name, proto, alias) static inline __typeof__(proto) name { return alias; }
+
+#ifndef __cplusplus
+#ifdef __WCHAR_TYPE__
+typedef __WCHAR_TYPE__ wchar_t;
+#else
+typedef long wchar_t;
+#endif
+#endif
 
 #ifdef __cplusplus
 }

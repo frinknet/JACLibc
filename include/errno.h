@@ -3,7 +3,7 @@
 #define ERRNO_H
 #pragma once
 
-#include "config.h"
+#include <config.h>
 
 /* Require C11 for proper thread-local errno support */
 #if !JACL_HAS_C11

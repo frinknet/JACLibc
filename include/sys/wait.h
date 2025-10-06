@@ -7,8 +7,7 @@
 extern "C" {
 #endif
 
-// Basic types
-typedef int pid_t;
+#include <sys/types.h>
 
 // Status macros (commonly used)
 #define WEXITSTATUS(s) (((s) & 0xff00) >> 8)

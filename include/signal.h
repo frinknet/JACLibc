@@ -4,9 +4,9 @@
 #pragma once
 
 #include <config.h>
+#include <errno.h>
 #include <stddef.h>
 #include <sys/types.h>
-#include <errno.h>
 
 // C23 version identification (required by C23 §7.14)
 #if JACL_HAS_C23

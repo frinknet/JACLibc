@@ -16,12 +16,7 @@ I/* (c) 2025 FRINKnet & Friends – MIT licence */
 	#define SYSTIME_WASM
 #else
 	#define SYSTIME_POSIX
-	#include <unistd.h>
 	#include <sys/syscall.h>
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 #ifdef __cplusplus
@@ -34,23 +29,26 @@ extern "C" {
 
 #ifndef SYSTIME_WIN32
 /* Standard timeval structure (Windows gets it from winsock2.h) */
-struct timeval {
+typedef struct timeval {
 	time_t tv_sec;      /* Seconds */
 	suseconds_t tv_usec; /* Microseconds */
-};
+} timeval;
+#else
+typedef struct timeval timeval;
 #endif
 
 /* Time zone structure */
-struct timezone {
+typedef struct timezone {
 	int tz_minuteswest; /* Minutes west of Greenwich */
 	int tz_dsttime;     /* Type of DST correction */
-};
+} timezone;
 
 /* Interval timer structures */
-struct itimerval {
-	struct timeval it_interval; /* Timer interval */
-	struct timeval it_value;    /* Current value */
-};
+typedef struct itimerval {
+	timeval it_interval; /* Timer interval */
+	timeval it_value;    /* Current value */
+} itimerval;
+
 
 /* Timer types for setitimer/getitimer */
 #define ITIMER_REAL    0  /* Real time timer */
@@ -104,7 +102,7 @@ struct itimerval {
 /* Windows implementation                                           */
 /* ================================================================ */
 
-static inline int gettimeofday(struct timeval *tv, struct timezone *tz) {
+static inline int gettimeofday(timeval *tv, timezone *tz) {
 	if (!tv) return -1;
 
 	FILETIME ft;
@@ -136,7 +134,7 @@ static inline int gettimeofday(struct timeval *tv, struct timezone *tz) {
 	return 0;
 }
 
-static inline int settimeofday(const struct timeval *tv, const struct timezone *tz) {
+static inline int settimeofday(const timeval *tv, const timezone *tz) {
 	(void)tz; /* Windows doesn't support setting timezone this way */
 
 	if (!tv) return -1;
@@ -157,19 +155,19 @@ static inline int settimeofday(const struct timeval *tv, const struct timezone *
 	return SetSystemTime(&st) ? 0 : -1;
 }
 
-static inline int getitimer(int which, struct itimerval *curr_value) {
+static inline int getitimer(int which, itimerval *curr_value) {
 	(void)which; (void)curr_value;
 
 	return -1; /* Not supported on Windows */
 }
 
-static inline int setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value) {
+static inline int setitimer(int which, const itimerval *new_value, itimerval *old_value) {
 	(void)which; (void)new_value; (void)old_value;
 
 	return -1; /* Not supported on Windows */
 }
 
-static inline int utimes(const char *pathname, const struct timeval times[2]) {
+static inline int utimes(const char *pathname, const timeval times[2]) {
 	if (!pathname) return -1;
 
 	HANDLE hFile = CreateFileA(pathname, FILE_WRITE_ATTRIBUTES,
@@ -211,31 +209,31 @@ static inline int utimes(const char *pathname, const struct timeval times[2]) {
 /* WebAssembly - Limited time support                              */
 /* ================================================================ */
 
-static inline int gettimeofday(struct timeval *tv, struct timezone *tz) {
+static inline int gettimeofday(timeval *tv, timezone *tz) {
 	(void)tv; (void)tz;
 
 	return -1; /* Not supported */
 }
 
-static inline int settimeofday(const struct timeval *tv, const struct timezone *tz) {
+static inline int settimeofday(const timeval *tv, const timezone *tz) {
 	(void)tv; (void)tz;
 
 	return -1; /* Not supported */
 }
 
-static inline int getitimer(int which, struct itimerval *curr_value) {
+static inline int getitimer(int which, itimerval *curr_value) {
 	(void)which; (void)curr_value;
 
 	return -1; /* Not supported */
 }
 
-static inline int setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value) {
+static inline int setitimer(int which, const itimerval *new_value, itimerval *old_value) {
 	(void)which; (void)new_value; (void)old_value;
 
 	return -1; /* Not supported */
 }
 
-static inline int utimes(const char *pathname, const struct timeval times[2]) {
+static inline int utimes(const char *pathname, const timeval times[2]) {
 	(void)pathname; (void)times;
 
 	return -1; /* Not supported */
@@ -246,7 +244,7 @@ static inline int utimes(const char *pathname, const struct timeval times[2]) {
 /* POSIX implementation                                             */
 /* ================================================================ */
 
-static inline int gettimeofday(struct timeval *tv, struct timezone *tz) {
+static inline int gettimeofday(timeval *tv, timezone *tz) {
 	if (!tv) return -1;
 
 	#if defined(SYS_gettimeofday)
@@ -254,7 +252,8 @@ static inline int gettimeofday(struct timeval *tv, struct timezone *tz) {
 	#endif
 
 	/* Fallback using clock_gettime */
-	struct timespec ts;
+	timespec ts;
+
 	if (clock_gettime(CLOCK_REALTIME, &ts) != 0) return -1;
 
 	tv->tv_sec = ts.tv_sec;
@@ -269,7 +268,7 @@ static inline int gettimeofday(struct timeval *tv, struct timezone *tz) {
 	return 0;
 }
 
-static inline int settimeofday(const struct timeval *tv, const struct timezone *tz) {
+static inline int settimeofday(const timeval *tv, const timezone *tz) {
 	(void)tz; /* Timezone setting deprecated */
 
 	if (!tv) return -1;
@@ -279,102 +278,84 @@ static inline int settimeofday(const struct timeval *tv, const struct timezone *
 	#endif
 
 	/* Fallback using clock_settime */
-	struct timespec ts;
+	timespec ts;
+
 	ts.tv_sec = tv->tv_sec;
 	ts.tv_nsec = tv->tv_usec * 1000;
 
 	return clock_settime(CLOCK_REALTIME, &ts);
 }
 
-static inline int getitimer(int which, struct itimerval *curr_value) {
+static inline int getitimer(int which, itimerval *curr_value) {
 	if (!curr_value) return -1;
 
 	#if defined(SYS_getitimer)
 		return (int)syscall(SYS_getitimer, which, curr_value);
+	#else
+		(void)which;
+		(void)curr_value;
+
+		errno = ENOSYS;
+
+		return -1;
 	#endif
-
-	extern int getitimer(int which, struct itimerval *curr_value);
-
-	return getitimer(which, curr_value);
 }
 
-static inline int setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value) {
+static inline int setitimer(int which, const itimerval *new_value, itimerval *old_value) {
 	if (!new_value) return -1;
 
 	#if defined(SYS_setitimer)
 		return (int)syscall(SYS_setitimer, which, new_value, old_value);
+	#else
+		(void)which; (void)old_value;
+
+		errno = ENOSYS;
+
+		return -1;
 	#endif
-
-	extern int setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value);
-
-	return setitimer(which, new_value, old_value);
 }
 
-static inline int utimes(const char *pathname, const struct timeval times[2]) {
+static inline int utimes(const char *pathname, const timeval times[2]) {
 	if (!pathname) return -1;
 
 	#if defined(SYS_utimes)
 		return (int)syscall(SYS_utimes, pathname, times);
+	#else
+		(void)times;
+
+		errno = ENOSYS;
+
+		return -1;
 	#endif
-
-	/* Fallback using utimensat */
-	struct timespec ts[2];
-	if (times) {
-		ts[0].tv_sec = times[0].tv_sec;
-		ts[0].tv_nsec = times[0].tv_usec * 1000;
-		ts[1].tv_sec = times[1].tv_sec;
-		ts[1].tv_nsec = times[1].tv_usec * 1000;
-	} else {
-		ts[0].tv_sec = ts[0].tv_nsec = UTIME_NOW;
-		ts[1].tv_sec = ts[1].tv_nsec = UTIME_NOW;
-	}
-
-	extern int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags);
-
-	return utimensat(AT_FDCWD, pathname, ts, 0);
 }
 
 /* Additional POSIX.1-2008 functions */
-static inline int futimes(int fd, const struct timeval times[2]) {
+/* Additional POSIX.1-2008 functions */
+static inline int futimes(int fd, const timeval times[2]) {
 	#if defined(SYS_futimes)
 		return (int)syscall(SYS_futimes, fd, times);
+	#else
+		(void)fd;
+		(void)times;
+
+		errno = ENOSYS;
+
+		return -1;
 	#endif
-
-	struct timespec ts[2];
-
-	if (times) {
-		ts[0].tv_sec = times[0].tv_sec;
-		ts[0].tv_nsec = times[0].tv_usec * 1000;
-		ts[1].tv_sec = times[1].tv_sec;
-		ts[1].tv_nsec = times[1].tv_usec * 1000;
-	} else {
-		ts[0].tv_sec = ts[0].tv_nsec = UTIME_NOW;
-		ts[1].tv_sec = ts[1].tv_nsec = UTIME_NOW;
-	}
-
-	extern int futimens(int fd, const struct timespec times[2]);
-
-	return futimens(fd, ts);
 }
 
-static inline int lutimes(const char *pathname, const struct timeval times[2]) {
+static inline int lutimes(const char *pathname, const timeval times[2]) {
 	if (!pathname) return -1;
 
-	struct timespec ts[2];
+	#if defined(SYS_lutimes)
+		return (int)syscall(SYS_lutimes, pathname, times);
+	#else
+		(void)times;
 
-	if (times) {
-		ts[0].tv_sec = times[0].tv_sec;
-		ts[0].tv_nsec = times[0].tv_usec * 1000;
-		ts[1].tv_sec = times[1].tv_sec;
-		ts[1].tv_nsec = times[1].tv_usec * 1000;
-	} else {
-		ts[0].tv_sec = ts[0].tv_nsec = UTIME_NOW;
-		ts[1].tv_sec = ts[1].tv_nsec = UTIME_NOW;
-	}
+		errno = ENOSYS;
 
-	extern int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags);
-
-	return utimensat(AT_FDCWD, pathname, ts, AT_SYMLINK_NOFOLLOW);
+		return -1;
+	#endif
 }
 
 #endif
@@ -384,7 +365,7 @@ static inline int lutimes(const char *pathname, const struct timeval times[2]) {
 /* ================================================================ */
 
 /* Convert timespec to timeval */
-static inline void timespec_to_timeval(const struct timespec *ts, struct timeval *tv) {
+static inline void timespec_to_timeval(const timespec *ts, timeval *tv) {
 	if (ts && tv) {
 		tv->tv_sec = ts->tv_sec;
 		tv->tv_usec = ts->tv_nsec / 1000;
@@ -392,7 +373,7 @@ static inline void timespec_to_timeval(const struct timespec *ts, struct timeval
 }
 
 /* Convert timeval to timespec */
-static inline void timeval_to_timespec(const struct timeval *tv, struct timespec *ts) {
+static inline void timeval_to_timespec(const timeval *tv, timespec *ts) {
 	if (tv && ts) {
 		ts->tv_sec = tv->tv_sec;
 		ts->tv_nsec = tv->tv_usec * 1000;

@@ -3,9 +3,9 @@
 #define ASSERT_H
 #pragma once
 
+#include <stdnoreturn.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdnoreturn.h>
 
 #undef assert
 #ifdef NDEBUG

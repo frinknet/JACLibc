@@ -4,11 +4,11 @@
 #pragma once
 
 #include <config.h>
-#include <fenv.h>
-#include <stdint.h>
-#include <limits.h>
-#include <float.h>
 #include <errno.h>
+#include <limits.h>
+#include <stdint.h>
+#include <float.h>
+#include <fenv.h>
 
 // Add static assertions here (after includes, before extern "C")
 _Static_assert(sizeof(float) == 4, "Assumes 32-bit IEEE-754 float");

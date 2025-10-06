@@ -3,9 +3,9 @@
 #define CONFIG_H
 #pragma once
 
-// macros
+// useful macros
 #define JACL_QUOTE(x) #x
-#define JACL_CONCAT(a,b) a##b
+#define JACL_CONCAT(a,b,space) a##space##b
 #define JACL_HEADER(dir, file) <dir/file.h>
 #define JACL_ARCHFILE(type) <arch/JACL_ARCH##_##type.h>
 
@@ -32,13 +32,20 @@
 #define JACL_HAS_C17 (JACL_STDC_VERSION >= 2017)
 #define JACL_HAS_C23 (JACL_STDC_VERSION >= 2023)
 
-// C99 features
+// C99 features polyfill
 #if !JACL_HAS_C99
   #define inline
-  #define restrict
+
+	#if defined(__GNUC__) || defined(__clang__)
+    #define restrict __restrict__
+	#elif defined(_MSC_VER)
+    #define restrict __restrict
+	#else
+    #define restrict
+	#endif
 #endif
 
-// C11 features
+// C11 features polyfill
 #if !JACL_HAS_C11
 	#define _Static_assert(cond, msg) typedef char JACL_CONCAT(static_assertion_,__LINE__)[(cond) ? 1 : -1]
 	#define _Atomic volatile
@@ -50,6 +57,18 @@
   #else
     #define _Thread_local
   #endif
+
+	#if defined(_WIN32) || defined(_WIN64)
+		#define _Alignas(x) __declspec(align(x))
+		#define _Alignof(t) __alignof(t)
+	#elif defined(__GNUC__) || defined(__clang__)
+		#define _Alignas(x) __attribute__((aligned(x)))
+		#define _Alignof(t) __alignof__(t)
+	#else
+		#define aoffset(type, member) ((unsigned long)&(((type*)0)->member))
+		#define _Alignas(x)
+		#define _Alignof(t) aoffset(struct { char c; t m; }, m)
+	#endif
 #endif
 
 // C23 features
