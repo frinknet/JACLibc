@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends - MIT licence */
-#ifndef JSIO_C
-#define JSIO_C
+#ifndef CORE_JSIO_H
+#define CORE_JSIO_H
 
 #include <jsio.h>
 #include <setjmp.h>
@@ -740,4 +740,4 @@ char* js_stringify(js_t* v) {
 }
 #endif
 
-#endif // JSIO_C
+#endif /* CORE_JSIO_H */
