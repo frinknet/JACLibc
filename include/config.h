@@ -3,6 +3,9 @@
 #define CONFIG_H
 #pragma once
 
+#define JACL_VERSION 1.34
+#define JACL_RELEASE 202510L
+
 // useful macros
 #define JACL_QUOTE(x) #x
 #define JACL_CONCAT(a,b,space) a##space##b
