@@ -239,6 +239,10 @@
 #define SYS_mincore 232
 #define SYS_madvise 233
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ARM64 syscall assembly */
 static inline long __arch_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
 	long result;
@@ -259,5 +263,9 @@ static inline long __arch_syscall(long num, long a1, long a2, long a3, long a4, 
 
 	return result;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ARCH_ARM64_H

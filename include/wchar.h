@@ -34,9 +34,37 @@ typedef struct { uint32_t wc; int bytes, want; } mbstate_t;
 
 #if JACL_HAS_C99
 
-// FIXME flesh out these
-wint_t fputwc(wchar_t wc, FILE *stream) { (void)stream; return wc; }
-wint_t fgetwc(FILE *stream) { (void)stream; return WEOF; }
+wint_t fputwc(wchar_t wc, FILE *stream) {
+  char buf[MB_CUR_MAX];
+  int len = wcrtomb(buf, wc, NULL);
+
+  if (len < 0 || fwrite(buf, 1, len, stream) != (size_t)len) return WEOF;
+
+  return wc;
+}
+
+wint_t fgetwc(FILE *stream) {
+  char buf[MB_CUR_MAX];
+  mbstate_t st = {0,0,0};
+  size_t n = 0;
+  wint_t result = WEOF;
+
+  // Try to read up to MB_CUR_MAX bytes for one code point
+  for (; n < MB_CUR_MAX; ++n) {
+    int c = fgetc(stream);
+
+    if (c == EOF) return WEOF;
+
+    buf[n] = (char)c;
+    int len = mbrtowc(&result, buf, n+1, &st);
+
+    if (len > 0) return result;
+    if (len == (size_t)-2) continue; // incomplete, read more!
+    if (len == (size_t)-1) return WEOF; // invalid sequence
+  }
+
+  return WEOF; // something went wrong
+}
 wint_t putwc(wchar_t wc, FILE *stream) { return fputwc(wc, stream); }
 wint_t getwc(FILE *stream) { return fgetwc(stream); }
 

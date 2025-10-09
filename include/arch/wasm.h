@@ -40,16 +40,27 @@
 #define SYS_gettid    186
 #define SYS_futex     202
 
-static inline long __arch_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
-	(void)num;
-	(void)a1;
-	(void)a2;
-	(void)a3;
-	(void)a4;
-	(void)a5;
-	(void)a6;
+#include <jsio.h>  // For js_read/js_write
 
-	return 0;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+static inline long __arch_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+  switch ((int)num) {
+    case SYS_read:
+      return js_read((int)a1, (void*)a2, (size_t)a3);
+    case SYS_write:
+      return js_write((int)a1, (const void*)a2, (size_t)a3);
+
+    // Add more cases as you implement them
+    default:
+      return 0; // Or return -1/ENOSYS for unsupported
+  }
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ARCH_WASM_H

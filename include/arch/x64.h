@@ -220,6 +220,10 @@
 #define SYS_mq_getsetattr 245
 #define SYS_waitid       247
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* x86_64 syscall assembly */
 static inline long __arch_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
 	long result;
@@ -238,5 +242,9 @@ static inline long __arch_syscall(long num, long a1, long a2, long a3, long a4, 
 
 	return result;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ARCH_X64_H
