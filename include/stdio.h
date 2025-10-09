@@ -105,12 +105,12 @@ static inline int __file_mode_flags(const char *mode) {
 }
 
 static inline int __file_buffer_output(FILE *f) {
-	if (!f || !(f->_flags & __SWR)) return 0;
+	if (JACL_UNLIKELY(!f || !(f->_flags & __SWR))) return 0;
 
 	size_t to_write = f->_ptr - f->_base;
 	ssize_t written = write(f->_fd, f->_base, to_write);
 
-	if (written < 0) {
+	if (JACL_UNLIKELY(written < 0)) {
 		f->_flags |= __SERR;
 
 		return EOF;
@@ -130,11 +130,11 @@ static inline int __file_buffer_output(FILE *f) {
 }
 
 static inline int __file_buffer_input(FILE *f) {
-	if (!f || !(f->_flags & __SRD)) return EOF;
+	if (JACL_UNLIKELY(!f || !(f->_flags & __SRD))) return EOF;
 
 	ssize_t n = read(f->_fd, f->_base, f->_bufsiz);
 
-	if (n <= 0) {
+	if (JACL_UNLIKELY(n <= 0)) {
 		f->_flags |= (n == 0) ? __SEOF : __SERR;
 		f->_cnt = 0;
 
@@ -150,7 +150,7 @@ static inline int __file_buffer_input(FILE *f) {
 // File I/O
 static inline FILE* fopen(const char* restrict path, const char* restrict mode) {
 	// Check arguments and parse mode
-	if (!path || !mode) {
+	if (JACL_UNLIKELY(!path || !mode)) {
 		errno = EINVAL;
 
 		return NULL;
@@ -158,7 +158,7 @@ static inline FILE* fopen(const char* restrict path, const char* restrict mode) 
 
 	int flags = __file_mode_flags(mode);
 
-	if (flags < 0) {
+	if (JACL_UNLIKELY(flags < 0)) {
 		errno = EINVAL;
 
 		return NULL;
@@ -167,7 +167,7 @@ static inline FILE* fopen(const char* restrict path, const char* restrict mode) 
 	// Open the file
 	int fd = open(path, flags, 0666);
 
-	if (fd < 0) return NULL;
+	if (JACL_UNLIKELY(fd < 0)) return NULL;
 
 	// Allocate FILE object
 	FILE *f = (FILE *)malloc(sizeof(FILE));
@@ -236,7 +236,7 @@ static inline size_t fread(void* restrict ptr, size_t size, size_t nmemb, FILE* 
 	size_t copied = 0;
 
 	while (copied < total) {
-		if (stream->_cnt > 0) {
+		if (JACL_LIKELY(stream->_cnt > 0)) {
 			size_t avail = (size_t)stream->_cnt < total - copied ? (size_t)stream->_cnt : total - copied;
 
 			memcpy(buf + copied, stream->_ptr, avail);
@@ -248,7 +248,7 @@ static inline size_t fread(void* restrict ptr, size_t size, size_t nmemb, FILE* 
 		} else {
 			int c = __file_buffer_input(stream);
 
-			if (c == EOF) break;
+			if (JACL_UNLIKELY(c == EOF)) break;
 
 			buf[copied++] = (unsigned char)c;
 		}
@@ -258,7 +258,7 @@ static inline size_t fread(void* restrict ptr, size_t size, size_t nmemb, FILE* 
 }
 
 static inline size_t fwrite(const void* restrict ptr, size_t size, size_t nmemb, FILE* restrict stream) {
-	if (!stream || !ptr || size == 0 || nmemb == 0) return 0;
+	if (JACL_UNLIKELY(!stream || !ptr || size == 0 || nmemb == 0)) return 0;
 
 	size_t total = size * nmemb;
 
@@ -268,8 +268,8 @@ static inline size_t fwrite(const void* restrict ptr, size_t size, size_t nmemb,
 	while (written < total) {
 		size_t space = stream->_end - stream->_ptr;
 
-		if (space == 0) {
-			if (__file_buffer_output(stream) == EOF) break;
+		if (JACL_UNLIKELY(space == 0)) {
+			if (JACL_UNLIKELY(__file_buffer_output(stream) == EOF)) break;
 
 			space = stream->_bufsiz;
 		}
@@ -366,14 +366,14 @@ static inline char *tempnam(const char *dir, const char *pfx) {
 
 // Character I/O
 static inline int fgetc(FILE* stream) {
-	if (!stream || !(stream->_flags & __SRD)) {
+	if (JACL_UNLIKELY(!stream || !(stream->_flags & __SRD))) {
 
 		errno = EBADF;
 
 		return EOF;
 	}
 
-	if (stream->_cnt <= 0) {
+	if (JACL_UNLIKELY(stream->_cnt <= 0)) {
 		int c = __file_buffer_input(stream);
 
 		if (c == EOF) return EOF;
@@ -389,7 +389,7 @@ static inline int fgetc(FILE* stream) {
 }
 
 static inline int fputc(int c, FILE* stream) {
-	if (!stream || !(stream->_flags & __SWR)) {
+	if (JACL_UNLIKELY(!stream || !(stream->_flags & __SWR))) {
 		errno = EBADF;
 
 		return EOF;

@@ -20,61 +20,73 @@ void* malloc(size_t);
 
 /* emory Operations */
 static inline void* memcpy(void* restrict dest, const void*  restrict src, size_t n) {
-		unsigned char* d = (unsigned char* )dest;
-		const unsigned char* s = (const unsigned char* )src;
+	if (JACL_UNLIKELY(!dest || !src)) return NULL;
 
-		for (size_t i = 0; i < n; i++) d[i] = s[i];
+	unsigned char* d = (unsigned char* )dest;
+	const unsigned char* s = (const unsigned char* )src;
 
-		return dest;
+	for (size_t i = 0; i < n; i++) d[i] = s[i];
+
+	return dest;
 }
 
 static inline void* memset(void* s, int c, size_t n) {
-		unsigned char* p = (unsigned char* )s;
+	if (JACL_UNLIKELY(!s)) return NULL;
 
-		for (size_t i = 0; i < n; i++) p[i] = (unsigned char)c;
+	unsigned char* p = (unsigned char* )s;
 
-		return s;
+	for (size_t i = 0; i < n; i++) p[i] = (unsigned char)c;
+
+	return s;
 }
 
 static inline void* memmove(void* dest, const void* src, size_t n) {
-		unsigned char* d = (unsigned char* )dest;
-		const unsigned char* s = (const unsigned char* )src;
+	if (JACL_UNLIKELY(!dest || !src)) return NULL;
 
-		if (d < s) {
-				for (size_t i = 0; i < n; i++) d[i] = s[i];
-		} else {
-				for (size_t i = n; i-- > 0;) d[i] = s[i];
-		}
+	unsigned char* d = (unsigned char* )dest;
+	const unsigned char* s = (const unsigned char* )src;
 
-		return dest;
+	if (d < s) {
+		for (size_t i = 0; i < n; i++) d[i] = s[i];
+	} else {
+		for (size_t i = n; i-- > 0;) d[i] = s[i];
+	}
+
+	return dest;
 }
 
 static inline int memcmp(const void* a, const void* b, size_t n) {
-		const unsigned char* x = (const unsigned char* )a;
-		const unsigned char* y = (const unsigned char* )b;
+	const unsigned char* x = (const unsigned char* )a;
+	const unsigned char* y = (const unsigned char* )b;
 
-		for (size_t i = 0; i < n; i++)
-				if (x[i] != y[i]) return x[i] < y[i] ? -1 : 1;
+	for (size_t i = 0; i < n; i++) {
+		if (x[i] != y[i]) return x[i] < y[i] ? -1 : 1;
+	}
 
-		return 0;
+	return 0;
 }
 
 static inline void* memchr(const void* s, int c, size_t n) {
-		const unsigned char* p = (const unsigned char* )s;
+	const unsigned char* p = (const unsigned char* )s;
 
-		for (size_t i = 0; i < n; i++)
-				if (p[i] == (unsigned char)c) return (void* )&p[i];
+	for (size_t i = 0; i < n; i++) {
+		if (p[i] == (unsigned char)c) return (void* )&p[i];
+	}
 
-		return NULL;
+	return NULL;
 }
 
 #ifdef JACL_HAS_POSIX
 static inline void* memmem(const void* hay, size_t hl, const void* ndl, size_t nl) {
-		if (nl > hl) return NULL;
-		const unsigned char* h = (const unsigned char* )hay;
-		for (size_t i = 0; i <= hl - nl; i++)
-				if (!memcmp(h + i, ndl, nl)) return (void* )(h + i);
-		return NULL;
+	if (nl > hl) return NULL;
+
+	const unsigned char* h = (const unsigned char* )hay;
+
+	for (size_t i = 0; i <= hl - nl; i++) {
+		if (!memcmp(h + i, ndl, nl)) return (void* )(h + i);
+	}
+
+	return NULL;
 }
 #endif
 
@@ -133,9 +145,14 @@ static inline char* strncat(char*  restrict dest, const char* src, size_t n) {
 
 /* Comparison & Collation (byte-safe, Unicode case-fold hooks) */
 static inline int strcmp(const char* a, const char* b) {
-	while (*a && *a == *b) { a++; b++; }
+	while (*a && *a == *b) {
+		a++;
+		b++;
+	}
 
-	return (*a < *b) ? -1 : (*a > *b);
+	return (*a < *b)
+		? -1 :
+		(*a > *b);
 }
 
 static inline int strncmp(const char* a, const char* b, size_t n) {
@@ -251,7 +268,9 @@ static inline char* strstr(const char* h, const char* n) {
 
 	if (!nl) return (char* )h;
 
-	for (; *h; h++) if (!strncmp(h, n, nl)) return (char* )h;
+	for (; *h; h++) {
+		if (!strncmp(h, n, nl)) return (char* )h;
+	}
 
 	return NULL;
 }

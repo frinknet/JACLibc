@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 #include <config.h>
+#include <stdbit.h>
 #include <stddef.h>
 #include <string.h>
 #include <ctype.h>
@@ -26,24 +27,20 @@ extern "C" {
 static inline int strcasecmp(const char *s1, const char *s2) {
 	if (!s1 || !s2) return (s1 == s2) ? 0 : (s1 ? 1 : -1);
 
-	#ifdef STRINGS_WIN32
-		return _stricmp(s1, s2);
-	#else
-		const unsigned char *p1 = (const unsigned char *)s1;
-		const unsigned char *p2 = (const unsigned char *)s2;
+	const unsigned char *p1 = (const unsigned char *)s1;
+	const unsigned char *p2 = (const unsigned char *)s2;
 
-		while (*p1 && *p2) {
-			int c1 = tolower(*p1);
-			int c2 = tolower(*p2);
+	while (*p1 && *p2) {
+		int c1 = tolower(*p1);
+		int c2 = tolower(*p2);
 
-			if (c1 != c2) return c1 - c2;
+		if (c1 != c2) return c1 - c2;
 
-			p1++;
-			p2++;
-		}
+		p1++;
+		p2++;
+	}
 
-		return tolower(*p1) - tolower(*p2);
-	#endif
+	return tolower(*p1) - tolower(*p2);
 }
 
 /* Case-insensitive string comparison (n characters) */
@@ -54,136 +51,87 @@ static inline int strncasecmp(const char *s1, const char *s2, size_t n) {
 	// Then handle NULL pointers
 	if (!s1 || !s2) return (s1 == s2) ? 0 : (s1 ? 1 : -1);
 
-	#ifdef STRINGS_WIN32
-		return _strnicmp(s1, s2, n);
-	#else
-		const unsigned char *p1 = (const unsigned char *)s1;
-		const unsigned char *p2 = (const unsigned char *)s2;
-		size_t i;
+	const unsigned char *p1 = (const unsigned char *)s1;
+	const unsigned char *p2 = (const unsigned char *)s2;
+	size_t i;
 
-		for (i = 0; i < n && *p1 && *p2; i++) {
-				int c1 = tolower(*p1);
-				int c2 = tolower(*p2);
+	for (i = 0; i < n && *p1 && *p2; i++) {
+			int c1 = tolower(*p1);
+			int c2 = tolower(*p2);
 
-				if (c1 != c2) return c1 - c2;
+			if (c1 != c2) return c1 - c2;
 
-				p1++;
-				p2++;
-		}
+			p1++;
+			p2++;
+	}
 
-		// If we compared n characters successfully, they're equal
-		if (i == n) return 0;
+	// If we compared n characters successfully, they're equal
+	if (i == n) return 0;
 
-		// Otherwise, one string ended before n characters
-		return tolower(*p1) - tolower(*p2);
-	#endif
+	// Otherwise, one string ended before n characters
+	return tolower(*p1) - tolower(*p2);
 }
 
 
 /* Find first set bit (1-based indexing) */
 static inline int ffs(int mask) {
-	if (mask == 0) return 0;
+  if (!mask) return 0;
 
-	#if defined(__GNUC__) || defined(__clang__)
-		return __builtin_ffs(mask);
-	#elif defined(STRINGS_WIN32)
-		unsigned long index;
-
-		return _BitScanForward(&index, (unsigned long)mask) ? (int)(index + 1) : 0;
-	#else
-		/* Portable implementation */
-		int bit = 1;
-
-		if ((mask & 0xFFFF) == 0) { mask >>= 16; bit += 16; }
-		if ((mask & 0xFF) == 0) { mask >>= 8; bit += 8; }
-		if ((mask & 0xF) == 0) { mask >>= 4; bit += 4; }
-		if ((mask & 0x3) == 0) { mask >>= 2; bit += 2; }
-		if ((mask & 0x1) == 0) bit++;
-
-		return bit;
-	#endif
+  return __jacl_ctz32((uint32_t)mask) + 1;
 }
 
 /* Find first set bit in long */
 static inline int ffsl(long mask) {
-	if (mask == 0) return 0;
+  if (!mask) return 0;
 
-	#if defined(__GNUC__) || defined(__clang__)
-		return __builtin_ffsl(mask);
-	#else
-		return ffs((int)mask);
-	#endif
+  #if JACL_64BIT
+    uint32_t lo = (uint32_t)mask;
+
+    return lo
+			? (__jacl_ctz32(lo) + 1)
+			: (__jacl_ctz32((uint32_t)(mask >> 32)) + 33);
+  #else
+      return __jacl_ctz32((uint32_t)mask) + 1;
+  #endif
 }
 
 /* Find first set bit in long long */
 static inline int ffsll(long long mask) {
-	if (mask == 0) return 0;
+    if (!mask) return 0;
 
-	#if defined(__GNUC__) || defined(__clang__)
-		return __builtin_ffsll(mask);
-	#else
-		/* Check lower 32 bits first */
-		int result = ffs((int)(mask & 0xFFFFFFFF));
-		if (result != 0) return result;
-		/* Check upper 32 bits */
-		result = ffs((int)(mask >> 32));
-		return (result == 0) ? 0 : result + 32;
-	#endif
+    uint32_t lo = (uint32_t)mask;
+
+    return lo
+			? (__jacl_ctz32(lo) + 1)
+			: (__jacl_ctz32((uint32_t)(mask >> 32)) + 33);
 }
 
 /* Find last set bit (1-based indexing) */
 static inline int fls(int mask) {
-	if (mask == 0) return 0;
+  if (!mask) return 0;
 
-	#if defined(__GNUC__) || defined(__clang__)
-		return 32 - __builtin_clz((unsigned int)mask);
-	#elif defined(STRINGS_WIN32)
-		unsigned long index;
-
-		return _BitScanReverse(&index, (unsigned long)mask) ? (int)(index + 1) : 0;
-	#else
-		/* Portable implementation */
-		int bit = 0;
-
-		if (mask & 0xFFFF0000) { mask >>= 16; bit += 16; }
-		if (mask & 0xFF00) { mask >>= 8; bit += 8; }
-		if (mask & 0xF0) { mask >>= 4; bit += 4; }
-		if (mask & 0xC) { mask >>= 2; bit += 2; }
-		if (mask & 0x2) bit++;
-		if (mask & 0x1) bit++;
-
-		return bit;
-	#endif
+  return 32 - __jacl_clz32((unsigned int)mask);
 }
 
 /* Find last set bit in long */
 static inline int flsl(long mask) {
-	if (mask == 0) return 0;
+  if (!mask) return 0;
 
-	#if defined(__GNUC__) || defined(__clang__)
-		return (sizeof(long) == 8) ?
-			(64 - __builtin_clzl((unsigned long)mask)) :
-			(32 - __builtin_clzl((unsigned long)mask));
-	#else
-		return fls((int)mask);
-	#endif
+  #if JACL_64BIT
+    uint32_t hi = (uint32_t)(mask >> 32);
+    return hi ? (64 - __jacl_clz32(hi)) : (32 - __jacl_clz32((uint32_t)mask));
+  #else
+    return 32 - __jacl_clz32((unsigned long)mask);
+  #endif
 }
 
 /* Find last set bit in long long */
 static inline int flsll(long long mask) {
-	if (mask == 0) return 0;
+  if (!mask) return 0;
 
-	#if defined(__GNUC__) || defined(__clang__)
-		return 64 - __builtin_clzll((unsigned long long)mask);
-	#else
-		/* Check upper 32 bits first */
-		int result = fls((int)(mask >> 32));
+  uint32_t hi = (uint32_t)(mask >> 32);
 
-		if (result != 0) return result + 32;
-
-		/* Check lower 32 bits */
-		return fls((int)(mask & 0xFFFFFFFF));
-	#endif
+  return hi ? (64 - __jacl_clz32(hi)) : (32 - __jacl_clz32((uint32_t)mask));
 }
 
 /* Legacy BSD functions (deprecated but sometimes needed) */

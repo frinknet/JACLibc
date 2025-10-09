@@ -36,14 +36,6 @@
 #define JACL_HDR_ALLOC 1u
 #define JACL_HDR_ARENA 2u
 
-#if __has_builtin(__builtin_expect)
-	#define JACL_LIKELY(x)   __builtin_expect(!!(x), 1)
-	#define JACL_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#else
-	#define JACL_LIKELY(x)   (x)
-	#define JACL_UNLIKELY(x) (x)
-#endif
-
 #if JACL_HAS_C11
 	#include <stdatomic.h>
 #else
@@ -62,21 +54,6 @@
 		((*(ptr) == *(expected)) ? (*(ptr) = (desired), 1) : (*(expected) = *(ptr), 0))
 
 	#warning "WARNING: Before C11 your memory is single-threaded mode only"
-#endif
-
-#if JACL_HAS_C23
-	#include <stdbit.h>
-#else
-	static inline int __jacl_ctz32(uint32_t x) {
-		#if __has_builtin(__builtin_ctz)
-			return __builtin_ctz(x);
-		#else
-			int n = 0;
-			if (!x) return 32;
-			while (!(x & 1)) { x >>= 1; n++; }
-			return n;
-		#endif
-	}
 #endif
 
 #ifdef __cplusplus

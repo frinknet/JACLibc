@@ -5,8 +5,9 @@
 
 #include <config.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdbit.h>
 #include <string.h>
 #include <limits.h>
 #include <signal.h>

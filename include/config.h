@@ -183,4 +183,26 @@
 	#define JACL_HAS_POSIX 1
 #endif
 
+//Compiler Optimization
+#if __has_builtin(__builtin_expect)
+		#define JACL_LIKELY(x)   __builtin_expect(!!(x), 1)
+		#define JACL_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+		#define JACL_LIKELY(x)   (x)
+		#define JACL_UNLIKELY(x) (x)
+#endif
+
+// Builtin Polyfills
+#if !__has_builtin(__builtin_unreachable)
+	#define __builtin_unreachable()
+#endif
+
+#if !__has_builtin(__builtin_prefetch)
+	#define __builtin_prefetch(addr, rw, locality) ((void)(addr))
+#endif
+
+#if !__has_builtin(__builtin_trap)
+	#define __builtin_trap() do { *(volatile int*)0 = 0; } while(0)
+#endif
+
 #endif // CONFIG_H

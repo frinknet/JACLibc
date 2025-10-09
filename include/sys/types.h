@@ -62,6 +62,12 @@ typedef long long off64_t;      /* 64-bit file offset */
 typedef long long blkcnt64_t;   /* 64-bit block count */
 #endif
 
+#if JACL_64BIT
+	typedef long ssize_t;
+#else
+	typedef int ssize_t;
+#endif
+
 #ifdef __cplusplus
 }
 #endif

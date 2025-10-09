@@ -6,12 +6,12 @@
 #include <config.h>
 #include <stdarg.h>
 
+// Include OS-specific syscall numbers
+#include JACL_HEADER(os, JACL_OS)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// Include architecture-specific syscall numbers
-#include JACL_HEADER(arch, JACL_ARCH)
 
 static inline long syscall(long num, ...) {
 	va_list args;
@@ -26,7 +26,7 @@ static inline long syscall(long num, ...) {
 	a6 = va_arg(args, long);
 	va_end(args);
 
-	return __arch_syscall(num, a1, a2, a3, a4, a5, a6);
+	return __os_syscall(num, a1, a2, a3, a4, a5, a6);
 }
 
 #ifdef __cplusplus
