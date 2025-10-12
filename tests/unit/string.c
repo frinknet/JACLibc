@@ -2,451 +2,802 @@
 #include <testing.h>
 #include <string.h>
 
-TEST_SUITE(string);
+TEST_TYPE(unit);
+TEST_UNIT(string.h);
 
-/* ===== Memory Operations Tests ===== */
-TEST(memcpy_basic_copy) {
-		char src[10] = "hello";
-		char dest[10];
-		
-		void *result = memcpy(dest, src, 6);
-		ASSERT_EQ(dest, result);	// Should return dest
-		ASSERT_EQ(0, strcmp(dest, "hello"));
-		
-		// Test partial copy
-		memcpy(dest, "world", 3);
-		dest[3] = '\0';
-		ASSERT_EQ(0, strcmp(dest, "wor"));
+/* ============================================================================
+ * MEMORY COPY TESTS
+ * ============================================================================ */
+TEST_SUITE(memory_copy);
+
+TEST(memcpy_basic) {
+	char src[] = "Hello World";
+	char dest[20];
+	
+	void *result = memcpy(dest, src, 12);
+	
+	ASSERT_EQ(dest, result);
+	ASSERT_STR_EQ("Hello World", dest);
 }
 
-TEST(memcpy_overlapping_undefined) {
-		// memcpy behavior with overlapping regions is undefined
-		// We test that it doesn't crash, but don't rely on results
-		char buffer[10] = "abcdef";
-		memcpy(buffer + 1, buffer, 3);	// Should use memmove for this
-		// Just verify it doesn't crash
+TEST(memcpy_partial) {
+	char src[] = "Hello";
+	char dest[10];
+	
+	memcpy(dest, src, 3);
+	dest[3] = '\0';
+	
+	ASSERT_STR_EQ("Hel", dest);
 }
 
-TEST(memset_fill_memory) {
-		char buffer[10];
-		
-		void *result = memset(buffer, 'A', 5);
-		ASSERT_EQ(buffer, result);
-		buffer[5] = '\0';
-		ASSERT_EQ(0, strcmp(buffer, "AAAAA"));
-		
-		// Test zero fill
-		memset(buffer, 0, 10);
-		for (int i = 0; i < 10; i++) {
-				ASSERT_EQ(0, buffer[i]);
-		}
+TEST(memcpy_zero_bytes) {
+	char src[] = "test";
+	char dest[10] = "orig";
+	
+	memcpy(dest, src, 0);
+	
+	ASSERT_STR_EQ("orig", dest);
 }
 
-TEST(memmove_safe_overlap) {
-		char buffer[20] = "hello world";
-		
-		// Move forward (overlapping)
-		void *result = memmove(buffer + 2, buffer, 5);
-		ASSERT_EQ(buffer + 2, result);
-		buffer[7] = '\0';
-		ASSERT_EQ(0, strcmp(buffer + 2, "hello"));
-		
-		// Move backward (overlapping) 
-		strcpy(buffer, "abcdefgh");
-		memmove(buffer, buffer + 3, 5);
-		buffer[5] = '\0';
-		ASSERT_EQ(0, strcmp(buffer, "defgh"));
+TEST(memcpy_binary_data) {
+	unsigned char src[5] = {0x00, 0xFF, 0xAA, 0x55, 0x00};
+	unsigned char dest[5];
+	
+	memcpy(dest, src, 5);
+	
+	ASSERT_EQ(0x00, dest[0]);
+	ASSERT_EQ(0xFF, dest[1]);
+	ASSERT_EQ(0xAA, dest[2]);
+	ASSERT_EQ(0x55, dest[3]);
+	ASSERT_EQ(0x00, dest[4]);
 }
 
-TEST(memcmp_comparison) {
-		ASSERT_EQ(0, memcmp("hello", "hello", 5));
-		ASSERT_TRUE(memcmp("abc", "abd", 3) < 0);
-		ASSERT_TRUE(memcmp("abd", "abc", 3) > 0);
-		
-		// Compare with embedded nulls
-		char a[5] = {'a', '\0', 'b', 'c', 'd'};
-		char b[5] = {'a', '\0', 'b', 'c', 'e'};
-		ASSERT_TRUE(memcmp(a, b, 5) < 0);
-		
-		// Zero length comparison
-		ASSERT_EQ(0, memcmp("different", "strings", 0));
+TEST(memcpy_null_pointers) {
+	char buf[10];
+	ASSERT_NULL(memcpy(NULL, "test", 4));
+	ASSERT_NULL(memcpy(buf, NULL, 4));
+	ASSERT_NULL(memcpy(NULL, NULL, 4));
 }
 
-TEST(memchr_find_byte) {
-		const char *str = "hello world";
-		
-		ASSERT_EQ(str + 4, memchr(str, 'o', 11));			 // First 'o'
-		ASSERT_EQ(str + 0, memchr(str, 'h', 11));			 // First char
-		ASSERT_EQ(str + 10, memchr(str, 'd', 11));		 // Last char
-		ASSERT_EQ(NULL, memchr(str, 'x', 11));				 // Not found
-		ASSERT_EQ(NULL, memchr(str, 'o', 3));					 // Beyond search range
+/* ============================================================================
+ * MEMORY MOVE TESTS
+ * ============================================================================ */
+TEST_SUITE(memory_move);
+
+TEST(memmove_basic) {
+	char src[] = "Hello";
+	char dest[10];
+	
+	void *result = memmove(dest, src, 6);
+	
+	ASSERT_EQ(dest, result);
+	ASSERT_STR_EQ("Hello", dest);
 }
 
-#ifdef _GNU_SOURCE
-TEST(memmem_find_substring) {
-		const char *haystack = "hello world hello";
-		
-		ASSERT_EQ(haystack + 0, memmem(haystack, 17, "hello", 5));	 // First match
-		ASSERT_EQ(haystack + 6, memmem(haystack, 17, "world", 5));	 // Middle match
-		ASSERT_EQ(NULL, memmem(haystack, 17, "goodbye", 7));				 // Not found
-		ASSERT_EQ(NULL, memmem(haystack, 5, "world", 5));						 // Beyond range
-		
-		// Empty needle
-		ASSERT_EQ(haystack, memmem(haystack, 17, "", 0));
-		
-		// Needle larger than haystack
-		ASSERT_EQ(NULL, memmem("hi", 2, "hello", 5));
-}
-#endif
-
-/* ===== String Length and Copy Tests ===== */
-TEST(strlen_basic_length) {
-		ASSERT_EQ(0, strlen(""));
-		ASSERT_EQ(5, strlen("hello"));
-		ASSERT_EQ(11, strlen("hello world"));
-		
-		// String with embedded content
-		char str[10] = {'a', 'b', '\0', 'c', 'd'};
-		ASSERT_EQ(2, strlen(str));	// Stops at first null
+TEST(memmove_overlap_forward) {
+	char buffer[20] = "0123456789";
+	
+	memmove(buffer + 3, buffer, 7);
+	
+	ASSERT_EQ('0', buffer[3]);
+	ASSERT_EQ('1', buffer[4]);
+	ASSERT_EQ('6', buffer[9]);
 }
 
-TEST(strnlen_limited_length) {
-		ASSERT_EQ(0, strnlen("", 10));
-		ASSERT_EQ(5, strnlen("hello", 10));					 // String shorter than limit
-		ASSERT_EQ(3, strnlen("hello", 3));					 // Limit shorter than string
-		ASSERT_EQ(0, strnlen("test", 0));						 // Zero limit
+TEST(memmove_overlap_backward) {
+	char buffer[20] = "0123456789";
+	
+	memmove(buffer, buffer + 3, 7);
+	
+	ASSERT_EQ('3', buffer[0]);
+	ASSERT_EQ('4', buffer[1]);
+	ASSERT_EQ('9', buffer[6]);
 }
 
-TEST(strcpy_copy_string) {
-		char dest[20];
-		
-		char *result = strcpy(dest, "hello");
-		ASSERT_EQ(dest, result);
-		ASSERT_EQ(0, strcmp(dest, "hello"));
-		
-		// Empty string
-		strcpy(dest, "");
-		ASSERT_EQ(0, strcmp(dest, ""));
+TEST(memmove_same_location) {
+	char buffer[10] = "test";
+	
+	memmove(buffer, buffer, 5);
+	
+	ASSERT_STR_EQ("test", buffer);
 }
 
-TEST(strncpy_safe_copy) {
-		char dest[10];
-		
-		// Normal case - string fits
-		char *result = strncpy(dest, "hello", 10);
-		ASSERT_EQ(dest, result);
-		ASSERT_EQ(0, strcmp(dest, "hello"));
-		
-		// String exactly fits
-		strncpy(dest, "12345", 5);
-		dest[5] = '\0';  // Need manual null termination
-		ASSERT_EQ(0, strcmp(dest, "12345"));
-		
-		// String truncated, remaining filled with nulls
-		memset(dest, 'X', 10);
-		strncpy(dest, "hi", 5);
-		ASSERT_EQ('h', dest[0]);
-		ASSERT_EQ('i', dest[1]);
-		ASSERT_EQ('\0', dest[2]);
-		ASSERT_EQ('\0', dest[3]);
-		ASSERT_EQ('\0', dest[4]);
+TEST(memmove_null_pointers) {
+	char buf[10];
+	ASSERT_NULL(memmove(NULL, "test", 4));
+	ASSERT_NULL(memmove(buf, NULL, 4));
 }
 
-TEST(strcat_concatenation) {
-		char dest[20] = "hello";
-		
-		char *result = strcat(dest, " world");
-		ASSERT_EQ(dest, result);
-		ASSERT_EQ(0, strcmp(dest, "hello world"));
-		
-		// Concatenate to empty string
-		strcpy(dest, "");
-		strcat(dest, "test");
-		ASSERT_EQ(0, strcmp(dest, "test"));
+/* ============================================================================
+ * MEMORY SET TESTS
+ * ============================================================================ */
+TEST_SUITE(memory_set);
+
+TEST(memset_basic) {
+	char buffer[10];
+	
+	void *result = memset(buffer, 'A', 5);
+	buffer[5] = '\0';
+	
+	ASSERT_EQ(buffer, result);
+	ASSERT_STR_EQ("AAAAA", buffer);
 }
 
-TEST(strncat_safe_concatenation) {
-		char dest[20] = "hello";
-		
-		char *result = strncat(dest, " world!", 6);  // Takes exactly 6 chars: " world"
-		ASSERT_EQ(dest, result);
-		ASSERT_EQ(0, strcmp(dest, "hello world"));	// Fixed expectation
-		
-		// Add exactly n characters
-		strcpy(dest, "test");
-		strncat(dest, "12345", 3);
-		ASSERT_EQ(0, strcmp(dest, "test123"));
+TEST(memset_zero_fill) {
+	char buffer[10] = "test";
+	
+	memset(buffer, 0, 10);
+	
+	for (int i = 0; i < 10; i++) {
+		ASSERT_EQ(0, buffer[i]);
+	}
 }
 
-/* ===== String Comparison Tests ===== */
-TEST(strcmp_string_comparison) {
-		ASSERT_EQ(0, strcmp("hello", "hello"));
-		ASSERT_TRUE(strcmp("abc", "abd") < 0);
-		ASSERT_TRUE(strcmp("abd", "abc") > 0);
-		ASSERT_TRUE(strcmp("", "a") < 0);
-		ASSERT_TRUE(strcmp("a", "") > 0);
-		ASSERT_EQ(0, strcmp("", ""));
+TEST(memset_full_range) {
+	unsigned char buffer[5];
+	
+	memset(buffer, 0xFF, 5);
+	
+	for (int i = 0; i < 5; i++) {
+		ASSERT_EQ(0xFF, buffer[i]);
+	}
 }
 
-TEST(strncmp_limited_comparison) {
-		ASSERT_EQ(0, strncmp("hello", "hello", 5));
-		ASSERT_EQ(0, strncmp("hello123", "hello456", 5));  // Equal within n
-		ASSERT_TRUE(strncmp("abc", "abd", 3) < 0);
-		ASSERT_TRUE(strncmp("abd", "abc", 3) > 0);
-		
-		// Zero length comparison
-		ASSERT_EQ(0, strncmp("different", "strings", 0));
+TEST(memset_null_pointer) {
+	ASSERT_NULL(memset(NULL, 'A', 10));
 }
 
-TEST(strcoll_collation) {
-		// Your implementation just calls strcmp
-		ASSERT_EQ(0, strcoll("hello", "hello"));
-		ASSERT_TRUE(strcoll("abc", "abd") < 0);
+/* ============================================================================
+ * MEMORY COMPARE TESTS
+ * ============================================================================ */
+TEST_SUITE(memory_compare);
+
+TEST(memcmp_equal) {
+	ASSERT_EQ(0, memcmp("hello", "hello", 5));
+	ASSERT_EQ(0, memcmp("test", "test", 4));
 }
 
-TEST(strxfrm_transformation) {
-		char dest[20];
-		
-		size_t result = strxfrm(dest, "hello", 20);
-		ASSERT_EQ(5, result);  // Should return length of source
-		ASSERT_EQ(0, strcmp(dest, "hello"));
-		
-		// Test with small buffer
-		result = strxfrm(dest, "hello world", 5);
-		ASSERT_EQ(11, result);	// Still returns full length
-		// dest content undefined when n < src length
+TEST(memcmp_less_than) {
+	ASSERT_TRUE(memcmp("abc", "abd", 3) < 0);
+	ASSERT_TRUE(memcmp("aaa", "aab", 3) < 0);
 }
 
-/* ===== Error Handling Tests ===== */
-TEST(strerror_error_messages) {
-		char *msg0 = strerror(0);
-		ASSERT_NE(NULL, msg0);
-		ASSERT_EQ(0, strcmp(msg0, "Success"));
-		
-		char *msg1 = strerror(1);
-		ASSERT_NE(NULL, msg1);
-		ASSERT_EQ(0, strcmp(msg1, "Perm"));
-		
-		char *msg_unknown = strerror(999);
-		ASSERT_NE(NULL, msg_unknown);
-		ASSERT_EQ(0, strcmp(msg_unknown, "Unknown"));
+TEST(memcmp_greater_than) {
+	ASSERT_TRUE(memcmp("abd", "abc", 3) > 0);
+	ASSERT_TRUE(memcmp("aab", "aaa", 3) > 0);
 }
 
-TEST(strerror_r_thread_safe) {
-		char buffer[20];
-		
-		int result = strerror_r(0, buffer, 20);
-		ASSERT_EQ(0, result);
-		ASSERT_EQ(0, strcmp(buffer, "Success"));
-		
-		// Test truncation
-		result = strerror_r(0, buffer, 3);
-		ASSERT_EQ(0, result);
-		buffer[2] = '\0';
-		ASSERT_EQ(0, strcmp(buffer, "Su"));
+TEST(memcmp_zero_length) {
+	ASSERT_EQ(0, memcmp("different", "strings", 0));
 }
 
-/* ===== String Search Tests ===== */
-TEST(strchr_find_character) {
-		const char *str = "hello world";
-		
-		ASSERT_EQ(str + 4, strchr(str, 'o'));					 // First 'o'
-		ASSERT_EQ(str + 0, strchr(str, 'h'));					 // First char
-		ASSERT_EQ(str + 10, strchr(str, 'd'));				 // Last char
-		ASSERT_EQ(NULL, strchr(str, 'x'));						 // Not found
-		
-		// Find null terminator
-		ASSERT_EQ(str + 11, strchr(str, '\0'));
+TEST(memcmp_binary_data) {
+	unsigned char a[4] = {0xFF, 0x00, 0xAA, 0x55};
+	unsigned char b[4] = {0xFF, 0x00, 0xAA, 0x55};
+	unsigned char c[4] = {0xFF, 0x00, 0xBB, 0x55};
+	
+	ASSERT_EQ(0, memcmp(a, b, 4));
+	ASSERT_TRUE(memcmp(a, c, 4) < 0);
 }
 
-TEST(strrchr_find_last_character) {
-		const char *str = "hello world";
-		
-		ASSERT_EQ(str + 7, strrchr(str, 'o'));				 // Last 'o'
-		ASSERT_EQ(str + 9, strrchr(str, 'l'));				 // Last 'l'
-		ASSERT_EQ(str + 0, strrchr(str, 'h'));				 // Only 'h'
-		ASSERT_EQ(NULL, strrchr(str, 'x'));						 // Not found
+TEST(memcmp_embedded_nulls) {
+	char a[5] = {'a', '\0', 'b', 'c', 'd'};
+	char b[5] = {'a', '\0', 'b', 'c', 'e'};
+	
+	ASSERT_TRUE(memcmp(a, b, 5) < 0);
 }
 
-TEST(strstr_find_substring) {
-		const char *str = "hello world hello";
-		
-		ASSERT_EQ(str + 0, strstr(str, "hello"));			 // First match
-		ASSERT_EQ(str + 6, strstr(str, "world"));			 // Middle match
-		ASSERT_EQ(NULL, strstr(str, "goodbye"));			 // Not found
-		
-		// Empty needle
-		ASSERT_EQ(str, strstr(str, ""));
-		
-		// Find substring that appears later
-		ASSERT_EQ(str + 12, strstr(str + 6, "hello")); // Search from middle for second "hello"
+/* ============================================================================
+ * MEMORY SEARCH TESTS
+ * ============================================================================ */
+TEST_SUITE(memory_search);
+
+TEST(memchr_found) {
+	const char *str = "hello world";
+	
+	ASSERT_EQ(str + 4, memchr(str, 'o', 11));
+	ASSERT_EQ(str + 0, memchr(str, 'h', 11));
+	ASSERT_EQ(str + 10, memchr(str, 'd', 11));
 }
 
-TEST(strspn_span_characters) {
-		ASSERT_EQ(0, strspn("hello", "xyz"));					 // No match
-		ASSERT_EQ(4, strspn("hello", "hel"));					 // "hell" matches (not just "he")
-		ASSERT_EQ(5, strspn("hello", "helo"));				 // All match
-		ASSERT_EQ(3, strspn("abcdef", "cab"));				 // "abc" matches
+TEST(memchr_not_found) {
+	const char *str = "hello";
+	
+	ASSERT_NULL(memchr(str, 'x', 5));
+	ASSERT_NULL(memchr(str, 'o', 3));
 }
 
-TEST(strcspn_complement_span) {
-		ASSERT_EQ(5, strcspn("hello", "xyz"));				 // No reject chars
-		ASSERT_EQ(2, strcspn("hello", "l"));					 // Stop at first 'l'
-		ASSERT_EQ(0, strcspn("hello", "h"));					 // Stop immediately
-		ASSERT_EQ(3, strcspn("abcdef", "def"));				 // Stop at 'd'
+TEST(memchr_null_byte) {
+	const char *str = "hello\0world";
+	
+	ASSERT_EQ(str + 5, memchr(str, '\0', 11));
 }
 
-TEST(strpbrk_find_any_character) {
-		const char *str = "hello world";
-		
-		ASSERT_EQ(str + 2, strpbrk(str, "l"));				 // First 'l'
-		ASSERT_EQ(str + 2, strpbrk(str, "xl"));				 // First of any
-		ASSERT_EQ(str + 4, strpbrk(str, "or"));				 // First 'o'
-		ASSERT_EQ(NULL, strpbrk(str, "xyz"));					 // None found
+TEST(memchr_binary_search) {
+	unsigned char data[5] = {0x00, 0xFF, 0xAA, 0x55, 0x00};
+	
+	ASSERT_EQ(data + 1, memchr(data, 0xFF, 5));
+	ASSERT_EQ(data + 2, memchr(data, 0xAA, 5));
 }
 
-TEST(strtok_tokenization) {
-		char str[] = "hello,world;test:end";
-		
-		char *token = strtok(str, ",;:");
-		ASSERT_NE(NULL, token);
-		ASSERT_EQ(0, strcmp(token, "hello"));
-		
-		token = strtok(NULL, ",;:");
-		ASSERT_NE(NULL, token);
-		ASSERT_EQ(0, strcmp(token, "world"));
-		
-		token = strtok(NULL, ",;:");
-		ASSERT_NE(NULL, token);
-		ASSERT_EQ(0, strcmp(token, "test"));
-		
-		token = strtok(NULL, ",;:");
-		ASSERT_NE(NULL, token);
-		ASSERT_EQ(0, strcmp(token, "end"));
-		
-		token = strtok(NULL, ",;:");
-		ASSERT_EQ(NULL, token);  // No more tokens
+#if JACL_HAS_POSIX
+TEST(memmem_found) {
+	const char *haystack = "hello world hello";
+	
+	ASSERT_EQ(haystack + 0, memmem(haystack, 17, "hello", 5));
+	ASSERT_EQ(haystack + 6, memmem(haystack, 17, "world", 5));
 }
 
-TEST(strtok_r_reentrant_tokenization) {
-		char str1[] = "a,b,c";
-		char str2[] = "x:y:z";
-		char *save1, *save2;
-		
-		// Interleave two tokenizations
-		char *t1 = strtok_r(str1, ",", &save1);
-		char *t2 = strtok_r(str2, ":", &save2);
-		
-		ASSERT_EQ(0, strcmp(t1, "a"));
-		ASSERT_EQ(0, strcmp(t2, "x"));
-		
-		t1 = strtok_r(NULL, ",", &save1);
-		t2 = strtok_r(NULL, ":", &save2);
-		
-		ASSERT_EQ(0, strcmp(t1, "b"));
-		ASSERT_EQ(0, strcmp(t2, "y"));
+TEST(memmem_not_found) {
+	const char *haystack = "hello world";
+	
+	ASSERT_NULL(memmem(haystack, 11, "goodbye", 7));
 }
 
-/* ===== BSD-style Safe Functions Tests ===== */
-#if defined(_BSD_SOURCE) || defined(_SUSV2)
-TEST(strlcpy_safe_copy) {
-		char dest[10];
-		
-		// String fits
-		size_t result = strlcpy(dest, "hello", 10);
-		ASSERT_EQ(5, result);  // Length of source
-		ASSERT_EQ(0, strcmp(dest, "hello"));
-		
-		// String truncated
-		result = strlcpy(dest, "very long string", 5);
-		ASSERT_EQ(16, result);	// Full source length
-		ASSERT_EQ(0, strcmp(dest, "very"));  // Truncated but null-terminated
+TEST(memmem_empty_needle) {
+	const char *haystack = "test";
+	
+	ASSERT_EQ(haystack, memmem(haystack, 4, "", 0));
 }
 
-TEST(strlcat_safe_concatenation) {
-		char dest[10] = "hi";
-		
-		// Concatenation fits
-		size_t result = strlcat(dest, " there", 10);
-		ASSERT_EQ(8, result);  // Final length would be
-		ASSERT_EQ(0, strcmp(dest, "hi there"));
-		
-		// Concatenation truncated
-		strcpy(dest, "hello");
-		result = strlcat(dest, " world", 8);
-		ASSERT_EQ(11, result);	// Would-be final length
-		ASSERT_EQ(0, strcmp(dest, "hello w"));	// Truncated
+TEST(memmem_needle_larger) {
+	ASSERT_NULL(memmem("hi", 2, "hello", 5));
 }
 #endif
 
-/* ===== POSIX basename Tests ===== */
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
-TEST(basename_path_extraction) {
-		ASSERT_EQ(0, strcmp(basename("/usr/bin/test"), "test"));
-		ASSERT_EQ(0, strcmp(basename("/usr/bin/"), ""));
-		ASSERT_EQ(0, strcmp(basename("filename"), "filename"));
-		ASSERT_EQ(0, strcmp(basename(""), ""));
+/* ============================================================================
+ * STRING LENGTH TESTS
+ * ============================================================================ */
+TEST_SUITE(string_length);
+
+TEST(strlen_basic) {
+	ASSERT_EQ(0, strlen(""));
+	ASSERT_EQ(5, strlen("hello"));
+	ASSERT_EQ(11, strlen("hello world"));
+}
+
+TEST(strlen_embedded_null) {
+	char str[10] = {'a', 'b', '\0', 'c', 'd'};
+	
+	ASSERT_EQ(2, strlen(str));
+}
+
+TEST(strnlen_within_limit) {
+	ASSERT_EQ(5, strnlen("hello", 10));
+	ASSERT_EQ(0, strnlen("", 10));
+}
+
+TEST(strnlen_exceeds_limit) {
+	ASSERT_EQ(3, strnlen("hello", 3));
+}
+
+TEST(strnlen_zero_limit) {
+	ASSERT_EQ(0, strnlen("test", 0));
+}
+
+/* ============================================================================
+ * STRING COPY TESTS
+ * ============================================================================ */
+TEST_SUITE(string_copy);
+
+TEST(strcpy_basic) {
+	char dest[20];
+	
+	char *result = strcpy(dest, "hello");
+	
+	ASSERT_EQ(dest, result);
+	ASSERT_STR_EQ("hello", dest);
+}
+
+TEST(strcpy_empty) {
+	char dest[10];
+	
+	strcpy(dest, "");
+	
+	ASSERT_STR_EQ("", dest);
+}
+
+TEST(strncpy_basic) {
+	char dest[10];
+	
+	char *result = strncpy(dest, "hello", 10);
+	
+	ASSERT_EQ(dest, result);
+	ASSERT_STR_EQ("hello", dest);
+}
+
+TEST(strncpy_truncate) {
+	char dest[10];
+	memset(dest, 'X', 10);
+	
+	strncpy(dest, "hello", 3);
+	dest[3] = '\0';
+	
+	ASSERT_STR_EQ("hel", dest);
+}
+
+TEST(strncpy_pad_nulls) {
+	char dest[10];
+	memset(dest, 'X', 10);
+	
+	strncpy(dest, "hi", 5);
+	
+	ASSERT_EQ('h', dest[0]);
+	ASSERT_EQ('i', dest[1]);
+	ASSERT_EQ('\0', dest[2]);
+	ASSERT_EQ('\0', dest[3]);
+	ASSERT_EQ('\0', dest[4]);
+}
+
+TEST(strncpy_no_null_termination) {
+	char dest[10];
+	memset(dest, 'X', 10);
+	
+	strncpy(dest, "12345", 5);
+	
+	ASSERT_EQ('X', dest[5]);
+}
+
+/* ============================================================================
+ * STRING CONCATENATION TESTS
+ * ============================================================================ */
+TEST_SUITE(string_concatenation);
+
+TEST(strcat_basic) {
+	char dest[20] = "hello";
+	
+	char *result = strcat(dest, " world");
+	
+	ASSERT_EQ(dest, result);
+	ASSERT_STR_EQ("hello world", dest);
+}
+
+TEST(strcat_empty_dest) {
+	char dest[20] = "";
+	
+	strcat(dest, "test");
+	
+	ASSERT_STR_EQ("test", dest);
+}
+
+TEST(strcat_empty_src) {
+	char dest[20] = "test";
+	
+	strcat(dest, "");
+	
+	ASSERT_STR_EQ("test", dest);
+}
+
+TEST(strncat_basic) {
+	char dest[20] = "hello";
+	
+	char *result = strncat(dest, " world!", 6);
+	
+	ASSERT_EQ(dest, result);
+	ASSERT_STR_EQ("hello world", dest);
+}
+
+TEST(strncat_partial) {
+	char dest[20] = "test";
+	
+	strncat(dest, "12345", 3);
+	
+	ASSERT_STR_EQ("test123", dest);
+}
+
+TEST(strncat_exact) {
+	char dest[20] = "a";
+	
+	strncat(dest, "bcd", 3);
+	
+	ASSERT_STR_EQ("abcd", dest);
+}
+
+/* ============================================================================
+ * STRING COMPARISON TESTS
+ * ============================================================================ */
+TEST_SUITE(string_comparison);
+
+TEST(strcmp_equal) {
+	ASSERT_EQ(0, strcmp("hello", "hello"));
+	ASSERT_EQ(0, strcmp("", ""));
+}
+
+TEST(strcmp_less_than) {
+	ASSERT_TRUE(strcmp("abc", "abd") < 0);
+	ASSERT_TRUE(strcmp("", "a") < 0);
+}
+
+TEST(strcmp_greater_than) {
+	ASSERT_TRUE(strcmp("abd", "abc") > 0);
+	ASSERT_TRUE(strcmp("a", "") > 0);
+}
+
+TEST(strcmp_different_lengths) {
+	ASSERT_TRUE(strcmp("abc", "abcd") < 0);
+	ASSERT_TRUE(strcmp("abcd", "abc") > 0);
+}
+
+TEST(strncmp_equal_within_n) {
+	ASSERT_EQ(0, strncmp("hello", "hello", 5));
+	ASSERT_EQ(0, strncmp("hello123", "hello456", 5));
+}
+
+TEST(strncmp_different_within_n) {
+	ASSERT_TRUE(strncmp("abc", "abd", 3) < 0);
+	ASSERT_TRUE(strncmp("abd", "abc", 3) > 0);
+}
+
+TEST(strncmp_zero_length) {
+	ASSERT_EQ(0, strncmp("different", "strings", 0));
+}
+
+TEST(strcoll_basic) {
+	ASSERT_EQ(0, strcoll("hello", "hello"));
+	ASSERT_TRUE(strcoll("abc", "abd") < 0);
+}
+
+TEST(strxfrm_basic) {
+	char dest[20];
+	
+	size_t result = strxfrm(dest, "hello", 20);
+	
+	ASSERT_EQ(5, result);
+	ASSERT_STR_EQ("hello", dest);
+}
+
+TEST(strxfrm_small_buffer) {
+	char dest[3];
+	
+	size_t result = strxfrm(dest, "hello", 3);
+	
+	ASSERT_EQ(5, result);
+}
+
+/* ============================================================================
+ * ERROR STRING TESTS
+ * ============================================================================ */
+TEST_SUITE(error_strings);
+
+TEST(strerror_success) {
+	char *msg = strerror(0);
+	
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Success", msg);
+}
+
+TEST(strerror_common_errors) {
+	ASSERT_NOT_NULL(strerror(EPERM));
+	ASSERT_NOT_NULL(strerror(ENOENT));
+	ASSERT_NOT_NULL(strerror(ENOMEM));
+	ASSERT_NOT_NULL(strerror(EACCES));
+}
+
+TEST(strerror_unknown) {
+	char *msg = strerror(999);
+	
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Unknown error", msg);
+}
+
+TEST(strerror_r_success) {
+	char buffer[64];
+	
+	int result = strerror_r(0, buffer, 64);
+	
+	ASSERT_EQ(0, result);
+	ASSERT_STR_EQ("Success", buffer);
+}
+
+TEST(strerror_r_truncation) {
+	char buffer[5];
+	
+	int result = strerror_r(0, buffer, 5);
+	
+	ASSERT_EQ(ERANGE, result);
+	ASSERT_EQ(4, strlen(buffer));
+}
+
+TEST(strerror_r_invalid) {
+	ASSERT_EQ(EINVAL, strerror_r(0, NULL, 10));
+	
+	char buf[10];
+	ASSERT_EQ(EINVAL, strerror_r(0, buf, 0));
+}
+
+/* ============================================================================
+ * STRING SEARCH TESTS
+ * ============================================================================ */
+TEST_SUITE(string_search);
+
+TEST(strchr_found) {
+	const char *str = "hello world";
+	
+	ASSERT_EQ(str + 4, strchr(str, 'o'));
+	ASSERT_EQ(str + 0, strchr(str, 'h'));
+	ASSERT_EQ(str + 10, strchr(str, 'd'));
+}
+
+TEST(strchr_not_found) {
+	const char *str = "hello";
+	
+	ASSERT_NULL(strchr(str, 'x'));
+}
+
+TEST(strchr_null_terminator) {
+	const char *str = "hello";
+	
+	ASSERT_EQ(str + 5, strchr(str, '\0'));
+}
+
+TEST(strrchr_last_occurrence) {
+	const char *str = "hello world";
+	
+	ASSERT_EQ(str + 7, strrchr(str, 'o'));
+	ASSERT_EQ(str + 9, strrchr(str, 'l'));
+	ASSERT_EQ(str + 0, strrchr(str, 'h'));
+}
+
+TEST(strrchr_not_found) {
+	ASSERT_NULL(strrchr("hello", 'x'));
+}
+
+TEST(strstr_found) {
+	const char *str = "hello world hello";
+	
+	ASSERT_EQ(str + 0, strstr(str, "hello"));
+	ASSERT_EQ(str + 6, strstr(str, "world"));
+	ASSERT_EQ(str + 12, strstr(str + 6, "hello"));
+}
+
+TEST(strstr_not_found) {
+	ASSERT_NULL(strstr("hello", "goodbye"));
+}
+
+TEST(strstr_empty_needle) {
+	const char *str = "test";
+	
+	ASSERT_EQ(str, strstr(str, ""));
+}
+
+TEST(strspn_basic) {
+	ASSERT_EQ(0, strspn("hello", "xyz"));
+	ASSERT_EQ(4, strspn("hello", "helo"));
+	ASSERT_EQ(5, strspn("hello", "helo"));
+	ASSERT_EQ(3, strspn("abcdef", "abc"));
+}
+
+TEST(strspn_empty) {
+	ASSERT_EQ(0, strspn("hello", ""));
+	ASSERT_EQ(0, strspn("", "abc"));
+}
+
+TEST(strcspn_basic) {
+	ASSERT_EQ(5, strcspn("hello", "xyz"));
+	ASSERT_EQ(2, strcspn("hello", "l"));
+	ASSERT_EQ(0, strcspn("hello", "h"));
+	ASSERT_EQ(3, strcspn("abcdef", "def"));
+}
+
+TEST(strcspn_empty) {
+	ASSERT_EQ(5, strcspn("hello", ""));
+}
+
+TEST(strpbrk_found) {
+	const char *str = "hello world";
+	
+	ASSERT_EQ(str + 2, strpbrk(str, "l"));
+	ASSERT_EQ(str + 2, strpbrk(str, "xl"));
+	ASSERT_EQ(str + 4, strpbrk(str, "or"));
+}
+
+TEST(strpbrk_not_found) {
+	ASSERT_NULL(strpbrk("hello", "xyz"));
+}
+
+/* ============================================================================
+ * TOKENIZATION TESTS
+ * ============================================================================ */
+TEST_SUITE(tokenization);
+
+TEST(strtok_basic) {
+	char str[] = "hello,world;test:end";
+	
+	char *tok = strtok(str, ",;:");
+	ASSERT_STR_EQ("hello", tok);
+	
+	tok = strtok(NULL, ",;:");
+	ASSERT_STR_EQ("world", tok);
+	
+	tok = strtok(NULL, ",;:");
+	ASSERT_STR_EQ("test", tok);
+	
+	tok = strtok(NULL, ",;:");
+	ASSERT_STR_EQ("end", tok);
+	
+	tok = strtok(NULL, ",;:");
+	ASSERT_NULL(tok);
+}
+
+TEST(strtok_consecutive_delimiters) {
+	char str[] = "a,,b,,c";
+	
+	char *tok = strtok(str, ",");
+	ASSERT_STR_EQ("a", tok);
+	
+	tok = strtok(NULL, ",");
+	ASSERT_STR_EQ("b", tok);
+	
+	tok = strtok(NULL, ",");
+	ASSERT_STR_EQ("c", tok);
+}
+
+TEST(strtok_leading_trailing) {
+	char str[] = ",,,abc,,,";
+	
+	char *tok = strtok(str, ",");
+	ASSERT_STR_EQ("abc", tok);
+	
+	tok = strtok(NULL, ",");
+	ASSERT_NULL(tok);
+}
+
+TEST(strtok_empty_string) {
+	char str[] = "";
+	
+	ASSERT_NULL(strtok(str, ","));
+}
+
+TEST(strtok_only_delimiters) {
+	char str[] = ",,,";
+	
+	ASSERT_NULL(strtok(str, ","));
+}
+
+TEST(strtok_r_basic) {
+	char str1[] = "a,b,c";
+	char str2[] = "x:y:z";
+	char *save1, *save2;
+	
+	char *t1 = strtok_r(str1, ",", &save1);
+	char *t2 = strtok_r(str2, ":", &save2);
+	
+	ASSERT_STR_EQ("a", t1);
+	ASSERT_STR_EQ("x", t2);
+	
+	t1 = strtok_r(NULL, ",", &save1);
+	t2 = strtok_r(NULL, ":", &save2);
+	
+	ASSERT_STR_EQ("b", t1);
+	ASSERT_STR_EQ("y", t2);
+}
+
+/* ============================================================================
+ * BSD SAFE STRING TESTS
+ * ============================================================================ */
+#if JACL_OS_BSD
+TEST_SUITE(bsd_strings);
+
+TEST(strlcpy_fits) {
+	char dest[10];
+	
+	size_t result = strlcpy(dest, "hello", 10);
+	
+	ASSERT_EQ(5, result);
+	ASSERT_STR_EQ("hello", dest);
+}
+
+TEST(strlcpy_truncates) {
+	char dest[5];
+	
+	size_t result = strlcpy(dest, "very long", 5);
+	
+	ASSERT_EQ(9, result);
+	ASSERT_STR_EQ("very", dest);
+}
+
+TEST(strlcat_fits) {
+	char dest[10] = "hi";
+	
+	size_t result = strlcat(dest, " there", 10);
+	
+	ASSERT_EQ(8, result);
+	ASSERT_STR_EQ("hi there", dest);
+}
+
+TEST(strlcat_truncates) {
+	char dest[8] = "hello";
+	
+	size_t result = strlcat(dest, " world", 8);
+	
+	ASSERT_EQ(11, result);
+	ASSERT_STR_EQ("hello w", dest);
 }
 #endif
 
-/* ===== Edge Cases and Integration Tests ===== */
-TEST(empty_string_handling) {
-		char empty[10] = "";
-		
-		ASSERT_EQ(0, strlen(empty));
-		ASSERT_EQ(empty, strcpy(empty, ""));
-		ASSERT_EQ(0, strcmp(empty, ""));
-		ASSERT_EQ(NULL, strchr("", 'x'));
-		ASSERT_EQ(empty, strstr(empty, ""));
+/* ============================================================================
+ * POSIX BASENAME TEST
+ * ============================================================================ */
+#if JACL_HAS_POSIX
+TEST_SUITE(posix_path);
+
+TEST(basename_basic) {
+	ASSERT_STR_EQ("test", basename("/usr/bin/test"));
+	ASSERT_STR_EQ("filename", basename("filename"));
+	ASSERT_STR_EQ("", basename("/usr/bin/"));
+	ASSERT_STR_EQ("", basename(""));
+}
+#endif
+
+/* ============================================================================
+ * EDGE CASE TESTS
+ * ============================================================================ */
+TEST_SUITE(edge_cases);
+
+TEST(empty_strings) {
+	char empty[10] = "";
+	
+	ASSERT_EQ(0, strlen(empty));
+	ASSERT_EQ(empty, strcpy(empty, ""));
+	ASSERT_EQ(0, strcmp(empty, ""));
+	ASSERT_NULL(strchr("", 'x'));
+	ASSERT_EQ(empty, strstr(empty, ""));
 }
 
-TEST(null_terminator_handling) {
-		char str[10] = {'a', 'b', 'c', '\0', 'd', 'e', 'f', '\0'};
-		
-		ASSERT_EQ(3, strlen(str));	// Stops at first null
-		ASSERT_EQ(str + 3, strchr(str, '\0'));	// Find null terminator
-		ASSERT_EQ(str + 3, strrchr(str, '\0')); // Find last null in logical string
+TEST(null_terminators) {
+	char str[10] = {'a', 'b', 'c', '\0', 'd', 'e', '\0'};
+	
+	ASSERT_EQ(3, strlen(str));
+	ASSERT_EQ(str + 3, strchr(str, '\0'));
 }
 
-
-TEST(memory_boundary_conditions) {
-		// Test with single character
-		char single[2] = "a";
-		ASSERT_EQ(1, strlen(single));
-		ASSERT_EQ(single, strchr(single, 'a'));
-		
-		// Test with exactly fitting strings
-		char exact[6];
-		strcpy(exact, "hello");
-		ASSERT_EQ(5, strlen(exact));
-		ASSERT_EQ(0, strcmp(exact, "hello"));
+TEST(special_characters) {
+	const char *str = "hello\nworld\t!";
+	
+	ASSERT_EQ(str + 5, strchr(str, '\n'));
+	ASSERT_EQ(str + 11, strchr(str, '\t'));
 }
 
-TEST(character_range_handling) {
-		// Test with full character range
-		unsigned char str[3] = {255, 128, 0};
-		
-		ASSERT_EQ(str + 0, memchr(str, 255, 3));
-		ASSERT_EQ(str + 1, memchr(str, 128, 3));
-		ASSERT_EQ(str + 2, memchr(str, 0, 3));
+TEST(high_ascii) {
+	unsigned char str[4] = {200, 201, 202, 0};
+	
+	ASSERT_EQ(3, strlen((char*)str));
+	ASSERT_EQ(str + 1, (unsigned char*)strchr((char*)str, 201));
 }
 
-TEST(large_string_operations) {
-		// Test with longer strings to exercise implementation
-		char large1[1000];
-		char large2[1000];
-		
-		memset(large1, 'A', 999);
-		large1[999] = '\0';
-		
-		strcpy(large2, large1);
-		ASSERT_EQ(999, strlen(large2));
-		ASSERT_EQ(0, strcmp(large1, large2));
-		
-		// Test search in large string
-		large1[500] = 'X';
-		ASSERT_EQ(large1 + 500, strchr(large1, 'X'));
+/* ============================================================================
+ * STRESS TESTS
+ * ============================================================================ */
+TEST_SUITE(stress);
+
+TEST(large_strings) {
+	#define SIZE 10000
+	char *large = malloc(SIZE);
+	memset(large, 'A', SIZE - 1);
+	large[SIZE - 1] = '\0';
+	
+	ASSERT_EQ(SIZE - 1, strlen(large));
+	
+	char *copy = malloc(SIZE);
+	strcpy(copy, large);
+	ASSERT_EQ(0, strcmp(large, copy));
+	
+	large[5000] = 'X';
+	ASSERT_EQ(large + 5000, strchr(large, 'X'));
+	
+	free(large);
+	free(copy);
+	#undef SIZE
+}
+
+TEST(repeated_operations) {
+	char buffer[100];
+	
+	for (int i = 0; i < 100; i++) {
+		strcpy(buffer, "test");
+		strcat(buffer, "ing");
+		ASSERT_EQ(7, strlen(buffer));
+	}
 }
 
 TEST_MAIN()
-

@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <sched.h>
 
+#if JACL_OS_WINDOWS
+  #include <windows.h>
+#endif
+
 /* Heap Growth Configuration */
 #ifndef JACL_HEAP_INIT
 #define JACL_HEAP_INIT (256u<<10)
@@ -184,6 +188,8 @@ static inline uint32_t __jacl_bin_pop(__jacl_segment_t* seg, uint32_t need) {
 }
 
 static inline __jacl_segment_t* __jacl_find_segment(void* ptr) {
+	if (!ptr) return NULL;
+
 	__jacl_segment_t* seg = __jacl_segment_head;
 
 	while (seg) {
@@ -196,22 +202,12 @@ static inline __jacl_segment_t* __jacl_find_segment(void* ptr) {
 }
 
 static inline void __jacl_init_once(void) {
-	if (atomic_load_explicit(&__jacl_once, memory_order_relaxed)) return;
+	if (atomic_load_explicit(&__jacl_once, memory_order_acquire)) return;
 
 	uint32_t expect = 0;
 
 	if (!atomic_compare_exchange_strong(&__jacl_once, &expect, 1)) return;
 
-	// Read environment override
-	const char* env = getenv("JACL_HEAP_SIZE");
-
-	if (env) {
-		size_t val = (size_t)atoll(env);
-
-		if (val >= JACL_HEAP_INIT) __jacl_heap_max = val;
-	}
-
-	// Initialize first segment from static heap
 	__jacl_initial_segment.base = __jacl_static_heap;
 	__jacl_initial_segment.size = JACL_HEAP_INIT;
 	__jacl_initial_segment.next = NULL;
@@ -224,7 +220,6 @@ static inline void __jacl_init_once(void) {
 
 	atomic_store_explicit(&__jacl_tls_cursor, 0, memory_order_relaxed);
 
-	// Reserve 25% for TLS, rest for bins
 	uint32_t base = JACL_ALIGN_UP(JACL_HEAP_INIT/4, JACL_ALIGNMENT);
 
 	if (base + sizeof(__jacl_hdr_t) < JACL_HEAP_INIT) {
@@ -240,11 +235,16 @@ static inline void __jacl_init_once(void) {
 
 static inline int __jacl_tls_refill(void) {
 	uint32_t cur = atomic_fetch_add_explicit(&__jacl_tls_cursor, JACL_TLS_CHUNK, memory_order_relaxed);
+	uint32_t limit = JACL_HEAP_INIT / 4;
 
-	if (cur + JACL_TLS_CHUNK >= JACL_HEAP_INIT/4) return 0;
+	if (cur >= limit) return 0;
+
+	uint32_t available = (cur + JACL_TLS_CHUNK > limit) ? (limit - cur) : JACL_TLS_CHUNK;
+
+	if (available < 64) return 0;
 
 	__jacl_tls_off = JACL_ALIGN_UP(cur, JACL_ALIGNMENT);
-	__jacl_tls_end = cur + JACL_TLS_CHUNK;
+	__jacl_tls_end = cur + available;
 
 	return 1;
 }
@@ -463,13 +463,28 @@ void free(void* p) {
 	// Find which segment this belongs to
 	__jacl_segment_t* seg = __jacl_find_segment((void*)h);
 
-	if (!seg) return;  // Invalid pointer
+	// If not found, might be aligned allocation
+	if (!seg) {
+		// Try to recover original pointer stored before the aligned pointer
+		void** stored_ptr = (void**)((uint8_t*)p - sizeof(void*));
+		void* original = *stored_ptr;
+
+		// Validate original pointer looks reasonable
+		if (!original || ((uintptr_t)original & (JACL_ALIGNMENT - 1))) return;  // Invalid
+
+		h = (__jacl_hdr_t*)original - 1;
+		seg = __jacl_find_segment((void*)h);
+
+		if (!seg) return;  // Still invalid
+
+		p = (void*)(h + 1);  // Use original pointer for the rest of free
+	}
 
 	if (JACL_UNLIKELY(!(h->flags & JACL_HDR_ALLOC))) return;
 
 	uint32_t size = h->size - sizeof(__jacl_hdr_t);
 
-	/* Quicklist - UNCHANGED */
+	/* Quicklist */
 	if (size <= 40 && size >= 16 && !(h->flags & JACL_HDR_ARENA)) {
 		int qidx = (size >> 3) - 2;
 
@@ -482,7 +497,7 @@ void free(void* p) {
 		}
 	}
 
-	/* Arena blocks leak - UNCHANGED */
+	/* Arena blocks leak */
 	if (h->flags & JACL_HDR_ARENA) {
 		h->flags = 0;
 
@@ -517,13 +532,18 @@ void free(void* p) {
 		/* Coalesce prev */
 		if (off > 0 && h->prev_size > 0) {
 			uint32_t prev_off = off - h->prev_size;
+
 			__jacl_hdr_t* prev = (__jacl_hdr_t*)(seg->base + prev_off);
+
 			if (!(prev->flags & JACL_HDR_ALLOC)) {
 				__jacl_bin_remove(seg, prev_off);
+
 				prev->size += h->size;
+
 				uint32_t after_off = prev_off + prev->size;
-				if (after_off < seg->size)
-					((__jacl_hdr_t*)(seg->base + after_off))->prev_size = prev->size;
+
+				if (after_off < seg->size) ((__jacl_hdr_t*)(seg->base + after_off))->prev_size = prev->size;
+
 				off = prev_off;
 			}
 		}
@@ -589,6 +609,193 @@ void* aligned_alloc(size_t alignment, size_t size) {
 
 
 	return aligned_conv.ptr;
+}
+
+/* ============================================================= */
+/* Exit Handler Registry                                         */
+/* ============================================================= */
+
+#define __JACL_ATEXIT_MAX 32
+
+static struct {
+	void (*func)(void);
+	int used;
+} __jacl_exit_handlers[__JACL_ATEXIT_MAX];
+
+static int __jacl_exit_count = 0;
+
+#if JACL_HAS_C11
+static struct {
+	void (*func)(void);
+	int used;
+} __jacl_quick_exit_handlers[__JACL_ATEXIT_MAX];
+
+static int __jacl_quick_exit_count = 0;
+#endif
+
+int atexit(void (*func)(void)) {
+	if (!func) return -1;
+
+	for (int i = 0; i < __JACL_ATEXIT_MAX; i++) {
+		if (!__jacl_exit_handlers[i].used) {
+			__jacl_exit_handlers[i].func = func;
+			__jacl_exit_handlers[i].used = 1;
+			__jacl_exit_count++;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+static inline void __jacl_exit_run_handlers(void) {
+	for (int i = __JACL_ATEXIT_MAX - 1; i >= 0; i--) {
+		if (__jacl_exit_handlers[i].used && __jacl_exit_handlers[i].func) {
+			__jacl_exit_handlers[i].func();
+		}
+	}
+}
+
+#if JACL_HAS_C11
+
+int at_quick_exit(void (*func)(void)) {
+	if (!func) return -1;
+
+	for (int i = 0; i < __JACL_ATEXIT_MAX; i++) {
+		if (!__jacl_quick_exit_handlers[i].used) {
+			__jacl_quick_exit_handlers[i].func = func;
+			__jacl_quick_exit_handlers[i].used = 1;
+			__jacl_quick_exit_count++;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+static inline void __jacl_exit_run_quick_handlers(void) {
+	for (int i = __JACL_ATEXIT_MAX - 1; i >= 0; i--) {
+		if (__jacl_quick_exit_handlers[i].used && __jacl_quick_exit_handlers[i].func) {
+			__jacl_quick_exit_handlers[i].func();
+		}
+	}
+}
+
+_Noreturn void quick_exit(int status) {
+	__jacl_exit_run_quick_handlers();
+	_Exit(status);
+
+	for(;;);
+}
+
+#endif /* JACL_HAS_C11 */
+
+void exit(int status) {
+	__jacl_exit_run_handlers();
+
+	#if JACL_HAS_C99
+		_Exit(status);
+	#else
+		(void)status;
+
+		abort();
+	#endif
+}
+
+
+/* ============================================================= */
+/* Sorting & Searching                                           */
+/* ============================================================= */
+
+static inline void __jacl_sort_swap(unsigned char* a, unsigned char* b, size_t size) {
+	while (size--) {
+		unsigned char tmp = *a;
+
+		*a++ = *b;
+		*b++ = tmp;
+	}
+}
+
+static void __jacl_sort_again(void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*)) {
+	if (nmemb < 2) return;
+
+	unsigned char* arr = (unsigned char*)base;
+
+	// Median-of-three pivot selection
+	size_t low = 0;
+	size_t high = nmemb - 1;
+	size_t mid = low + (high - low) / 2;
+
+	// Sort low, mid, high
+	if (compar(arr + low * size, arr + mid * size) > 0) __jacl_sort_swap(arr + low * size, arr + mid * size, size);
+	if (compar(arr + mid * size, arr + high * size) > 0) __jacl_sort_swap(arr + mid * size, arr + high * size, size);
+	if (compar(arr + low * size, arr + mid * size) > 0) __jacl_sort_swap(arr + low * size, arr + mid * size, size);
+
+	// Allocate pivot storage
+	void* pivot = malloc(size);
+
+	if (!pivot) {
+		// Fallback to bubble sort
+		for (size_t i = 0; i < nmemb - 1; i++) {
+			for (size_t j = 0; j < nmemb - i - 1; j++) {
+				if (compar(arr + j * size, arr + (j + 1) * size) > 0) __jacl_sort_swap(arr + j * size, arr + (j + 1) * size, size);
+			}
+		}
+
+		return;
+	}
+
+	memcpy(pivot, arr + mid * size, size);
+
+	// Partition
+	size_t i = 0;
+	size_t j = nmemb - 1;
+
+	while (1) {
+		while (i < nmemb && compar(arr + i * size, pivot) < 0) i++;
+		while (j > 0 && compar(arr + j * size, pivot) > 0) j--;
+
+		if (i >= j) break;
+
+		__jacl_sort_swap(arr + i * size, arr + j * size, size);
+
+		i++;
+
+		if (j > 0) j--;
+	}
+
+	free(pivot);
+
+	// Recursively sort partitions
+	if (j > 0) __jacl_sort_again(arr, j + 1, size, compar);
+	if (i < nmemb - 1) __jacl_sort_again(arr + (i + 1) * size, nmemb - i - 1, size, compar);
+}
+
+void qsort(void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*)) {
+	if (!base || !compar || size == 0 || nmemb < 2) return;
+
+	__jacl_sort_again(base, nmemb, size, compar);
+}
+
+void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*)) {
+	if (!key || !base || !compar || size == 0 || nmemb == 0)
+		return NULL;
+
+	const unsigned char* arr = (const unsigned char*)base;
+	size_t low = 0;
+	size_t high = nmemb;
+
+	while (low < high) {
+		size_t mid = low + (high - low) / 2;
+		const void* mid_elem = arr + mid * size;
+		int cmp = compar(key, mid_elem);
+
+		if (cmp == 0) return (void*)mid_elem;
+		else if (cmp < 0) high = mid;
+		else low = mid + 1;
+	}
+
+	return NULL;
 }
 
 #ifdef __cplusplus

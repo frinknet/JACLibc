@@ -8,6 +8,9 @@
 extern "C" {
 #endif
 
+/* ============================================================= */
+/* Internal Variable                                             */
+/* ============================================================= */
 static char __jacl_stdin_buf[BUFSIZ];
 static char __jacl_stdout_buf[BUFSIZ];
 static char __jacl_stderr_buf[BUFSIZ];
@@ -65,6 +68,9 @@ typedef struct __jacl_stream_node {
 
 static STREAM_NODE* __jacl_stream_list;
 
+/* ============================================================= */
+/* Stream Registry                                               */
+/* ============================================================= */
 void __jacl_stream_register(FILE *stream) {
 	STREAM_NODE *node = (STREAM_NODE *)malloc(sizeof(STREAM_NODE));
 
@@ -130,6 +136,9 @@ int __jacl_stream_flush(FILE* stream) {
 	);
 #endif
 
+/* ============================================================= */
+/* Buffer Helpers                                                */
+/* ============================================================= */
 int __jacl_buffer_flags(const char *mode) {
 	int flags = 0;
 
@@ -193,6 +202,9 @@ int __jacl_buffer_input(FILE *f) {
 	return (unsigned char)f->_base[0];
 }
 
+/* ============================================================= */
+/* String Helpers                                                */
+/* ============================================================= */
 static inline int __jacl_getch(const char **in, FILE *stream) {
 	if (*in && **in) return *(*in)++;
 
@@ -282,6 +294,9 @@ static inline int __jacl_isspace(int c) {
 	return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
 }
 
+/* ============================================================= */
+/* String Formatting                                             */
+/* ============================================================= */
 static inline int __jacl_format_string(char **out, const char *s, size_t remaining, int prec) {
 	if (!s) s = "(null)";
 
@@ -555,7 +570,7 @@ static inline int __jacl_format_int(char * restrict *out, const char *fmt_pos, i
 	return __jacl_format_num(out, val, base, is_signed, width, upper, flags);
 }
 
-int __jacl_format(char * restrict out, size_t n, const char * restrict fmt, va_list ap) {
+static inline int __jacl_format(char * restrict out, size_t n, const char * restrict fmt, va_list ap) {
 	if (!fmt) return -1;
 
 	char ch;
@@ -631,6 +646,9 @@ int __jacl_format(char * restrict out, size_t n, const char * restrict fmt, va_l
 	return len;
 }
 
+/* ============================================================= */
+/* String Parsing                                                */
+/* ============================================================= */
 static inline void __jacl_parse_next(const char **in) {
 	if (!in || !*in) return;
 
@@ -885,7 +903,7 @@ static inline int __jacl_parse_float(const char **in, int length, int suppress, 
 	return 0;
 }
 
-int __jacl_parse(const char **input, FILE *stream, const char * restrict fmt, va_list ap) {
+static inline int __jacl_parse(const char **input, FILE *stream, const char * restrict fmt, va_list ap) {
 	const char *in = input ? *input : NULL;
 	int count = 0, suppress = 0;
 
@@ -948,15 +966,19 @@ int __jacl_parse(const char **input, FILE *stream, const char * restrict fmt, va
 	return count;
 }
 
-/* Printf Implementations */
-int vprintf(const char * restrict fmt, va_list ap) { char buf[BUFSIZ]; int len = __jacl_format(buf, BUFSIZ, fmt, ap); if (fwrite(buf, 1, len, stdout) != (size_t)len) return -1; return len; }
+/* ============================================================= */
+/* Printf Implementations                                        */
+/* ============================================================= */
+int vprintf(const char * restrict fmt, va_list ap) { char buf[BUFSIZ]; int len = __jacl_format(buf, BUFSIZ, fmt, ap); size_t to_write = (len >= BUFSIZ) ? BUFSIZ - 1 : (size_t)len; if (fwrite(buf, 1, to_write, stdout) != to_write) return -1; return len; }
 int printf(const char* restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vprintf(fmt, ap); va_end(ap); return r; }
-int vfprintf(FILE * restrict stream, const char * restrict fmt, va_list ap) { char buf[BUFSIZ]; int len = __jacl_format(buf, BUFSIZ, fmt, ap); if (fwrite(buf, 1, len, stream) != (size_t)len) return -1; return len; }
+int vfprintf(FILE * restrict stream, const char * restrict fmt, va_list ap) { char buf[BUFSIZ]; int len = __jacl_format(buf, BUFSIZ, fmt, ap); size_t to_write = (len >= BUFSIZ) ? BUFSIZ - 1 : (size_t)len; if (fwrite(buf, 1, to_write, stream) != to_write) return -1; return len; }
 int fprintf(FILE* restrict stream, const char* restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vfprintf(stream, fmt, ap); va_end(ap); return r; }
 int vsprintf(char * restrict s, const char * restrict fmt, va_list ap) { return __jacl_format(s, SIZE_MAX, fmt, ap); }
 int sprintf(char * restrict s, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsprintf(s, fmt, ap); va_end(ap); return r; }
 
-/* Scanf Implementations */
+/* ============================================================= */
+/* Scanf Implementations                                         */
+/* ============================================================= */
 int vscanf(const char * restrict fmt, va_list ap) { return __jacl_parse(NULL, stdin, fmt, ap); }
 int scanf(const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = __jacl_parse(NULL, stdin, fmt, ap); va_end(ap); return r; }
 int vfscanf(FILE * restrict stream, const char * restrict fmt, va_list ap) { return __jacl_parse(NULL, stream, fmt, ap); }

@@ -14,6 +14,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <math.h>
+#include <sys/stat.h>
+#include <time.h>
 
 #if JACL_HAS_POSIX
 #include <sys/wait.h>
@@ -38,10 +40,6 @@
 
 #ifndef TMP_MAX
 #define TMP_MAX 32767
-#endif
-
-#ifndef L_tmpnam
-#define L_tmpnam 20
 #endif
 
 #ifndef SEEK_SET
@@ -69,6 +67,10 @@
 #else
 #define TEMP_DIR "/tmp/"
 #endif
+#endif
+
+#ifndef L_tmpnam
+#define L_tmpnam 64
 #endif
 
 #ifdef __cplusplus
@@ -111,9 +113,6 @@ int __jacl_buffer_flags(const char *mode);
 int __jacl_buffer_output(FILE *f);
 int __jacl_buffer_input(FILE *f);
 
-// Format Parsing Helpers
-int __jacl_format(char * restrict out, size_t n, const char * restrict fmt, va_list ap);
-int __jacl_parse(const char **input, FILE *stream, const char * restrict fmt, va_list ap);
 
 // Stub for fpos_t (implementation-defined)
 typedef long long fpos_t;
@@ -473,6 +472,69 @@ int fprintf(FILE* restrict stream, const char* restrict fmt, ...);
 int vsprintf(char * restrict s, const char * restrict fmt, va_list ap);
 int sprintf(char * restrict s, const char * restrict fmt, ...);
 
+#if JACL_HAS_C99
+
+int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap);
+int snprintf(char * restrict s, size_t n, const char * restrict fmt, ...);
+
+static inline int vdprintf(int fd, const char* restrict fmt, va_list ap) {
+	char buf[BUFSIZ];
+	int len = vsnprintf(buf, BUFSIZ, fmt, ap);
+
+	if (len < 0) return -1;
+
+	size_t to_write = (len >= BUFSIZ) ? BUFSIZ - 1 : (size_t)len;
+	ssize_t written = write(fd, buf, to_write);
+
+	return written < 0 ? -1 : len;
+}
+
+static inline int dprintf(int fd, const char* restrict fmt, ...) {
+	va_list ap;
+
+	va_start(ap, fmt);
+
+	int r = vdprintf(fd, fmt, ap);
+
+	va_end(ap);
+
+	return r;
+}
+
+static inline int vasprintf(char **strp, const char *fmt, va_list ap) {
+	if (!strp || !fmt) { errno = EINVAL; return -1; }
+
+	va_list ap_copy;
+
+	va_copy(ap_copy, ap);
+
+	int len = vsnprintf(NULL, 0, fmt, ap_copy);
+
+	va_end(ap_copy);
+
+	if (len < 0) return -1;
+
+	*strp = (char *)malloc(len + 1);
+
+	if (!*strp) return -1;
+
+	return vsnprintf(*strp, len + 1, fmt, ap);
+}
+
+static inline int asprintf(char **strp, const char *fmt, ...) {
+	va_list ap;
+
+	va_start(ap, fmt);
+
+	int r = vasprintf(strp, fmt, ap);
+
+	va_end(ap);
+
+	return r;
+}
+
+#endif
+
 /* Scanf Implementations */
 int vscanf(const char * restrict fmt, va_list ap);
 int scanf(const char * restrict fmt, ...);
@@ -480,11 +542,6 @@ int vfscanf(FILE * restrict stream, const char * restrict fmt, va_list ap);
 int fscanf(FILE* restrict stream, const char * restrict fmt, ...);
 int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap);
 int sscanf(const char * restrict s, const char * restrict fmt, ...);
-
-#if JACL_HAS_C99
-int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap);
-int snprintf(char * restrict s, size_t n, const char * restrict fmt, ...);
-#endif
 
 /* Error Handling */
 static inline int feof(FILE* stream) {
@@ -844,68 +901,6 @@ static inline ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
 	return getdelim(lineptr, n, '\n', stream);
 }
 
-static inline int vdprintf(int fd, const char* restrict fmt, va_list ap) {
-	char buf[BUFSIZ];
-	int len = __jacl_format(buf, BUFSIZ, fmt, ap);
-
-	ssize_t written = write(fd, buf, len);
-
-	return written < 0 ? -1 : (int)written;
-}
-
-static inline int dprintf(int fd, const char* restrict fmt, ...) {
-	va_list ap;
-
-	va_start(ap, fmt);
-
-	int r = vdprintf(fd, fmt, ap);
-
-	va_end(ap);
-
-	return r;
-}
-
-static inline int vasprintf(char **strp, const char *fmt, va_list ap) {
-	if (!strp || !fmt) {
-		errno = EINVAL;
-
-		return -1;
-	}
-
-	#if JACL_HAS_C99 || defined(__GNUC__)
-		va_list ap_copy;
-
-		va_copy(ap_copy, ap);
-
-		int len = vsnprintf(NULL, 0, fmt, ap_copy);
-
-		va_end(ap_copy);
-	#else
-		// Fallback: assume reasonable max size
-		int len = 1024;
-	#endif
-
-	if (len < 0) return -1;
-
-	*strp = (char *)malloc(len + 1);
-
-	if (!*strp) return -1;
-
-	return vsnprintf(*strp, len + 1, fmt, ap);
-}
-
-static inline int asprintf(char **strp, const char *fmt, ...) {
-	va_list ap;
-
-	va_start(ap, fmt);
-
-	int r = vasprintf(strp, fmt, ap);
-
-	va_end(ap);
-
-	return r;
-}
-
 #endif /* JACL_HAS_POSIX */
 
 #if JACL_HAS_THREADS
@@ -945,22 +940,29 @@ static inline FILE *tmpfile(void) {
 
 static inline char *tmpnam(char *s) {
 	static char buf[L_tmpnam];
+	static unsigned int counter = 0;
+	static unsigned int tmpnam_seed = 1;
 
-	char tmpl[] = TEMP_DIR "/tmpXXXXXX";
-	int fd = mkstemp(tmpl);
+	char *target = s ? s : buf;
+	unsigned int attempts = 0;
 
-	if (fd < 0) return NULL;
+	while (attempts++ < TMP_MAX) {
+		unsigned int seed = (unsigned int)time(NULL)
+		                  ^ (unsigned int)getpid()
+		                  ^ __sync_fetch_and_add(&counter, 1);
 
-	close(fd);
+		tmpnam_seed = tmpnam_seed * 1103515245u + 12345u;
 
-	if (s) {
-		strcpy(s, tmpl);
-	} else {
-		strcpy(buf, tmpl);
-		s = buf;
+		unsigned int rand_val = (tmpnam_seed >> 16) & 0x7FFF;
+
+		snprintf(target, L_tmpnam, "%stmp%08x%04x", TEMP_DIR, seed, rand_val);
+
+		struct stat st;
+
+		if (stat(target, &st) == -1 && errno == ENOENT) return target;
 	}
 
-	return s;
+	return NULL;
 }
 
 #ifdef __cplusplus
