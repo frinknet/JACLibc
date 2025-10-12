@@ -7,12 +7,12 @@
 extern "C" {
 #endif
 
-#include <config.h>     /* platform detection */
-#include <stdlib.h>     /* malloc, free, qsort */
-#include <string.h>     /* memcpy, strlen, strcmp */
-#include <sys/types.h>  /* ino_t, off_t, mode_t, dev_t, size_t, ssize_t */
-#include <stddef.h>     /* size_t, NULL, offsetof */
-#include <errno.h>      /* EINVAL, ENOMEM, EBADF, ENOSYS, errno */
+#include <config.h>
+#include <stdlib.h>     // malloc(), free(), qsort()
+#include <string.h>     // memcpy(), strlen(), strcmp()
+#include <sys/types.h>  // ino_t, off_t, mode_t, dev_t, size_t, ssize_t
+#include <stddef.h>     // size_t, NULL, offsetof()
+#include <errno.h>      // EINVAL, ENOMEM, EBADF, ENOSYS, errno
 
 #if JACL_OS_WINDOWS
 	#define DIRENT_WIN32 1
@@ -26,12 +26,11 @@ extern "C" {
 
 #if JACL_HAS_PTHREADS && JACL_HAS_C11
 	#define DIRENT_THREADS 1
-	#include <stdatomic.h>    /* _Atomic, atomic operations */
-	#ifn JACL_OS_WINDOWS
-		#include <sched.h>      /* sched_yield */
+	#include <stdatomic.h>
+
+	#if !JACL_OS_WINDOWS
+		#include <sched.h>    // sched_yield()
 	#endif
-#else
-	#define _Atomic           /* Empty definition for single-threaded builds */
 #endif
 
 /* ================================================================ */
@@ -73,75 +72,75 @@ typedef unsigned short reclen_t;
 /* Windows implementation with Unicode support                     */
 /* ================================================================ */
 
-typedef struct {
-	HANDLE handle;              /* Windows search handle */
-	WIN32_FIND_DATAW find_data; /* Windows file data (Unicode) */
-	int first_call;             /* First call flag */
-	wchar_t path[PATH_MAX];     /* Directory path (Unicode) */
-	struct dirent current;      /* Current entry */
-	long position;              /* Current position for telldir/seekdir */
-	int error_code;             /* Last error code */
-} DIR;
-
-struct dirent {
+typedef struct __jacl_dirent {
 	ino_t d_ino;                /* File serial number */
 	unsigned char d_type;       /* File type */
 	unsigned short d_reclen;    /* Record length */
 	unsigned short d_namlen;    /* Name length */
 	char d_name[NAME_MAX + 1];  /* Filename (UTF-8) */
-};
+} dirent;
+
+typedef struct __jacl_dir {
+	HANDLE handle;              /* Windows search handle */
+	WIN32_FIND_DATAW find_data; /* Windows file data (Unicode) */
+	int first_call;             /* First call flag */
+	wchar_t path[PATH_MAX];     /* Directory path (Unicode) */
+	dirent current;             /* Current entry */
+	long position;              /* Current position for telldir/seekdir */
+	int error_code;             /* Last error code */
+} DIR;
 
 #else
 /* ================================================================ */
 /* POSIX implementation                                             */
 /* ================================================================ */
 
-typedef struct {
-	int fd;                     /* Directory file descriptor */
-	char *buffer;               /* Buffer for getdents */
-	size_t buffer_size;         /* Buffer size */
-	size_t buffer_pos;          /* Current position in buffer */
-	size_t buffer_end;          /* End of valid data in buffer */
-	long position;              /* Current position for telldir/seekdir */
-	struct dirent current;      /* Current entry */
-	int error_code;             /* Last error code */
-	_Atomic int lock;           /* Simple spinlock for thread safety */
-} DIR;
-
-struct dirent {
+typedef struct __jacl_dirent {
 	ino_t d_ino;                /* File serial number */
 	off_t d_off;                /* File offset (Linux) */
 	unsigned short d_reclen;    /* Record length */
 	unsigned char d_type;       /* File type */
 	char d_name[NAME_MAX + 1];  /* Filename */
-};
+} dirent;
+
+typedef struct __jacl_dir {
+	int fd;              /* Directory file descriptor */
+	char *buffer;        /* Buffer for getdents */
+	size_t buffer_size;  /* Buffer size */
+	size_t buffer_pos;   /* Current position in buffer */
+	size_t buffer_end;   /* End of valid data in buffer */
+	long position;       /* Current position for telldir/seekdir */
+	dirent current;      /* Current entry */
+	int error_code;      /* Last error code */
+	_Atomic int lock;    /* Simple spinlock for thread safety */
+} DIR;
 
 /* Linux getdents structure (different from dirent) */
 #if JACL_HAS_C99
-struct linux_dirent {
+typedef struct __jacl_linux_dirent {
   unsigned long d_ino;
   unsigned long d_off;
   unsigned short d_reclen;
   char d_name[];          /* C99 flexible array member */
-};
+} linux_dirent;
 #else
-struct linux_dirent {
+typedef struct __jacl_linux_dirent {
   unsigned long d_ino;
   unsigned long d_off;
   unsigned short d_reclen;
   char d_name[1];         /* C89 hack */
-};
+} linux_dirent;
 #endif
 
 #endif
 
 /* POSIX.1-2008 addition - posix_dent structure */
-struct posix_dent {
+typedef struct __jacl_posix_dent {
 	ino_t d_ino;               /* File serial number */
 	reclen_t d_reclen;         /* Length of this entry */
 	unsigned char d_type;      /* File type */
 	char d_name[];            /* Filename string */
-};
+} posix_dent;
 
 /* ================================================================ */
 /* Thread safety documentation                                     */
@@ -234,7 +233,7 @@ static inline DIR *opendir(const char *dirname) {
 	return dirp;
 }
 
-static inline struct dirent *readdir(DIR *dirp) {
+static inline dirent *readdir(DIR *dirp) {
 	if (!dirp) {
 		errno = EBADF;
 		return NULL;
@@ -279,21 +278,21 @@ static inline struct dirent *readdir(DIR *dirp) {
 
 	size_t name_len = strlen(dirp->current.d_name);
 	dirp->current.d_namlen = (unsigned short)name_len;
-	dirp->current.d_reclen = (unsigned short)(sizeof(struct dirent) - NAME_MAX - 1 + name_len + 1);
+	dirp->current.d_reclen = (unsigned short)(sizeof(dirent) - NAME_MAX - 1 + name_len + 1);
 
 	dirp->position++;
 	return &dirp->current;
 }
 
 /* Thread-safe readdir_r (deprecated but provided for POSIX compliance) */
-static inline int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result) {
+static inline int readdir_r(DIR *dirp, dirent *entry, dirent **result) {
 	if (!dirp || !entry || !result) {
 		return EINVAL;
 	}
 
 	*result = NULL;
 
-	struct dirent *current = readdir(dirp);
+	dirent *current = readdir(dirp);
 	if (!current) {
 		return errno;  /* errno set by readdir */
 	}
@@ -375,17 +374,21 @@ static inline DIR *fdopendir(int fd) {
 #if DIRENT_THREADS
 static inline void dir_lock(DIR *dirp) {
 	int expected = 0;
-	while (!__atomic_compare_exchange_n(&dirp->lock, &expected, 1, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+
+	while (!atomic_compare_exchange_strong_explicit(
+	       (atomic_int*)&dirp->lock, &expected, 1,
+	       memory_order_acquire, memory_order_relaxed)) {
 		expected = 0;
-		/* Yield to avoid busy spinning */
+
 		sched_yield();
 	}
 }
 
 static inline void dir_unlock(DIR *dirp) {
-	__atomic_store_n(&dirp->lock, 0, __ATOMIC_RELEASE);
+	atomic_store_explicit((atomic_int*)&dirp->lock, 0, memory_order_release);
 }
 #endif
+
 
 static inline DIR *opendir(const char *dirname) {
 	if (!dirname) {
@@ -420,12 +423,17 @@ static inline DIR *opendir(const char *dirname) {
 	dirp->buffer_end = 0;
 	dirp->position = 0;
 	dirp->error_code = 0;
-	__atomic_store_n(&dirp->lock, 0, __ATOMIC_RELAXED);
+
+	#if DIRENT_THREADS
+		atomic_store_explicit((atomic_int*)&dirp->lock, 0, memory_order_relaxed);
+	#else
+		dirp->lock = 0;
+	#endif
 
 	return dirp;
 }
 
-static inline struct dirent *readdir(DIR *dirp) {
+static inline dirent *readdir(DIR *dirp) {
 	if (!dirp) {
 		errno = EBADF;
 		return NULL;
@@ -453,18 +461,18 @@ static inline struct dirent *readdir(DIR *dirp) {
 	}
 
 	/* Validate buffer bounds */
-	if (dirp->buffer_pos + sizeof(struct linux_dirent) > dirp->buffer_end) {
+	if (dirp->buffer_pos + sizeof(linux_dirent) > dirp->buffer_end) {
 		errno = EIO;
 		return NULL;
 	}
 
 	/* Parse current entry from buffer */
-	struct linux_dirent *d = (struct linux_dirent *)(dirp->buffer + dirp->buffer_pos);
+	linux_dirent *d = (linux_dirent *)(dirp->buffer + dirp->buffer_pos);
 
 	/* Validate record length */
-	if (d->d_reclen < sizeof(struct linux_dirent) ||
+	if (d->d_reclen < sizeof(linux_dirent) ||
 	    dirp->buffer_pos + d->d_reclen > dirp->buffer_end ||
-	    d->d_reclen > sizeof(struct linux_dirent) + NAME_MAX + 1) {
+	    d->d_reclen > sizeof(linux_dirent) + NAME_MAX + 1) {
 		errno = EIO;
 		return NULL;
 	}
@@ -493,7 +501,7 @@ static inline struct dirent *readdir(DIR *dirp) {
 }
 
 /* Thread-safe readdir_r (deprecated but provided for POSIX compliance) */
-static inline int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result) {
+static inline int readdir_r(DIR *dirp, dirent *entry, dirent **result) {
 	if (!dirp || !entry || !result) return EINVAL;
 
 	*result = NULL;
@@ -501,7 +509,7 @@ static inline int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **res
 	/* Use internal locking for thread safety */
 	dir_lock(dirp);
 
-	struct dirent *current = readdir(dirp);
+	dirent *current = readdir(dirp);
 	int saved_errno = errno;
 
 	if (current) {
@@ -617,7 +625,11 @@ static inline DIR *fdopendir(int fd) {
 	dirp->position = 0;
 	dirp->error_code = 0;
 
-	__atomic_store_n(&dirp->lock, 0, __ATOMIC_RELAXED);
+	#if DIRENT_THREADS
+		atomic_store_explicit((atomic_int*)&dirp->lock, 0, memory_order_relaxed);
+	#else
+		dirp->lock = 0;
+	#endif
 
 	return dirp;
 }
@@ -629,22 +641,22 @@ static inline DIR *fdopendir(int fd) {
 /* ================================================================ */
 
 /* Directory entry comparison for scandir */
-static inline int alphasort(const struct dirent **a, const struct dirent **b) {
+static inline int alphasort(const dirent **a, const dirent **b) {
 	if (!a || !*a || !b || !*b) return 0;
 	return strcmp((*a)->d_name, (*b)->d_name);
 }
 
 /* Reverse alphabetical sort */
-static inline int versionsort(const struct dirent **a, const struct dirent **b) {
+static inline int versionsort(const dirent **a, const dirent **b) {
 	if (!a || !*a || !b || !*b) return 0;
 	/* Simplified version sort - just use strcmp for now */
 	return strcmp((*a)->d_name, (*b)->d_name);
 }
 
 /* Scan directory and sort entries (improved error handling) */
-static inline int scandir(const char *dirpath, struct dirent ***namelist,
-                         int (*select_fn)(const struct dirent *),
-                         int (*compar)(const struct dirent **, const struct dirent **)) {
+static inline int scandir(const char *dirpath, dirent ***namelist,
+                         int (*select_fn)(const dirent *),
+                         int (*compar)(const dirent **, const dirent **)) {
 	if (!dirpath || !namelist) {
 		errno = EINVAL;
 		return -1;
@@ -653,18 +665,18 @@ static inline int scandir(const char *dirpath, struct dirent ***namelist,
 	DIR *dirp = opendir(dirpath);
 	if (!dirp) return -1;
 
-	struct dirent **list = NULL;
+	dirent **list = NULL;
 	int count = 0;
 	int capacity = 16;
 
-	list = (struct dirent **)malloc(capacity * sizeof(struct dirent *));
+	list = (dirent **)malloc(capacity * sizeof(dirent *));
 	if (!list) {
 		closedir(dirp);
 		errno = ENOMEM;
 		return -1;
 	}
 
-	struct dirent *entry;
+	dirent *entry;
 	while ((entry = readdir(dirp)) != NULL) {
 		/* Apply filter function if provided */
 		if (select_fn && !select_fn(entry)) continue;
@@ -672,7 +684,7 @@ static inline int scandir(const char *dirpath, struct dirent ***namelist,
 		/* Resize array if needed */
 		if (count >= capacity) {
 			capacity *= 2;
-			struct dirent **new_list = (struct dirent **)realloc(list, capacity * sizeof(struct dirent *));
+			dirent **new_list = (dirent **)realloc(list, capacity * sizeof(dirent *));
 			if (!new_list) {
 				for (int i = 0; i < count; i++) free(list[i]);
 				free(list);
@@ -684,8 +696,8 @@ static inline int scandir(const char *dirpath, struct dirent ***namelist,
 		}
 
 		/* Allocate and copy entry */
-		size_t entry_size = sizeof(struct dirent);
-		list[count] = (struct dirent *)malloc(entry_size);
+		size_t entry_size = sizeof(dirent);
+		list[count] = (dirent *)malloc(entry_size);
 		if (!list[count]) {
 			for (int i = 0; i < count; i++) free(list[i]);
 			free(list);
@@ -702,7 +714,7 @@ static inline int scandir(const char *dirpath, struct dirent ***namelist,
 
 	/* Sort if comparison function provided */
 	if (count > 0 && compar) {
-		qsort(list, count, sizeof(struct dirent *),
+		qsort(list, count, sizeof(dirent *),
 		      (int (*)(const void *, const void *))compar);
 	}
 

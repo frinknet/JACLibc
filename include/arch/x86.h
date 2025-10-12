@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 /* i386 syscall assembly */
-static inline long __arch_syscall(long number, long a1, long a2, long a3, long a4, long a5, long a6) {
+static inline long __x86_syscall(long number, long a1, long a2, long a3, long a4, long a5, long a6) {
 	long result;
 	__asm__ volatile ("int $0x80"
 		: "=a"(result)

@@ -358,14 +358,15 @@ static inline const char* basename(const char* path) {
 
 #ifdef __cplusplus
 }
+#endif
 
+#ifdef __cplusplus
 #include <type_traits>
 template<typename T> T *memcpy(T*, const T*, size_t) = delete;
 template<typename T> T *memmove(T*, const T*, size_t) = delete;
 template<typename T> T *strcpy(T*, const char*) = delete;
 template<typename T> T *strcat(T*, const char*) = delete;
 static_assert(std::is_same<decltype(::memcpy((int*)0, (int*)0, 0)), void*>::value, "Use C memcpy, not template");
-#endif
 #endif
 
 #endif /* STRING_H */

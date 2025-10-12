@@ -57,7 +57,7 @@ typedef unsigned int useconds_t;  /* Microseconds (0 to 1000000) */
 typedef int suseconds_t;          /* Signed microseconds */
 
 /* Large file support types */
-#if JACL_LARGEFILE64
+#if JACL_HAS_LFS
 typedef long long off64_t;      /* 64-bit file offset */
 typedef long long blkcnt64_t;   /* 64-bit block count */
 #endif

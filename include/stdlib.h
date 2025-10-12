@@ -4,13 +4,14 @@
 #pragma once
 
 #include <config.h>
-#include <stdio.h>
-#include <stddef.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdbit.h>
+#include <stddef.h>
 #include <string.h>
-#include <limits.h>
+#include <stdio.h>
 #include <signal.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 #if JACL_HAS_C23

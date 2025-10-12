@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-static inline long __arch_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+static inline long __wasm_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
   switch ((int)num) {
     case SYS_read:
       return js_read((int)a1, (void*)a2, (size_t)a3);

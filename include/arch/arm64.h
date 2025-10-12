@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 /* ARM64 syscall assembly */
-static inline long __arch_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+static inline long __arm64_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
 	long result;
 	register long x8 __asm__("x8") = num;
 	register long x0 __asm__("x0") = a1;

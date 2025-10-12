@@ -38,26 +38,20 @@ typedef enum {
 #define FAKE_ATOMICS
 #endif
 
-#ifdef FAKE_ATOMICS
-#define ATOMIC(type) type
-#else
-#define ATOMIC(type) _Atomic(type)
-#endif
-
-typedef ATOMIC(bool) atomic_bool;
-typedef ATOMIC(char) atomic_char;
-typedef ATOMIC(signed char) atomic_schar;
-typedef ATOMIC(unsigned char) atomic_uchar;
-typedef ATOMIC(short) atomic_short;
-typedef ATOMIC(unsigned short) atomic_ushort;
-typedef ATOMIC(int) atomic_int;
-typedef ATOMIC(unsigned int) atomic_uint;
-typedef ATOMIC(long) atomic_long;
-typedef ATOMIC(unsigned long) atomic_ulong;
-typedef ATOMIC(long long) atomic_llong;
-typedef ATOMIC(unsigned long long) atomic_ullong;
-typedef ATOMIC(void*) atomic_voidptr;
-typedef struct { ATOMIC(bool) _Value; } atomic_flag;
+typedef _Atomic bool atomic_bool;
+typedef _Atomic char atomic_char;
+typedef _Atomic signed char atomic_schar;
+typedef _Atomic unsigned char atomic_uchar;
+typedef _Atomic short atomic_short;
+typedef _Atomic unsigned short atomic_ushort;
+typedef _Atomic int atomic_int;
+typedef _Atomic unsigned int atomic_uint;
+typedef _Atomic long atomic_long;
+typedef _Atomic unsigned long atomic_ulong;
+typedef _Atomic long long atomic_llong;
+typedef _Atomic unsigned long long atomic_ullong;
+typedef _Atomic uintptr_t atomic_voidptr;
+typedef struct { _Atomic  bool _Value; } atomic_flag;
 
 // Memory Barrier
 #ifdef FAKE_ATOMICS

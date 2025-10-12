@@ -15,11 +15,8 @@ extern "C" {
 	#define FCNTL_WIN32 1
 	#include <windows.h>
 	#include <io.h>
-#elif defined(JACL_ARCH_WASM)
-	#define FCNTL_WASM 1
 #else
 	#define FCNTL_POSIX 1
-	#include <unistd.h>
 	#include <sys/syscall.h>
 #endif
 
@@ -313,10 +310,6 @@ static inline int creat(const char *pathname, mode_t mode) {
 	return open(pathname, O_CREAT | O_WRONLY | O_TRUNC, 0);
 }
 
-static inline int close(int fd) {
-	return _close(fd);
-}
-
 static inline int fcntl(int fd, int cmd, ...) {
 	va_list args;
 	va_start(args, cmd);
@@ -325,58 +318,73 @@ static inline int fcntl(int fd, int cmd, ...) {
 		case F_DUPFD: {
 			int min_fd = va_arg(args, int);
 			int new_fd = _dup(fd);
+
 			va_end(args);
+
 			return (new_fd >= min_fd) ? new_fd : -1;
 		}
 
 		case F_DUPFD_CLOEXEC: {
 			int min_fd = va_arg(args, int);
 			int new_fd = _dup(fd);
+
 			va_end(args);
+
 			/* Windows: Set inheritable to FALSE for CLOEXEC equivalent */
 			if (new_fd >= min_fd) {
 				HANDLE h = (HANDLE)_get_osfhandle(new_fd);
 				SetHandleInformation(h, HANDLE_FLAG_INHERIT, 0);
+
 				return new_fd;
 			}
+
 			return -1;
 		}
 
 		case F_GETFD:
 			va_end(args);
+
 			/* Check if handle is inheritable */
 			{
 				HANDLE h = (HANDLE)_get_osfhandle(fd);
 				DWORD flags;
-				if (GetHandleInformation(h, &flags)) {
-					return (flags & HANDLE_FLAG_INHERIT) ? 0 : FD_CLOEXEC;
-				}
+
+				if (GetHandleInformation(h, &flags)) return (flags & HANDLE_FLAG_INHERIT) ? 0 : FD_CLOEXEC;
 			}
+
 			return 0;
 
 		case F_SETFD: {
 			int flags = va_arg(args, int);
+
 			va_end(args);
+
 			HANDLE h = (HANDLE)_get_osfhandle(fd);
 			DWORD win_flags = (flags & FD_CLOEXEC) ? 0 : HANDLE_FLAG_INHERIT;
+
 			return SetHandleInformation(h, HANDLE_FLAG_INHERIT, win_flags) ? 0 : -1;
 		}
 
 		case F_GETFL:
 			va_end(args);
+
 			/* Cannot easily determine original open flags on Windows */
 			return 0;
 
 		case F_SETFL: {
 			int flags = va_arg(args, int);
+
 			va_end(args);
+
 			/* Limited flag setting support on Windows */
 			(void)flags;
+
 			return 0;
 		}
 
 		default:
 			va_end(args);
+
 			return -1;
 	}
 }
@@ -384,52 +392,14 @@ static inline int fcntl(int fd, int cmd, ...) {
 /* POSIX advisory functions - limited Windows support */
 static inline int posix_fadvise(int fd, off_t offset, off_t len, int advice) {
 	(void)fd; (void)offset; (void)len; (void)advice;
+
 	return 0; /* No-op on Windows */
 }
 
 static inline int posix_fallocate(int fd, off_t offset, off_t len) {
 	(void)fd; (void)offset; (void)len;
+
 	return -1; /* Not easily supported on Windows */
-}
-
-#elif defined(FCNTL_WASM)
-/* ================================================================ */
-/* WebAssembly - File operations not supported                     */
-/* ================================================================ */
-
-static inline int open(const char *pathname, int flags, ...) {
-	(void)pathname; (void)flags;
-	return -1; /* Not supported */
-}
-
-static inline int openat(int dirfd, const char *pathname, int flags, ...) {
-	(void)dirfd; (void)pathname; (void)flags;
-	return -1; /* Not supported */
-}
-
-static inline int creat(const char *pathname, mode_t mode) {
-	(void)pathname; (void)mode;
-	return -1; /* Not supported */
-}
-
-static inline int close(int fd) {
-	(void)fd;
-	return -1; /* Not supported */
-}
-
-static inline int fcntl(int fd, int cmd, ...) {
-	(void)fd; (void)cmd;
-	return -1; /* Not supported */
-}
-
-static inline int posix_fadvise(int fd, off_t offset, off_t len, int advice) {
-	(void)fd; (void)offset; (void)len; (void)advice;
-	return -1; /* Not supported */
-}
-
-static inline int posix_fallocate(int fd, off_t offset, off_t len) {
-	(void)fd; (void)offset; (void)len;
-	return -1; /* Not supported */
 }
 
 #else
@@ -467,10 +437,6 @@ static inline int openat(int dirfd, const char *pathname, int flags, ...) {
 
 static inline int creat(const char *pathname, mode_t mode) {
 	return open(pathname, O_CREAT | O_WRONLY | O_TRUNC, mode);
-}
-
-static inline int close(int fd) {
-	return (int)syscall(SYS_close, fd);
 }
 
 static inline int fcntl(int fd, int cmd, ...) {
@@ -518,30 +484,6 @@ static inline int posix_fallocate(int fd, off_t offset, off_t len) {
 	return (int)syscall(SYS_fallocate, fd, 0, offset, len);
 }
 
-/* Additional POSIX functions */
-static inline int dup(int oldfd) {
-	return fcntl(oldfd, F_DUPFD, 0);
-}
-
-static inline int dup2(int oldfd, int newfd) {
-	return (int)syscall(SYS_dup2, oldfd, newfd);
-}
-
-#if JACL_OS_LINUX
-static inline int dup3(int oldfd, int newfd, int flags) {
-	#if defined(SYS_dup3)
-		return (int)syscall(SYS_dup3, oldfd, newfd, flags);
-	#endif
-
-	/* Fallback using dup2 and fcntl */
-	if (dup2(oldfd, newfd) == -1) return -1;
-	if (flags & O_CLOEXEC) {
-		return fcntl(newfd, F_SETFD, FD_CLOEXEC);
-	}
-	return newfd;
-}
-#endif
-
 /* Large file support */
 #if JACL_HAS_LFS
 static inline int fcntl64(int fd, int cmd, ...) {
@@ -574,8 +516,15 @@ static inline int fcntl64(int fd, int cmd, ...) {
 }
 
 static inline int posix_fadvise64(int fd, off64_t offset, off64_t len, int advice) {
-	return (int)syscall(SYS_fadvise64_64, fd, offset, len, advice);
+	#if defined(SYS_fadvise64_64)
+		return (int)syscall(SYS_fadvise64_64, fd, offset, len, advice);
+	#else
+		errno = ENOSYS;
+
+		return -1;
+	#endif
 }
+
 
 static inline int posix_fallocate64(int fd, off64_t offset, off64_t len) {
 	#if defined(SYS_fallocate)
@@ -635,7 +584,8 @@ static inline int fcntl_dupfd_cloexec(int fd, int min_fd) {
 	if (new_fd == -1) return -1;
 
 	if (fcntl_set_cloexec(new_fd) == -1) {
-		close(new_fd);
+		syscall(SYS_close, new_fd);
+
 		return -1;
 	}
 

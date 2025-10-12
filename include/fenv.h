@@ -34,12 +34,7 @@ typedef struct { fexcept_t excepts; int round; } fenv_t;
 static const fenv_t __jacl_fenv_default = { 0u, FE_TONEAREST };
 #define FE_DFL_ENV ((const fenv_t*)&__jacl_fenv_default)
 
-/* Emulated environment storage (thread-local when available) */
-#if JACL_HAS_PTHREADS
-	    extern _Thread_local fenv_t __jacl_fenv;
-#else
-    extern fenv_t __jacl_fenv;  /* Global fallback for single-threaded */
-#endif
+extern _Thread_local fenv_t __jacl_fenv;
 
 /* Inline API functions */
 static inline int feclearexcept(int e) {

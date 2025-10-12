@@ -6,11 +6,16 @@
 #define JACL_VERSION 1.34
 #define JACL_RELEASE 202510L
 
+// avoid compile screams
+#if defined(__GNUC__) || defined(__clang__)
+  #pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
+  #pragma GCC diagnostic ignored "-Wincompatible-library-redeclaration"
+#endif
+
 // useful macros
 #define JACL_QUOTE(x) #x
 #define JACL_CONCAT(a,b,space) a##space##b
 #define JACL_HEADER(dir, file) <dir/file.h>
-#define JACL_ARCHFILE(type) <arch/JACL_ARCH##_##type.h>
 
 // standard version
 #if defined(__STDC_VERSION__)
@@ -107,57 +112,81 @@
 
 // architecture
 #if defined(__i386__)
+	#undef x86
 	#define JACL_ARCH x86
 	#define JACL_ARCH_X86 1
+	#define __jacl_arch_syscall __x86_syscall
 	#define JACL_BITS 32
 #elif defined(__x86_64__) || defined(__amd64__)
+	#undef x64
 	#define JACL_ARCH x64
 	#define JACL_ARCH_X64 1
+	#define __jacl_arch_syscall __x64_syscall
 	#define JACL_BITS 64
 #elif defined(__aarch64__)
+	#undef arm64
 	#define JACL_ARCH arm64
 	#define JACL_ARCH_ARM64 1
+	#define __jacl_arch_syscall __arm64_syscall
 	#define JACL_BITS 64
 #elif defined(__arm__) || defined(_ARM_) || defined(_M_ARM)
+	#undef arm32
 	#define JACL_ARCH arm32
 	#define JACL_ARCH_ARM32 1
+	#define __jacl_arch_syscall __arm32_syscall
 	#define JACL_BITS 32
 #elif defined(__riscv) || defined(__riscv__)
+	#undef riscv
 	#define JACL_ARCH riscv
 	#define JACL_ARCH_RISCV 1
+	#define __jacl_arch_syscall __riscv_syscall
 	#if defined(__riscv_xlen) && __riscv_xlen == 64
 		#define JACL_BITS 64
 	#else
 		#define JACL_BITS 32
 	#endif
 #elif defined(__wasm__)
+	#undef wasm
 	#define JACL_ARCH wasm
 	#define JACL_ARCH_WASM 1
+	#define __jacl_arch_syscall __wasm_syscall
 	#define JACL_BITS 32
-	#include <JACL_ARCHFILE(helpers)>
+	#include <arch/wasm_helpers.h>
 #else
-	#error "JACLibc - Unsuported Architecture"
+	#error "JACLibc - Unsupported Architecture"
 #endif
 
 // operating system
 #if defined(__linux__)
+	#undef linux
 	#define JACL_OS linux
 	#define JACL_OS_LINUX 1
+	#define __jacl_os_syscall __linux_syscall
 #elif defined(_WIN32)
+	#undef windows
 	#define JACL_OS windows
 	#define JACL_OS_WINDOWS 1
+	#define __jacl_os_syscall __windows_syscall
 #elif defined(__APPLE__) && defined(__MACH__)
+	#undef darwin
 	#define JACL_OS darwin
 	#define JACL_OS_DARWIN 1
+	#define __jacl_os_syscall __darwin_syscall
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+	#undef bsd
 	#define JACL_OS bsd
 	#define JACL_OS_BSD 1
+	#define __jacl_os_syscall __bsd_syscall
 #elif defined(__wasi__)
+	#undef wasi
 	#define JACL_OS wasi
 	#define JACL_OS_WASI 1
+	#define __jacl_os_syscall __wasi_syscall
 #elif defined(__wasm__)
+	#undef jsrun
 	#define JACL_OS jsrun
 	#define JACL_OS_JSRUN 1
+	#define __jacl_os_syscall __jsrun_syscall
 #else
 	#error "JACLibc - Unsupported Operating System"
 #endif

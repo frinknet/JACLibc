@@ -1,4 +1,4 @@
-I/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef ARCH_X64_H
 #define ARCH_X64_H
 #pragma once
@@ -8,7 +8,7 @@ I/* (c) 2025 FRINKnet & Friends – MIT licence */
 #endif
 
 	/* x86_64 syscall assembly */
-	static inline long __arch_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+	static inline long __x64_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
 		long result;
 		register long rax __asm__("rax") = num;
 		register long rdi __asm__("rdi") = a1;

@@ -38,10 +38,12 @@ typedef struct {
 } test_t;
 
 typedef struct {
-  const char* name;
-  test_t tests[JACL_MAX_TESTS];
-  int test_count;
-  test_stats_t stats;
+	const char* type;
+	const char* unit;
+	const char* suite;
+	test_t tests[JACL_MAX_TESTS];
+	int test_count;
+	test_stats_t stats;
 } test_suite_t;
 
 static test_stats_t __jacl_test_stats         = {0,0,0,0};
@@ -78,56 +80,39 @@ static inline int __jacl_test_color(void) {
 /* ============================================================= */
 /* Registration                                                  */
 /* ============================================================= */
-static inline const char* __jacl_test_type(const char* type) {
-  static const char* current = "unit";
-  if (type) current = type;
-  return current;
-}
-
-static inline const char* __jacl_test_suite(const char* suite) {
-  static const char* current = "default";
-  if (suite) current = suite;
-  return current;
-}
+static char *__jacl_test_type = "unit";
+static char *__jacl_test_unit = "test";
+static char *__jacl_test_suite = "default";
 
 static inline void __jacl_test_register(const char *test_name, test_func_t func) {
-	// Build suite name from current type and suite
-	char name_buf[256];
-
-	snprintf(name_buf, sizeof(name_buf), "%s - %s tests", __jacl_test_suite(NULL), __jacl_test_type(NULL));
-
-	// Find or create suite
 	test_suite_t *suite = NULL;
-
 	for (int i = 0; i < __jacl_test_suite_count; i++) {
-		if (!strcmp(__jacl_test_suites[i].name, name_buf)) {
+		if (!strcmp(__jacl_test_suites[i].type, __jacl_test_type) &&
+		    !strcmp(__jacl_test_suites[i].unit, __jacl_test_unit) &&
+		    !strcmp(__jacl_test_suites[i].suite, __jacl_test_suite)) {
 			suite = &__jacl_test_suites[i];
+
 			break;
 		}
 	}
 
 	if (!suite) {
-		// Create new suite
 		if (__jacl_test_suite_count >= JACL_MAX_SUITES) {
 			fprintf(stderr, "Error: too many suites (>%d)\n", JACL_MAX_SUITES);
+
 			exit(1);
 		}
 
 		suite = &__jacl_test_suites[__jacl_test_suite_count++];
-
-		// Allocate permanent storage for suite name
-		char *permanent_name = (char*)malloc(strlen(name_buf) + 1);
-
-		strcpy(permanent_name, name_buf);
-
-		suite->name = permanent_name;
+		suite->type = __jacl_test_type;
+		suite->unit = __jacl_test_unit;
+		suite->suite = __jacl_test_suite;
 		suite->test_count = 0;
 		suite->stats = (test_stats_t){0, 0, 0, 0};
 	}
 
-	// Add test to suite (rest unchanged)
 	if (suite->test_count >= JACL_MAX_TESTS) {
-		fprintf(stderr, "Error: too many tests in suite '%s' (>%d)\n", suite->name, JACL_MAX_TESTS);
+		fprintf(stderr, "Error: too many tests in suite '%s: %s' (>%d)\n", suite->unit, suite->suite, JACL_MAX_TESTS);
 		exit(1);
 	}
 
@@ -173,18 +158,10 @@ static inline void __jacl_test_register(const char *test_name, test_func_t func)
   printf("	INFO: " format "\n", ##__VA_ARGS__); \
 } while(0)
 
-#define TEST_RUN(test) __jacl_test_run_one(test)
-
-#define TEST_RUN_SUITE(name) __jacl_test_run_suite(name)
-
-#define TEST_RUN_ALL() __jacl_test_run_all()
-
 /* ============================================================= */
 /* Convenience MAIN Macro                                        */
 /* ============================================================= */
 #ifndef NO_TEST_MAIN
-#include <static.h> // include everything
-
 #define TEST_MAIN() \
   int main(int argc, char**argv) { \
     int r = 0; \
@@ -195,6 +172,9 @@ static inline void __jacl_test_register(const char *test_name, test_func_t func)
     __jacl_test_summary(); \
     return r; \
   }
+
+#else
+#define TEST_MAIN()
 #endif
 
 /* ============================================================= */
@@ -255,9 +235,12 @@ static inline void __jacl_test_register(const char *test_name, test_func_t func)
 /* ============================================================= */
 /* Test Definition DSL                                           */
 /* ============================================================= */
-#define TEST_TYPE(name) __jacl_test_type(#name)
 
-#define TEST_SUITE(name) __jacl_test_suite(#name)
+#define TEST_TYPE(name) __jacl_test_type = #name
+
+#define TEST_UNIT(name) __jacl_test_unit = #name
+
+#define TEST_SUITE(name) __jacl_test_suite = #name
 
 #if __has_attribute(constructor)
   // Auto-registration
@@ -322,21 +305,19 @@ static inline int __jacl_test_run_all(void) {
     return 0;
   }
 
-  // Count total tests
   int total = 0;
-
   for (int i = 0; i < __jacl_test_suite_count; i++) {
     total += __jacl_test_suites[i].test_count;
   }
 
   printf("Running %d test%s…\n\n", total, total == 1 ? "" : "s");
 
-  // Run all suites
   for (int i = 0; i < __jacl_test_suite_count; i++) {
     test_suite_t *suite = &__jacl_test_suites[i];
-
-    printf("\n%s=== %s ===%s\n", __jacl_test_color() ? COLOR_CYAN : "",
-           suite->name, __jacl_test_color() ? COLOR_RESET : "");
+    printf("\n%s=== %s: %s - %s tests ===%s\n",
+           __jacl_test_color() ? COLOR_CYAN : "",
+           suite->unit, suite->suite, suite->type,
+           __jacl_test_color() ? COLOR_RESET : "");
 
     for (int j = 0; j < suite->test_count; j++) {
       __jacl_test_run_single(suite, &suite->tests[j]);
@@ -347,42 +328,43 @@ static inline int __jacl_test_run_all(void) {
 }
 
 static inline int __jacl_test_run_suite(const char *name) {
-  test_suite_t *suite = NULL;
+	test_suite_t *suite = NULL;
 
-  // Find suite
-  for (int i = 0; i < __jacl_test_suite_count; i++) {
-    if (!strcmp(__jacl_test_suites[i].name, name)) {
-      suite = &__jacl_test_suites[i];
+	for (int i = 0; i < __jacl_test_suite_count; i++) {
+		if (!strcmp(__jacl_test_suites[i].suite, name)) {
+			suite = &__jacl_test_suites[i];
 
-      break;
-    }
-  }
+			break;
+		}
+	}
 
-  if (!suite) {
-    printf("Suite '%s' not found\n", name);
+	if (!suite) {
+		printf("Suite '%s' not found\n", name);
 
-    return 1;
-  }
+		return 1;
+	}
 
-  printf("Suite '%s'\n\n", name);
-  printf("%s=== %s ===%s\n", __jacl_test_color() ? COLOR_CYAN : "", name, __jacl_test_color() ? COLOR_RESET : "");
+	printf("%s=== %s: %s - %s tests ===%s\n",
+	       __jacl_test_color() ? COLOR_CYAN : "",
+	       suite->unit, suite->suite, suite->type,
+	       __jacl_test_color() ? COLOR_RESET : "");
 
-  for (int i = 0; i < suite->test_count; i++) {
-    __jacl_test_run_single(suite, &suite->tests[i]);
-  }
+	for (int i = 0; i < suite->test_count; i++) __jacl_test_run_single(suite, &suite->tests[i]);
 
-  return __jacl_test_stats.failed > 0;
+	return __jacl_test_stats.failed > 0;
 }
 
 static inline int __jacl_test_run_one(const char *test_name) {
-  // Search all suites for test
   for (int i = 0; i < __jacl_test_suite_count; i++) {
     test_suite_t *suite = &__jacl_test_suites[i];
 
     for (int j = 0; j < suite->test_count; j++) {
       if (!strcmp(suite->tests[j].name, test_name)) {
-        printf("Test '%s' (suite %s)\n\n", test_name, suite->name);
-        printf("%s=== %s ===%s\n", __jacl_test_color() ? COLOR_CYAN : "", suite->name, __jacl_test_color() ? COLOR_RESET : "");
+        printf("Test '%s' (suite %s:%s)\n\n", test_name, suite->unit, suite->suite);
+        printf("%s=== %s: %s - %s tests ===%s\n",
+               __jacl_test_color() ? COLOR_CYAN : "",
+               suite->unit, suite->suite, suite->type,
+               __jacl_test_color() ? COLOR_RESET : "");
         __jacl_test_run_single(suite, &suite->tests[j]);
 
         return __jacl_test_stats.failed > 0;
