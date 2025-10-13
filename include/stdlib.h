@@ -14,6 +14,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <time.h>
+#include <fcntl.h>
 
 #if JACL_HAS_C23
 #define __STDC_VERSION_STDLIB_H__ 202311L
@@ -32,6 +33,10 @@ extern "C" {
 
 #ifndef MB_LEN_MAX
 #define MB_LEN_MAX 1
+#endif
+
+#ifndef TMP_MAX
+#define TMP_MAX 238328
 #endif
 
 	/* Builtin compatibility  */

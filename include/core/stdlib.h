@@ -641,6 +641,7 @@ int atexit(void (*func)(void)) {
 			__jacl_exit_handlers[i].func = func;
 			__jacl_exit_handlers[i].used = 1;
 			__jacl_exit_count++;
+
 			return 0;
 		}
 	}

@@ -153,7 +153,7 @@ struct stat64 {
 
 #if STAT_WIN32
 /* ================================================================ */
-/* Windows implementation using Win32 APIs                         */
+/* Windows implementation using Win32 APIs                          */
 /* ================================================================ */
 
 /* Convert Windows file attributes to POSIX mode */
@@ -452,19 +452,13 @@ static inline mode_t umask(mode_t mask) {
 static inline int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags) {
 	if (!pathname || !statbuf) return -1;
 
-	return (int)syscall(SYS_newfstatat, dirfd, pathname, statbuf, flags);
-}
+	#ifdef SYS_newfstatat
+		return (int)syscall(SYS_newfstatat, dirfd, pathname, statbuf, flags);
+	#else
+		errno = ENOSYS;
 
-static inline int mkdirat(int dirfd, const char *pathname, mode_t mode) {
-	if (!pathname) return -1;
-
-	return (int)syscall(SYS_mkdirat, dirfd, pathname, mode);
-}
-
-static inline int fchmodat(int dirfd, const char *pathname, mode_t mode, int flags) {
-	if (!pathname) return -1;
-
-	return (int)syscall(SYS_fchmodat, dirfd, pathname, mode, flags);
+		return -1;
+	#endif
 }
 
 // Additional POSIX functions
@@ -483,33 +477,64 @@ static inline int mkfifo(const char *pathname, mode_t mode) {
 static inline int stat64(const char *pathname, struct stat64 *statbuf) {
 	if (!pathname || !statbuf) return -1;
 
-	return (int)syscall(SYS_stat64, pathname, statbuf);
+	#ifdef SYS_stat64
+		return (int)syscall(SYS_stat64, pathname, statbuf);
+	#else
+		errno = ENOSYS;
+
+		return -1;
+	#endif
 }
 
 static inline int fstat64(int fd, struct stat64 *statbuf) {
 	if (!statbuf) return -1;
 
-	return (int)syscall(SYS_fstat64, fd, statbuf);
+	#ifdef SYS_fstat64
+		return (int)syscall(SYS_fstat64, fd, statbuf);
+	#else
+		errno = ENOSYS;
+
+		return -1;
+	#endif
 }
 
 static inline int lstat64(const char *pathname, struct stat64 *statbuf) {
 	if (!pathname || !statbuf) return -1;
 
-	return (int)syscall(SYS_lstat64, pathname, statbuf);
+	#ifdef SYS_lstat64
+		return (int)syscall(SYS_lstat64, pathname, statbuf);
+	#else
+		errno = ENOSYS;
+
+		return -1;
+	#endif
 }
 #endif /* JACL_HAS_LFS */
 
 static inline int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags) {
 	if (!pathname) return -1;
 
-	return (int)syscall(SYS_utimensat, dirfd, pathname, times, flags);
+	#ifdef SYS_utimensat
+		return (int)syscall(SYS_utimensat, dirfd, pathname, times, flags);
+	#else
+		errno = ENOSYS;
+
+		return -1;
+	#endif
 }
 
 static inline int futimens(int fd, const struct timespec times[2]) {
-	return (int)syscall(SYS_futimens, fd, times);
+	#ifdef SYS_futimens
+		return (int)syscall(SYS_futimens, fd, times);
+	#else
+		errno = ENOSYS;
+
+		return -1;
+	#endif
 }
 
 #endif
+
 
 #ifdef __cplusplus
 }

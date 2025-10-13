@@ -10,17 +10,6 @@
 extern "C" {
 #endif
 
-// Notify
-#ifdef NO_JS_NOTIFY
-static void js_notify(js_t* v) {}
-#else
-static void js_notify(js_t* v) {
-	if (!js_ispublic(v)) return;
-
-	js_code("this.trigger(this.export(arguments[0]))", 39, JS_STRING(js_path(v)));
-}
-#endif
-
 #define JS_PUBLIC_ROOT __jacl_public_root()
 static js_t *__jacl_public_root(void) {
 	static js_t* root = NULL;
@@ -474,6 +463,7 @@ static ssize_t js_read(int fd, void *buf, size_t count) {
 
   return copy_len;
 }
+
 static ssize_t js_write(int fd, const void *buf, size_t count) {
   if (fd < 0 || fd >= JS_MAX_FDS || !buf) {
     errno = EBADF;
@@ -513,7 +503,7 @@ static ssize_t js_write(int fd, const void *buf, size_t count) {
 
   return count;
 }
-#endif
+#endif /* JACL_ARCH_WASM */
 
 // Slep and async
 #ifndef NO_JS_ASYNCIFY
@@ -525,21 +515,16 @@ static jmp_buf* __jacl_async_env(void) {
 }
 
 #define JS_PAUSE JS_EXEC(js_property(JS_ASYNC, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
-JS_EXPORT(sleep)
-void js_sleep(uint32_t ms) {
+JS_EXPORT(sleep) void js_sleep(uint32_t ms) {
 	if (setjmp(JS_ASYNC_ENV) == 0) {
 		JS_PAUSE;
 		JS_EXEC(js_property(JS_ASYNC, "sleep"), ms);
 	}
 }
-JS_EXPORT(pause)
-void js_pause() { JS_PAUSE; }
-JS_EXPORT(resume)
-void js_resume(void) {
-		longjmp(JS_ASYNC_ENV, 1);
-}
+JS_EXPORT(pause) void js_pause() { JS_PAUSE; }
+JS_EXPORT(resume) void js_resume(void) { longjmp(JS_ASYNC_ENV, 1); }
 #undef JS_PAUSE
-#endif
+#endif /* !NO_JS_ASYNCIFY */
 
 // JS Parser
 static js_t* js_parse_value(const char* s, size_t* i);

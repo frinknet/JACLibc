@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 TEST_TYPE(unit);
-TEST_UNIT(stdnoreturn.h);
+TEST_UNIT(stdnoreturn_h);
 
 /* ============================================================================
  * MACRO DEFINITIONS
@@ -81,8 +81,8 @@ TEST(noreturn_extern_linkage) {
 TEST_SUITE(noreturn_pointers);
 
 TEST(noreturn_function_pointer) {
-	// Verify noreturn function pointer compiles
-	noreturn void (*exit_ptr)(void) = exit_immediately;
+	// Pointer to noreturn function (noreturn applies to the function, not the pointer)
+	void (*exit_ptr)(void) = exit_immediately;
 	
 	// Don't actually call it
 	(void)exit_ptr;
@@ -90,7 +90,7 @@ TEST(noreturn_function_pointer) {
 }
 
 TEST(noreturn_function_pointer_with_args) {
-	noreturn void (*exit_code_ptr)(int) = exit_with_code;
+	void (*exit_code_ptr)(int) = exit_with_code;
 	
 	(void)exit_code_ptr;
 	ASSERT_TRUE(1);
@@ -113,7 +113,7 @@ TEST(noreturn_with_inline) {
 
 TEST(noreturn_order_matters) {
 	// Test that "noreturn void" compiles (not "void noreturn")
-	noreturn void (*ptr)(void);
+	void (*ptr)(void);
 	(void)ptr;
 	ASSERT_TRUE(1);
 }

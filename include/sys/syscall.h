@@ -26,7 +26,7 @@ static inline long syscall(long num, ...) {
 	a6 = va_arg(args, long);
 	va_end(args);
 
-	return __os_syscall(num, a1, a2, a3, a4, a5, a6);
+	return __jacl_os_syscall(num, a1, a2, a3, a4, a5, a6);
 }
 
 #ifdef __cplusplus

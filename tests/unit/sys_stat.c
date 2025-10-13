@@ -115,7 +115,7 @@ TEST_SUITE(stat_structure);
 
 TEST(stat_has_required_fields) {
 	struct stat st;
-	
+
 	st.st_dev = 1;
 	st.st_ino = 2;
 	st.st_mode = S_IFREG | 0644;
@@ -123,7 +123,7 @@ TEST(stat_has_required_fields) {
 	st.st_uid = 1000;
 	st.st_gid = 1000;
 	st.st_size = 12345;
-	
+
 	ASSERT_EQ(1, st.st_dev);
 	ASSERT_EQ(2, st.st_ino);
 	ASSERT_EQ(S_IFREG | 0644, st.st_mode);
@@ -135,11 +135,11 @@ TEST(stat_has_required_fields) {
 
 TEST(stat_has_timespec_fields) {
 	struct stat st;
-	
+
 	st.st_atim.tv_sec = 1000;
 	st.st_mtim.tv_sec = 2000;
 	st.st_ctim.tv_sec = 3000;
-	
+
 	ASSERT_EQ(1000, st.st_atim.tv_sec);
 	ASSERT_EQ(2000, st.st_mtim.tv_sec);
 	ASSERT_EQ(3000, st.st_ctim.tv_sec);
@@ -156,46 +156,46 @@ TEST(stat_regular_file) {
 	int fd = open("/tmp/stat_test_file.txt", O_CREAT | O_WRONLY, 0644);
 	write(fd, "test", 4);
 	close(fd);
-	
+
 	struct stat st;
 	int result = stat("/tmp/stat_test_file.txt", &st);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_TRUE(S_ISREG(st.st_mode));
 	ASSERT_EQ(4, st.st_size);
-	
+
 	unlink("/tmp/stat_test_file.txt");
 }
 
 TEST(stat_directory) {
 	mkdir("/tmp/stat_test_dir", 0755);
-	
+
 	struct stat st;
 	int result = stat("/tmp/stat_test_dir", &st);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_TRUE(S_ISDIR(st.st_mode));
-	
+
 	rmdir("/tmp/stat_test_dir");
 }
 
 TEST(stat_nonexistent) {
 	struct stat st;
 	int result = stat("/tmp/nonexistent_file_xyz123", &st);
-	
+
 	ASSERT_EQ(-1, result);
 }
 
 TEST(stat_null_pathname) {
 	struct stat st;
 	int result = stat(NULL, &st);
-	
+
 	ASSERT_EQ(-1, result);
 }
 
 TEST(stat_null_statbuf) {
 	int result = stat("/tmp", NULL);
-	
+
 	ASSERT_EQ(-1, result);
 }
 #endif
@@ -209,14 +209,14 @@ TEST_SUITE(fstat_test);
 TEST(fstat_basic) {
 	int fd = open("/tmp/fstat_test.txt", O_CREAT | O_RDWR, 0644);
 	write(fd, "data", 4);
-	
+
 	struct stat st;
 	int result = fstat(fd, &st);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_TRUE(S_ISREG(st.st_mode));
 	ASSERT_EQ(4, st.st_size);
-	
+
 	close(fd);
 	unlink("/tmp/fstat_test.txt");
 }
@@ -224,17 +224,17 @@ TEST(fstat_basic) {
 TEST(fstat_invalid_fd) {
 	struct stat st;
 	int result = fstat(-1, &st);
-	
+
 	ASSERT_EQ(-1, result);
 }
 
 TEST(fstat_null_statbuf) {
 	int fd = open("/tmp/fstat_test2.txt", O_CREAT | O_RDWR, 0644);
-	
+
 	int result = fstat(fd, NULL);
-	
+
 	ASSERT_EQ(-1, result);
-	
+
 	close(fd);
 	unlink("/tmp/fstat_test2.txt");
 }
@@ -249,21 +249,21 @@ TEST_SUITE(chmod_test);
 TEST(chmod_basic) {
 	int fd = open("/tmp/chmod_test.txt", O_CREAT | O_WRONLY, 0644);
 	close(fd);
-	
+
 	int result = chmod("/tmp/chmod_test.txt", 0755);
-	
+
 	ASSERT_EQ(0, result);
-	
+
 	struct stat st;
 	stat("/tmp/chmod_test.txt", &st);
 	ASSERT_TRUE(st.st_mode & S_IXUSR);
-	
+
 	unlink("/tmp/chmod_test.txt");
 }
 
 TEST(chmod_null_pathname) {
 	int result = chmod(NULL, 0644);
-	
+
 	ASSERT_EQ(-1, result);
 }
 #endif
@@ -276,29 +276,29 @@ TEST_SUITE(mkdir_test);
 
 TEST(mkdir_basic) {
 	int result = mkdir("/tmp/mkdir_test_dir", 0755);
-	
+
 	ASSERT_EQ(0, result);
-	
+
 	struct stat st;
 	stat("/tmp/mkdir_test_dir", &st);
 	ASSERT_TRUE(S_ISDIR(st.st_mode));
-	
+
 	rmdir("/tmp/mkdir_test_dir");
 }
 
 TEST(mkdir_existing) {
 	mkdir("/tmp/mkdir_test_dir2", 0755);
-	
+
 	int result = mkdir("/tmp/mkdir_test_dir2", 0755);
-	
+
 	ASSERT_EQ(-1, result);
-	
+
 	rmdir("/tmp/mkdir_test_dir2");
 }
 
 TEST(mkdir_null_pathname) {
 	int result = mkdir(NULL, 0755);
-	
+
 	ASSERT_EQ(-1, result);
 }
 #endif
@@ -310,19 +310,19 @@ TEST_SUITE(umask_test);
 
 TEST(umask_basic) {
 	mode_t old_mask = umask(0022);
-	
+
 	// Set it back
 	umask(old_mask);
-	
+
 	ASSERT_TRUE(1); // Just verify it doesn't crash
 }
 
 TEST(umask_changes) {
 	mode_t old1 = umask(0022);
 	mode_t old2 = umask(0077);
-	
+
 	ASSERT_EQ(0022, old2);
-	
+
 	umask(old1);
 }
 
@@ -333,7 +333,7 @@ TEST_SUITE(permission_combinations);
 
 TEST(read_write_permission) {
 	mode_t mode = S_IRUSR | S_IWUSR;
-	
+
 	ASSERT_TRUE(mode & S_IRUSR);
 	ASSERT_TRUE(mode & S_IWUSR);
 	ASSERT_FALSE(mode & S_IXUSR);
@@ -341,19 +341,19 @@ TEST(read_write_permission) {
 
 TEST(all_permissions) {
 	mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;
-	
+
 	ASSERT_EQ(0777, mode);
 }
 
 TEST(typical_file_permissions) {
 	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-	
+
 	ASSERT_EQ(0644, mode);
 }
 
 TEST(typical_directory_permissions) {
 	mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
-	
+
 	ASSERT_EQ(0755, mode);
 }
 
@@ -365,14 +365,14 @@ TEST_SUITE(mode_extraction);
 TEST(extract_file_type) {
 	mode_t mode = S_IFREG | 0644;
 	mode_t type = mode & S_IFMT;
-	
+
 	ASSERT_EQ(S_IFREG, type);
 }
 
 TEST(extract_permissions) {
 	mode_t mode = S_IFREG | 0755;
 	mode_t perms = mode & 0777;
-	
+
 	ASSERT_EQ(0755, perms);
 }
 
@@ -380,7 +380,7 @@ TEST(combine_type_and_perms) {
 	mode_t type = S_IFDIR;
 	mode_t perms = 0755;
 	mode_t mode = type | perms;
-	
+
 	ASSERT_TRUE(S_ISDIR(mode));
 	ASSERT_EQ(0755, mode & 0777);
 }
@@ -392,14 +392,14 @@ TEST_SUITE(edge_cases);
 
 TEST(zero_permissions) {
 	mode_t mode = S_IFREG | 0000;
-	
+
 	ASSERT_TRUE(S_ISREG(mode));
 	ASSERT_EQ(0000, mode & 0777);
 }
 
 TEST(all_special_bits) {
 	mode_t mode = S_ISUID | S_ISGID | S_ISVTX;
-	
+
 	ASSERT_TRUE(mode & S_ISUID);
 	ASSERT_TRUE(mode & S_ISGID);
 	ASSERT_TRUE(mode & S_ISVTX);
@@ -408,7 +408,7 @@ TEST(all_special_bits) {
 TEST(file_type_mask_isolation) {
 	mode_t mode = S_IFREG | S_ISUID | 0755;
 	mode_t type = mode & S_IFMT;
-	
+
 	ASSERT_EQ(S_IFREG, type);
 	ASSERT_TRUE(S_ISREG(mode));
 }

@@ -297,24 +297,43 @@ static inline int __jacl_isspace(int c) {
 /* ============================================================= */
 /* String Formatting                                             */
 /* ============================================================= */
-static inline int __jacl_format_string(char **out, const char *s, size_t remaining, int prec) {
+static inline int __jacl_format_string(char **out, const char *s, size_t remaining, int prec, int width, int flags) {
 	if (!s) s = "(null)";
 
 	int len = 0;
 
-	if (out && *out && remaining > 0) {
-		while (*s && remaining-- > 0 && (prec < 0 || len < prec)) {
-			*(*out)++ = *s++;
+	// Count the actual string length
+	const char *p = s;
+	while (*p && (prec < 0 || len < prec)) { p++; len++; }
 
-			len++;
+	int pad = width - len;
+	if (pad < 0) pad = 0;
+
+	// Left padding (if not left-aligned)
+	if (pad > 0 && !(flags & 0x01)) {
+		if (out && *out) {
+			for (int i = 0; i < pad; i++) *(*out)++ = ' ';
 		}
-
-		while (*s++) len++;
-	} else {
-		while (*s++) len++;
 	}
 
-	return len;
+	// Write the string
+	if (out && *out && remaining > 0) {
+		p = s;
+		int written = 0;
+		while (*p && remaining-- > 0 && (prec < 0 || written < prec)) {
+			*(*out)++ = *p++;
+			written++;
+		}
+	}
+
+	// Right padding (if left-aligned)
+	if (pad > 0 && (flags & 0x01)) {
+		if (out && *out) {
+			for (int i = 0; i < pad; i++) *(*out)++ = ' ';
+		}
+	}
+
+	return len + pad;
 }
 
 static inline int __jacl_format_num(char * restrict *out, uintptr_t num, int base, int sign, int width, int uppercase, int flags) {
@@ -617,7 +636,7 @@ static inline int __jacl_format(char * restrict out, size_t n, const char * rest
 		switch (*fmt++) {
 			case '%': if (out && len < (int)n - 1) *out++ = '%'; len++; break;
 			case 'c': if (out && len < (int)n - 1) *out++ = (char)va_arg(ap, int); len++; break;
-			case 's': len += __jacl_format_string(out ? &out : NULL, va_arg(ap, const char*), remaining, prec); break;
+			case 's': len += __jacl_format_string(out ? &out : NULL, va_arg(ap, const char*), remaining, prec, width, flags); break;
 			case 'i':
 			case 'd':
 			case 'u':

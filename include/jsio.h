@@ -93,10 +93,21 @@ uintptr_t	js_code(const char *code, int len, ...);
 
 #ifndef NO_JS_EXTERNALS
 #define JS_EXEC(fn, ...) js_code("[f,...a]=arguments;return this.import(this.export(f)(...a.map(this.export)))", 76, fn, __VA_ARGS__)
+#else
 #define NO_JS_NOTIFY
 #define NO_JS_ASYNCIFY
-#else
 #define JS_EXEC(fn, ...)
+#endif
+
+// Notify
+#ifdef NO_JS_NOTIFY
+static inline void js_notify(js_t* v) { (void*)v; }
+#else
+static inline void js_notify(js_t* v) {
+	if (!js_ispublic(v)) return;
+
+	js_code("this.trigger(this.export(arguments[0]))", 39, JS_STRING(js_path(v)));
+}
 #endif
 
 // Slep and async

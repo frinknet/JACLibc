@@ -292,7 +292,7 @@
 
 	/* x86_64 syscall assembly */
 	static inline long __linux_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
-		return __arch_syscall(num, a1, a2, a3, a4, a5, a6);
+		return __jacl_arch_syscall(num, a1, a2, a3, a4, a5, a6);
 	}
 
 #ifdef __cplusplus

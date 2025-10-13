@@ -14,7 +14,10 @@
 
 // useful macros
 #define JACL_QUOTE(x) #x
-#define JACL_CONCAT(a,b,space) a##space##b
+#define JACL_EXPAND(x) x
+#define JACL_CONCAT(a, b, space) a##space##b
+#define JACL_CONCAT_EXPAND(a, b, space) JACL_CONCAT(a,b,space)
+#define JACL_INIT(name) static void __attribute__((constructor)) JACL_CONCAT_EXPAND(__jacl_init_##name, __LINE__, _)(void)
 #define JACL_HEADER(dir, file) <dir/file.h>
 
 // standard version

@@ -1,4 +1,4 @@
-	/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef TESTING_H
 #define TESTING_H
 #pragma once
@@ -78,7 +78,7 @@ static inline int __jacl_test_color(void) {
 }
 
 /* ============================================================= */
-/* Registration                                                  */
+/* Registration Internals                                        */
 /* ============================================================= */
 static char *__jacl_test_type = "unit";
 static char *__jacl_test_unit = "test";
@@ -86,6 +86,7 @@ static char *__jacl_test_suite = "default";
 
 static inline void __jacl_test_register(const char *test_name, test_func_t func) {
 	test_suite_t *suite = NULL;
+
 	for (int i = 0; i < __jacl_test_suite_count; i++) {
 		if (!strcmp(__jacl_test_suites[i].type, __jacl_test_type) &&
 		    !strcmp(__jacl_test_suites[i].unit, __jacl_test_unit) &&
@@ -122,63 +123,156 @@ static inline void __jacl_test_register(const char *test_name, test_func_t func)
 }
 
 /* ============================================================= */
-/* Test Utility Macros                                           */
+/* Runner Internals                                              */
 /* ============================================================= */
-#define TEST_FAIL(fmt,...) \
-  do { __jacl_test_failed = __jacl_test_errored = 1; \
-    snprintf(__jacl_test_error, sizeof(__jacl_test_error), fmt, \
-      ##__VA_ARGS__); return; } while(0)
+static inline void __jacl_test_run(test_suite_t *suite, test_t *t) {
+  __jacl_test_failed = __jacl_test_errored = 0;
 
-#define ASSERT_TRUE(cond) do{ if(!(cond)) TEST_FAIL("\tFAIL: %s:%d\n" \
-  "\tTEST: %s == true", __FILE__,__LINE__,#cond);}while(0)
+  memset(__jacl_test_error, 0, sizeof(__jacl_test_error));
 
-#define ASSERT_FALSE(cond) do{ if( (cond)) TEST_FAIL("\tFAIL: %s:%d\n" \
-  "\tTEST: %s == false", __FILE__,__LINE__,#cond);}while(0)
+  __jacl_test_stats.total++;
 
-#define ASSERT_EQ(e,a) do{ if((e)!=(a)) TEST_FAIL("\tFAIL: %s:%d\n" \
-  "\tTEST: %ld == %ld", __FILE__,__LINE__,(long)(a),(long)(e));}while(0)
+  suite->stats.total++;
 
-#define ASSERT_NE(e,a) do{ if((e)==(a)) TEST_FAIL("\tFAIL: %s:%d\n" \
-  "\tTEST: values should differ", __FILE__,__LINE__);}while(0)
+	printf("  %s%-60s%s", __jacl_test_color() ? COLOR_BLUE : "", t->name, __jacl_test_color() ? COLOR_RESET : "");
 
-#define ASSERT_LT(a, b) do { \
-  if (!((a) < (b))) { \
-    TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-      "\tTEST: %ld < %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
-  } \
-} while(0)
+  fflush(stdout);
 
-#define TEST_SKIP(reason) do { \
-  printf("	SKIP: %s\n", reason); \
-  __jacl_test_stats.skipped++; \
-  return; \
-} while(0)
+  t->func();
 
-#define TEST_INFO(format, ...) do { \
-  printf("	INFO: " format "\n", ##__VA_ARGS__); \
-} while(0)
+  if (__jacl_test_failed) {
+    printf("%s[FAIL]%s\n", __jacl_test_color() ? COLOR_RED : "", __jacl_test_color() ? COLOR_RESET : "");
 
-/* ============================================================= */
-/* Convenience MAIN Macro                                        */
-/* ============================================================= */
-#ifndef NO_TEST_MAIN
-#define TEST_MAIN() \
-  int main(int argc, char**argv) { \
-    int r = 0; \
-    if (argc > 2 && !strcmp(argv[1], "--suite")) r = __jacl_test_run_suite(argv[2]); \
-    else if (argc > 2 && !strcmp(argv[1], "--test")) r = __jacl_test_run_one(argv[2]); \
-    else if (argc == 1) r = __jacl_test_run_all(); \
-    else { printf("Usage: %s [--suite S | --test T]\n", argv[0]); return 1; } \
-    __jacl_test_summary(); \
-    return r; \
+    if (__jacl_test_errored) puts(__jacl_test_error), putchar('\n');
+
+    __jacl_test_stats.failed++;
+
+    suite->stats.failed++;
+  } else {
+    printf("%s[PASS]%s\n", __jacl_test_color() ? COLOR_GREEN : "", __jacl_test_color() ? COLOR_RESET : "");
+
+    __jacl_test_stats.passed++;
+
+    suite->stats.passed++;
+  }
+}
+
+static inline int __jacl_test_only(const char *test_name) {
+  for (int i = 0; i < __jacl_test_suite_count; i++) {
+    test_suite_t *suite = &__jacl_test_suites[i];
+
+    for (int j = 0; j < suite->test_count; j++) {
+      if (!strcmp(suite->tests[j].name, test_name)) {
+        printf("  Test '%s' (suite %s:%s)\n\n", test_name, suite->unit, suite->suite);
+        printf("  %s=== %s: %s - %s tests ===%s\n",
+               __jacl_test_color() ? COLOR_CYAN : "",
+               suite->unit, suite->suite, suite->type,
+               __jacl_test_color() ? COLOR_RESET : "");
+        __jacl_test_run(suite, &suite->tests[j]);
+
+        return __jacl_test_stats.failed > 0;
+      }
+    }
   }
 
-#else
-#define TEST_MAIN()
-#endif
+  printf("Test '%s' not found\n", test_name);
+
+  return 1;
+}
+
+static inline int __jacl_test_each(const char *name) {
+	test_suite_t *suite = NULL;
+
+	for (int i = 0; i < __jacl_test_suite_count; i++) {
+		if (!strcmp(__jacl_test_suites[i].suite, name)) {
+			suite = &__jacl_test_suites[i];
+
+			break;
+		}
+	}
+
+	if (!suite) {
+		printf("  Suite '%s' not found\n", name);
+
+		return 1;
+	}
+
+	printf("  %s=== %s: %s - %s tests ===%s\n",
+	       __jacl_test_color() ? COLOR_CYAN : "",
+	       suite->unit, suite->suite, suite->type,
+	       __jacl_test_color() ? COLOR_RESET : "");
+
+	for (int i = 0; i < suite->test_count; i++) __jacl_test_run(suite, &suite->tests[i]);
+
+	return __jacl_test_stats.failed > 0;
+}
+
+static inline int __jacl_test_all(void) {
+  if (__jacl_test_suite_count == 0) {
+    puts("No tests registered.");
+
+    return 0;
+  }
+
+  int total = 0;
+  for (int i = 0; i < __jacl_test_suite_count; i++) {
+    total += __jacl_test_suites[i].test_count;
+  }
+
+  // Add blank line before, color the "Running" message like test names (blue)
+  printf("\n  %sRunning %d test%s…%s\n",
+         __jacl_test_color() ? COLOR_BLUE : "",
+         total,
+         total == 1 ? "" : "s",
+         __jacl_test_color() ? COLOR_RESET : "");
+
+  for (int i = 0; i < __jacl_test_suite_count; i++) {
+    test_suite_t *suite = &__jacl_test_suites[i];
+
+    // Add blank line before header, keep header on its own line
+    printf("\n  %s=== %s: %s - %s tests ===%s\n\n",
+           __jacl_test_color() ? COLOR_CYAN : "",
+           suite->unit, suite->suite, suite->type,
+           __jacl_test_color() ? COLOR_RESET : "");
+
+    for (int j = 0; j < suite->test_count; j++) {
+      __jacl_test_run(suite, &suite->tests[j]);
+    }
+  }
+
+  return __jacl_test_stats.failed > 0;
+}
 
 /* ============================================================= */
-/* Assertion Macros (buffered)                                   */
+/* Print Summary                                                 */
+/* ============================================================= */
+static inline void __jacl_test_report(void) {
+  if (!__jacl_test_stats.total) {
+    puts("No tests run.");
+
+    return;
+  }
+
+  printf("\n%s\n",
+    __jacl_test_stats.failed
+    ? (__jacl_test_color() ? COLOR_RED
+      "  ❌ SOME CHECKS FAILED ❌" COLOR_RESET
+      : "  ❌ SOME CHECKS FAILED ❌")
+    : (__jacl_test_color() ? COLOR_GREEN
+      "  🎉 ALL CHECKS PASSED 🎉" COLOR_RESET
+      : "  🎉 ALL CHECKS PASSED 🎉")
+  );
+
+  printf("\n  %s%d total   %d passed   %d failed   %d skipped%s\n",
+    __jacl_test_color() ? COLOR_BLUE : "",
+    __jacl_test_stats.total, __jacl_test_stats.passed,
+    __jacl_test_stats.failed, __jacl_test_stats.skipped,
+    __jacl_test_color() ? COLOR_RESET : ""
+  );
+}
+
+/* ============================================================= */
+/* Test Assertions                                               */
 /* ============================================================= */
 #define ASSERT_GT(a, b) do { \
   if (!((a) > (b))) { \
@@ -233,174 +327,76 @@ static inline void __jacl_test_register(const char *test_name, test_func_t func)
 } while(0)
 
 /* ============================================================= */
-/* Test Definition DSL                                           */
+/* Test Utilities                                                */
 /* ============================================================= */
+#define TEST_FAIL(fmt,...) \
+  do { __jacl_test_failed = __jacl_test_errored = 1; \
+    snprintf(__jacl_test_error, sizeof(__jacl_test_error), fmt, \
+      ##__VA_ARGS__); return; } while(0)
 
-#define TEST_TYPE(name) __jacl_test_type = #name
+#define ASSERT_TRUE(cond) do{ if(!(cond)) TEST_FAIL("\tFAIL: %s:%d\n" \
+  "\tTEST: %s == true", __FILE__,__LINE__,#cond);}while(0)
 
-#define TEST_UNIT(name) __jacl_test_unit = #name
+#define ASSERT_FALSE(cond) do{ if( (cond)) TEST_FAIL("\tFAIL: %s:%d\n" \
+  "\tTEST: %s == false", __FILE__,__LINE__,#cond);}while(0)
 
-#define TEST_SUITE(name) __jacl_test_suite = #name
+#define ASSERT_EQ(e,a) do{ if((e)!=(a)) TEST_FAIL("\tFAIL: %s:%d\n" \
+  "\tTEST: %ld == %ld", __FILE__,__LINE__,(long)(a),(long)(e));}while(0)
 
-#if __has_attribute(constructor)
-  // Auto-registration
-  #define TEST(name) \
-    static void test_##name(void); \
-    static void __attribute__((constructor)) \
-    register_##name(void) { \
-      __jacl_test_register(#name, test_##name); \
-    } \
-    static void test_##name(void)
+#define ASSERT_NE(e,a) do{ if((e)==(a)) TEST_FAIL("\tFAIL: %s:%d\n" \
+  "\tTEST: values should differ", __FILE__,__LINE__);}while(0)
+
+#define ASSERT_LT(a, b) do { \
+  if (!((a) < (b))) { \
+    TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
+      "\tTEST: %ld < %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+  } \
+} while(0)
+
+#define TEST_SKIP(reason) do { \
+  printf("	SKIP: %s\n", reason); \
+  __jacl_test_stats.skipped++; \
+  return; \
+} while(0)
+
+#define TEST_INFO(format, ...) do { \
+  printf("	INFO: " format "\n", ##__VA_ARGS__); \
+} while(0)
+
+/* ============================================================= */
+/* Test Definitions                                              */
+/* ============================================================= */
+#define TEST_TYPE(name) JACL_INIT(type) { __jacl_test_type = #name; }
+#define TEST_UNIT(name) JACL_INIT(unit) { __jacl_test_unit = #name; }
+#define TEST_SUITE(name) JACL_INIT(suite) { __jacl_test_suite = #name; }
+#define TEST(name) \
+	static void test_##name(void); \
+	JACL_INIT(test) { __jacl_test_register(#name, test_##name); } \
+	static void test_##name(void)
+
+/* ============================================================= */
+/* Test Running                                                  */
+/* ============================================================= */
+#define  TEST_REPORT() __jacl_test_report()
+#define  TEST_EACH(suite) __jacl_test_each(suite)
+#define  TEST_ONLY(name) __jacl_test_only(name)
+#define  TEST_ALL() __jacl_test_all()
+#define  TEST_RUN() JACL_INIT(run) { __jacl_test_all(); }
+
+#ifndef NO_TEST_MAIN
+#define TEST_MAIN() \
+	int main(int argc, char**argv) { \
+		int r = 0; \
+		if (argc > 2 && !strcmp(argv[1], "--suite")) r = TEST_EACH(argv[2]); \
+		else if (argc > 2 && !strcmp(argv[1], "--test")) r = TEST_ONLY(argv[2]); \
+		else if (argc == 1) r = TEST_ALL(); \
+		else { printf("Usage: %s [--suite S | --test T]\n", argv[0]); return 1; } \
+		TEST_REPORT(); \
+		fflush(stdout); \
+		return r; \
+	}
 #else
-  // Static initializer fallback
-  #define TEST(name) \
-    static void test_##name(void); \
-    static int register_##name##_init = \
-      (__jacl_test_register(#name, test_##name), 0); \
-    static void test_##name(void)
+#define TEST_MAIN() TEST_RUN()
 #endif
-
-/* ============================================================= */
-/* Runner Internals                                              */
-/* ============================================================= */
-static inline void __jacl_test_run_single(test_suite_t *suite, test_t *t) {
-  __jacl_test_failed = __jacl_test_errored = 0;
-
-  memset(__jacl_test_error, 0, sizeof(__jacl_test_error));
-
-  __jacl_test_stats.total++;
-
-  suite->stats.total++;
-
-  printf("%s%-60s%s ", __jacl_test_color() ? COLOR_BLUE : "", t->name, __jacl_test_color() ? COLOR_RESET : "");
-
-  fflush(stdout);
-
-  t->func();
-
-  if (__jacl_test_failed) {
-    printf("%s[FAIL]%s\n", __jacl_test_color() ? COLOR_RED : "", __jacl_test_color() ? COLOR_RESET : "");
-
-    if (__jacl_test_errored) puts(__jacl_test_error), putchar('\n');
-
-    __jacl_test_stats.failed++;
-
-    suite->stats.failed++;
-  } else {
-    printf("%s[PASS]%s\n", __jacl_test_color() ? COLOR_GREEN : "", __jacl_test_color() ? COLOR_RESET : "");
-
-    __jacl_test_stats.passed++;
-
-    suite->stats.passed++;
-  }
-}
-
-/* ============================================================= */
-/* Public Runner API                                             */
-/* ============================================================= */
-static inline int __jacl_test_run_all(void) {
-  if (__jacl_test_suite_count == 0) {
-    puts("No tests registered.");
-
-    return 0;
-  }
-
-  int total = 0;
-  for (int i = 0; i < __jacl_test_suite_count; i++) {
-    total += __jacl_test_suites[i].test_count;
-  }
-
-  printf("Running %d test%s…\n\n", total, total == 1 ? "" : "s");
-
-  for (int i = 0; i < __jacl_test_suite_count; i++) {
-    test_suite_t *suite = &__jacl_test_suites[i];
-    printf("\n%s=== %s: %s - %s tests ===%s\n",
-           __jacl_test_color() ? COLOR_CYAN : "",
-           suite->unit, suite->suite, suite->type,
-           __jacl_test_color() ? COLOR_RESET : "");
-
-    for (int j = 0; j < suite->test_count; j++) {
-      __jacl_test_run_single(suite, &suite->tests[j]);
-    }
-  }
-
-  return __jacl_test_stats.failed > 0;
-}
-
-static inline int __jacl_test_run_suite(const char *name) {
-	test_suite_t *suite = NULL;
-
-	for (int i = 0; i < __jacl_test_suite_count; i++) {
-		if (!strcmp(__jacl_test_suites[i].suite, name)) {
-			suite = &__jacl_test_suites[i];
-
-			break;
-		}
-	}
-
-	if (!suite) {
-		printf("Suite '%s' not found\n", name);
-
-		return 1;
-	}
-
-	printf("%s=== %s: %s - %s tests ===%s\n",
-	       __jacl_test_color() ? COLOR_CYAN : "",
-	       suite->unit, suite->suite, suite->type,
-	       __jacl_test_color() ? COLOR_RESET : "");
-
-	for (int i = 0; i < suite->test_count; i++) __jacl_test_run_single(suite, &suite->tests[i]);
-
-	return __jacl_test_stats.failed > 0;
-}
-
-static inline int __jacl_test_run_one(const char *test_name) {
-  for (int i = 0; i < __jacl_test_suite_count; i++) {
-    test_suite_t *suite = &__jacl_test_suites[i];
-
-    for (int j = 0; j < suite->test_count; j++) {
-      if (!strcmp(suite->tests[j].name, test_name)) {
-        printf("Test '%s' (suite %s:%s)\n\n", test_name, suite->unit, suite->suite);
-        printf("%s=== %s: %s - %s tests ===%s\n",
-               __jacl_test_color() ? COLOR_CYAN : "",
-               suite->unit, suite->suite, suite->type,
-               __jacl_test_color() ? COLOR_RESET : "");
-        __jacl_test_run_single(suite, &suite->tests[j]);
-
-        return __jacl_test_stats.failed > 0;
-      }
-    }
-  }
-
-  printf("Test '%s' not found\n", test_name);
-
-  return 1;
-}
-
-/* ============================================================= */
-/* Summary                                                       */
-/* ============================================================= */
-static inline void __jacl_test_summary(void) {
-  if (!__jacl_test_stats.total) {
-    puts("No tests run.");
-
-    return;
-  }
-
-  puts(
-    __jacl_test_stats.failed
-    ? (__jacl_test_color() ? COLOR_RED
-      "❌ SOME CHECKS FAILED ❌" COLOR_RESET
-      : "❌ SOME CHECKS FAILED ❌")
-    : (__jacl_test_color() ? COLOR_GREEN
-      "🎉 ALL CHECKS PASSED 🎉" COLOR_RESET
-      : "🎉 ALL CHECKS PASSED 🎉")
-  );
-
-  printf("\n\t%d total   %d passed   %d failed   %d skipped\n",
-    __jacl_test_stats.total, __jacl_test_stats.passed,
-    __jacl_test_stats.failed, __jacl_test_stats.skipped
-  );
-}
 
 #endif /* TESTING_H */
