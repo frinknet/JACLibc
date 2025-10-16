@@ -11,55 +11,17 @@ extern "C" {
 /* ============================================================= */
 /* Internal Variable                                             */
 /* ============================================================= */
-static char __jacl_stdin_buf[BUFSIZ];
-static char __jacl_stdout_buf[BUFSIZ];
-static char __jacl_stderr_buf[BUFSIZ];
+#define JACL_FILE(name, flag, fd, bufmode) \
+static char __jacl_##name##_buf[BUFSIZ]; \
+static FILE __jacl_##name##_file = { \
+	flag, __jacl_##name##_buf, __jacl_##name##_buf, __jacl_##name##_buf + BUFSIZ, \
+	BUFSIZ, fd, 0, 0, NULL, bufmode, 1 \
+}; \
+FILE* name = &__jacl_##name##_file
 
-static FILE __jacl_stdin_file = {
-	__SRD,                       /* _flags */
-	__jacl_stdin_buf,            /* _ptr */
-	__jacl_stdin_buf,            /* _base */
-	__jacl_stdin_buf + BUFSIZ,   /* _end */
-	BUFSIZ,                      /* _bufsiz */
-	0,                           /* _fd */
-	0,                           /* _cnt */
-	0,                           /* _orientation */
-	NULL,                        /* _tmpfname */
-	_IOLBF,                      /* _bufmode */
-	1                            /* _buf_owned */
-};
-
-static FILE __jacl_stdout_file = {
-	__SWR,                       /* _flags */
-	__jacl_stdout_buf,           /* _ptr */
-	__jacl_stdout_buf,           /* _base */
-	__jacl_stdout_buf + BUFSIZ,  /* _end */
-	BUFSIZ,                      /* _bufsiz */
-	1,                           /* _fd */
-	0,                           /* _cnt */
-	0,                           /* _orientation */
-	NULL,                        /* _tmpfname */
-	_IOLBF,                      /* _bufmode */
-	1                            /* _buf_owned */
-};
-
-static FILE __jacl_stderr_file = {
-	__SWR,                       /* _flags */
-	__jacl_stderr_buf,           /* _ptr */
-	__jacl_stderr_buf,           /* _base */
-	__jacl_stderr_buf + BUFSIZ,  /* _end */
-	BUFSIZ,                      /* _bufsiz */
-	2,                           /* _fd */
-	0,                           /* _cnt */
-	0,                           /* _orientation */
-	NULL,                        /* _tmpfname */
-	_IONBF,                      /* _bufmode */
-	1                            /* _buf_owned */
-};
-
-FILE* stdin  = &__jacl_stdin_file;
-FILE* stdout = &__jacl_stdout_file;
-FILE* stderr = &__jacl_stderr_file;
+JACL_FILE(stdin, __SRD, 0, _IOLBF);
+JACL_FILE(stdout, __SWR, 1, _IOLBF);
+JACL_FILE(stderr, __SWR, 2, _IONBF);
 
 typedef struct __jacl_stream_node {
 	FILE* stream;
@@ -67,6 +29,14 @@ typedef struct __jacl_stream_node {
 } STREAM_NODE;
 
 static STREAM_NODE* __jacl_stream_list;
+
+static const unsigned long long __jacl_pow10[20] = {
+	0xff77b1fcbebcdc4fULL, 0x9faacf3df73609b1ULL, 0xc795830d75038c1dULL, 0xf97ae3d0d2446f25ULL,
+	0x9becce62836ac577ULL, 0xc2e801fb244576d5ULL, 0xf3a20279ed56d48aULL, 0x9845418c345644d6ULL,
+	0xbe5691ef416bd60cULL, 0xedec366b11c6cb8fULL, 0x94b3a202eb1c3f39ULL, 0xb9e08a83a5e34f07ULL,
+	0xe858ad248f5c22c9ULL, 0x91376c36d99995beULL, 0xb58547448ffffb2dULL, 0xe2e69915b3fff9f9ULL,
+	0x8dd01fad907ffc3bULL, 0xb1442798f49ffb4aULL, 0xdd95317f31c7fa1dULL, 0x8a7d3eef7f1cfc52ULL
+};
 
 /* ============================================================= */
 /* Stream Registry                                               */
@@ -110,31 +80,19 @@ int __jacl_stream_flush(FILE* stream) {
   for (STREAM_NODE* n = __jacl_stream_list; n; n = n->next) {
     FILE* s = n->stream;
 
-    if (s && (s->_flags & __SWR) && s != stdout && s != stderr) {
-      if (__jacl_buffer_output(s) == EOF) result = EOF;
-    }
+    if (s && (s->_flags & __SWR) && s != stdout && s != stderr && __jacl_buffer_output(s) == EOF) result = EOF;
   }
 
   return result;
 }
 
-#if __has_attribute(constructor)
-	static void __attribute__((constructor)) __jacl_stream_init(void) {
-		__jacl_stream_register(stdin);
-		__jacl_stream_register(stdout);
-		__jacl_stream_register(stderr);
+static void __attribute__((constructor)) __jacl_stream_init(void) {
+	__jacl_stream_register(stdin);
+	__jacl_stream_register(stdout);
+	__jacl_stream_register(stderr);
 
-		stdout->_bufmode = isatty(stdout->_fd) ? _IOLBF : _IOFBF;
-	}
-#else
-	static int __jacl_stream_init = (
-		__jacl_stream_register(stdin),
-		__jacl_stream_register(stdout),
-		__jacl_stream_register(stderr),
-		stdout->_bufmode = isatty(stdout->_fd) ? _IOLBF : _IOFBF,
-		0
-	);
-#endif
+	stdout->_bufmode = isatty(stdout->_fd) ? _IOLBF : _IOFBF;
+}
 
 /* ============================================================= */
 /* Buffer Helpers                                                */
@@ -205,71 +163,30 @@ int __jacl_buffer_input(FILE *f) {
 /* ============================================================= */
 /* String Helpers                                                */
 /* ============================================================= */
-static inline int __jacl_getch(const char **in, FILE *stream) {
-	if (*in && **in) return *(*in)++;
-
-	return fgetc(stream ? stream : stdin);
-}
-
-static inline int __jacl_scan_u32(const char **restrict p) {
-	const char *s = *p;
-	int v = 0;
-
-	while ((unsigned)(*s - '0') <= 9u) {
-		v = v * 10 + (int)(*s - '0');
-
-		s++;
-	}
-
-	*p = s;
-
-	return v;
-}
-
 static inline int __jacl_mod_length(const char **restrict pfmt) {
 	const char *fmt = *pfmt;
-	int length = 0;
+	int length = (*fmt == 'l') ? (fmt[1] == 'l' ? (fmt += 2, 2) : (fmt++, 1)) :
+	             (*fmt == 'h') ? (fmt[1] == 'h' ? (fmt += 2, -2) : (fmt++, -1)) : 0;
 
-	if (JACL_UNLIKELY(*fmt == 'l' || *fmt == 'h')) {
-		switch (*fmt++) {
-			case 'l':
-				if (*fmt == 'l') { length = 2; fmt++; }
-				else length = 1;
+#if JACL_HAS_C99
+	if (!length && (*fmt == 'z' || *fmt == 't' || *fmt == 'j')) {
+		length = (*fmt == 'z') ? 3 : (*fmt == 't') ? 4 : 5;
 
-				break;
-			case 'h':
-				if (*fmt == 'h') { length = -2; fmt++; }
-				else length = -1;
-
-				break;
-		}
+		fmt++;
 	}
-
-	#if JACL_HAS_C99
-		else if (*fmt == 'z' || *fmt == 't' || *fmt == 'j') {
-			switch (*fmt++) {
-				case 'z': length = 3; break;  // size_t
-				case 't': length = 4; break;  // ptrdiff_t
-				case 'j': length = 5; break;  // intmax_t
-			}
-		}
-	#endif
+#endif
 
 	*pfmt = fmt;
 
 	return length;
 }
 
+#define CASE(N,type) case N: *va_arg(ap, type*) = (type)v; break
 static inline void __jacl_store_signed(int length, va_list ap, uintptr_t v) {
 	switch (length) {
-		case -2: *va_arg(ap, signed char*) = (signed char)v; break;
-		case -1: *va_arg(ap, short*) = (short)v; break;
-		case  1: *va_arg(ap, long*) = (long)v; break;
+		CASE(-2, signed char); CASE(-1, short); CASE(1, long);
 	#if JACL_HAS_C99
-		case  2: *va_arg(ap, long long*) = (long long)v; break;
-		case  3: *va_arg(ap, ssize_t*) = (ssize_t)v; break;
-		case  4: *va_arg(ap, ptrdiff_t*) = (ptrdiff_t)v; break;
-		case  5: *va_arg(ap, intmax_t*) = (intmax_t)v; break;
+		CASE(2, long long); CASE(3, ssize_t); CASE(4, ptrdiff_t); CASE(5, intmax_t);
 	#endif
 		default: *va_arg(ap, int*) = (int)v; break;
 	}
@@ -277,22 +194,20 @@ static inline void __jacl_store_signed(int length, va_list ap, uintptr_t v) {
 
 static inline void __jacl_store_unsigned(int length, va_list ap, uintptr_t v) {
 	switch (length) {
-		case -2: *va_arg(ap, unsigned char*) = (unsigned char)v; break;
-		case -1: *va_arg(ap, unsigned short*) = (unsigned short)v; break;
-		case  1: *va_arg(ap, unsigned long*) = (unsigned long)v; break;
+		CASE(-2, unsigned char); CASE(-1, unsigned short); CASE(1, unsigned long);
 	#if JACL_HAS_C99
-		case  2: *va_arg(ap, unsigned long long*) = (unsigned long long)v; break;
-		case  3: *va_arg(ap, size_t*) = (size_t)v; break;
-		case  4: *va_arg(ap, size_t*) = (size_t)v; break;
-		case  5: *va_arg(ap, uintmax_t*) = (uintmax_t)v; break;
+		CASE(2, unsigned long long); CASE(3, size_t); CASE(4, size_t); CASE(5, uintmax_t);
 	#endif
 		default: *va_arg(ap, unsigned int*) = (unsigned int)v; break;
 	}
 }
+#undef CASE
 
-static inline int __jacl_isspace(int c) {
-	return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
-}
+#define __jacl_isspace(c) ((c)==' '||(c)=='\t'||(c)=='\n'||(c)=='\r'||(c)=='\f'||(c)=='\v')
+#define __jacl_skip_space(in) do { if ((in) && *(in)) while (__jacl_isspace(**(in))) (*(in))++; } while(0)
+#define __jacl_getch(in, s) (((in) && **(in)) ? *(*in)++ : fgetc((s)?(s):stdin))
+#define __jacl_ungetch(ch, in, s) do { if ((in) && *(in)) (*(in))--; else ungetc((ch), (s)); } while(0)
+#define __jacl_set_u32(w,fmt) w = 0; while ((unsigned)(*fmt - '0') <= 9u) { w = w * 10 + (*fmt - '0'); fmt++; }
 
 /* ============================================================= */
 /* String Formatting                                             */
@@ -301,36 +216,28 @@ static inline int __jacl_format_string(char **out, const char *s, size_t remaini
 	if (!s) s = "(null)";
 
 	int len = 0;
-
-	// Count the actual string length
 	const char *p = s;
+
 	while (*p && (prec < 0 || len < prec)) { p++; len++; }
 
 	int pad = width - len;
+
 	if (pad < 0) pad = 0;
 
-	// Left padding (if not left-aligned)
-	if (pad > 0 && !(flags & 0x01)) {
-		if (out && *out) {
-			for (int i = 0; i < pad; i++) *(*out)++ = ' ';
-		}
+	if (pad > 0 && !(flags & 0x01) && out && *out) {
+		for (int i = 0; i < pad; i++) *(*out)++ = ' ';
 	}
 
-	// Write the string
 	if (out && *out && remaining > 0) {
 		p = s;
+
 		int written = 0;
-		while (*p && remaining-- > 0 && (prec < 0 || written < prec)) {
-			*(*out)++ = *p++;
-			written++;
-		}
+
+		while (*p && remaining-- > 0 && (prec < 0 || written < prec)) { *(*out)++ = *p++; written++; }
 	}
 
-	// Right padding (if left-aligned)
-	if (pad > 0 && (flags & 0x01)) {
-		if (out && *out) {
-			for (int i = 0; i < pad; i++) *(*out)++ = ' ';
-		}
+	if (pad > 0 && (flags & 0x01) && out && *out) {
+		for (int i = 0; i < pad; i++) *(*out)++ = ' ';
 	}
 
 	return len + pad;
@@ -341,10 +248,10 @@ static inline int __jacl_format_num(char * restrict *out, uintptr_t num, int bas
 	static const char UD[] = "0123456789ABCDEF";
 	const char *digits = uppercase ? UD : LD;
 	char buffer[64];
-	int len = 0, negative = 0;
+	int len = 0, neg = 0;
 
 	if (sign && (intptr_t)num < 0) {
-		negative = 1;
+		neg = 1;
 		num = (uintptr_t)(-(intptr_t)num);
 	}
 
@@ -369,7 +276,7 @@ static inline int __jacl_format_num(char * restrict *out, uintptr_t num, int bas
 		}
 	}
 
-	if (negative) {
+	if (neg) {
 		buffer[len++] = '-';
 	} else if (flags & 0x02) {
 		buffer[len++] = '+';
@@ -410,24 +317,17 @@ static inline int __jacl_format_exp(char **out, double num, int prec, int upper)
 
 	if (prec < 0) prec = 6;
 
-	if (num != num) {
-		const char *s = upper ? "NAN" : "nan";
+	if (num != num || num > DBL_MAX || num < -DBL_MAX) {
+		int is_inf = (num > DBL_MAX || num < -DBL_MAX);
+
+		if (is_inf && num < 0) buf[pos++] = '-';
+
+		const char *s = is_inf ? (upper ? "INF" : "inf") : (upper ? "NAN" : "nan");
 
 		buf[pos++] = s[0]; buf[pos++] = s[1]; buf[pos++] = s[2];
 
 		goto done;
-	}
-
-	if (num > DBL_MAX || num < -DBL_MAX) {
-		if (num < 0) buf[pos++] = '-';
-		const char *s = upper ? "INF" : "inf";
-
-		buf[pos++] = s[0]; buf[pos++] = s[1]; buf[pos++] = s[2];
-
-		goto done;
-	}
-
-	if (num == 0.0) {
+	} else if (num == 0.0) {
 		buf[pos++] = '0';
 
 		if (prec > 0) {
@@ -440,9 +340,7 @@ static inline int __jacl_format_exp(char **out, double num, int prec, int upper)
 		buf[pos++] = '+'; buf[pos++] = '0'; buf[pos++] = '0';
 
 		goto done;
-	}
-
-	if (num < 0) {
+	} else if (num < 0) {
 		buf[pos++] = '-';
 		num = -num;
 	}
@@ -490,63 +388,165 @@ done:
 	return pos;
 }
 
+#define MULSHIFT64(m, mul, shift, res) do { \
+	unsigned long long a = (unsigned long long)(m), b = (mul); \
+	unsigned long long a_lo = a & 0xFFFFFFFFULL, a_hi = a >> 32; \
+	unsigned long long b_lo = b & 0xFFFFFFFFULL, b_hi = b >> 32; \
+	unsigned long long p0 = a_lo * b_lo, p1 = a_lo * b_hi; \
+	unsigned long long p2 = a_hi * b_lo, p3 = a_hi * b_hi; \
+	unsigned long long m1 = p1 + (p0 >> 32), m2 = p2 + (m1 & 0xFFFFFFFFULL); \
+	unsigned long long hi = p3 + (m1 >> 32) + (m2 >> 32); \
+	unsigned long long lo = (m2 << 32) | (p0 & 0xFFFFFFFFULL); \
+	(res) = ((shift) >= 64) ? (hi >> ((shift) - 64)) : ((hi << (64 - (shift))) | (lo >> (shift))); \
+} while(0)
 static inline int __jacl_format_float(char * restrict *out, const char *fmt_pos, int prec, int width, int flags, va_list ap) {
 	double val = va_arg(ap, double);
-	char spec = *fmt_pos;
-	int uppercase = (spec == 'E' || spec == 'G');
+	char spec = *fmt_pos, digits[32], buf[64], *bp = buf, *p = out ? *out : NULL;
+	unsigned long long bits, mbit, m2, mv, mp, mm, vr, vp, vm;
+	unsigned int exp, mant, w;
+	int neg, e2, q, e10, k, idx, mm_shift, even, vm_trail, vr_trail, last, ndigits, dec_pos, len, i;
 
-	if (spec == 'e' || spec == 'E') return __jacl_format_exp(out, val, prec, uppercase);
+	if (spec == 'e' || spec == 'E') return __jacl_format_exp(out, val, prec, (spec == 'E'));
 
 	if (spec == 'g' || spec == 'G') {
-		int p = (prec < 0) ? 6 : (prec == 0) ? 1 : prec;
+		int exp_val = 0;
 		double absval = (val < 0) ? -val : val;
-		int exp = 0;
+		int p = (prec < 0) ? 6 : (prec == 0) ? 1 : prec;
 
-		while (absval >= 10.0) { absval /= 10.0; exp++; }
-		while (absval > 0.0 && absval < 1.0) { absval *= 10.0; exp--; }
+		while (absval >= 10.0) { absval /= 10.0; exp_val++; }
+		while (absval > 0.0 && absval < 1.0) { absval *= 10.0; exp_val--; }
 
-		if (exp < -4 || exp >= p) return __jacl_format_exp(out, val, p - 1, uppercase);
+		if (exp_val < -4 || exp_val >= p) return __jacl_format_exp(out, val, p - 1, (spec == 'G'));
 
-		prec = p - exp - 1;
-	} else {
-		prec = (prec < 0) ? 6 : prec;
+		prec = p - exp_val - 1;
 	}
 
-	int len = 0;
+	if (prec < 0) prec = 6;
+	if (prec > 15) prec = 15;
 
-	if (val < 0) { if (out && *out) *(*out)++ = '-'; len++; val = -val; }
+	memcpy(&bits, &val, sizeof(double));
 
-	#if JACL_HAS_C99
-		long long ipart = (long long)val;
-	#else
-		long ipart = (long)val;
-	#endif
+	exp = (bits >> 52) & 0x7FF;
+	mbit = bits & 0xFFFFFFFFFFFFFULL;
+	neg = (bits >> 63);
+	bp = buf;
+	p = out ? *out : NULL;
 
-	len += __jacl_format_num(out, ipart, 10, 0, 0, 0, 0);
+	if (exp == 0x7FF) {
+		const char *s = mbit ? "nan" : "inf";
 
-	if (prec > 0) {
-		if (out && *out) *(*out)++ = '.';
+		if (p) { memcpy(p, s, 3); p += 3; }
+		if (out) *out = p;
 
-		len++;
+		return 3;
+	}
 
-		double fpart = val - (double)ipart;
+	if (!(exp | mbit)) {
+		if (neg) *bp++ = '-';
 
-		for (int i = 0; i < prec; i++) {
-			fpart *= 10.0;
+		*bp++ = '0';
 
-			if (i == prec - 1) fpart += 0.5;
+		if (prec > 0) { *bp++ = '.'; for (i = 0; i < prec; i++) *bp++ = '0'; }
 
-			int digit = (int)fpart;
+		len = bp - buf;
 
-			if (out && *out) *(*out)++ = '0' + digit;
+		if (p) { memcpy(p, buf, len); p += len; }
+		if (out) *out = p;
 
-			len++;
-			fpart -= digit;
+		return len;
+	}
+
+	e2 = exp ? (int)exp - 1075 : -1074;
+	m2 = exp ? (1ULL << 52) | mbit : mbit;
+	even = !(m2 & 1);
+	mm_shift = (mbit == 0 && exp > 1);
+	mv = m2 << 2;
+	mp = mv + 2;
+	mm = mv - (mm_shift ? 2 : 1);
+	e2 -= 2;
+	q = (int)((unsigned int)e2 * 1262611u) >> 22;
+
+	if (e2 < 0) q--;
+
+	e10 = q;
+	k = 124 + q - e2;
+	idx = -e10;
+
+	if (idx < 0 || idx > 19) return __jacl_format_exp(out, val, prec, 0);
+
+	MULSHIFT64(mv, __jacl_pow10[idx], k, vr);
+	MULSHIFT64(mp, __jacl_pow10[idx], k, vp);
+	MULSHIFT64(mm, __jacl_pow10[idx], k, vm);
+
+	vm_trail = mm_shift;
+	vr_trail = !mm_shift && !(vr & 1);
+	last = 0;
+
+	while (vp / 10 > vm / 10) {
+		vm_trail = vm_trail && !(vm % 10);
+		vr_trail = vr_trail && !last;
+		last = vr % 10;
+		vr /= 10; vp /= 10; vm /= 10; e10++;
+	}
+
+	if (vm_trail) {
+		while (!(vm % 10)) {
+			vr_trail = vr_trail && !last;
+			last = vr % 10;
+			vr /= 10; vp /= 10; vm /= 10; e10++;
 		}
 	}
 
+	if (vr_trail && last == 5 && !(vr & 1)) last = 4;
+
+	mant = (unsigned int)vr + ((vr == vm) ? (!even || !vm_trail) : (last >= 5));
+	ndigits = 0;
+	w = mant ? mant : 1;
+
+	if (mant) { while (w) { digits[ndigits++] = '0' + w % 10; w /= 10; } }
+	else digits[ndigits++] = '0';
+
+	if (neg) *bp++ = '-';
+
+	dec_pos = e10 + 1;
+
+	if (dec_pos > 0 && dec_pos <= ndigits) {
+		for (i = ndigits - 1; i >= ndigits - dec_pos; i--) *bp++ = digits[i];
+
+		if (prec > 0) {
+			*bp++ = '.';
+
+			for (i = 0; i < prec; i++) {
+				int idx = ndigits - dec_pos - 1 - i;
+
+				*bp++ = (idx >= 0) ? digits[idx] : '0';
+			}
+		}
+	} else if (dec_pos > ndigits) {
+		for (i = ndigits - 1; i >= 0; i--) *bp++ = digits[i];
+		for (i = 0; i < dec_pos - ndigits; i++) *bp++ = '0';
+
+		if (prec > 0) { *bp++ = '.'; for (i = 0; i < prec; i++) *bp++ = '0'; }
+	} else {
+		*bp++ = '0';
+
+		if (prec > 0) {
+			*bp++ = '.';
+
+			for (i = 0; i < -dec_pos && i < prec; i++) *bp++ = '0';
+			for (len = -dec_pos; i < prec && ndigits - 1 - (i - len) >= 0; i++) *bp++ = digits[ndigits - 1 - (i - len)];
+			for (; i < prec; i++) *bp++ = '0';
+		}
+	}
+
+	len = bp - buf;
+
+	if (p) { memcpy(p, buf, len); p += len; }
+	if (out) *out = p;
+
 	return len;
 }
+#undef MULSHIFT64
 
 static inline int __jacl_format_int(char * restrict *out, const char *fmt_pos, int length, int width, int flags, va_list ap) {
 	char spec = *fmt_pos;
@@ -621,13 +621,13 @@ static inline int __jacl_format(char * restrict out, size_t n, const char * rest
 		width = 0;
 
 		if (*fmt == '*') { width = va_arg(ap, int); if (width < 0) { flags |= 0x01; width = -width; } fmt++; }
-		else if ((unsigned)(*fmt - '0') <= 9u) { width = __jacl_scan_u32(&fmt); }
+		else if ((unsigned)(*fmt - '0') <= 9u) { __jacl_set_u32(width, fmt); }
 
 		if (*fmt == '.') {
 			fmt++;
 
 			if (*fmt == '*') { prec = va_arg(ap, int); if (prec < 0) prec = -1; fmt++; }
-			else { prec = __jacl_scan_u32(&fmt); }
+			else { __jacl_set_u32(prec, fmt); }
 		}
 
 		int length = __jacl_mod_length(&fmt);
@@ -668,55 +668,26 @@ static inline int __jacl_format(char * restrict out, size_t n, const char * rest
 /* ============================================================= */
 /* String Parsing                                                */
 /* ============================================================= */
-static inline void __jacl_parse_next(const char **in) {
-	if (!in || !*in) return;
-
-	while (__jacl_isspace(**in)) (*in)++;
-}
-
-static inline int __jacl_parse_char(const char **in, FILE *stream, int width, int suppress, va_list ap) {
+static inline int __jacl_parse_string(const char **in, FILE *stream, int width, int suppress, char type, va_list ap) {
 	char *p = suppress ? NULL : va_arg(ap, char*);
-	int w = (width == INT_MAX) ? 1 : width;
+	int is_str = (type == 's'), w = is_str ? width : ((width == INT_MAX) ? 1 : width), i = 0, ch;
 
-	while (w--) {
-		int ch = __jacl_getch(in, stream);
+	if (is_str) __jacl_skip_space(in);
 
-		if (ch == EOF) break;
-		if (p) *p++ = (char)ch;
-	}
-
-	return suppress ? 0 : 1;
-}
-
-static inline int __jacl_parse_string(const char **in, FILE *stream, int width, int suppress, va_list ap) {
-	char *p = suppress ? NULL : va_arg(ap, char*);
-
-	__jacl_parse_next(in);
-
-	int i = 0;
-
-	while (i < width) {
-		int ch = __jacl_getch(in, stream);
-
-		if (ch == EOF || __jacl_isspace(ch)) break;
-		if (p) p[i] = (char)ch;
+	while (i < w && (ch = __jacl_getch(in, stream)) != EOF && (!is_str || !__jacl_isspace(ch))) {
+		if (p) p[i] = ch;
 
 		i++;
 	}
 
-	if (p) p[i] = '\0';
+	if (p && is_str) p[i] = '\0';
 
-	return suppress ? 0 : 1;
+	return (suppress || (is_str && !i)) ? 0 : 1;
 }
 
 static inline int __jacl_parse_scanset(const char **in, FILE *stream, const char **fmt, int width, int suppress, va_list ap) {
-	char *p = suppress ? NULL : va_arg(ap, char*);
-	int i = 0, invert = 0;
-
-	if (**fmt == '^') { invert = 1; (*fmt)++; }
-
-	char charset[256] = {0};
-	int has_chars = 0;
+	char *p = suppress ? NULL : va_arg(ap, char*), charset[256] = {0};
+	int i = 0, invert = (**fmt == '^' ? ((*fmt)++, 1) : 0), has_chars = 0;
 
 	if (**fmt == ']') { charset[(unsigned char)']'] = 1; (*fmt)++; has_chars = 1; }
 
@@ -724,12 +695,14 @@ static inline int __jacl_parse_scanset(const char **in, FILE *stream, const char
 		if ((*fmt)[1] == '-' && (*fmt)[2] != ']' && (*fmt)[2] != '\0') {
 			unsigned char start = (unsigned char)**fmt;
 			unsigned char end = (unsigned char)(*fmt)[2];
+			unsigned char c;
 
-			for (unsigned char c = start; c <= end; c++) charset[c] = 1;
+			for (c = start; c <= end; c++) charset[c] = 1;
 
 			(*fmt) += 3;
 		} else {
 			charset[(unsigned char)**fmt] = 1;
+
 			(*fmt)++;
 		}
 
@@ -739,7 +712,7 @@ static inline int __jacl_parse_scanset(const char **in, FILE *stream, const char
 	if (**fmt == ']') (*fmt)++;
 	if (!has_chars) return 0;
 
-	__jacl_parse_next(in);
+	__jacl_skip_space(in);
 
 	while (i < width) {
 		int ch = __jacl_getch(in, stream);
@@ -764,67 +737,56 @@ static inline int __jacl_parse_scanset(const char **in, FILE *stream, const char
 	return 0;
 }
 
-static inline int __jacl_parse_digit(unsigned char c, int base) {
-	if (c >= '0' && c <= '9') {
-		int val = c - '0';
-
-		return val < base ? val : -1;
-	}
-
-	if (base > 10) {
-		if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-		if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-	}
-
-	return -1;
-}
-
-static inline int __jacl_parse_num(const char **in, uintptr_t *out, int base, int sign) {
-	const char *start = *in;
+static inline int __jacl_parse_num(const char **in, FILE *stream, uintptr_t *out, int base, int sign) {
 	uintptr_t result = 0;
-	int negative = 0, digits = 0;
+	int neg = 0, digits = 0, ch;
 
-	while (__jacl_isspace(**in)) (*in)++;
+	__jacl_skip_space(in);
 
-	if (sign && **in == '-') {
-		negative = 1;
+	ch = __jacl_getch(in, stream);
 
-		(*in)++;
-	} else if (**in == '+') {
-		(*in)++;
-	}
+	if (sign && ch == '-') neg = 1;
+	else if (ch != '+' && ch != EOF) __jacl_ungetch(ch, in, stream);
 
-	while (**in) {
-		int digit_val = __jacl_parse_digit((unsigned char)**in, base);
+	while ((ch = __jacl_getch(in, stream)) != EOF) {
+		int digit_val = -1;
 
-		if (digit_val >= 0) {
-			result = result * base + digit_val;
+		if (ch >= '0' && ch <= '9') {
+			digit_val = ch - '0';
 
-			digits++;
-			(*in)++;
-		} else {
+			if (digit_val >= base) digit_val = -1;
+		} else if (base > 10) {
+			if (ch >= 'a' && ch <= 'f') digit_val = ch - 'a' + 10;
+			else if (ch >= 'A' && ch <= 'F') digit_val = ch - 'A' + 10;
+		}
+
+		if (digit_val < 0) {
+			__jacl_ungetch(ch, in, stream);
+
 			break;
 		}
+
+		result = result * base + digit_val;
+
+		digits++;
 	}
 
 	if (digits > 0) {
-		if (negative) result = (uintptr_t)(-(intptr_t)result);
+		if (neg) result = (uintptr_t)(-(intptr_t)result);
 
 		*out = result;
 
 		return digits;
 	}
 
-	*in = start;
-
 	return 0;
 }
 
-static inline int __jacl_parse_ptr(const char **in, int suppress, va_list ap) {
+static inline int __jacl_parse_ptr(const char **in, FILE *stream, int suppress, va_list ap) {
 	void **out = suppress ? NULL : va_arg(ap, void**);
 	uintptr_t val;
 
-	if (__jacl_parse_num(in, &val, 16, 0)) {
+	if (__jacl_parse_num(in, stream, &val, 16, 0)) {
 		if (out) *out = (void*)val;
 
 		return suppress ? 0 : 1;
@@ -833,13 +795,12 @@ static inline int __jacl_parse_ptr(const char **in, int suppress, va_list ap) {
 	return 0;
 }
 
-static inline int __jacl_parse_int(const char **in, const char *fmt_pos, int length, int suppress, va_list ap) {
+static inline int __jacl_parse_int(const char **in, FILE *stream, const char *fmt_pos, int length, int suppress, va_list ap) {
 	char spec = *fmt_pos;
-	int is_signed = (spec == 'i' || spec == 'd');
-	int base = 10;
+	int is_signed = (spec == 'i' || spec == 'd'), base = 10;
 
-	if (spec == 'i') {
-		__jacl_parse_next(in);
+	if (spec == 'i' && in && *in) {
+		__jacl_skip_space(in);
 
 		if (**in == '0' && ((*in)[1] == 'x' || (*in)[1] == 'X')) {
 			(*in) += 2;
@@ -857,7 +818,7 @@ static inline int __jacl_parse_int(const char **in, const char *fmt_pos, int len
 
 	uintptr_t val;
 
-	if (__jacl_parse_num(in, &val, base, is_signed) && !suppress) {
+	if (__jacl_parse_num(in, stream, &val, base, is_signed) && !suppress) {
 		if (is_signed) __jacl_store_signed(length, ap, val);
 		else __jacl_store_unsigned(length, ap, val);
 
@@ -867,59 +828,77 @@ static inline int __jacl_parse_int(const char **in, const char *fmt_pos, int len
 	return 0;
 }
 
-static inline int __jacl_parse_float(const char **in, int length, int suppress, va_list ap) {
-	uintptr_t ipart;
-	int digits = __jacl_parse_num(in, &ipart, 10, 1);
-	double result = (double)ipart;
+static inline int __jacl_parse_float(const char **in, FILE *stream, int length, int suppress, va_list ap) {
+	double result = 0.0;
+	int neg = 0, digits = 0, ch;
 
-	if (**in == '.') {
-		(*in)++;
+	__jacl_skip_space(in);
 
+	ch = __jacl_getch(in, stream);
+
+	if (ch == '-') neg = 1;
+	else if (ch != '+' && ch != EOF) __jacl_ungetch(ch, in, stream);
+
+	while ((ch = __jacl_getch(in, stream)) != EOF && ch >= '0' && ch <= '9') {
+		result = result * 10.0 + (ch - '0');
+
+		digits++;
+	}
+
+	if (ch == '.') {
 		double divisor = 10.0;
 
-		while (**in >= '0' && **in <= '9') {
-			result += (**in - '0') / divisor;
+		while ((ch = __jacl_getch(in, stream)) != EOF && ch >= '0' && ch <= '9') {
+			result += (ch - '0') / divisor;
 			divisor *= 10.0;
 
-			(*in)++;
 			digits++;
 		}
 	}
 
-	if ((**in == 'e' || **in == 'E') && digits > 0) {
-		(*in)++;
+	if (!digits) {
+		if (ch != EOF) __jacl_ungetch(ch, in, stream);
 
-		uintptr_t exp_u;
-		int exp_digits = __jacl_parse_num(in, &exp_u, 10, 1);
+		return 0;
+	}
+
+	if (ch == 'e' || ch == 'E') {
+		int exp_neg = 0, exp = 0, exp_digits = 0;
+
+		ch = __jacl_getch(in, stream);
+
+		if (ch == '-') exp_neg = 1;
+		else if (ch != '+' && ch != EOF) __jacl_ungetch(ch, in, stream);
+
+		while ((ch = __jacl_getch(in, stream)) != EOF && ch >= '0' && ch <= '9') {
+			exp = exp * 10 + (ch - '0');
+			exp_digits++;
+		}
+
+		if (ch != EOF) __jacl_ungetch(ch, in, stream);
 
 		if (exp_digits > 0) {
-			int exp_val = (int)exp_u;
+			if (exp > 308) exp = 308;
+			else if (exp_neg) exp = -exp;
 
-			if (exp_val > 300) exp_val = 300;
-			else if (exp_val < -300) exp_val = -300;
-
-			int abs_exp = (exp_val < 0) ? -exp_val : exp_val;
-
-			if (abs_exp > 100) {
-				result *= pow(10.0, (double)exp_val);
-			} else if (exp_val > 0) {
-				for (int i = 0; i < exp_val; i++) result *= 10.0;
-			} else if (exp_val < 0) {
-				for (int i = 0; i < abs_exp; i++) result /= 10.0;
+			if (exp > 0) {
+				for (int i = 0; i < exp; i++) result *= 10.0;
+			} else if (exp < 0) {
+				for (int i = 0; i < -exp; i++) result /= 10.0;
 			}
 		}
+	} else if (ch != EOF) {
+		__jacl_ungetch(ch, in, stream);
 	}
 
-	if (digits) {
-		if (!suppress) {
-			if (length == 1) *va_arg(ap, double*) = result;
-			else *va_arg(ap, float*) = (float)result;
-		}
+	if (neg) result = -result;
 
-		return suppress ? 0 : 1;
+	if (!suppress) {
+		if (length == 1) *va_arg(ap, double*) = result;
+		else *va_arg(ap, float*) = (float)result;
 	}
 
-	return 0;
+	return suppress ? 0 : 1;
 }
 
 static inline int __jacl_parse(const char **input, FILE *stream, const char * restrict fmt, va_list ap) {
@@ -928,7 +907,7 @@ static inline int __jacl_parse(const char **input, FILE *stream, const char * re
 
 	while (*fmt) {
 		if (*fmt != '%') {
-			__jacl_parse_next(&in);
+			__jacl_skip_space(in);
 
 			int ch = __jacl_getch(&in, stream);
 
@@ -948,14 +927,14 @@ static inline int __jacl_parse(const char **input, FILE *stream, const char * re
 
 		int width = INT_MAX;
 
-		if ((unsigned)(*fmt - '0') <= 9u) width = __jacl_scan_u32(&fmt);
+		if ((unsigned)(*fmt - '0') <= 9u) __jacl_set_u32(width, fmt);
 
 		int length = __jacl_mod_length(&fmt);
 		char type = *fmt++;
 
 		switch (type) {
-			case 'c': count += __jacl_parse_char(&in, stream, width, suppress, ap); break;
-			case 's': count += __jacl_parse_string(&in, stream, width, suppress, ap); break;
+			case 'c':
+			case 's': count += __jacl_parse_string(&in, stream, width, suppress, type, ap); break;
 			case '[': count += __jacl_parse_scanset(&in, stream, &fmt, width, suppress, ap); break;
 			case 'i':
 			case 'd':
@@ -966,15 +945,19 @@ static inline int __jacl_parse(const char **input, FILE *stream, const char * re
 			case 'B':
 			#endif
 			case 'x':
-			case 'X': count += __jacl_parse_int(&in, fmt - 1, length, suppress, ap); break;
-			case 'p': count += __jacl_parse_ptr(&in, suppress, ap); break;
+			case 'X': count += __jacl_parse_int(&in, stream, fmt - 1, length, suppress, ap); break;
+			case 'p': count += __jacl_parse_ptr(&in, stream, suppress, ap); break;
 			case 'e':
 			case 'E':
 			case 'g':
 			case 'G':
-			case 'f': count += __jacl_parse_float(&in, length, suppress, ap); break;
-			case '%': __jacl_parse_next(&in); if (__jacl_getch(&in, stream) == '%') count++; break;
-			default: break;
+			case 'f': count += __jacl_parse_float(&in, stream, length, suppress, ap); break;
+			case '%':
+				__jacl_skip_space(in);
+
+				if (__jacl_getch(&in, stream) == '%') count++;
+
+				break;
 		}
 
 		suppress = 0;
@@ -995,6 +978,11 @@ int fprintf(FILE* restrict stream, const char* restrict fmt, ...) { va_list ap; 
 int vsprintf(char * restrict s, const char * restrict fmt, va_list ap) { return __jacl_format(s, SIZE_MAX, fmt, ap); }
 int sprintf(char * restrict s, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsprintf(s, fmt, ap); va_end(ap); return r; }
 
+#if JACL_HAS_C99
+int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap) { return __jacl_format(s, n, fmt, ap); }
+int snprintf(char * restrict s, size_t n, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsnprintf(s, n, fmt, ap); va_end(ap); return r; }
+#endif
+
 /* ============================================================= */
 /* Scanf Implementations                                         */
 /* ============================================================= */
@@ -1004,11 +992,6 @@ int vfscanf(FILE * restrict stream, const char * restrict fmt, va_list ap) { ret
 int fscanf(FILE* restrict stream, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vfscanf(stream, fmt, ap); va_end(ap); return r; }
 int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap) { const char *in = s; return __jacl_parse(&in, NULL, fmt, ap); }
 int sscanf(const char * restrict s, const char * restrict fmt, ...) { const char *in = s; va_list ap; va_start(ap, fmt); int r = __jacl_parse(&in, NULL, fmt, ap); va_end(ap); return r; }
-
-#if JACL_HAS_C99
-int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap) { return __jacl_format(s, n, fmt, ap); }
-int snprintf(char * restrict s, size_t n, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsnprintf(s, n, fmt, ap); va_end(ap); return r; }
-#endif
 
 #ifdef __cplusplus
 }

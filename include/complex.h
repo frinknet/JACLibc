@@ -17,16 +17,12 @@ extern "C" {
 # define complex _Complex
 #endif
 
-#ifndef I
-# define I _Complex_I
+#ifndef _Complex_I
+	#define _Complex_I (0.0f+1.0fi)
 #endif
 
-#ifndef _Complex_I
-	#if defined(__GNUC__) || defined(__clang__)
-		#define _Complex_I (__extension__ 1.0iF)
-	#else
-		#define _Complex_I (1.0F * I)
-	#endif
+#ifndef I
+# define I _Complex_I
 #endif
 
 #if JACL_HAS_C11
@@ -46,18 +42,24 @@ extern "C" {
 
 #define __jacl_creal(type, suf) \
 	static inline type creal##suf(type complex z) { \
-		return __real__ z; \
+		union { type complex c; type a[2]; } u; \
+		u.c = z; \
+		return u.a[0]; \
 	}
 
 #define __jacl_cimag(type, suf) \
 	static inline type cimag##suf(type complex z) { \
-		return __imag__ z; \
+		union { type complex c; type a[2]; } u; \
+		u.c = z; \
+		return u.a[1]; \
 	}
 
 #define __jacl_conj(type, suf) \
 	static inline type complex conj##suf(type complex z) { \
 		return creal##suf(z) - I * cimag##suf(z); \
 	}
+
+
 
 // cproj(z) = z if finite, else infinite projection on Riemann sphere
 #define __jacl_cproj(type, suf) \
@@ -106,9 +108,11 @@ extern "C" {
 // ctan(z) = csin(z) / ccos(z)
 #define __jacl_ctan(type, suf) \
 	static inline type complex ctan##suf(type complex z) { \
+		type complex s = csin##suf(z); \
 		type complex c = ccos##suf(z); \
-		if (c == (type complex)0) return (type complex)(0.0 / 0.0); /* NaN */ \
-		return csin##suf(z) / c; \
+		type r = creal##suf(c), i = cimag##suf(c); \
+		if (r == (type)0 && i == (type)0) return (type complex)(0.0 / 0.0); \
+		return s / c; \
 	}
 
 // cacos(z) = -I * clog(z + I * csqrt(1 - z*z))
@@ -154,9 +158,11 @@ extern "C" {
 // ctanh(z) = csinh(z) / ccosh(z)
 #define __jacl_ctanh(type, suf) \
 	static inline type complex ctanh##suf(type complex z) { \
+		type complex s = csinh##suf(z); \
 		type complex c = ccosh##suf(z); \
-		if (c == (type complex)0) return (type complex)(0.0 / 0.0); /* NaN */ \
-		return csinh##suf(z) / c; \
+		type r = creal##suf(c), i = cimag##suf(c); \
+		if (r == (type)0 && i == (type)0) return (type complex)(0.0 / 0.0); \
+		return s / c; \
 	}
 
 // cacosh(z) = clog(z + csqrt(z+1) * csqrt(z-1))
@@ -208,15 +214,27 @@ extern "C" {
 		return cexp##suf((type complex)0.5 * clog##suf(z)); \
 	}
 
-// Manipulation Functions
+/* ================================================================ */
+/* Manipulation functions                                           */
+/* ================================================================ */
 __jacl_cmath(creal)
 __jacl_cmath(cimag)
 __jacl_cmath(conj)
-__jacl_cmath(cproj)
 __jacl_cmath(cabs)
 __jacl_cmath(carg)
+__jacl_cmath(cproj)
 
-// Trogonometry Functions
+/* ================================================================ */
+/* Exponential functions                                            */
+/* ================================================================ */
+__jacl_cmath(cexp)
+__jacl_cmath(clog)
+__jacl_cmath(csqrt)
+__jacl_cmath(cpow)
+
+/* ================================================================ */
+/* Trigonometry functions                                           */
+/* ================================================================ */
 __jacl_cmath(ccos)
 __jacl_cmath(csin)
 __jacl_cmath(ctan)
@@ -224,7 +242,9 @@ __jacl_cmath(cacos)
 __jacl_cmath(casin)
 __jacl_cmath(catan)
 
-// Hyperbolic Functions
+/* ================================================================ */
+/* Hyperbolic functions                                             */
+/* ================================================================ */
 __jacl_cmath(ccosh)
 __jacl_cmath(csinh)
 __jacl_cmath(ctanh)
@@ -232,11 +252,33 @@ __jacl_cmath(cacosh)
 __jacl_cmath(casinh)
 __jacl_cmath(catanh)
 
-// Exponential Functions
-__jacl_cmath(cexp)
-__jacl_cmath(clog)
-__jacl_cmath(cpow)
-__jacl_cmath(csqrt)
+/* ================================================================ */
+/* Cleanup internal macros                                          */
+/* ================================================================ */
+
+#undef __jacl_cmath
+#undef __jacl_creal
+#undef __jacl_cimag
+#undef __jacl_conj
+#undef __jacl_cproj
+#undef __jacl_cabs
+#undef __jacl_carg
+#undef __jacl_ccos
+#undef __jacl_csin
+#undef __jacl_ctan
+#undef __jacl_cacos
+#undef __jacl_casin
+#undef __jacl_catan
+#undef __jacl_ccosh
+#undef __jacl_csinh
+#undef __jacl_ctanh
+#undef __jacl_cacosh
+#undef __jacl_casinh
+#undef __jacl_catanh
+#undef __jacl_cexp
+#undef __jacl_clog
+#undef __jacl_cpow
+#undef __jacl_csqrt
 
 #ifdef __cplusplus
 }

@@ -57,12 +57,12 @@ static int          __jacl_test_suite_count   = 0;
 /* ============================================================= */
 /* ANSI Colour Helper                                            */
 /* ============================================================= */
-#define COLOR_RED    "\x1b[31m"
-#define COLOR_GREEN  "\x1b[32m"
-#define COLOR_YELLOW "\x1b[33m"
-#define COLOR_BLUE   "\x1b[34m"
-#define COLOR_CYAN   "\x1b[36m"
-#define COLOR_RESET  "\x1b[0m"
+#define COLOR_HEAD   "\x1b[36m"
+#define COLOR_TEST   "\x1b[93m"
+#define COLOR_PASS   "\x1b[92m"
+#define COLOR_FAIL   "\x1b[31m"
+#define COLOR_SKIP   "\x1b[36m"
+#define COLOR_NORM   "\x1b[0m"
 
 static inline int __jacl_test_color(void) {
   static int checked = 0, has = 0;
@@ -134,22 +134,22 @@ static inline void __jacl_test_run(test_suite_t *suite, test_t *t) {
 
   suite->stats.total++;
 
-	printf("  %s%-60s%s", __jacl_test_color() ? COLOR_BLUE : "", t->name, __jacl_test_color() ? COLOR_RESET : "");
+	printf("  %s%-60s%s", __jacl_test_color() ? COLOR_TEST : "", t->name, __jacl_test_color() ? COLOR_NORM : "");
 
   fflush(stdout);
 
   t->func();
 
   if (__jacl_test_failed) {
-    printf("%s[FAIL]%s\n", __jacl_test_color() ? COLOR_RED : "", __jacl_test_color() ? COLOR_RESET : "");
+    printf("%s[FAIL]%s\n", __jacl_test_color() ? COLOR_FAIL : "", __jacl_test_color() ? COLOR_NORM : "");
 
-    if (__jacl_test_errored) puts(__jacl_test_error), putchar('\n');
+    if (__jacl_test_errored) printf("\n%s%s%s\n\n", __jacl_test_color() ? COLOR_FAIL : "", __jacl_test_error, __jacl_test_color() ? COLOR_NORM : "");
 
     __jacl_test_stats.failed++;
 
     suite->stats.failed++;
   } else {
-    printf("%s[PASS]%s\n", __jacl_test_color() ? COLOR_GREEN : "", __jacl_test_color() ? COLOR_RESET : "");
+    printf("%s[PASS]%s\n", __jacl_test_color() ? COLOR_PASS : "", __jacl_test_color() ? COLOR_NORM : "");
 
     __jacl_test_stats.passed++;
 
@@ -158,33 +158,36 @@ static inline void __jacl_test_run(test_suite_t *suite, test_t *t) {
 }
 
 static inline int __jacl_test_only(const char *test_name) {
-  for (int i = 0; i < __jacl_test_suite_count; i++) {
-    test_suite_t *suite = &__jacl_test_suites[i];
+	for (int i = 0; i < __jacl_test_suite_count; i++) {
+		test_suite_t *suite = &__jacl_test_suites[i];
 
-    for (int j = 0; j < suite->test_count; j++) {
-      if (!strcmp(suite->tests[j].name, test_name)) {
-        printf("  Test '%s' (suite %s:%s)\n\n", test_name, suite->unit, suite->suite);
-        printf("  %s=== %s: %s - %s tests ===%s\n",
-               __jacl_test_color() ? COLOR_CYAN : "",
-               suite->unit, suite->suite, suite->type,
-               __jacl_test_color() ? COLOR_RESET : "");
-        __jacl_test_run(suite, &suite->tests[j]);
+		for (int j = 0; j < suite->test_count; j++) {
+			if (!strcmp(suite->tests[j].name, test_name)) {
+  			printf("\n  %sRunning only '%s' test…%s\n",
+				       __jacl_test_color() ? COLOR_TEST : "",
+							 test_name,
+				       __jacl_test_color() ? COLOR_NORM : "");
+				printf("  %s%s - %s: %s test%s\n\n",
+				       __jacl_test_color() ? COLOR_HEAD : "",
+				       suite->suite, suite->unit, suite->type,
+				       __jacl_test_color() ? COLOR_NORM : "");
+				__jacl_test_run(suite, &suite->tests[j]);
 
-        return __jacl_test_stats.failed > 0;
-      }
-    }
-  }
+				return __jacl_test_stats.failed > 0;
+			}
+		}
+	}
 
   printf("Test '%s' not found\n", test_name);
 
   return 1;
 }
 
-static inline int __jacl_test_each(const char *name) {
+static inline int __jacl_test_each(const char *suite_name) {
 	test_suite_t *suite = NULL;
 
 	for (int i = 0; i < __jacl_test_suite_count; i++) {
-		if (!strcmp(__jacl_test_suites[i].suite, name)) {
+		if (!strcmp(__jacl_test_suites[i].suite, suite_name)) {
 			suite = &__jacl_test_suites[i];
 
 			break;
@@ -192,15 +195,20 @@ static inline int __jacl_test_each(const char *name) {
 	}
 
 	if (!suite) {
-		printf("  Suite '%s' not found\n", name);
+		printf("  Suite '%s' not found\n", suite_name);
 
 		return 1;
 	}
 
-	printf("  %s=== %s: %s - %s tests ===%s\n",
-	       __jacl_test_color() ? COLOR_CYAN : "",
-	       suite->unit, suite->suite, suite->type,
-	       __jacl_test_color() ? COLOR_RESET : "");
+  printf("\n  %sRunning '%s' suite…%s\n",
+	       __jacl_test_color() ? COLOR_TEST : "",
+				 suite_name,
+	       __jacl_test_color() ? COLOR_NORM : "");
+
+	printf("  %s%s - %s: %s tests%s\n\n",
+	       __jacl_test_color() ? COLOR_HEAD : "",
+	       suite->suite, suite->unit, suite->type,
+	       __jacl_test_color() ? COLOR_NORM : "");
 
 	for (int i = 0; i < suite->test_count; i++) __jacl_test_run(suite, &suite->tests[i]);
 
@@ -220,20 +228,20 @@ static inline int __jacl_test_all(void) {
   }
 
   // Add blank line before, color the "Running" message like test names (blue)
-  printf("\n  %sRunning %d test%s…%s\n",
-         __jacl_test_color() ? COLOR_BLUE : "",
+  printf("\n  %sRunning all %d test%s…%s\n",
+         __jacl_test_color() ? COLOR_TEST : "",
          total,
          total == 1 ? "" : "s",
-         __jacl_test_color() ? COLOR_RESET : "");
+         __jacl_test_color() ? COLOR_NORM : "");
 
   for (int i = 0; i < __jacl_test_suite_count; i++) {
     test_suite_t *suite = &__jacl_test_suites[i];
 
     // Add blank line before header, keep header on its own line
-    printf("\n  %s=== %s: %s - %s tests ===%s\n\n",
-           __jacl_test_color() ? COLOR_CYAN : "",
-           suite->unit, suite->suite, suite->type,
-           __jacl_test_color() ? COLOR_RESET : "");
+    printf("\n  %s%s - %s: %s tests%s\n\n",
+           __jacl_test_color() ? COLOR_HEAD : "",
+           suite->suite, suite->unit, suite->type,
+           __jacl_test_color() ? COLOR_NORM : "");
 
     for (int j = 0; j < suite->test_count; j++) {
       __jacl_test_run(suite, &suite->tests[j]);
@@ -255,75 +263,146 @@ static inline void __jacl_test_report(void) {
 
   printf("\n%s\n",
     __jacl_test_stats.failed
-    ? (__jacl_test_color() ? COLOR_RED
-      "  ❌ SOME CHECKS FAILED ❌" COLOR_RESET
+    ? (__jacl_test_color() ? COLOR_FAIL
+      "  ❌ SOME CHECKS FAILED ❌" COLOR_NORM
       : "  ❌ SOME CHECKS FAILED ❌")
-    : (__jacl_test_color() ? COLOR_GREEN
-      "  🎉 ALL CHECKS PASSED 🎉" COLOR_RESET
+    : (__jacl_test_color() ? COLOR_PASS
+      "  🎉 ALL CHECKS PASSED 🎉" COLOR_NORM
       : "  🎉 ALL CHECKS PASSED 🎉")
   );
 
-  printf("\n  %s%d total   %d passed   %d failed   %d skipped%s\n",
-    __jacl_test_color() ? COLOR_BLUE : "",
-    __jacl_test_stats.total, __jacl_test_stats.passed,
-    __jacl_test_stats.failed, __jacl_test_stats.skipped,
-    __jacl_test_color() ? COLOR_RESET : ""
+  printf("\n  %s%d total   %s%d passed   %s%d failed   %s%d skipped%s\n\n",
+    __jacl_test_color() ? COLOR_TEST : "",
+    __jacl_test_stats.total,
+    __jacl_test_color() ? COLOR_PASS : "",
+		__jacl_test_stats.passed,
+    __jacl_test_color() ? COLOR_FAIL : "",
+    __jacl_test_stats.failed,
+    __jacl_test_color() ? COLOR_SKIP : "",
+		__jacl_test_stats.skipped,
+    __jacl_test_color() ? COLOR_NORM : ""
   );
 }
 
 /* ============================================================= */
 /* Test Assertions                                               */
 /* ============================================================= */
+#define ASSERT_TRUE(x) do { \
+	if (!(x)) { \
+		TEST_FAIL("\tFAIL: %s:%d - Value should be true\n" \
+		          "\tTEST: %s", __FILE__, __LINE__, #x); \
+	} \
+} while(0)
+
+#define ASSERT_FALSE(x) do { \
+	if (x) { \
+		TEST_FAIL("\tFAIL: %s:%d\n - Value should be false\n" \
+		          "\tTEST: %s", __FILE__, __LINE__, #x); \
+	} \
+} while(0)
+
+#define ASSERT_EQ(a, b) do { \
+	if (!((a) == (b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be equal\n" \
+		          "\tTEST: %ld == %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+	} \
+} while(0)
+
 #define ASSERT_GT(a, b) do { \
-  if (!((a) > (b))) { \
-    TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-      "\tTEST: %ld > %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
-  } \
+	if (!((a) > (b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
+		          "\tTEST: %ld > %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_LT(a, b) do { \
+	if (!((a) < (b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
+		          "\tTEST: %ld < %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_GE(a, b) do { \
+	if (!((a) >= (b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values shouldn't be less\n" \
+		          "\tTEST: %ld >= %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_LE(a, b) do { \
+	if (!((a) <= (b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values shouldn't be more\n" \
+		          "\tTEST: %ld <= %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_NE(a, b) do { \
+	if (!((a) != (b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be different\n" \
+		          "\tTEST: %ld != %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+	} \
 } while(0)
 
 #define ASSERT_STR_EQ(expected, actual) do { \
-  if (!expected || !actual || strcmp((expected), (actual)) != 0) { \
-    TEST_FAIL("\tFAIL: %s:%d - Strings not equal\n" \
-      "\tTEST: \"%s\" == \"%s\"", \
-      __FILE__, __LINE__, \
-      (actual) ? (actual) : "(null)", \
-      (expected) ? (expected) : "(null)"); \
-  } \
+	if (!expected || !actual || strcmp((expected), (actual)) != 0) { \
+		TEST_FAIL("\tFAIL: %s:%d - Strings not equal\n" \
+		          "\tTEST: \"%s\" == \"%s\"", \
+		          __FILE__, __LINE__, \
+		          (actual) ? (actual) : "(null)", \
+		          (expected) ? (expected) : "(null)"); \
+	} \
 } while(0)
 
 #define ASSERT_STR_NE(expected, actual) do { \
-  if (expected && actual && strcmp((expected), (actual)) == 0) { \
-    TEST_FAIL("\tFAIL: %s:%d - Strings should not match\n" \
-      "\tTEST: \"%s\" != \"%s\"", \
-      __FILE__, __LINE__, \
-      (actual) ? (actual) : "(null)", \
-      (expected) ? (expected) : "(null)"); \
-  } \
+	if (expected && actual && strcmp((expected), (actual)) == 0) { \
+		TEST_FAIL("\tFAIL: %s:%d - Strings should not match\n" \
+		          "\tTEST: \"%s\" != \"%s\"", \
+		          __FILE__, __LINE__, \
+		          (actual) ? (actual) : "(null)", \
+		          (expected) ? (expected) : "(null)"); \
+	} \
 } while(0)
 
 #define ASSERT_NULL(ptr) do { \
-  if ((ptr) != NULL) { \
-    TEST_FAIL("\tFAIL: %s:%d - Expected NULL pointer\n" \
-      "\tTEST: %p != NULL", __FILE__, __LINE__, (ptr)); \
-  } \
+	if ((ptr) != NULL) { \
+		TEST_FAIL("\tFAIL: %s:%d - Expected NULL pointer\n" \
+		          "\tTEST: %p != NULL", __FILE__, __LINE__, (ptr)); \
+	} \
 } while(0)
 
 #define ASSERT_NOT_NULL(ptr) do { \
-  if ((ptr) == NULL) { \
-    TEST_FAIL("\tFAIL: %s:%d - Expected non-NULL pointer\n" \
-      "\tTEST: NULL != NULL", __FILE__, __LINE__); \
-  } \
+	if ((ptr) == NULL) { \
+		TEST_FAIL("\tFAIL: %s:%d - Expected non-NULL pointer\n" \
+		          "\tTEST: NULL != NULL", __FILE__, __LINE__); \
+	} \
 } while(0)
 
-#define ASSERT_FLOAT_EQ(expected, actual, epsilon) do { \
-  double diff = (double)(expected) - (double)(actual); \
-  if (diff < 0) diff = -diff; \
-  if (diff > (epsilon)) { \
-    TEST_FAIL("\tFAIL: %s:%d - Floats not equal within epsilon\n" \
-      "\tTEST: %f != %f\n" \
-      "\tWITH: ϵ = %f, Δ = %f", \
-      __FILE__, __LINE__, (actual), (expected), (double)(epsilon), diff); \
-  } \
+#define ASSERT_APPROX(expected, actual, tolerance) do { \
+	double diff = (double)(expected) - (double)(actual); \
+	if (diff < 0) diff = -diff; \
+	if (diff > (tolerance)) { \
+		TEST_FAIL("\tFAIL: %s:%d - not within tolerance\n" \
+		          "\tTEST: %f ≈ %f\n" \
+		          "\tWITH: ϵ = %f, Δ = %f", \
+		          __FILE__, __LINE__, (actual), (expected), (double)(tolerance), diff); \
+	} \
+} while(0)
+
+#define ASSERT_COMPLEX(expt_real, expt_imgn, actual, tolerance) do { \
+	  double _r = creal(actual); \
+	  double _i = cimag(actual); \
+	  double diff_r = (double)(expt_real) - _r; \
+	  double diff_i = (double)(expt_imgn) - _i; \
+	  if (diff_r < 0) diff_r = -diff_r; \
+	  if (diff_i < 0) diff_i = -diff_i; \
+	  if (diff_r > (tolerance) || diff_i > (tolerance)) { \
+			TEST_FAIL("\tFAIL: %s:%d - complex not in tolerance\n" \
+			          "\tTEST: %.6fr%+.6fi ≈ %.6fr%+.6fi\n" \
+			          "\tWITH: ϵ = %f, Δr = %f, Δi = %f", \
+			          __FILE__, __LINE__, _r, _i, \
+			          (double)(expt_real), (double)(expt_imgn), \
+			          (double)(tolerance), diff_r, diff_i); \
+		} \
 } while(0)
 
 /* ============================================================= */
@@ -334,27 +413,11 @@ static inline void __jacl_test_report(void) {
     snprintf(__jacl_test_error, sizeof(__jacl_test_error), fmt, \
       ##__VA_ARGS__); return; } while(0)
 
-#define ASSERT_TRUE(cond) do{ if(!(cond)) TEST_FAIL("\tFAIL: %s:%d\n" \
-  "\tTEST: %s == true", __FILE__,__LINE__,#cond);}while(0)
-
-#define ASSERT_FALSE(cond) do{ if( (cond)) TEST_FAIL("\tFAIL: %s:%d\n" \
-  "\tTEST: %s == false", __FILE__,__LINE__,#cond);}while(0)
-
-#define ASSERT_EQ(e,a) do{ if((e)!=(a)) TEST_FAIL("\tFAIL: %s:%d\n" \
-  "\tTEST: %ld == %ld", __FILE__,__LINE__,(long)(a),(long)(e));}while(0)
-
-#define ASSERT_NE(e,a) do{ if((e)==(a)) TEST_FAIL("\tFAIL: %s:%d\n" \
-  "\tTEST: values should differ", __FILE__,__LINE__);}while(0)
-
-#define ASSERT_LT(a, b) do { \
-  if (!((a) < (b))) { \
-    TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-      "\tTEST: %ld < %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
-  } \
-} while(0)
-
 #define TEST_SKIP(reason) do { \
-  printf("	SKIP: %s\n", reason); \
+  printf("\n	%sSKIP: %s%s\n\n", \
+    __jacl_test_color() ? COLOR_SKIP : "", \
+		reason \
+    __jacl_test_color() ? COLOR_NORM : ""); \
   __jacl_test_stats.skipped++; \
   return; \
 } while(0)

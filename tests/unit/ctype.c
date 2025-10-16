@@ -301,11 +301,11 @@ TEST(ascii_boundaries) {
 	// First printable
 	ASSERT_TRUE(isprint(' '));
 	ASSERT_EQ(' ', 32);
-	
+
 	// Last printable
 	ASSERT_TRUE(isprint('~'));
 	ASSERT_EQ('~', 126);
-	
+
 	// DEL boundary
 	ASSERT_TRUE(iscntrl(127));
 	ASSERT_FALSE(isprint(127));
@@ -316,7 +316,7 @@ TEST(letter_boundaries) {
 	ASSERT_TRUE(isalpha('Z'));
 	ASSERT_FALSE(isalpha('@'));
 	ASSERT_FALSE(isalpha('['));
-	
+
 	ASSERT_TRUE(isalpha('a'));
 	ASSERT_TRUE(isalpha('z'));
 	ASSERT_FALSE(isalpha('`'));
@@ -337,7 +337,7 @@ TEST_SUITE(combined);
 
 TEST(string_classification) {
 	const char *str = "Hello123!";
-	
+
 	ASSERT_TRUE(isupper(str[0]));
 	ASSERT_TRUE(islower(str[1]));
 	ASSERT_TRUE(isalpha(str[0]));
@@ -349,7 +349,7 @@ TEST(string_classification) {
 
 TEST(case_conversion_string) {
 	char str[] = "HeLLo WoRLd!";
-	
+
 	for (int i = 0; str[i]; i++) {
 		if (isupper(str[i])) {
 			str[i] = tolower(str[i]);
@@ -357,13 +357,13 @@ TEST(case_conversion_string) {
 			str[i] = toupper(str[i]);
 		}
 	}
-	
-	ASSERT_STR_EQ("hEllO wOrld!", str);
+
+	ASSERT_STR_EQ("hEllO wOrlD!", str);
 }
 
 TEST(whitespace_detection) {
 	const char *str = "a b\tc\nd";
-	
+
 	ASSERT_FALSE(isspace(str[0]));
 	ASSERT_TRUE(isspace(str[1]));
 	ASSERT_FALSE(isspace(str[2]));
@@ -411,7 +411,7 @@ TEST(all_letters) {
 		ASSERT_FALSE(islower(c));
 		ASSERT_EQ(c + 32, tolower(c));
 	}
-	
+
 	for (char c = 'a'; c <= 'z'; c++) {
 		ASSERT_TRUE(isalpha(c));
 		ASSERT_TRUE(islower(c));
@@ -438,17 +438,17 @@ TEST(batch_classification) {
 	for (int i = 0; i < 256; i++) {
 		test_string[i] = (char)i;
 	}
-	
+
 	int alpha_count = 0;
 	int digit_count = 0;
 	int space_count = 0;
-	
+
 	for (int i = 0; i < 256; i++) {
 		if (isalpha(test_string[i])) alpha_count++;
 		if (isdigit(test_string[i])) digit_count++;
 		if (isspace(test_string[i])) space_count++;
 	}
-	
+
 	ASSERT_EQ(52, alpha_count);  // A-Z + a-z
 	ASSERT_EQ(10, digit_count);  // 0-9
 	ASSERT_EQ(6, space_count);   // space, tab, newline, etc.

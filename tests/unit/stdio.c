@@ -68,23 +68,23 @@ TEST(fprintf_multiple_writes) {
 /* ============================================================================
  * sprintf BASIC TESTS
  * ============================================================================ */
-TEST_SUITE(sprintf);
+TEST_SUITE(sprintf_basic);
 
-TEST(basic_string) {
+TEST(sprintf_basic_string) {
 	char buf[64];
 	int ret = sprintf(buf, "hello");
 	ASSERT_STR_EQ("hello", buf);
 	ASSERT_EQ(5, ret);
 }
 
-TEST(percent_escape) {
+TEST(sprintf_percent_escape) {
 	char buf[64];
 	int ret = sprintf(buf, "%%");
 	ASSERT_STR_EQ("%", buf);
 	ASSERT_EQ(1, ret);
 }
 
-TEST(mixed_format) {
+TEST(sprintf_mixed_format) {
 	char buf[128];
 	int x = 42;
 	sprintf(buf, "%d %s %p", 42, "test", &x);
@@ -96,171 +96,171 @@ TEST(mixed_format) {
  * ============================================================================ */
 TEST_SUITE(sprintf_float);
 
-TEST(zero) {
+TEST(sprintf_float_zero) {
 	char buf[64];
 	sprintf(buf, "%.6f", 0.0);
 	ASSERT_STR_EQ("0.000000", buf);
 }
 
-TEST(negative_zero) {
+TEST(sprintf_float_negative_zero) {
 	char buf[64];
 	sprintf(buf, "%.6f", -0.0);
 	ASSERT_TRUE(strstr(buf, "0.000000") != NULL);
 }
 
-TEST(rounding_995_critical) {
+TEST(sprintf_float_rounding_995_critical) {
 	// Critical: tests last-digit rounding fix
 	char buf[64];
 	sprintf(buf, "%.2f", 0.995);
 	ASSERT_STR_EQ("1.00", buf);
 }
 
-TEST(rounding_994_no_round) {
+TEST(sprintf_float_rounding_994_no_round) {
 	char buf[64];
 	sprintf(buf, "%.2f", 0.994);
 	ASSERT_STR_EQ("0.99", buf);
 }
 
-TEST(rounding_1005_half) {
+TEST(sprintf_float_rounding_1005_half) {
 	char buf[64];
 	sprintf(buf, "%.2f", 1.005);
-	ASSERT_TRUE(!strcmp(buf, "1.00") || !strcmp(buf, "1.01"));
+	ASSERT_STR_EQ(buf, "1.01");
 }
 
-TEST(rounding_9995_carry_tens) {
+TEST(sprintf_float_rounding_9995_carry_tens) {
 	char buf[64];
 	sprintf(buf, "%.2f", 9.995);
 	ASSERT_STR_EQ("10.00", buf);
 }
 
-TEST(rounding_99995_carry_hundreds) {
+TEST(sprintf_float_rounding_99995_carry_hundreds) {
 	char buf[64];
 	sprintf(buf, "%.2f", 99.995);
 	ASSERT_STR_EQ("100.00", buf);
 }
 
-TEST(precision_overflow_prevention) {
+TEST(sprintf_float_precision_overflow_prevention) {
 	// Critical: ensures fix prevents '0'+10 = ':' bug
 	char buf[64];
 	sprintf(buf, "%.6f", 1.999999);
 	ASSERT_STR_EQ("2.000000", buf);
 }
 
-TEST(large_integer_1e15) {
+TEST(sprintf_float_large_integer_1e15) {
 	char buf[64];
 	sprintf(buf, "%.6f", 1e15);
 	ASSERT_NOT_NULL(strstr(buf, "1000000000000000"));
 }
 
-TEST(negative_near_zero) {
+TEST(sprintf_float_negative_near_zero) {
 	char buf[64];
 	sprintf(buf, "%.10f", -1e-10);
 	ASSERT_STR_EQ("-0.0000000001", buf);
 }
 
-TEST(negative_rounds_to_zero) {
+TEST(sprintf_float_negative_rounds_to_zero) {
 	char buf[64];
 	sprintf(buf, "%.6f", -0.0000001);
 	ASSERT_TRUE(strstr(buf, "0.000000") != NULL);
 }
 
-TEST(precision_zero) {
+TEST(sprintf_float_precision_zero) {
 	char buf[64];
 	sprintf(buf, "%.0f", 3.5);
 	ASSERT_TRUE(!strcmp(buf, "3") || !strcmp(buf, "4"));
 }
 
-TEST(precision_zero_integer) {
+TEST(sprintf_float_precision_zero_integer) {
 	char buf[64];
 	sprintf(buf, "%.0f", 1.0);
 	ASSERT_STR_EQ("1", buf);
 }
 
-TEST(trailing_zeros_show) {
+TEST(sprintf_float_trailing_zeros_show) {
 	char buf[64];
 	sprintf(buf, "%.6f", 1.0);
 	ASSERT_STR_EQ("1.000000", buf);
 }
 
-TEST(alt_form_decimal_point) {
+TEST(sprintf_float_alt_form_decimal_point) {
 	char buf[64];
 	sprintf(buf, "%#.0f", 1.0);
 	ASSERT_STR_EQ("1.", buf);
 }
 
-TEST(width_padding_right) {
+TEST(sprintf_float_width_padding_right) {
 	char buf[64];
 	sprintf(buf, "%10.2f", 3.14);
 	ASSERT_STR_EQ("      3.14", buf);
 }
 
-TEST(width_padding_left) {
+TEST(sprintf_float_width_padding_left) {
 	char buf[64];
 	sprintf(buf, "%-10.2f", 3.14);
 	ASSERT_STR_EQ("3.14      ", buf);
 }
 
-TEST(width_zero_padding) {
+TEST(sprintf_float_width_zero_padding) {
 	char buf[64];
 	sprintf(buf, "%010.2f", 3.14);
 	ASSERT_STR_EQ("0000003.14", buf);
 }
 
-TEST(width_zero_padding_negative) {
+TEST(sprintf_float_width_zero_padding_negative) {
 	char buf[64];
 	sprintf(buf, "%010.2f", -3.14);
 	ASSERT_STR_EQ("-000003.14", buf);
 }
 
-TEST(flag_plus_sign) {
+TEST(sprintf_float_flag_plus_sign) {
 	char buf[64];
 	sprintf(buf, "%+f", 3.14);
 	ASSERT_EQ('+', buf[0]);
 }
 
-TEST(flag_plus_negative) {
+TEST(sprintf_float_flag_plus_negative) {
 	char buf[64];
 	sprintf(buf, "%+f", -3.14);
 	ASSERT_EQ('-', buf[0]);
 }
 
-TEST(flag_space) {
+TEST(sprintf_float_flag_space) {
 	char buf[64];
 	sprintf(buf, "% f", 3.14);
 	ASSERT_EQ(' ', buf[0]);
 }
 
-TEST(flag_space_negative) {
+TEST(sprintf_float_flag_space_negative) {
 	char buf[64];
 	sprintf(buf, "% f", -3.14);
 	ASSERT_EQ('-', buf[0]);
 }
 
-TEST(precision_one) {
+TEST(sprintf_float_precision_one) {
 	char buf[64];
 	sprintf(buf, "%.1f", 1.05);
 	ASSERT_TRUE(!strcmp(buf, "1.0") || !strcmp(buf, "1.1"));
 }
 
-TEST(precision_twenty) {
+TEST(sprintf_float_precision_twenty) {
 	char buf[64];
 	sprintf(buf, "%.20f", 1.0);
 	ASSERT_STR_EQ("1.00000000000000000000", buf);
 }
 
-TEST(huge_precision_clamping) {
+TEST(sprintf_float_huge_precision_clamping) {
 	char buf[100];
 	int len = snprintf(buf, 100, "%.500f", 1.5);
 	ASSERT_GT(len, 100);  // Should report full needed
 }
 
-TEST(negative_rounds_correctly) {
+TEST(sprintf_float_negative_rounds_correctly) {
 	char buf[20];
 	sprintf(buf, "%.1f", -0.05);
 	ASSERT_TRUE(!strcmp(buf, "-0.0") || !strcmp(buf, "-0.1"));
 }
 
-TEST(denormal_float) {
+TEST(sprintf_float_denormal_float) {
 	char buf[64];
 	sprintf(buf, "%.50e", 1e-320);
 	// Should handle gracefully (may underflow to 0)
@@ -595,13 +595,13 @@ TEST(uintmax_t_max) {
  * ============================================================================ */
 TEST_SUITE(sprintf_unsigned);
 
-TEST(zero) {
+TEST(unsigned_zero) {
 	char buf[64];
 	sprintf(buf, "%u", 0U);
 	ASSERT_STR_EQ("0", buf);
 }
 
-TEST(basic) {
+TEST(unsigned_basic) {
 	char buf[64];
 	sprintf(buf, "%u", 42U);
 	ASSERT_STR_EQ("42", buf);
@@ -630,61 +630,61 @@ TEST(ulong_long_max) {
  * ============================================================================ */
 TEST_SUITE(sprintf_hex);
 
-TEST(zero) {
+TEST(hex_zero) {
 	char buf[64];
 	sprintf(buf, "%x", 0);
 	ASSERT_STR_EQ("0", buf);
 }
 
-TEST(basic_lowercase) {
+TEST(hex_lowercase) {
 	char buf[64];
 	sprintf(buf, "%x", 255);
 	ASSERT_STR_EQ("ff", buf);
 }
 
-TEST(basic_uppercase) {
+TEST(hex_uppercase) {
 	char buf[64];
 	sprintf(buf, "%X", 255);
 	ASSERT_STR_EQ("FF", buf);
 }
 
-TEST(alt_form_prefix_lowercase) {
+TEST(hex_prefix_lowercase) {
 	char buf[64];
 	sprintf(buf, "%#x", 42);
 	ASSERT_STR_EQ("0x2a", buf);
 }
 
-TEST(alt_form_prefix_uppercase) {
+TEST(hex_prefix_uppercase) {
 	char buf[64];
 	sprintf(buf, "%#X", 42);
 	ASSERT_STR_EQ("0X2A", buf);
 }
 
-TEST(alt_form_zero_no_prefix) {
+TEST(hex_zero_no_prefix) {
 	char buf[64];
 	sprintf(buf, "%#x", 0);
 	ASSERT_STR_EQ("0", buf);
 }
 
-TEST(negative_as_hex) {
+TEST(hex_negative) {
 	char buf[64];
 	sprintf(buf, "%x", -1);
 	ASSERT_STR_EQ("ffffffff", buf);
 }
 
-TEST(combo_alt_zero_pad) {
+TEST(hex_combo_zero_pad) {
 	char buf[64];
 	sprintf(buf, "%#010x", 42);
 	ASSERT_STR_EQ("0x0000002a", buf);
 }
 
-TEST(width_padding) {
+TEST(hex_width_padding) {
 	char buf[64];
 	sprintf(buf, "%10x", 42);
 	ASSERT_STR_EQ("        2a", buf);
 }
 
-TEST(alt_form_with_precision) {
+TEST(hex_with_precision) {
 	char buf[20];
 	sprintf(buf, "%#.8x", 42);
 	ASSERT_STR_EQ("0x0000002a", buf);
@@ -695,31 +695,31 @@ TEST(alt_form_with_precision) {
  * ============================================================================ */
 TEST_SUITE(sprintf_octal);
 
-TEST(zero) {
+TEST(octal_zero) {
 	char buf[64];
 	sprintf(buf, "%o", 0);
 	ASSERT_STR_EQ("0", buf);
 }
 
-TEST(basic) {
+TEST(octal_basic) {
 	char buf[64];
 	sprintf(buf, "%o", 8);
 	ASSERT_STR_EQ("10", buf);
 }
 
-TEST(alt_form_prefix) {
+TEST(octal_form_prefix) {
 	char buf[64];
 	sprintf(buf, "%#o", 8);
 	ASSERT_STR_EQ("010", buf);
 }
 
-TEST(alt_form_zero) {
+TEST(octal_form_zero) {
 	char buf[64];
 	sprintf(buf, "%#o", 0);
 	ASSERT_STR_EQ("0", buf);
 }
 
-TEST(large_value) {
+TEST(octal_large_value) {
 	char buf[64];
 	sprintf(buf, "%o", 255);
 	ASSERT_STR_EQ("377", buf);
@@ -730,68 +730,68 @@ TEST(large_value) {
  * ============================================================================ */
 TEST_SUITE(sprintf_string);
 
-TEST(basic) {
+TEST(string_basic) {
 	char buf[64];
 	sprintf(buf, "%s", "hello");
 	ASSERT_STR_EQ("hello", buf);
 }
 
-TEST(null_pointer) {
+TEST(string_null_pointer) {
 	// Critical: tests "(null)" handling
 	char buf[64];
 	sprintf(buf, "%s", NULL);
 	ASSERT_STR_EQ("(null)", buf);
 }
 
-TEST(null_pointer_with_precision) {
+TEST(string_null_pointer_with_precision) {
 	char buf[64];
 	sprintf(buf, "%.3s", NULL);
 	ASSERT_STR_EQ("(nu", buf);
 }
 
-TEST(empty_string) {
+TEST(string_empty_string) {
 	char buf[64];
 	sprintf(buf, "%s", "");
 	ASSERT_STR_EQ("", buf);
 }
 
-TEST(precision_limiting) {
+TEST(string_precision_limiting) {
 	char buf[64];
 	sprintf(buf, "%.3s", "hello");
 	ASSERT_STR_EQ("hel", buf);
 }
 
-TEST(precision_longer_than_string) {
+TEST(string_precision_longer_than_string) {
 	char buf[64];
 	sprintf(buf, "%.10s", "hi");
 	ASSERT_STR_EQ("hi", buf);
 }
 
-TEST(width_right_align) {
+TEST(string_width_right_align) {
 	char buf[64];
 	sprintf(buf, "%10s", "hi");
 	ASSERT_STR_EQ("        hi", buf);
 }
 
-TEST(width_left_align) {
+TEST(string_width_left_align) {
 	char buf[64];
 	sprintf(buf, "%-10s", "hi");
 	ASSERT_STR_EQ("hi        ", buf);
 }
 
-TEST(empty_with_width) {
+TEST(string_empty_with_width) {
 	char buf[64];
 	sprintf(buf, "%10s", "");
 	ASSERT_STR_EQ("          ", buf);
 }
 
-TEST(precision_zero) {
+TEST(string_precision_zero) {
 	char buf[20];
 	sprintf(buf, "%.0s", "hello");
 	ASSERT_STR_EQ("", buf);
 }
 
-TEST(width_and_precision) {
+TEST(string_width_and_precision) {
 	char buf[20];
 	sprintf(buf, "%10.3s", "hello");
 	ASSERT_STR_EQ("       hel", buf);
@@ -802,13 +802,13 @@ TEST(width_and_precision) {
  * ============================================================================ */
 TEST_SUITE(sprintf_char);
 
-TEST(basic) {
+TEST(char_basic) {
 	char buf[64];
 	sprintf(buf, "%c", 'A');
 	ASSERT_STR_EQ("A", buf);
 }
 
-TEST(null_char) {
+TEST(char_null_char) {
 	char buf[64] = {0};
 	sprintf(buf, "x%cy", 0);
 	ASSERT_EQ('x', buf[0]);
@@ -816,13 +816,13 @@ TEST(null_char) {
 	ASSERT_EQ('y', buf[2]);
 }
 
-TEST(high_ascii) {
+TEST(char_high_ascii) {
 	char buf[64];
 	sprintf(buf, "%c", 127);
 	ASSERT_EQ(127, (unsigned char)buf[0]);
 }
 
-TEST(extended_ascii) {
+TEST(char_extended_ascii) {
 	char buf[64];
 	sprintf(buf, "%c", 255);
 	ASSERT_EQ(255, (unsigned char)buf[0]);
@@ -845,20 +845,20 @@ TEST(char_left_align_width) {
  * ============================================================================ */
 TEST_SUITE(sprintf_pointer);
 
-TEST(null_pointer) {
+TEST(pointer_null) {
 	char buf[64];
 	sprintf(buf, "%p", NULL);
 	ASSERT_NOT_NULL(buf);
 }
 
-TEST(valid_pointer) {
+TEST(pointer_valid) {
 	int x = 42;
 	char buf[64];
 	sprintf(buf, "%p", &x);
 	ASSERT_TRUE(strstr(buf, "0x") || strstr(buf, "0X") || buf[0] != '\0');
 }
 
-TEST(max_pointer_value) {
+TEST(pointer_max_value) {
 	char buf[64];
 	sprintf(buf, "%p", (void*)UINTPTR_MAX);
 	ASSERT_NOT_NULL(buf);
@@ -1215,91 +1215,91 @@ TEST(parse_zero) {
 	double d;
 	int ret = sscanf("0.0", "%lf", &d);
 	ASSERT_EQ(1, ret);
-	ASSERT_FLOAT_EQ(0.0, d, 1e-10);
+	ASSERT_APPROX(0.0, d, 1e-10);
 }
 
 TEST(parse_negative) {
 	double d;
 	sscanf("-3.14", "%lf", &d);
-	ASSERT_FLOAT_EQ(-3.14, d, 1e-10);
+	ASSERT_APPROX(-3.14, d, 1e-10);
 }
 
 TEST(parse_positive_exponent) {
 	// Critical: tests fixed exp loop
 	double d;
 	sscanf("1.5e10", "%lf", &d);
-	ASSERT_FLOAT_EQ(1.5e10, d, 1e5);
+	ASSERT_APPROX(1.5e10, d, 1e5);
 }
 
 TEST(parse_negative_exponent) {
 	// Critical: tests /=10 fix
 	double d;
 	sscanf("1e-5", "%lf", &d);
-	ASSERT_FLOAT_EQ(0.00001, d, 1e-15);
+	ASSERT_APPROX(0.00001, d, 1e-15);
 }
 
 TEST(parse_large_exponent) {
 	double d;
 	sscanf("1e200", "%lf", &d);
-	ASSERT_FLOAT_EQ(1e200, d, 1e195);
+	ASSERT_APPROX(1e200, d, 1e195);
 }
 
 TEST(parse_small_exponent) {
 	double d;
 	sscanf("1e-200", "%lf", &d);
-	ASSERT_FLOAT_EQ(1e-200, d, 1e-210);
+	ASSERT_APPROX(1e-200, d, 1e-210);
 }
 
 TEST(parse_no_decimal) {
 	double d;
 	sscanf("42", "%lf", &d);
-	ASSERT_FLOAT_EQ(42.0, d, 1e-10);
+	ASSERT_APPROX(42.0, d, 1e-10);
 }
 
 TEST(parse_leading_zeros) {
 	double d;
 	sscanf("0001.5", "%lf", &d);
-	ASSERT_FLOAT_EQ(1.5, d, 1e-10);
+	ASSERT_APPROX(1.5, d, 1e-10);
 }
 
 TEST(parse_trailing_zeros) {
 	double d;
 	sscanf("1.500", "%lf", &d);
-	ASSERT_FLOAT_EQ(1.5, d, 1e-10);
+	ASSERT_APPROX(1.5, d, 1e-10);
 }
 
 TEST(parse_whitespace) {
 	double d;
 	sscanf("  3.14", "%lf", &d);
-	ASSERT_FLOAT_EQ(3.14, d, 1e-10);
+	ASSERT_APPROX(3.14, d, 1e-10);
 }
 
 TEST(parse_multiple_floats) {
 	double a, b, c;
 	int ret = sscanf("1.0 2.0 3.0", "%lf %lf %lf", &a, &b, &c);
 	ASSERT_EQ(3, ret);
-	ASSERT_FLOAT_EQ(1.0, a, 1e-10);
-	ASSERT_FLOAT_EQ(2.0, b, 1e-10);
-	ASSERT_FLOAT_EQ(3.0, c, 1e-10);
+	ASSERT_APPROX(1.0, a, 1e-10);
+	ASSERT_APPROX(2.0, b, 1e-10);
+	ASSERT_APPROX(3.0, c, 1e-10);
 }
 
 TEST(parse_uppercase_E) {
 	double d;
 	sscanf("1E5", "%lf", &d);
-	ASSERT_FLOAT_EQ(1e5, d, 1e-5);
+	ASSERT_APPROX(1e5, d, 1e-5);
 }
 
 TEST(parse_positive_sign) {
 	double d;
 	sscanf("+42.5", "%lf", &d);
-	ASSERT_FLOAT_EQ(42.5, d, 1e-10);
+	ASSERT_APPROX(42.5, d, 1e-10);
 }
 
 TEST(parse_no_digits) {
 	double d = 42.0;
 	int ret = sscanf(".", "%lf", &d);
 	ASSERT_EQ(0, ret);
-	ASSERT_FLOAT_EQ(42.0, d, 1e-10);  // Unchanged
+	ASSERT_APPROX(42.0, d, 1e-10);  // Unchanged
 }
 
 TEST(parse_only_exponent) {
@@ -1311,13 +1311,13 @@ TEST(parse_only_exponent) {
 TEST(parse_decimal_only) {
 	double d;
 	sscanf(".5", "%lf", &d);
-	ASSERT_FLOAT_EQ(0.5, d, 1e-10);
+	ASSERT_APPROX(0.5, d, 1e-10);
 }
 
 TEST(parse_trailing_decimal) {
 	double d;
 	sscanf("5.", "%lf", &d);
-	ASSERT_FLOAT_EQ(5.0, d, 1e-10);
+	ASSERT_APPROX(5.0, d, 1e-10);
 }
 
 /* ============================================================================
@@ -1587,7 +1587,7 @@ TEST(float_roundtrip) {
 	sprintf(buf, "%.15e", orig);
 	double parsed;
 	sscanf(buf, "%lf", &parsed);
-	ASSERT_FLOAT_EQ(orig, parsed, orig * 1e-14);
+	ASSERT_APPROX(orig, parsed, orig * 1e-14);
 }
 
 TEST(int_roundtrip) {
@@ -2084,7 +2084,7 @@ TEST(fscanf_basic) {
 	ASSERT_EQ(3, ret);
 	ASSERT_EQ(42, i);
 	ASSERT_STR_EQ("hello", str);
-	ASSERT_FLOAT_EQ(3.14, fl, 0.01);
+	ASSERT_APPROX(3.14, fl, 0.01);
 
 	fclose(f);
 }
