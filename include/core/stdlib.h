@@ -2,9 +2,8 @@
 #ifndef CORE_STDLIB_H
 #define CORE_STDLIB_H
 
-#include <config.h>
 #include <stdlib.h>
-#include <sched.h>
+#include <core/format.h>
 
 #if JACL_OS_WINDOWS
   #include <windows.h>
@@ -797,6 +796,69 @@ void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int 
 	}
 
 	return NULL;
+}
+
+/* ============================================================= */
+/* String Conversion                                             */
+/* ============================================================= */
+
+#define __jacl_ato_int(name, type, len, sign) type ato##name(const char* str) { \
+	const char* p = str; \
+	int read = 0; \
+	uintptr_t val = 0; \
+	if (__jacl_input_int(&p, NULL, &read, (__jacl_fmt_t)(sign ?  10 | JACL_FMT_FLAG_sign : 10), INT_MAX, &val)) return (type)val; \
+	return 0; \
+}
+#define __jacl_strto_num(suf, type, size, sign) type strto##suf(const char* restrict str, char** restrict endptr, int base) { \
+	const char* p = str; \
+	int read = 0; \
+	uintptr_t val = 0; \
+	if (base != 0 && (base < 2 || base > 36)) { if (endptr) *endptr = (char*)str; return 0; } \
+	if (base == 0) base = 10; \
+	if (__jacl_input_int(&p, NULL, &read, (__jacl_fmt_t)(sign ? base | JACL_FMT_FLAG_sign : base), INT_MAX, &val)) { \
+		if (endptr) *endptr = (char*)p; \
+		return (type)val; \
+	} \
+	if (endptr) *endptr = (char*)str; \
+	return 0; \
+}
+#define __jacl_strto_float(suf, type) type strto##suf(const char* restrict str, char** restrict endptr) { \
+	const char* p = str; \
+	int read = 0; \
+	__jacl_fmt_t spec = {0}; \
+	long double val = 0.0; \
+	if (__jacl_input_float(&p, NULL, &read, 10, INT_MAX, &val)) { \
+		if (endptr) *endptr = (char*)p; \
+		return (type)val; \
+	} \
+	if (endptr) *endptr = (char*)str; \
+	return 0.0; \
+}
+
+__jacl_ato_int(i, int, 0, 1)
+__jacl_ato_int(l, long, 1, 1)
+
+__jacl_strto_num(l, long, l, 1)
+__jacl_strto_num(ul, unsigned long, l, 0)
+
+#if JACL_HAS_C99
+__jacl_ato_int(ll, long long, 2, 1)
+
+__jacl_strto_num(ll, long long, 2, 1)
+__jacl_strto_num(ull, unsigned long long, 2, 0)
+__jacl_strto_float(d, double)
+__jacl_strto_float(f, float)
+__jacl_strto_float(ld, long double)
+#endif
+
+double atof(const char* str) {
+	const char* p = str;
+	int _read = 0;
+	long double val = 0.0;
+
+	if (__jacl_input_float(&p, NULL, &_read, 10, INT_MAX, &val)) return (double)val;
+
+	return 0.0;
 }
 
 #ifdef __cplusplus

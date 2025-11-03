@@ -4,17 +4,19 @@
 #pragma once
 
 #include <config.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdbit.h>
 #include <stddef.h>
 #include <string.h>
-#include <stdio.h>
 #include <signal.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <time.h>
 #include <fcntl.h>
+#include <sched.h>
+#include <sys/wait.h>
 
 #if JACL_HAS_C23
 #define __STDC_VERSION_STDLIB_H__ 202311L
@@ -80,130 +82,29 @@ void *aligned_alloc(size_t a, size_t s);
 /* ============================================================= */
 /* Integer Conversion & Parsing                                  */
 /* ============================================================= */
-static inline int atoi(const char *nptr) { int v=0; sscanf(nptr, "%d", &v); return v; }
-static inline long atol(const char *nptr) { long v=0; sscanf(nptr, "%ld", &v); return v; }
-static inline double atof(const char *nptr) { double v=0; sscanf(nptr, "%lg", &v); return v; }
+int atoi(const char *nptr);
+long atol(const char *nptr);
+double atof(const char *nptr);
 
 #if JACL_HAS_C99
-static inline long long atoll(const char *nptr) { long long v=0; sscanf(nptr, "%lld", &v); return v; }
+long long atoll(const char *nptr);
 #endif
 
-static inline long strtol(const char *nptr, char **endptr, int base) {
-	if (!nptr || base < 0 || base == 1 || base > 36) {
-		if (endptr) *endptr = (char*)nptr;
-
-		return 0;
-	}
-
-	const char *s = nptr;
-
-	while (*s == ' ' || *s == '\t' || *s == '\n') s++;
-
-	int sign = 1;
-
-	if (*s == '-') { sign = -1; s++; }
-	else if (*s == '+') s++;
-
-	if (base == 0) {
-		if (*s == '0' && (s[1] == 'x' || s[1] == 'X')) { base = 16; s += 2; }
-		else if (*s == '0') base = 8;
-		else base = 10;
-	} else if (base == 16 && *s == '0' && (s[1] == 'x' || s[1] == 'X')) {
-		s += 2;
-	}
-
-	long result = 0;
-	const char *start = s;
-
-	for (; *s; s++) {
-		int digit = (*s >= '0' && *s <= '9') ? *s - '0' :
-		            (*s >= 'A' && *s <= 'Z') ? *s - 'A' + 10 :
-		            (*s >= 'a' && *s <= 'z') ? *s - 'a' + 10 : -1;
-
-		if (digit < 0 || digit >= base) break;
-
-		result = result * base + digit;
-	}
-
-	if (endptr) *endptr = (char*)(s > start ? s : nptr);
-
-	return sign * result;
-}
-
-static inline unsigned long strtoul(const char *nptr, char **endptr, int base) {
-	if (!nptr || base < 0 || base == 1 || base > 36) {
-		if (endptr) *endptr = (char*)nptr;
-
-		return 0;
-	}
-
-	const char *s = nptr;
-
-	while (*s == ' ' || *s == '\t' || *s == '\n') s++;
-
-	// Reject negative numbers for unsigned
-	if (*s == '-') {
-		if (endptr) *endptr = (char*)nptr;
-
-		return 0;
-	}
-
-	if (*s == '+') s++;
-
-	// Rest is same as strtol but cast to unsigned long
-	if (base == 0) {
-		if (*s == '0' && (s[1] == 'x' || s[1] == 'X')) { base = 16; s += 2; }
-		else if (*s == '0') base = 8;
-		else base = 10;
-	} else if (base == 16 && *s == '0' && (s[1] == 'x' || s[1] == 'X')) {
-		s += 2;
-	}
-
-	unsigned long result = 0;
-	const char *start = s;
-
-	for (; *s; s++) {
-		int digit = (*s >= '0' && *s <= '9') ? *s - '0' :
-		            (*s >= 'A' && *s <= 'Z') ? *s - 'A' + 10 :
-		            (*s >= 'a' && *s <= 'z') ? *s - 'a' + 10 : -1;
-
-		if (digit < 0 || digit >= base) break;
-
-		result = result * base + digit;
-	}
-
-	if (endptr) *endptr = (char*)(s > start ? s : nptr);
-
-	return result;
-}
-
-static inline double strtod(const char *nptr, char **endptr) {
-	double v=0; int n=0;
-
-	sscanf(nptr, "%lg%n", &v, &n);
-
-	if (endptr) *endptr = (char*)&nptr[n];
-
-	return v;
-}
+long strtol(const char *nptr, char **endptr, int base);
+unsigned long strtoul(const char *nptr, char **endptr, int base);
+double strtod(const char *nptr, char **endptr);
 
 #if JACL_HAS_C99
-static inline float strtof(const char *nptr, char **endptr) { float v=0; int n=0; sscanf(nptr, "%g%n", &v, &n); if (endptr) *endptr = (char*)&nptr[n]; return v; }
-
-static inline long double strtold(const char *nptr, char **endptr) { long double v=0; int n=0;
-
-	sscanf(nptr, "%Lg%n", &v, &n);
-	if (endptr) *endptr = (char*)&nptr[n];
-
-	return v;
-}
-static inline long long strtoll(const char *nptr, char **endptr, int base) { long r= strtol(nptr, endptr, base); return (long long)r; }
-static inline unsigned long long strtoull(const char *nptr, char **endptr, int base) { unsigned long r = strtoul(nptr, endptr, base); return (unsigned long long)r; }
+float strtof(const char *nptr, char **endptr);
+long double strtold(const char *nptr, char **endptr);
+long long strtoll(const char *nptr, char **endptr, int base);
+unsigned long long strtoull(const char *nptr, char **endptr, int base);
 #endif /* JACL_HAS_C99 */
 
 /* ============================================================= */
 /* Absolute Value & Division                                     */
-/* ============================================================= */ static inline int abs(int n) { return n < 0 ? -n : n; }
+/* ============================================================= */
+static inline int abs(int n) { return n < 0 ? -n : n; }
 static inline long labs(long n) { return n < 0 ? -n : n; }
 static inline div_t div(int n, int d) { return (div_t){ n/d, n%d }; }
 static inline ldiv_t ldiv(long n, long d) { return (ldiv_t){ n/d, n%d }; }
@@ -223,6 +124,7 @@ static unsigned __jacl_seed = 1;
 static inline void srand(unsigned s) { __jacl_seed = s ? s : 1; }
 static inline int rand(void) {
 	__jacl_seed = __jacl_seed * 1103515245u + 12345u;
+
 	return (int)((__jacl_seed >> 16) & RAND_MAX);
 }
 
@@ -284,14 +186,31 @@ static inline char* getenv(const char* name) {
 static inline int system(const char* command) {
 	#if JACL_OS_WINDOWS
 		return _spawnlp(_P_WAIT, "cmd.exe", "cmd.exe", "/C", command, NULL);
-	#elif JACL_OS_JSRUN
+	#elif JACL_OS_JSRUN || JACL_OS_WASM
 		(void)command;
-
 		return -1;
 	#else
-		return fork_and_exec(command); // Use fork/exec, or just call `system(3)` from host.
+		if (!command) return 1;
+
+		pid_t pid = fork();
+		if (pid < 0) return -1;
+		if (pid == 0) {
+			execl("/bin/sh", "sh", "-c", command, (char*)NULL);
+			_exit(127);
+		}
+
+		int status;
+		while (waitpid(pid, &status, 0) < 0) {
+			if (errno != EINTR) return -1;
+		}
+
+		if (WIFEXITED(status)) return WEXITSTATUS(status);
+		if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
+
+		return -1;
 	#endif
 }
+
 
 #if JACL_HAS_POSIX
 static inline int putenv(char *string) {

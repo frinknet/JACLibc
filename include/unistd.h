@@ -6,6 +6,7 @@
 #include <config.h>
 #include <errno.h>        // errno, ENOSYS
 #include <stddef.h>       // size_t
+#include <stdarg.h>   // va_list, va_start(), va_end(), va_arg()
 #include <stdnoreturn.h>  // noreturn
 #include <sys/types.h>    // pid_t, uid_t, gid_t, ssize_t, off_t
 #include <sys/syscall.h>  // syscall()
@@ -15,6 +16,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern char **environ;
 
 #define STDIN_FILENO    0
 #define STDOUT_FILENO   1
@@ -67,8 +70,60 @@ static inline char *getcwd(char *buf, size_t size) { return (char*)syscall(SYS_g
 
 /* Process execution */
 static inline int execve(const char *pathname, char *const argv[], char *const envp[]) { return (int)syscall(SYS_execve, pathname, argv, envp); }
-static inline int execv(const char *pathname, char *const argv[]) { extern char **environ; return (int)syscall(SYS_execve, pathname, argv, environ); }
-static inline int execvp(const char *file, char *const argv[]) { extern char **environ; return (int)syscall(SYS_execve, file, argv, environ); }
+static inline int execv(const char *pathname, char *const argv[]) { return (int)syscall(SYS_execve, pathname, argv, environ); }
+static inline int execvp(const char *file, char *const argv[]) { return (int)syscall(SYS_execve, file, argv, environ); }
+
+static inline int execl(const char *pathname, const char *arg, ...) {
+	const char *argv[256];
+	va_list ap;
+	int i = 0;
+
+	argv[i++] = arg;
+
+	va_start(ap, arg);
+
+	while (i < 255 && (argv[i] = va_arg(ap, const char*)) != NULL) i++;
+
+	va_end(ap);
+
+	argv[i] = NULL;
+
+	return execve(pathname, (char *const*)argv, environ);
+}
+
+static inline int execlp(const char *file, const char *arg, ...) {
+	const char *argv[256];
+	va_list ap;
+	int i = 0;
+
+	argv[i++] = arg;
+
+	va_start(ap, arg);
+
+	while (i < 255 && (argv[i] = va_arg(ap, const char*)) != NULL) i++;
+
+	va_end(ap);
+
+	argv[i] = NULL;
+
+	return execvp(file, (char *const*)argv);
+}
+
+static inline int execle(const char *pathname, const char *arg, ...) {
+	const char *argv[256];
+	char *const *envp;
+	va_list ap;
+	int i = 0;
+
+	argv[i++] = arg;
+	va_start(ap, arg);
+	while (i < 255 && (argv[i] = va_arg(ap, const char*)) != NULL) i++;
+	envp = va_arg(ap, char *const*);
+	va_end(ap);
+	argv[i] = NULL;
+
+	return execve(pathname, (char *const*)argv, envp);
+}
 
 /* User/Group IDs */
 static inline uid_t getuid(void) { return (uid_t)syscall(SYS_getuid); }
@@ -77,6 +132,12 @@ static inline uid_t geteuid(void) { return (uid_t)syscall(SYS_geteuid); }
 static inline gid_t getegid(void) { return (gid_t)syscall(SYS_getegid); }
 static inline int setuid(uid_t uid) { return (int)syscall(SYS_setuid, uid); }
 static inline int setgid(gid_t gid) { return (int)syscall(SYS_setgid, gid); }
+static inline int getgroups(int size, gid_t list[]) { return (int)syscall(SYS_getgroups, size, list); }
+
+/* Process groups & sessions */
+static inline pid_t getpgrp(void) { return (pid_t)syscall(SYS_getpgrp); }
+static inline int setpgid(pid_t pid, pid_t pgid) { return (int)syscall(SYS_setpgid, pid, pgid); }
+static inline pid_t setsid(void) { return (pid_t)syscall(SYS_setsid); }
 
 /* File properties */
 static inline int isatty(int fd) {
@@ -86,6 +147,22 @@ static inline int isatty(int fd) {
 	#else
 		errno = ENOSYS;
 		return 0;
+	#endif
+}
+
+/* File ownership */
+static inline int chown(const char *pathname, uid_t owner, gid_t group) { return (int)syscall(SYS_chown, pathname, owner, group); }
+static inline int fchown(int fd, uid_t owner, gid_t group) { return (int)syscall(SYS_fchown, fd, owner, group); }
+static inline int lchown(const char *pathname, uid_t owner, gid_t group) { return (int)syscall(SYS_lchown, pathname, owner, group); }
+static inline int fchdir(int fd) { return (int)syscall(SYS_fchdir, fd); }
+
+/* File synchronization */
+static inline int fsync(int fd) { return (int)syscall(SYS_fsync, fd); }
+static inline int fdatasync(int fd) {
+	#if defined(SYS_fdatasync)
+		return (int)syscall(SYS_fdatasync, fd);
+	#else
+		return fsync(fd);
 	#endif
 }
 
@@ -153,6 +230,9 @@ static inline char *getcwd(char *buf, size_t size) { (void)buf; (void)size; errn
 static inline int execve(const char *pathname, char *const argv[], char *const envp[]) { (void)pathname; (void)argv; (void)envp; errno = ENOSYS; return -1; }
 static inline int execv(const char *pathname, char *const argv[]) { (void)pathname; (void)argv; errno = ENOSYS; return -1; }
 static inline int execvp(const char *file, char *const argv[]) { (void)file; (void)argv; errno = ENOSYS; return -1; }
+static inline int execl(const char *pathname, const char *arg, ...) { (void)pathname; (void)arg; errno = ENOSYS; return -1; }
+static inline int execlp(const char *file, const char *arg, ...) { (void)file; (void)arg; errno = ENOSYS; return -1; }
+static inline int execle(const char *pathname, const char *arg, ...) { (void)pathname; (void)arg; errno = ENOSYS; return -1; }
 
 /* User/Group IDs */
 static inline uid_t getuid(void) { return 0; }
@@ -161,9 +241,26 @@ static inline uid_t geteuid(void) { return 0; }
 static inline gid_t getegid(void) { return 0; }
 static inline int setuid(uid_t uid) { (void)uid; errno = ENOSYS; return -1; }
 static inline int setgid(gid_t gid) { (void)gid; errno = ENOSYS; return -1; }
+static inline int getgroups(int size, gid_t list[]) { (void)size; (void)list; errno = ENOSYS; return -1; }
+
+/* Process groups & sessions */
+static inline pid_t getpgrp(void) { return 1; }
+static inline int setpgid(pid_t pid, pid_t pgid) { (void)pid; (void)pgid; errno = ENOSYS; return -1; }
+static inline pid_t setsid(void) { errno = ENOSYS; return -1; }
+
 
 /* File properties */
 static inline int isatty(int fd) { (void)fd; errno = ENOSYS; return 0; }
+
+/* File ownership */
+static inline int chown(const char *pathname, uid_t owner, gid_t group) { (void)pathname; (void)owner; (void)group; errno = ENOSYS; return -1; }
+static inline int fchown(int fd, uid_t owner, gid_t group) { (void)fd; (void)owner; (void)group; errno = ENOSYS; return -1; }
+static inline int lchown(const char *pathname, uid_t owner, gid_t group) { (void)pathname; (void)owner; (void)group; errno = ENOSYS; return -1; }
+static inline int fchdir(int fd) { (void)fd; errno = ENOSYS; return -1; }
+
+/* File synchronization */
+static inline int fsync(int fd) { (void)fd; errno = ENOSYS; return -1; }
+static inline int fdatasync(int fd) { (void)fd; errno = ENOSYS; return -1; }
 
 /* Sleep/alarm */
 static inline unsigned int sleep(unsigned int seconds) { (void)seconds; return 0; }

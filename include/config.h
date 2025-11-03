@@ -10,7 +10,7 @@
 #if defined(__GNUC__) || defined(__clang__)
   #pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
   #pragma GCC diagnostic ignored "-Wincompatible-library-redeclaration"
-#endif
+#endif /* __GNUC__ || __clang__ */
 
 // useful macros
 #define JACL_QUOTE(x) #x
@@ -30,12 +30,12 @@
 		#define JACL_STDC_VERSION 2011
 	#elif __STDC_VERSION__ >= 199901L
 		#define JACL_STDC_VERSION 1999
-	#else
+	#else /* too old to care */
 		#define JACL_STDC_VERSION 1989
-	#endif
+	#endif /* __STDC_VERSION__ */
 #else
 	#define JACL_STDC_VERSION 1989
-#endif
+#endif /* __STDC_VERSION__ */
 
 // has standard
 #define JACL_HAS_C99 (JACL_STDC_VERSION >= 1999)
@@ -51,10 +51,10 @@
     #define restrict __restrict__
 	#elif defined(_MSC_VER)
     #define restrict __restrict
-	#else
+	#else /* no restrict */
     #define restrict
-	#endif
-#endif
+	#endif /* __GNUC__ || __clang__ */
+#endif /* JACL_HAS_C99 */
 
 // C11 features polyfill
 #if !JACL_HAS_C11
@@ -65,9 +65,9 @@
     #define _Thread_local __thread
   #elif defined(_MSC_VER)
     #define _Thread_local __declspec(thread)
-  #else
+  #else /* no thread local */
     #define _Thread_local
-  #endif
+  #endif /* __GNUC__ || __clang__ || __SUNPRO_C || __TINY_CC__ */
 
 	#if defined(_WIN32) || defined(_WIN64)
 		#define _Alignas(x) __declspec(align(x))
@@ -75,43 +75,43 @@
 	#elif defined(__GNUC__) || defined(__clang__)
 		#define _Alignas(x) __attribute__((aligned(x)))
 		#define _Alignof(t) __alignof__(t)
-	#else
+	#else /* default alignment */
 		#define aoffset(type, member) ((unsigned long)&(((type*)0)->member))
 		#define _Alignas(x)
 		#define _Alignof(t) aoffset(struct { char c; t m; }, m)
-	#endif
-#endif
+	#endif /* allignment */
+#endif /* !JACL_HAS_C11 */
 
 // C23 features
 #if !JACL_HAS_C23
 	#if !defined(__cplusplus)
   	#define thread_local _Thread_local
-	#endif
-#endif
+	#endif /* !__cplusplus */
+#endif /* !JACL_HAS_C23 */
 
 // thread support detection
 #if defined(_POSIX_THREADS) || defined(__pthreads__)
   #define JACL_HAS_PTHREADS 1
-#else
+#else /* no pthreads */
   #define JACL_HAS_PTHREADS 0
-#endif
+#endif /* pthreads */
 
 // Feature attribute detection
 #ifndef __has_attribute
   #define __has_attribute(x) 0
-#endif
+#endif /* !__has_attribute */
 
 // Feature attribute detection
 #ifndef __has_builtin
   #define __has_builtin(x) 0
-#endif
+#endif /* !__has_builtin */
 
 // Check for atomic builtin support
 #if __has_builtin(__atomic_load_n) && __has_builtin(__atomic_compare_exchange_n) && __has_builtin(__atomic_store_n)
 	#define JACL_HAS_ATOMIC_BUILTINS 1
-#else
+#else /* no atomic builtins */
 	#define JACL_HAS_ATOMIC_BUILTINS 0
-#endif
+#endif /*atomic builtins */
 
 // architecture
 #if defined(__i386__)
@@ -145,9 +145,9 @@
 	#define __jacl_arch_syscall __riscv_syscall
 	#if defined(__riscv_xlen) && __riscv_xlen == 64
 		#define JACL_BITS 64
-	#else
+	#else /* 32bit risc */
 		#define JACL_BITS 32
-	#endif
+	#endif /* bit check */
 #elif defined(__wasm__)
 	#undef wasm
 	#define JACL_ARCH wasm
@@ -155,9 +155,9 @@
 	#define __jacl_arch_syscall __wasm_syscall
 	#define JACL_BITS 32
 	#include <arch/wasm_helpers.h>
-#else
+#else /* unknown */
 	#error "JACLibc - Unsupported Architecture"
-#endif
+#endif /* arch check */
 
 // operating system
 #if defined(__linux__)
@@ -190,51 +190,89 @@
 	#define JACL_OS jsrun
 	#define JACL_OS_JSRUN 1
 	#define __jacl_os_syscall __jsrun_syscall
-#else
+#else /* unknown */
 	#error "JACLibc - Unsupported Operating System"
-#endif
+#endif /* os check */
 
 // bit depth
 #define JACL_16BIT (JACL_BITS == 16)
 #define JACL_32BIT (JACL_BITS == 32)
 #define JACL_64BIT (JACL_BITS == 64)
 
-// large files
+// Long double precision bits
+#if defined(JACL_ARCH_X86) || defined(JACL_ARCH_X64)
+  #if defined(_MSC_VER)
+    #define JACL_LDBL_BITS 64   // MSVC: long double == double
+  #else /* linux has 80bit long doubles */
+    #define JACL_LDBL_BITS 80   // GCC/Clang: 80-bit extended
+  #endif
+#elif defined(JACL_ARCH_ARM64) && defined(JACL_OS_LINUX) && defined(__LONG_DOUBLE_128__)
+  #define JACL_LDBL_BITS 128    // ARM64 quad precision
+#else /* arm64 has 128bit long doubles but regular arm has 64bit */
+  #define JACL_LDBL_BITS 64     // Everywhere else: double
+#endif /* long double bits check */
+
+// HAS large file support
 #if JACL_64BIT
   #define JACL_HAS_LFS 1
 #elif defined(_LARGEFILE64_SOURCE) || defined(_GNU_SOURCE)
   #define JACL_HAS_LFS 1
-#else
+#else /* no large file support */
   #define JACL_HAS_LFS 0
-#endif
+#endif /* large file support check */
 
 // Has POSIX
 #ifdef JACL_OS_WINDOWS
 	#define JACL_HAS_POSIX 0
-#else
+#else /* everything else */
 	#define JACL_HAS_POSIX 1
-#endif
+#endif /* posix check */
 
 //Compiler Optimization
 #if __has_builtin(__builtin_expect)
 		#define JACL_LIKELY(x)   __builtin_expect(!!(x), 1)
 		#define JACL_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#else
+#else /* notexpectation builtin */
 		#define JACL_LIKELY(x)   (x)
 		#define JACL_UNLIKELY(x) (x)
-#endif
+#endif /* __builtin_expect */
 
 // Builtin Polyfills
 #if !__has_builtin(__builtin_unreachable)
 	#define __builtin_unreachable()
-#endif
+#endif /* __builtin_unreachable */
 
 #if !__has_builtin(__builtin_prefetch)
 	#define __builtin_prefetch(addr, rw, locality) ((void)(addr))
-#endif
+#endif /* __builtin_prefetch */
 
 #if !__has_builtin(__builtin_trap)
 	#define __builtin_trap() do { *(volatile int*)0 = 0; } while(0)
-#endif
+#endif /* __builtin_trap */
+
+// Fast math detection
+#ifndef JACL_FAST_MATH
+  #if defined(__FAST_MATH__) || defined(__FINITE_MATH_ONLY__)
+    #define JACL_FAST_MATH 1
+  #else /* no fast math */
+    #define JACL_FAST_MATH 0
+  #endif /* fast math check */
+#endif /* !JACL_FAST_MATH */
+
+// SIMD intrinsics
+#ifndef JACL_HAS_IMMINTRIN
+  #if JACL_HAS_C99 && (defined(__SSE2__) || defined(__ARM_NEON) || defined(__wasm_simd128__))
+    #define JACL_HAS_IMMINTRIN 1
+  #else /* no immintrin */
+    #define JACL_HAS_IMMINTRIN 0
+  #endif /* immintrin check */
+#endif /* !JACL_HAS_IMMINTRIN */
+
+// Safety check macro - compiles away in fast-math mode
+#if JACL_FAST_MATH
+  #define JACL_SAFETY(chk, rtn) do {} while(0)
+#else /* safe but slower */
+  #define JACL_SAFETY(chk, rtn) if (chk) return (rtn)
+#endif /* JACL_FAST_MATH */
 
 #endif // CONFIG_H

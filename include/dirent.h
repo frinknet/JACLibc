@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 #include <config.h>
+#include <limits.h>
 #include <stdlib.h>     // malloc(), free(), qsort()
 #include <string.h>     // memcpy(), strlen(), strcmp()
 #include <sys/types.h>  // ino_t, off_t, mode_t, dev_t, size_t, ssize_t
@@ -36,14 +37,6 @@ extern "C" {
 /* ================================================================ */
 /* Constants                                                        */
 /* ================================================================ */
-
-#ifndef NAME_MAX
-#define NAME_MAX 255
-#endif
-
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
 
 /* File type constants for d_type field */
 #define DT_UNKNOWN  0   /* Unknown file type */

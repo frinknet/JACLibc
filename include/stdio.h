@@ -6,12 +6,12 @@
 #include <config.h>
 
 #include <errno.h>
+#include <stdlib.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
-#include <dirent.h>
 #include <fcntl.h>
 #include <math.h>
 #include <sys/stat.h>
@@ -30,6 +30,12 @@
 #define BUFSIZ 1024
 #endif
 
+#ifndef OVRSIZ
+#define OVRSIZ 32
+#endif
+
+#define OVRBUF (BUFSIZ + OVRSIZ)
+
 #ifndef FILENAME_MAX
 #define FILENAME_MAX 4096
 #endif
@@ -42,11 +48,9 @@
 #define TMP_MAX 32767
 #endif
 
-#ifndef SEEK_SET
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
-#endif
 
 #define _IOFBF 0  /* Full buffering */
 #define _IOLBF 1  /* Line buffering */
@@ -83,36 +87,38 @@
 extern "C" {
 #endif
 
-// Memory API
-void* malloc(size_t n);
-void* realloc(void* ptr, size_t n);
-void free(void* ptr);
-
-// main FILE type
+// main FILE type - cache optimized
 typedef struct __jacl_file {
-	int _flags;               // File status flags
-	char *_ptr;               // Current position in buffer
-	char *_base;              // Base of buffer
-	char *_end;               // End of buffer
-	size_t _bufsiz;	          // Buffer size
-	int _fd;                  // File descriptor
-	int _cnt;                 // Characters left in buffer
-	int _orientation;         // -1=byte, 0=unset, 1=wide
-	unsigned char *_tmpfname; // Temp file name (if any)
-	int _bufmode;             // Buffering mode: _IOFBF, _IOLBF, _IONBF
-	int _buf_owned;           // 1 if we allocated the buffer, 0 if user-provided
+	// IO fields
+	int _cnt;          // Characters remaining
+	int _fd;           // File descriptor
+	char *_ptr;        // Current position in buffer
+	char *_end;        // End of buffer
+	char *_base;       // Buffer base
+
+	// Control fields
+	unsigned char _flags;        // Status flags (__SRD, __SWR, __SEOF, __SERR)
+	unsigned char _bufmode;      // Buffering mode (_IOFBF, _IOLBF, _IONBF)
+	unsigned char _orientation;  // Stream orientation (0=unset, 1=byte, 2=wide)
+	unsigned char _last_op;      // Last operation (0=none, 1=read, 2=write)
+	unsigned int _buf_owned;     // 0=user buffer, 1=internal buffer
+
+	// Position fields
+	off_t _read_pos;   // File position of read buffer start
+	off_t _write_pos;  // File position of write buffer start
+
+	// File fields
+	char *_tmpfname;   // Temp filename or pid (tmpfile/popen)
+
+	// Buffer size fields
+	size_t _bufsiz;    // Buffer size (excluding overflow)
+	size_t _ovrsiz;    // Overflow/pushback size
 } FILE;
 
 // Stream Registry Helpers
 void __jacl_stream_register(FILE *stream);
 void __jacl_stream_unregister(FILE *stream);
 int __jacl_stream_flush(FILE *stream);
-
-// Buffer I/O Helpers
-int __jacl_buffer_flags(const char *mode);
-int __jacl_buffer_output(FILE *f);
-int __jacl_buffer_input(FILE *f);
-
 
 // Stub for fpos_t (implementation-defined)
 typedef long long fpos_t;
@@ -122,7 +128,180 @@ extern FILE* stdin;
 extern FILE* stdout;
 extern FILE* stderr;
 
-// File I/O
+/* ============================================================= */
+/* IO Initialization                                             */
+/* ============================================================= */
+
+extern int __jacl_stdio_init;
+static inline void __jacl_init_stdio(void) {
+	if (!__jacl_stdio_init) {
+		__jacl_stream_register(stdin);
+		__jacl_stream_register(stdout);
+		__jacl_stream_register(stderr);
+		stdout->_bufmode = isatty(stdout->_fd) ? _IOLBF : _IOFBF;
+		__jacl_stdio_init = 1;
+	}
+}
+
+/* ============================================================= */
+/* File Macros                                                   */
+/* ============================================================= */
+
+#define FILE_INIT(fd, flags, mode, buf) { \
+	0, fd, buf + OVRSIZ, buf + OVRBUF, buf, \
+	flags, mode, 0, 0, 1, \
+	0, 0, NULL, BUFSIZ, OVRSIZ \
+}
+
+#define STATIC_FILE(name, fd, flags, mode) \
+static char __jacl_##name##_buf[OVRBUF]; \
+static FILE __jacl_##name##_file = FILE_INIT(fd, flags, mode, __jacl_##name##_buf); \
+FILE* name = &__jacl_##name##_file
+#define SETUP_FILE(name, fd, flags, mode) FILE* name = __jacl_file_setup(fd, flags, mode);
+static inline FILE* __jacl_file_setup(int fd, int flags, int mode) {
+	FILE *f = (FILE *)malloc(sizeof(FILE));
+
+	if (!f) { errno = ENOMEM; return NULL; }
+
+	char *buf = malloc(OVRBUF);
+
+	if (!buf) { free(f); errno = ENOMEM; return NULL; }
+
+	*f = (FILE)FILE_INIT(fd, flags, mode, buf);
+
+	__jacl_stream_register(f);
+
+	return f;
+}
+
+/* ============================================================= */
+/* Buffer Helpers                                                */
+/* ============================================================= */
+static inline int __jacl_buffer_flags(const char *mode) {
+	int flags = 0;
+
+	if (!mode || !*mode) return -1;
+
+	switch (*mode) {
+		case 'r': flags = O_RDONLY; break;
+		case 'w': flags = O_WRONLY | O_CREAT | O_TRUNC; break;
+		case 'a': flags = O_WRONLY | O_CREAT | O_APPEND; break;
+		default: return -1;
+	}
+
+	if (strchr(mode, '+')) {
+		if (flags == O_RDONLY) flags = O_RDWR;
+		else flags = (flags & ~O_WRONLY) | O_RDWR;
+	}
+
+	#if JACL_HAS_C11 || (defined(O_EXCL) && JACL_HAS_POSIX)
+		if (strchr(mode, 'x')) flags |= O_EXCL;
+	#endif
+
+	return flags;
+}
+
+static inline int __jacl_buffer_reload(FILE *f) {
+	if (JACL_UNLIKELY(!f || !(f->_flags & __SRD))) return EOF;
+
+	// Where are we in the file right now?
+	off_t cur_pos = lseek(f->_fd, 0, SEEK_CUR);
+
+	if (JACL_UNLIKELY(cur_pos < 0)) { f->_flags |= __SERR; return EOF; }
+
+	// So actual file position is earlier
+	if (f->_cnt > 0) cur_pos -= f->_cnt;
+
+	// Now read fresh chunk
+	f->_ptr = f->_base + OVRSIZ;
+	f->_cnt = 0;
+
+	ssize_t n = read(f->_fd, f->_ptr, BUFSIZ);
+
+	if (JACL_UNLIKELY(n < 0)) { f->_flags |= __SERR; return EOF; }
+	if (JACL_UNLIKELY(n == 0)) { f->_flags |= __SEOF; return EOF; }
+
+	// Buffer now starts at current_pos
+	f->_read_pos = cur_pos;
+	f->_cnt = (int)n - 1;
+	f->_last_op = 1;
+
+	return (unsigned char)*f->_ptr++;
+}
+
+static inline int __jacl_buffer_flush(FILE *f) {
+	if (JACL_UNLIKELY(!f || !(f->_flags & __SWR))) return 0;
+
+	size_t to_write = f->_ptr - (f->_base + OVRSIZ);
+
+	if (to_write == 0) return 0;
+
+	ssize_t written = write(f->_fd, f->_base + OVRSIZ, to_write);
+
+	if (JACL_UNLIKELY(written < 0)) { f->_flags |= __SERR; return EOF; }
+
+	if ((size_t)written < to_write) {
+		memmove(f->_base + OVRSIZ, f->_base + OVRSIZ + written, to_write - written);
+		f->_ptr = f->_base + OVRSIZ + (to_write - written);
+	} else {
+		f->_ptr = f->_base + OVRSIZ;
+	}
+
+	f->_write_pos = lseek(f->_fd, 0, SEEK_CUR);
+	f->_last_op = 2;
+
+	return 0;
+}
+
+static inline int __jacl_buffer_input(FILE *f) {
+	__jacl_init_stdio();
+
+	if (JACL_UNLIKELY(!f || !(f->_flags & __SRD))) return EOF;
+
+	// Mode switch: write→read
+	if (f->_last_op == 2) {
+		__jacl_buffer_flush(f);
+
+		f->_cnt = 0;
+	}
+
+	// Buffer has data
+	if (f->_cnt > 0) {
+		int c = (unsigned char)*f->_ptr++;
+
+		f->_cnt--;
+
+		return c;
+	}
+
+	// Buffer empty: reload
+	return __jacl_buffer_reload(f);
+}
+
+static inline int __jacl_buffer_output(FILE *f) {
+	__jacl_init_stdio();
+
+	if (JACL_UNLIKELY(!f || !(f->_flags & __SWR))) return 0;
+
+	int flush = 0;
+
+	if (f->_bufmode == _IONBF) flush = 1;
+	else if (f->_bufmode == _IOLBF) {
+		if (f->_ptr > f->_base + OVRSIZ && *(f->_ptr - 1) == '\n') flush = 1;
+		if (f->_ptr >= f->_end) flush = 1;
+	} else if (f->_bufmode == _IOFBF) {
+		if (f->_ptr >= f->_end) flush = 1;
+	}
+
+	if (flush) return __jacl_buffer_flush(f);
+
+	return 0;
+}
+
+
+/* ============================================================= */
+/* File IO                                                       */
+/* ============================================================= */
 static inline FILE* fopen(const char* restrict path, const char* restrict mode) {
 	if (JACL_UNLIKELY(!path || !mode)) {
 		errno = EINVAL;
@@ -130,56 +309,23 @@ static inline FILE* fopen(const char* restrict path, const char* restrict mode) 
 		return NULL;
 	}
 
-	int flags = __jacl_buffer_flags(mode);
-
-	if (JACL_UNLIKELY(flags < 0)) {
+	int open_flags = __jacl_buffer_flags(mode);
+	if (JACL_UNLIKELY(open_flags < 0)) {
 		errno = EINVAL;
-
 		return NULL;
 	}
 
-	int fd = open(path, flags, 0666);
-
+	int fd = open(path, open_flags, 0666);
 	if (JACL_UNLIKELY(fd < 0)) return NULL;
 
-	FILE *f = (FILE *)malloc(sizeof(FILE));
+	int stdio_flags = (open_flags & O_RDWR)
+	                ? (__SRD|__SWR)
+	                : (open_flags & O_WRONLY)
+	                ? __SWR
+	                : __SRD;
 
-	if (!f) {
-		close(fd);
-
-		errno = ENOMEM;
-
-		return NULL;
-	}
-
-	f->_base = malloc(BUFSIZ);
-
-	if (!f->_base) {
-		close(fd);
-		free(f);
-
-		errno = ENOMEM;
-
-		return NULL;
-	}
-
-	f->_ptr = f->_base;
-	f->_end = f->_base + BUFSIZ;
-	f->_bufsiz = BUFSIZ;
-	f->_fd = fd;
-	f->_cnt = 0;
-	f->_flags = (flags & O_RDWR)
-		? (__SRD|__SWR)
-		: (flags & O_WRONLY)
-			? __SWR
-			: __SRD;
-	f->_orientation = 0;
-	f->_tmpfname = NULL;
-	f->_bufmode = _IOFBF;
-	f->_buf_owned = 1;
-
-
-	__jacl_stream_register(f);
+	SETUP_FILE(f, fd, stdio_flags, _IOFBF);
+	if (!f) close(fd);
 
 	return f;
 }
@@ -190,7 +336,7 @@ static inline int fclose(FILE* stream) {
 		return EOF;
 	}
 
-	if (stream->_flags & __SWR && __jacl_buffer_output(stream) == EOF) return EOF;
+	if (stream->_flags & __SWR && __jacl_buffer_flush(stream) == EOF) return EOF;
 	if (close(stream->_fd) == -1) return EOF;
 	if (stream->_base && stream->_buf_owned) free(stream->_base);
 	if (stream->_tmpfname) free(stream->_tmpfname);
@@ -242,8 +388,7 @@ static inline size_t fwrite(const void* restrict ptr, size_t size, size_t nmemb,
 	size_t total = size * nmemb;
 	const unsigned char *buf = (const unsigned char *)ptr;
 
-	// Fast path: if buffer is empty and write is >= buffer size, bypass buffering
-	if (stream->_ptr == stream->_base && total >= stream->_bufsiz) {
+	if (stream->_bufmode == _IONBF) {
 		ssize_t written = write(stream->_fd, buf, total);
 
 		if (written < 0) {
@@ -255,7 +400,16 @@ static inline size_t fwrite(const void* restrict ptr, size_t size, size_t nmemb,
 		return written / size;
 	}
 
+	if (stream->_ptr == stream->_base && total >= stream->_bufsiz) {
+		ssize_t written = write(stream->_fd, buf, total);
+
+		if (written < 0) { stream->_flags |= __SERR; return 0; }
+
+		return written / size;
+	}
+
 	size_t written = 0;
+	int has_newline = 0;
 
 	while (written < total) {
 		size_t space = stream->_end - stream->_ptr;
@@ -266,15 +420,21 @@ static inline size_t fwrite(const void* restrict ptr, size_t size, size_t nmemb,
 			space = stream->_bufsiz;
 		}
 
-		size_t to_copy = total - written < space
-			? total - written
-			: space;
+		size_t to_copy = (total - written < space) ? total - written : space;
 
 		memcpy(stream->_ptr, buf + written, to_copy);
+
+		if (stream->_bufmode == _IOLBF && !has_newline) {
+			for (size_t i = 0; i < to_copy; i++) {
+				if (buf[written + i] == '\n') { has_newline = 1; break; }
+			}
+		}
 
 		stream->_ptr += to_copy;
 		written += to_copy;
 	}
+
+	if (stream->_bufmode == _IOLBF && has_newline) __jacl_buffer_output(stream);
 
 	return written / size;
 }
@@ -326,7 +486,7 @@ static inline FILE *freopen(const char* restrict path, const char* restrict mode
 
 	// Reinitialize stream
 	stream->_fd = fd;
-	stream->_ptr = stream->_base;
+	stream->_ptr = stream->_base + OVRSIZ;
 	stream->_cnt = 0;
 	stream->_flags = (flags & O_RDWR)
 		? (__SRD|__SWR)
@@ -357,20 +517,6 @@ static inline int rename(const char *old, const char *newpath) {
 }
 
 // Character I/O
-static inline int fgetc(FILE* stream) {
-	if (JACL_UNLIKELY(!stream || !(stream->_flags & __SRD))) {
-		errno = EBADF;
-
-		return EOF;
-	}
-
-	if (stream->_cnt <= 0) return __jacl_buffer_input(stream);
-
-	stream->_cnt--;
-
-	return (unsigned char)*stream->_ptr++;
-}
-
 static inline int fputc(int c, FILE* stream) {
 	if (JACL_UNLIKELY(!stream || !(stream->_flags & __SWR))) {
 		errno = EBADF;
@@ -378,31 +524,42 @@ static inline int fputc(int c, FILE* stream) {
 		return EOF;
 	}
 
+	// Mode switch: read→write
+	if (stream->_last_op == 1) {
+		stream->_cnt = 0;
+		stream->_ptr = stream->_base + OVRSIZ;
+	}
+
 	if (stream->_bufmode == _IONBF) {
 		unsigned char ch = (unsigned char)c;
 		ssize_t written = write(stream->_fd, &ch, 1);
 
-		if (written < 0) {
-			stream->_flags |= __SERR;
+		if (written < 0) { stream->_flags |= __SERR; return EOF; }
 
-			return EOF;
-		}
+		stream->_last_op = 2;
 
 		return (unsigned char)c;
 	}
 
 	if (stream->_ptr >= stream->_end && __jacl_buffer_output(stream) == EOF) return EOF;
 
-	*(stream->_ptr)++ = (unsigned char)c;
+	*stream->_ptr++ = (unsigned char)c;
+	stream->_last_op = 2;
 
 	if (stream->_bufmode == _IOLBF && c == '\n' && __jacl_buffer_output(stream) == EOF) return EOF;
 
 	return (unsigned char)c;
 }
+static inline int fgetc(FILE* stream) {
+	if (JACL_UNLIKELY(!stream || !(stream->_flags & __SRD))) {
+		errno = EBADF;
+		return EOF;
+	}
 
+	return __jacl_buffer_input(stream);
+}
 static inline int putc(int c, FILE* stream) { return fputc(c, stream); }
 static inline int getc(FILE* stream)	   { return fgetc(stream); }
-
 static inline int ungetc(int c, FILE* stream) {
 	if (!stream || stream->_ptr == stream->_base) return EOF;
 
@@ -412,10 +569,8 @@ static inline int ungetc(int c, FILE* stream) {
 
 	return (unsigned char)c;
 }
-
 static inline int getchar(void)	  { return getc(stdin); }
 static inline int putchar(int c)	 { return putc(c, stdout); }
-
 static inline int fputs(const char* restrict s, FILE* restrict stream) {
 	if (!s || !stream) {
 		errno = EINVAL;
@@ -429,7 +584,6 @@ static inline int fputs(const char* restrict s, FILE* restrict stream) {
 
 	return 0;
 }
-
 static inline char* fgets(char* restrict s, int n, FILE* restrict stream) {
 	if (!s || !stream || n <= 0) {
 		errno = EINVAL;
@@ -451,7 +605,6 @@ static inline char* fgets(char* restrict s, int n, FILE* restrict stream) {
 
 	return s;
 }
-
 static inline int puts(const char* s) {
 	if (!s) {
 		errno = EINVAL;
@@ -463,6 +616,13 @@ static inline int puts(const char* s) {
 
 	return putchar('\n') == EOF ? EOF : 0;
 }
+#if !JACL_HAS_C11
+static inline char* gets(char *s) {
+	// Unsafe—do NOT use this. Use fgets or getline instead.
+	// This would crash or overflow.
+	return fgets(s, INT_MAX, stdin);  // Still unsafe!
+}
+#endif
 
 /* Printf Implementations */
 int vprintf(const char * restrict fmt, va_list ap);
@@ -473,66 +633,12 @@ int vsprintf(char * restrict s, const char * restrict fmt, va_list ap);
 int sprintf(char * restrict s, const char * restrict fmt, ...);
 
 #if JACL_HAS_C99
-
 int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap);
 int snprintf(char * restrict s, size_t n, const char * restrict fmt, ...);
-
-static inline int vdprintf(int fd, const char* restrict fmt, va_list ap) {
-	char buf[BUFSIZ];
-	int len = vsnprintf(buf, BUFSIZ, fmt, ap);
-
-	if (len < 0) return -1;
-
-	size_t to_write = (len >= BUFSIZ) ? BUFSIZ - 1 : (size_t)len;
-	ssize_t written = write(fd, buf, to_write);
-
-	return written < 0 ? -1 : len;
-}
-
-static inline int dprintf(int fd, const char* restrict fmt, ...) {
-	va_list ap;
-
-	va_start(ap, fmt);
-
-	int r = vdprintf(fd, fmt, ap);
-
-	va_end(ap);
-
-	return r;
-}
-
-static inline int vasprintf(char **strp, const char *fmt, va_list ap) {
-	if (!strp || !fmt) { errno = EINVAL; return -1; }
-
-	va_list ap_copy;
-
-	va_copy(ap_copy, ap);
-
-	int len = vsnprintf(NULL, 0, fmt, ap_copy);
-
-	va_end(ap_copy);
-
-	if (len < 0) return -1;
-
-	*strp = (char *)malloc(len + 1);
-
-	if (!*strp) return -1;
-
-	return vsnprintf(*strp, len + 1, fmt, ap);
-}
-
-static inline int asprintf(char **strp, const char *fmt, ...) {
-	va_list ap;
-
-	va_start(ap, fmt);
-
-	int r = vasprintf(strp, fmt, ap);
-
-	va_end(ap);
-
-	return r;
-}
-
+int vdprintf(int fd, const char* restrict fmt, va_list ap);
+int dprintf(int fd, const char* restrict fmt, ...);
+int vasprintf(char **strp, const char *fmt, va_list ap);
+int asprintf(char **strp, const char *fmt, ...);
 #endif
 
 /* Scanf Implementations */
@@ -544,17 +650,9 @@ int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap);
 int sscanf(const char * restrict s, const char * restrict fmt, ...);
 
 /* Error Handling */
-static inline int feof(FILE* stream) {
-	return stream ? (stream->_flags & __SEOF) : 0;
-}
-static inline int ferror(FILE* stream) {
-	return stream ? (stream->_flags & __SERR) : 0;
-}
-static inline void clearerr(FILE* stream) {
-	if (stream) stream->_flags &= ~(__SEOF | __SERR);
-
-	errno = 0;
-}
+static inline int feof(FILE* stream) { return stream ? (stream->_flags & __SEOF) : 0; }
+static inline int ferror(FILE* stream) { return stream ? (stream->_flags & __SERR) : 0; }
+static inline void clearerr(FILE* stream) { if (stream) stream->_flags &= ~(__SEOF | __SERR); errno = 0; }
 static inline void perror(const char* s) { fprintf(stderr, "%s%s%s\n", s ? s : "", s ? ": " : "", strerror(errno)); }
 
 /* File Positioning */
@@ -575,7 +673,7 @@ static inline int fseek(FILE* stream, long offset, int whence) {
 
 	if (stream->_flags & __SRD) {
 		stream->_cnt = 0;
-		stream->_ptr = stream->_base;
+		stream->_ptr = stream->_base + OVRSIZ;
 	}
 
 	off_t result = lseek(stream->_fd, offset, whence);
@@ -638,7 +736,6 @@ static inline int fsetpos(FILE* stream, const fpos_t* pos) {
 	return fseek(stream, (long)*pos, SEEK_SET);
 }
 
-
 // Buffering
 static inline int setvbuf(FILE* restrict stream, char* restrict buf, int mode, size_t size) {
 	if (!stream) {
@@ -692,9 +789,7 @@ static inline int setvbuf(FILE* restrict stream, char* restrict buf, int mode, s
 	return 0;
 }
 
-static inline void setbuf(FILE* restrict stream, char* restrict buf) {
-	setvbuf(stream, buf, buf ? _IOFBF : _IONBF, BUFSIZ);
-}
+static inline void setbuf(FILE* restrict stream, char* restrict buf) { setvbuf(stream, buf, buf ? _IOFBF : _IONBF, BUFSIZ); }
 
 // Unlocked I/O
 static inline int getchar_unlocked(void) { return getchar(); }
@@ -718,30 +813,11 @@ static inline int setlinebuf(FILE *stream) { return setvbuf(stream, NULL, _IOLBF
 static inline FILE *fdopen(int fd, const char *mode) {
 	if (fd < 0 || !mode) { errno = EINVAL; return NULL; }
 
-	int flags = __jacl_buffer_flags(mode);
+	int stdio_flags = (mode[0] == 'r') ? __SRD : __SWR;
+	if (strchr(mode, '+')) stdio_flags = __SRD | __SWR;
 
-	if (flags < 0) { errno = EINVAL; return NULL; }
-
-	FILE *f = (FILE *)malloc(sizeof(FILE));
-
-	if (!f) { errno = ENOMEM; return NULL; }
-
-	f->_base = malloc(BUFSIZ);
-
-	if (!f->_base) { free(f); errno = ENOMEM; return NULL; }
-
-	f->_ptr = f->_base;
-	f->_end = f->_base + BUFSIZ;
-	f->_bufsiz = BUFSIZ;
-	f->_fd = fd;
-	f->_cnt = 0;
-	f->_flags = (flags & O_RDWR) ? (__SRD|__SWR) : (flags & O_WRONLY ? __SWR : __SRD);
-	f->_orientation = 0;
-	f->_tmpfname = NULL;
-	f->_bufmode = _IOFBF;      // ← ADD THIS LINE
-	f->_buf_owned = 1;         // ← ADD THIS LINE
-
-	__jacl_stream_register(f);
+	SETUP_FILE(f, fd, stdio_flags, _IOFBF);
+	if (!f) return NULL;
 
 	return f;
 }
@@ -897,28 +973,15 @@ static inline ssize_t getdelim(char **lineptr, size_t *n, int delim, FILE *strea
 	return (ssize_t)pos;
 }
 
-static inline ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
-	return getdelim(lineptr, n, '\n', stream);
-}
+static inline ssize_t getline(char **lineptr, size_t *n, FILE *stream) { return getdelim(lineptr, n, '\n', stream); }
 
 #endif /* JACL_HAS_POSIX */
 
 #if JACL_HAS_THREADS
 
-static inline void flockfile(FILE *stream) {
-  (void)stream;
-  /* No-op stub */
-}
-
-static inline int ftrylockfile(FILE *stream) {
-  (void)stream;
-  return 0;  /* Pretend lock always succeeds */
-}
-
-static inline void funlockfile(FILE *stream) {
-  (void)stream;
-  /* No-op stub */
-}
+static inline void flockfile(FILE *stream) { (void)stream; /* No-op stub */ }
+static inline int ftrylockfile(FILE *stream) { (void)stream; return 0;  /* Pretend lock always succeeds */ }
+static inline void funlockfile(FILE *stream) { (void)stream; /* No-op stub */ }
 
 #endif /* JACL_HAS_THREADS */
 

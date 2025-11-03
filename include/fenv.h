@@ -6,7 +6,6 @@
 #include <config.h>
 #include <stdint.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,6 +28,8 @@ extern "C" {
 
 typedef unsigned fexcept_t;
 typedef struct { fexcept_t excepts; int round; } fenv_t;
+
+//TODO: movethis andit's dependents to core
 
 /* Default environment object (C/C++ friendly) */
 static const fenv_t __jacl_fenv_default = { 0u, FE_TONEAREST };
