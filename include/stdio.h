@@ -131,7 +131,6 @@ extern FILE* stderr;
 /* ============================================================= */
 /* IO Initialization                                             */
 /* ============================================================= */
-
 extern int __jacl_stdio_init;
 static inline void __jacl_init_stdio(void) {
 	if (!__jacl_stdio_init) {
@@ -146,7 +145,6 @@ static inline void __jacl_init_stdio(void) {
 /* ============================================================= */
 /* File Macros                                                   */
 /* ============================================================= */
-
 #define FILE_INIT(fd, flags, mode, buf) { \
 	0, fd, buf + OVRSIZ, buf + OVRBUF, buf, \
 	flags, mode, 0, 0, 1, \
@@ -200,7 +198,6 @@ static inline int __jacl_buffer_flags(const char *mode) {
 
 	return flags;
 }
-
 static inline int __jacl_buffer_reload(FILE *f) {
 	if (JACL_UNLIKELY(!f || !(f->_flags & __SRD))) return EOF;
 
@@ -228,7 +225,6 @@ static inline int __jacl_buffer_reload(FILE *f) {
 
 	return (unsigned char)*f->_ptr++;
 }
-
 static inline int __jacl_buffer_flush(FILE *f) {
 	if (JACL_UNLIKELY(!f || !(f->_flags & __SWR))) return 0;
 
@@ -252,7 +248,6 @@ static inline int __jacl_buffer_flush(FILE *f) {
 
 	return 0;
 }
-
 static inline int __jacl_buffer_input(FILE *f) {
 	__jacl_init_stdio();
 
@@ -277,7 +272,6 @@ static inline int __jacl_buffer_input(FILE *f) {
 	// Buffer empty: reload
 	return __jacl_buffer_reload(f);
 }
-
 static inline int __jacl_buffer_output(FILE *f) {
 	__jacl_init_stdio();
 
@@ -298,25 +292,20 @@ static inline int __jacl_buffer_output(FILE *f) {
 	return 0;
 }
 
-
 /* ============================================================= */
 /* File IO                                                       */
 /* ============================================================= */
 static inline FILE* fopen(const char* restrict path, const char* restrict mode) {
-	if (JACL_UNLIKELY(!path || !mode)) {
-		errno = EINVAL;
-
-		return NULL;
-	}
+	if (JACL_UNLIKELY(!path || !mode)) { errno = EINVAL; return NULL; }
 
 	int open_flags = __jacl_buffer_flags(mode);
-	if (JACL_UNLIKELY(open_flags < 0)) {
-		errno = EINVAL;
-		return NULL;
-	}
+
+	if (JACL_UNLIKELY(open_flags < 0)) { errno = EINVAL; return NULL; }
 
 	int fd = open(path, open_flags, 0666);
+
 	if (JACL_UNLIKELY(fd < 0)) return NULL;
+	if (open_flags & O_APPEND) lseek(fd, 0, SEEK_END);
 
 	int stdio_flags = (open_flags & O_RDWR)
 	                ? (__SRD|__SWR)
@@ -325,19 +314,22 @@ static inline FILE* fopen(const char* restrict path, const char* restrict mode) 
 	                : __SRD;
 
 	SETUP_FILE(f, fd, stdio_flags, _IOFBF);
+
 	if (!f) close(fd);
 
 	return f;
 }
-
 static inline int fclose(FILE* stream) {
-	if (!stream) {
-		errno = EBADF;
-		return EOF;
+	if (!stream) { errno = EBADF; return EOF; }
+
+	int ret = 0;
+
+	if (stream->_flags & __SWR) {
+		if (__jacl_buffer_flush(stream) == EOF) ret = EOF;
+		if (fsync(stream->_fd) == -1) ret = EOF;
 	}
 
-	if (stream->_flags & __SWR && __jacl_buffer_flush(stream) == EOF) return EOF;
-	if (close(stream->_fd) == -1) return EOF;
+	if (close(stream->_fd) == -1) ret = EOF;
 	if (stream->_base && stream->_buf_owned) free(stream->_base);
 	if (stream->_tmpfname) free(stream->_tmpfname);
 
@@ -346,13 +338,9 @@ static inline int fclose(FILE* stream) {
 		free(stream);
 	}
 
-	return 0;
+	return ret;
 }
-
-static inline int fflush(FILE* stream) {
-	return __jacl_stream_flush(stream);
-}
-
+static inline int fflush(FILE* stream) { return __jacl_stream_flush(stream); }
 static inline size_t fread(void* restrict ptr, size_t size, size_t nmemb, FILE* restrict stream) {
 	if (!stream || !ptr || size == 0 || nmemb == 0) return 0;
 
@@ -381,7 +369,6 @@ static inline size_t fread(void* restrict ptr, size_t size, size_t nmemb, FILE* 
 
 	return copied / size;
 }
-
 static inline size_t fwrite(const void* restrict ptr, size_t size, size_t nmemb, FILE* restrict stream) {
 	if (JACL_UNLIKELY(!stream || !ptr || size == 0 || nmemb == 0)) return 0;
 
@@ -438,7 +425,6 @@ static inline size_t fwrite(const void* restrict ptr, size_t size, size_t nmemb,
 
 	return written / size;
 }
-
 static inline FILE *freopen(const char* restrict path, const char* restrict mode, FILE* restrict stream) {
 	if (!stream) {
 		errno = EBADF;
@@ -495,7 +481,6 @@ static inline FILE *freopen(const char* restrict path, const char* restrict mode
 
 	return stream;
 }
-
 static inline int remove(const char *filename) {
 	if (!filename) {
 		errno = EINVAL;
@@ -505,7 +490,6 @@ static inline int remove(const char *filename) {
 
 	return unlink(filename);
 }
-
 static inline int rename(const char *old, const char *newpath) {
 	if (!old || !newpath) {
 		errno = EINVAL;
@@ -657,59 +641,44 @@ static inline void perror(const char* s) { fprintf(stderr, "%s%s%s\n", s ? s : "
 
 /* File Positioning */
 static inline int fseek(FILE* stream, long offset, int whence) {
-	if (!stream) {
-		errno = EBADF;
-
-		return -1;
-	}
-
-	if (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END) {
-		errno = EINVAL;
-
-		return -1;
-	}
-
-	if (stream->_flags & __SWR && __jacl_buffer_output(stream) == EOF) return -1;
-
-	if (stream->_flags & __SRD) {
-		stream->_cnt = 0;
-		stream->_ptr = stream->_base + OVRSIZ;
-	}
+	if (!stream) { errno = EBADF; return -1; }
+	if (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END) { errno = EINVAL; return -1; }
+	if (stream->_flags & __SWR && __jacl_buffer_flush(stream) == EOF) return -1;
+	if (whence == SEEK_CUR && (stream->_flags & __SRD) && stream->_cnt > 0) offset -= stream->_cnt;
 
 	off_t result = lseek(stream->_fd, offset, whence);
 
 	if (result < 0) return -1;
 
+	stream->_cnt = 0;
+	stream->_ptr = stream->_base + OVRSIZ;
+	stream->_end = stream->_base + OVRBUF;
+	stream->_read_pos = result;
+	stream->_write_pos = result;
 	stream->_flags &= ~__SEOF;
+	stream->_last_op = 0;
 
 	return 0;
 }
-
 static inline long ftell(FILE* stream) {
-	if (!stream) {
-		errno = EBADF;
-
-		return -1L;
-	}
+	if (!stream) { errno = EBADF; return -1L; }
 
 	off_t pos = lseek(stream->_fd, 0, SEEK_CUR);
 
 	if (pos < 0) return -1L;
-
-	if (stream->_flags & __SWR) {
-		pos += (stream->_ptr - stream->_base);
-	} else if (stream->_flags & __SRD) {
-		pos -= stream->_cnt;
-	}
+	if (stream->_flags & __SWR) pos += (stream->_ptr - (stream->_base + OVRSIZ));
+	else if (stream->_flags & __SRD) pos -= stream->_cnt;
 
 	return (long)pos;
 }
-
 static inline void rewind(FILE* stream) {
+	if (!stream) return;
+	if (stream->_flags & __SWR) __jacl_buffer_flush(stream);
+	if (stream->_flags & __SRD) { stream->_cnt = 0; stream->_ptr = stream->_base + OVRSIZ; }
+
 	fseek(stream, 0L, SEEK_SET);
 	clearerr(stream);
 }
-
 static inline int fgetpos(FILE* restrict stream, fpos_t* restrict pos) {
 	if (!stream || !pos) {
 		errno = EINVAL;
@@ -725,7 +694,6 @@ static inline int fgetpos(FILE* restrict stream, fpos_t* restrict pos) {
 
 	return 0;
 }
-
 static inline int fsetpos(FILE* stream, const fpos_t* pos) {
 	if (!stream || !pos) {
 		errno = EINVAL;
@@ -788,7 +756,6 @@ static inline int setvbuf(FILE* restrict stream, char* restrict buf, int mode, s
 
 	return 0;
 }
-
 static inline void setbuf(FILE* restrict stream, char* restrict buf) { setvbuf(stream, buf, buf ? _IOFBF : _IONBF, BUFSIZ); }
 
 // Unlocked I/O
@@ -821,7 +788,6 @@ static inline FILE *fdopen(int fd, const char *mode) {
 
 	return f;
 }
-
 static inline FILE *popen(const char *command, const char *mode) {
 	if (!command || !mode) {
 		errno = EINVAL;
@@ -878,7 +844,6 @@ static inline FILE *popen(const char *command, const char *mode) {
 
 	return f;
 }
-
 static inline int pclose(FILE *stream) {
 	if (!stream) {
 		errno = EBADF;
@@ -920,7 +885,6 @@ static inline FILE *funopen(const void *cookie, readfn_t readfn, writefn_t write
 
   return NULL;
 }
-
 static inline int fileno(FILE *stream) {
 	if (!stream) {
 		errno = EBADF;
@@ -930,7 +894,6 @@ static inline int fileno(FILE *stream) {
 
 	return stream->_fd;
 }
-
 static inline ssize_t getdelim(char **lineptr, size_t *n, int delim, FILE *stream) {
 	if (!lineptr || !n || !stream) {
 		errno = EINVAL;
@@ -1000,32 +963,16 @@ static inline FILE *tmpfile(void) {
 
 	return f;
 }
-
 static inline char *tmpnam(char *s) {
 	static char buf[L_tmpnam];
-	static unsigned int counter = 0;
-	static unsigned int tmpnam_seed = 1;
-
+	static unsigned long counter = 0;
 	char *target = s ? s : buf;
-	unsigned int attempts = 0;
 
-	while (attempts++ < TMP_MAX) {
-		unsigned int seed = (unsigned int)time(NULL)
-		                  ^ (unsigned int)getpid()
-		                  ^ __sync_fetch_and_add(&counter, 1);
+	do {
+		snprintf(target, L_tmpnam, "%stmp_%lu_%ld", TEMP_DIR, counter++, (long)time(NULL));
+	} while (access(target, F_OK) == 0 && counter < TMP_MAX);
 
-		tmpnam_seed = tmpnam_seed * 1103515245u + 12345u;
-
-		unsigned int rand_val = (tmpnam_seed >> 16) & 0x7FFF;
-
-		snprintf(target, L_tmpnam, "%stmp%08x%04x", TEMP_DIR, seed, rand_val);
-
-		struct stat st;
-
-		if (stat(target, &st) == -1 && errno == ENOENT) return target;
-	}
-
-	return NULL;
+	return (counter < TMP_MAX) ? target : NULL;
 }
 
 #ifdef __cplusplus
