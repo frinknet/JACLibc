@@ -11,6 +11,7 @@
  * separately... There is a LOT of flexibility this way!!!
  */
 
+#include <core/errno.h>
 #include <core/fenv.h>
 #include <core/stdio.h>
 #include <core/stdlib.h>

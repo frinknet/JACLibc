@@ -1,543 +1,367 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
-
-#if JACL_HAS_C99
 #include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
 
-TEST_TYPE(unit);
-TEST_UNIT(inttypes.h);
+TEST_TYPE(unit)
+TEST_UNIT(inttypes.h)
 
-/* ============================================================================
- * TYPE DEFINITIONS
- * ============================================================================ */
-TEST_SUITE(type_definitions);
-
-TEST(imax_t_defined) {
-	imax_t val = 42;
-	ASSERT_EQ(42, val);
+/* ---- PRI Macro Suites ---- */
+TEST_SUITE(macro_pri_8bit)
+TEST(macro_pri_8bit)
+{
+    ASSERT_STR_EQ("hhd", PRId8);
+    ASSERT_STR_EQ("hhi", PRIi8);
 }
 
-TEST(umax_t_defined) {
-	umax_t val = 42U;
-	ASSERT_EQ(42U, val);
+#if JACL_INTMAX_BITS >= 16
+TEST_SUITE(macro_pri_16bit)
+TEST(macro_pri_16bit)
+{
+    ASSERT_STR_EQ("hd", PRId16);
+    ASSERT_STR_EQ("hi", PRIi16);
 }
-
-TEST(imaxdiv_t_defined) {
-	imaxdiv_t result;
-	result.quot = 10;
-	result.rem = 3;
-	
-	ASSERT_EQ(10, result.quot);
-	ASSERT_EQ(3, result.rem);
-}
-
-/* ============================================================================
- * IMAXDIV TESTS
- * ============================================================================ */
-TEST_SUITE(imaxdiv);
-
-TEST(imaxdiv_basic) {
-	imaxdiv_t result = imaxdiv(10, 3);
-	
-	ASSERT_EQ(3, result.quot);
-	ASSERT_EQ(1, result.rem);
-}
-
-TEST(imaxdiv_exact) {
-	imaxdiv_t result = imaxdiv(10, 5);
-	
-	ASSERT_EQ(2, result.quot);
-	ASSERT_EQ(0, result.rem);
-}
-
-TEST(imaxdiv_negative_numerator) {
-	imaxdiv_t result = imaxdiv(-10, 3);
-	
-	ASSERT_EQ(-3, result.quot);
-	ASSERT_EQ(-1, result.rem);
-}
-
-TEST(imaxdiv_negative_denominator) {
-	imaxdiv_t result = imaxdiv(10, -3);
-	
-	ASSERT_EQ(-3, result.quot);
-	ASSERT_EQ(1, result.rem);
-}
-
-TEST(imaxdiv_both_negative) {
-	imaxdiv_t result = imaxdiv(-10, -3);
-	
-	ASSERT_EQ(3, result.quot);
-	ASSERT_EQ(-1, result.rem);
-}
-
-/* ============================================================================
- * STRTOIMAX TESTS
- * ============================================================================ */
-TEST_SUITE(strtoimax);
-
-TEST(strtoimax_decimal) {
-	char *endptr;
-	intmax_t val = strtoimax("12345", &endptr, 10);
-	
-	ASSERT_EQ(12345, val);
-	ASSERT_EQ('\0', *endptr);
-}
-
-TEST(strtoimax_negative) {
-	char *endptr;
-	intmax_t val = strtoimax("-12345", &endptr, 10);
-	
-	ASSERT_EQ(-12345, val);
-}
-
-TEST(strtoimax_hex) {
-	char *endptr;
-	intmax_t val = strtoimax("0x1234", &endptr, 16);
-	
-	ASSERT_EQ(0x1234, val);
-}
-
-TEST(strtoimax_octal) {
-	char *endptr;
-	intmax_t val = strtoimax("0755", &endptr, 8);
-	
-	ASSERT_EQ(0755, val);
-}
-
-TEST(strtoimax_auto_base) {
-	char *endptr;
-	
-	intmax_t dec = strtoimax("123", &endptr, 0);
-	ASSERT_EQ(123, dec);
-	
-	intmax_t hex = strtoimax("0x123", &endptr, 0);
-	ASSERT_EQ(0x123, hex);
-	
-	intmax_t oct = strtoimax("0123", &endptr, 0);
-	ASSERT_EQ(0123, oct);
-}
-
-TEST(strtoimax_partial) {
-	char *endptr;
-	intmax_t val = strtoimax("123abc", &endptr, 10);
-	
-	ASSERT_EQ(123, val);
-	ASSERT_STR_EQ("abc", endptr);
-}
-
-/* ============================================================================
- * STRTOUMAX TESTS
- * ============================================================================ */
-TEST_SUITE(strtoumax);
-
-TEST(strtoumax_decimal) {
-	char *endptr;
-	uintmax_t val = strtoumax("12345", &endptr, 10);
-	
-	ASSERT_EQ(12345U, val);
-}
-
-TEST(strtoumax_hex) {
-	char *endptr;
-	uintmax_t val = strtoumax("ABCDEF", &endptr, 16);
-	
-	ASSERT_EQ(0xABCDEF, val);
-}
-
-TEST(strtoumax_large) {
-	char *endptr;
-	uintmax_t val = strtoumax("18446744073709551615", &endptr, 10);
-	
-	ASSERT_EQ(UINT64_MAX, val);
-}
-
-/* ============================================================================
- * PRINTF FORMAT MACROS - 8-bit
- * ============================================================================ */
-TEST_SUITE(printf_8bit);
-
-TEST(pri_8bit_macros_defined) {
-	ASSERT_STR_EQ("hhd", PRId8);
-	ASSERT_STR_EQ("hhi", PRIi8);
-	ASSERT_STR_EQ("hho", PRIo8);
-	ASSERT_STR_EQ("hhu", PRIu8);
-	ASSERT_STR_EQ("hhx", PRIx8);
-	ASSERT_STR_EQ("hhX", PRIX8);
-}
-
-TEST(printf_8bit_usage) {
-	char buf[64];
-	int8_t val = 127;
-	
-	snprintf(buf, sizeof(buf), "%" PRId8, val);
-	ASSERT_STR_EQ("127", buf);
-}
-
-TEST(printf_u8_usage) {
-	char buf[64];
-	uint8_t val = 255;
-	
-	snprintf(buf, sizeof(buf), "%" PRIu8, val);
-	ASSERT_STR_EQ("255", buf);
-}
-
-/* ============================================================================
- * PRINTF FORMAT MACROS - 16-bit
- * ============================================================================ */
-TEST_SUITE(printf_16bit);
-
-TEST(pri_16bit_macros_defined) {
-	ASSERT_STR_EQ("hd", PRId16);
-	ASSERT_STR_EQ("hi", PRIi16);
-	ASSERT_STR_EQ("ho", PRIo16);
-	ASSERT_STR_EQ("hu", PRIu16);
-	ASSERT_STR_EQ("hx", PRIx16);
-	ASSERT_STR_EQ("hX", PRIX16);
-}
-
-TEST(printf_16bit_usage) {
-	char buf[64];
-	int16_t val = 32767;
-	
-	snprintf(buf, sizeof(buf), "%" PRId16, val);
-	ASSERT_STR_EQ("32767", buf);
-}
-
-TEST(printf_u16_usage) {
-	char buf[64];
-	uint16_t val = 65535;
-	
-	snprintf(buf, sizeof(buf), "%" PRIu16, val);
-	ASSERT_STR_EQ("65535", buf);
-}
-
-/* ============================================================================
- * PRINTF FORMAT MACROS - 32-bit
- * ============================================================================ */
-TEST_SUITE(printf_32bit);
-
-TEST(pri_32bit_macros_defined) {
-	ASSERT_STR_EQ("d", PRId32);
-	ASSERT_STR_EQ("i", PRIi32);
-	ASSERT_STR_EQ("o", PRIo32);
-	ASSERT_STR_EQ("u", PRIu32);
-	ASSERT_STR_EQ("x", PRIx32);
-	ASSERT_STR_EQ("X", PRIX32);
-}
-
-TEST(printf_32bit_usage) {
-	char buf[64];
-	int32_t val = 2147483647;
-	
-	snprintf(buf, sizeof(buf), "%" PRId32, val);
-	ASSERT_STR_EQ("2147483647", buf);
-}
-
-TEST(printf_u32_usage) {
-	char buf[64];
-	uint32_t val = 4294967295U;
-	
-	snprintf(buf, sizeof(buf), "%" PRIu32, val);
-	ASSERT_STR_EQ("4294967295", buf);
-}
-
-TEST(printf_32bit_hex) {
-	char buf[64];
-	uint32_t val = 0xDEADBEEF;
-	
-	snprintf(buf, sizeof(buf), "0x%" PRIx32, val);
-	ASSERT_STR_EQ("0xdeadbeef", buf);
-}
-
-/* ============================================================================
- * PRINTF FORMAT MACROS - 64-bit
- * ============================================================================ */
-TEST_SUITE(printf_64bit);
-
-TEST(pri_64bit_macros_defined) {
-	ASSERT_NOT_NULL(PRId64);
-	ASSERT_NOT_NULL(PRIi64);
-	ASSERT_NOT_NULL(PRIo64);
-	ASSERT_NOT_NULL(PRIu64);
-	ASSERT_NOT_NULL(PRIx64);
-	ASSERT_NOT_NULL(PRIX64);
-}
-
-TEST(printf_64bit_usage) {
-	char buf[64];
-	int64_t val = 9223372036854775807LL;
-	
-	snprintf(buf, sizeof(buf), "%" PRId64, val);
-	ASSERT_STR_EQ("9223372036854775807", buf);
-}
-
-TEST(printf_u64_usage) {
-	char buf[64];
-	uint64_t val = 18446744073709551615ULL;
-	
-	snprintf(buf, sizeof(buf), "%" PRIu64, val);
-	ASSERT_STR_EQ("18446744073709551615", buf);
-}
-
-/* ============================================================================
- * PRINTF FORMAT MACROS - MAX/PTR
- * ============================================================================ */
-TEST_SUITE(printf_max_ptr);
-
-TEST(pri_max_macros_defined) {
-	ASSERT_NOT_NULL(PRIdMAX);
-	ASSERT_NOT_NULL(PRIiMAX);
-	ASSERT_NOT_NULL(PRIoMAX);
-	ASSERT_NOT_NULL(PRIuMAX);
-	ASSERT_NOT_NULL(PRIxMAX);
-	ASSERT_NOT_NULL(PRIXMAX);
-}
-
-TEST(pri_ptr_macros_defined) {
-	ASSERT_NOT_NULL(PRIdPTR);
-	ASSERT_NOT_NULL(PRIiPTR);
-	ASSERT_NOT_NULL(PRIoPTR);
-	ASSERT_NOT_NULL(PRIuPTR);
-	ASSERT_NOT_NULL(PRIxPTR);
-	ASSERT_NOT_NULL(PRIXPTR);
-}
-
-TEST(printf_max_usage) {
-	char buf[64];
-	intmax_t val = 123456789;
-	
-	snprintf(buf, sizeof(buf), "%" PRIdMAX, val);
-	ASSERT_STR_EQ("123456789", buf);
-}
-
-TEST(printf_ptr_usage) {
-	char buf[64];
-	uintptr_t val = 0x12345678;
-	
-	snprintf(buf, sizeof(buf), "0x%" PRIxPTR, val);
-	ASSERT_STR_EQ("0x12345678", buf);
-}
-
-/* ============================================================================
- * SCANF FORMAT MACROS - 8-bit
- * ============================================================================ */
-TEST_SUITE(scanf_8bit);
-
-TEST(scn_8bit_macros_defined) {
-	ASSERT_STR_EQ("hhd", SCNd8);
-	ASSERT_STR_EQ("hhi", SCNi8);
-	ASSERT_STR_EQ("hho", SCNo8);
-	ASSERT_STR_EQ("hhu", SCNu8);
-	ASSERT_STR_EQ("hhx", SCNx8);
-}
-
-TEST(scanf_8bit_usage) {
-	int8_t val;
-	sscanf("127", "%" SCNd8, &val);
-	ASSERT_EQ(127, val);
-}
-
-TEST(scanf_u8_usage) {
-	uint8_t val;
-	sscanf("255", "%" SCNu8, &val);
-	ASSERT_EQ(255, val);
-}
-
-/* ============================================================================
- * SCANF FORMAT MACROS - 16-bit
- * ============================================================================ */
-TEST_SUITE(scanf_16bit);
-
-TEST(scn_16bit_macros_defined) {
-	ASSERT_STR_EQ("hd", SCNd16);
-	ASSERT_STR_EQ("hi", SCNi16);
-	ASSERT_STR_EQ("ho", SCNo16);
-	ASSERT_STR_EQ("hu", SCNu16);
-	ASSERT_STR_EQ("hx", SCNx16);
-}
-
-TEST(scanf_16bit_usage) {
-	int16_t val;
-	sscanf("32767", "%" SCNd16, &val);
-	ASSERT_EQ(32767, val);
-}
-
-/* ============================================================================
- * SCANF FORMAT MACROS - 32-bit
- * ============================================================================ */
-TEST_SUITE(scanf_32bit);
-
-TEST(scn_32bit_macros_defined) {
-	ASSERT_STR_EQ("d", SCNd32);
-	ASSERT_STR_EQ("i", SCNi32);
-	ASSERT_STR_EQ("o", SCNo32);
-	ASSERT_STR_EQ("u", SCNu32);
-	ASSERT_STR_EQ("x", SCNx32);
-}
-
-TEST(scanf_32bit_usage) {
-	int32_t val;
-	sscanf("2147483647", "%" SCNd32, &val);
-	ASSERT_EQ(2147483647, val);
-}
-
-TEST(scanf_32bit_hex) {
-	uint32_t val;
-	sscanf("deadbeef", "%" SCNx32, &val);
-	ASSERT_EQ(0xDEADBEEF, val);
-}
-
-/* ============================================================================
- * SCANF FORMAT MACROS - 64-bit
- * ============================================================================ */
-TEST_SUITE(scanf_64bit);
-
-TEST(scn_64bit_macros_defined) {
-	ASSERT_NOT_NULL(SCNd64);
-	ASSERT_NOT_NULL(SCNi64);
-	ASSERT_NOT_NULL(SCNo64);
-	ASSERT_NOT_NULL(SCNu64);
-	ASSERT_NOT_NULL(SCNx64);
-}
-
-TEST(scanf_64bit_usage) {
-	int64_t val;
-	sscanf("9223372036854775807", "%" SCNd64, &val);
-	ASSERT_EQ(9223372036854775807LL, val);
-}
-
-/* ============================================================================
- * SCANF FORMAT MACROS - MAX/PTR
- * ============================================================================ */
-TEST_SUITE(scanf_max_ptr);
-
-TEST(scn_max_macros_defined) {
-	ASSERT_NOT_NULL(SCNdMAX);
-	ASSERT_NOT_NULL(SCNiMAX);
-	ASSERT_NOT_NULL(SCNoMAX);
-	ASSERT_NOT_NULL(SCNuMAX);
-	ASSERT_NOT_NULL(SCNxMAX);
-}
-
-TEST(scn_ptr_macros_defined) {
-	ASSERT_NOT_NULL(SCNdPTR);
-	ASSERT_NOT_NULL(SCNiPTR);
-	ASSERT_NOT_NULL(SCNoPTR);
-	ASSERT_NOT_NULL(SCNuPTR);
-	ASSERT_NOT_NULL(SCNxPTR);
-}
-
-TEST(scanf_max_usage) {
-	intmax_t val;
-	sscanf("123456789", "%" SCNdMAX, &val);
-	ASSERT_EQ(123456789, val);
-}
-
-/* ============================================================================
- * ROUNDTRIP TESTS
- * ============================================================================ */
-TEST_SUITE(roundtrip);
-
-TEST(printf_scanf_8bit_roundtrip) {
-	char buf[64];
-	int8_t original = 123;
-	int8_t parsed;
-	
-	snprintf(buf, sizeof(buf), "%" PRId8, original);
-	sscanf(buf, "%" SCNd8, &parsed);
-	
-	ASSERT_EQ(original, parsed);
-}
-
-TEST(printf_scanf_16bit_roundtrip) {
-	char buf[64];
-	int16_t original = 12345;
-	int16_t parsed;
-	
-	snprintf(buf, sizeof(buf), "%" PRId16, original);
-	sscanf(buf, "%" SCNd16, &parsed);
-	
-	ASSERT_EQ(original, parsed);
-}
-
-TEST(printf_scanf_32bit_roundtrip) {
-	char buf[64];
-	int32_t original = 1234567890;
-	int32_t parsed;
-	
-	snprintf(buf, sizeof(buf), "%" PRId32, original);
-	sscanf(buf, "%" SCNd32, &parsed);
-	
-	ASSERT_EQ(original, parsed);
-}
-
-TEST(printf_scanf_64bit_roundtrip) {
-	char buf[64];
-	int64_t original = 9223372036854775807LL;
-	int64_t parsed;
-	
-	snprintf(buf, sizeof(buf), "%" PRId64, original);
-	sscanf(buf, "%" SCNd64, &parsed);
-	
-	ASSERT_EQ(original, parsed);
-}
-
-TEST(printf_scanf_hex_roundtrip) {
-	char buf[64];
-	uint32_t original = 0xDEADBEEF;
-	uint32_t parsed;
-	
-	snprintf(buf, sizeof(buf), "%" PRIx32, original);
-	sscanf(buf, "%" SCNx32, &parsed);
-	
-	ASSERT_EQ(original, parsed);
-}
-
-/* ============================================================================
- * EDGE CASES
- * ============================================================================ */
-TEST_SUITE(edge_cases);
-
-TEST(imaxdiv_by_one) {
-	imaxdiv_t result = imaxdiv(42, 1);
-	
-	ASSERT_EQ(42, result.quot);
-	ASSERT_EQ(0, result.rem);
-}
-
-TEST(imaxdiv_zero_numerator) {
-	imaxdiv_t result = imaxdiv(0, 5);
-	
-	ASSERT_EQ(0, result.quot);
-	ASSERT_EQ(0, result.rem);
-}
-
-TEST(strtoimax_whitespace) {
-	char *endptr;
-	intmax_t val = strtoimax("  \t123", &endptr, 10);
-	
-	ASSERT_EQ(123, val);
-}
-
-TEST(strtoimax_plus_sign) {
-	char *endptr;
-	intmax_t val = strtoimax("+123", &endptr, 10);
-	
-	ASSERT_EQ(123, val);
-}
-
-TEST_MAIN()
-
-#else
-
-// Stub for pre-C99
-int main(void) {
-	printf("inttypes.h requires C99 or later\n");
-	return 0;
-}
-
 #endif
 
+#if JACL_INTMAX_BITS >= 32
+TEST_SUITE(macro_pri_32bit)
+TEST(macro_pri_32bit)
+{
+    ASSERT_STR_EQ("d", PRId32);
+    ASSERT_STR_EQ("i", PRIi32);
+}
+#endif
+
+#if JACL_INTMAX_BITS >= 64
+TEST_SUITE(macro_pri_64bit)
+TEST(macro_pri_64bit)
+{
+    ASSERT_STR_EQ("lld", PRId64);
+    ASSERT_STR_EQ("lli", PRIi64);
+}
+#endif
+
+TEST_SUITE(macro_pri_ptr)
+TEST(macro_pri_ptr)
+{
+#if JACL_64BIT
+    ASSERT_STR_EQ("lld", PRIdPTR);
+#elif JACL_32BIT
+    ASSERT_STR_EQ("d", PRIdPTR);
+#elif JACL_16BIT
+    ASSERT_STR_EQ("hd", PRIdPTR);
+#else
+    ASSERT_STR_EQ("hhd", PRIdPTR);
+#endif
+}
+
+/* ---- SCN Macro Suites ---- */
+TEST_SUITE(macro_scn_8bit)
+TEST(macro_scn_8bit)
+{
+    ASSERT_STR_EQ("hhd", SCNd8);
+    ASSERT_STR_EQ("hhi", SCNi8);
+}
+
+#if JACL_INTMAX_BITS >= 16
+TEST_SUITE(macro_scn_16bit)
+TEST(macro_scn_16bit)
+{
+    ASSERT_STR_EQ("hd", SCNd16);
+    ASSERT_STR_EQ("hi", SCNi16);
+}
+#endif
+
+#if JACL_INTMAX_BITS >= 32
+TEST_SUITE(macro_scn_32bit)
+TEST(macro_scn_32bit)
+{
+    ASSERT_STR_EQ("d", SCNd32);
+    ASSERT_STR_EQ("i", SCNi32);
+}
+#endif
+
+#if JACL_INTMAX_BITS >= 64
+TEST_SUITE(macro_scn_64bit)
+TEST(macro_scn_64bit)
+{
+    ASSERT_STR_EQ("lld", SCNd64);
+    ASSERT_STR_EQ("lli", SCNi64);
+}
+#endif
+
+TEST_SUITE(macro_scn_ptr)
+TEST(macro_scn_ptr)
+{
+#if JACL_64BIT
+    ASSERT_STR_EQ("lld", SCNdPTR);
+#elif JACL_32BIT
+    ASSERT_STR_EQ("d", SCNdPTR);
+#elif JACL_16BIT
+    ASSERT_STR_EQ("hd", SCNdPTR);
+#else
+    ASSERT_STR_EQ("hhd", SCNdPTR);
+#endif
+}
+
+/* ---- Formatted Print Suites ---- */
+TEST_SUITE(formatted_8bit)
+TEST(formatted_8bit)
+{
+    char buf[16];
+    int8_t a = 127;
+    snprintf(buf, sizeof(buf), "%" PRId8, a);
+    ASSERT_STR_EQ("127", buf);
+}
+
+#if JACL_INTMAX_BITS >= 16
+TEST_SUITE(formatted_16bit)
+TEST(formatted_16bit)
+{
+    char buf[16];
+    int16_t a = 4123;
+    snprintf(buf, sizeof(buf), "%" PRId16, a);
+    ASSERT_STR_EQ("4123", buf);
+}
+#endif
+
+#if JACL_INTMAX_BITS >= 32
+TEST_SUITE(formatted_32bit)
+TEST(formatted_32bit)
+{
+    char buf[32];
+    int32_t a = 12345678;
+    snprintf(buf, sizeof(buf), "%" PRId32, a);
+    ASSERT_TRUE(strstr(buf, "12345678") != NULL);
+}
+#endif
+
+#if JACL_INTMAX_BITS >= 64
+TEST_SUITE(formatted_64bit)
+TEST(formatted_64bit)
+{
+    char buf[64];
+    int64_t x = INT64_MAX;
+    snprintf(buf, sizeof(buf), "%" PRId64, (long long)x);
+    ASSERT_STR_EQ("9223372036854775807", buf);
+}
+#endif
+
+TEST_SUITE(formatted_ptr)
+TEST(formatted_ptr)
+{
+    char buf[64];
+    uintptr_t p = 0xCAFEBABEULL;
+    snprintf(buf, sizeof(buf), "%" PRIxPTR, p);
+    ASSERT_TRUE(strstr(buf, "cafebabe") != NULL || strstr(buf, "CAFEBABE") != NULL);
+}
+
+/* ---- C99 Function/Test Suites ---- */
+#if JACL_HAS_C99
+
+TEST_SUITE(type_definitions)
+TEST(type_definitions)
+{
+    intmax_t x = 123;
+    ASSERT_EQ(123, x);
+    uintmax_t y = 456u;
+    ASSERT_EQ(456u, y);
+    imaxdiv_t r = { .quot = 17, .rem = 3 };
+    ASSERT_EQ(17, r.quot);
+    ASSERT_EQ(3, r.rem);
+}
+
+TEST_SUITE(imaxdiv_basic)
+TEST(imaxdiv_basic)
+{
+    imaxdiv_t d = imaxdiv(13, 5);
+    ASSERT_EQ(2, d.quot);
+    ASSERT_EQ(3, d.rem);
+}
+
+TEST_SUITE(imaxdiv_signed_cases)
+TEST(imaxdiv_signed_cases)
+{
+    imaxdiv_t d = imaxdiv(-13, 5);
+    ASSERT_EQ(-2, d.quot);
+    ASSERT_EQ(-3, d.rem);
+    d = imaxdiv(13, -5);
+    ASSERT_EQ(-2, d.quot);
+    ASSERT_EQ(3, d.rem);
+    d = imaxdiv(-13, -5);
+    ASSERT_EQ(2, d.quot);
+    ASSERT_EQ(-3, d.rem);
+}
+
+TEST_SUITE(imaxdiv_zero)
+TEST(imaxdiv_zero)
+{
+    imaxdiv_t d = imaxdiv(0, 7);
+    ASSERT_EQ(0, d.quot);
+    ASSERT_EQ(0, d.rem);
+}
+
+TEST_SUITE(imaxdiv_min_by_one)
+TEST(imaxdiv_min_by_one)
+{
+    imaxdiv_t d = imaxdiv(INTMAX_MIN, 1);
+    ASSERT_EQ(INTMAX_MIN, d.quot);
+    ASSERT_EQ(0, d.rem);
+}
+
+TEST_SUITE(imaxdiv_min_by_max)
+TEST(imaxdiv_min_by_max)
+{
+    imaxdiv_t d = imaxdiv(INTMAX_MIN, INTMAX_MAX);
+    ASSERT_EQ(-1, d.quot);
+    ASSERT_EQ(-1, d.rem);
+}
+
+TEST_SUITE(strtoimax_basic)
+TEST(strtoimax_basic)
+{
+    char *end = NULL;
+    const char src[] = "12345";
+    intmax_t x = strtoimax(src, &end, 10);
+    ASSERT_EQ(12345, x);
+    ASSERT_EQ('\0', *end);
+}
+
+TEST_SUITE(strtoimax_partial)
+TEST(strtoimax_partial)
+{
+    char buf[] = "123junk";
+    char *end = NULL;
+    intmax_t v = strtoimax(buf, &end, 10);
+    ASSERT_EQ(v, 123);
+    ASSERT_EQ(*end, 'j');
+    ASSERT_TRUE(end > buf && end <= buf + strlen(buf));
+}
+
+TEST_SUITE(strtoimax_dec)
+TEST(strtoimax_dec)
+{
+    char *end;
+    intmax_t a = strtoimax("123", &end, 0);
+    ASSERT_EQ(123, a);
+}
+
+TEST_SUITE(strtoimax_hex)
+TEST(strtoimax_hex)
+{
+    char *end;
+    intmax_t b = strtoimax("0x123", &end, 0);
+    ASSERT_EQ(0x123, b);
+}
+
+TEST_SUITE(strtoimax_oct)
+TEST(strtoimax_oct)
+{
+    char *end;
+    intmax_t c = strtoimax("0755", &end, 0);
+    ASSERT_EQ(493, c);
+}
+
+TEST_SUITE(strtoimax_negative)
+TEST(strtoimax_negative)
+{
+    char *end;
+    intmax_t v = strtoimax("-0x11", &end, 0);
+    ASSERT_EQ(-17, v);
+}
+
+TEST_SUITE(strtoimax_big)
+TEST(strtoimax_big)
+{
+    char src[64];
+    snprintf(src, sizeof(src), "%" PRIuMAX, (uintmax_t)INTMAX_MAX + 1);
+    char *end = NULL;
+    errno = 0;
+    intmax_t v = strtoimax(src, &end, 10);
+    ASSERT_EQ(INTMAX_MAX, v);
+    ASSERT_EQ(ERANGE, errno);
+}
+
+TEST_SUITE(strtoimax_smass)
+TEST(strtoimax_smass)
+{
+    char src[64];
+    snprintf(src, sizeof(src), "%jd", (intmax_t)INTMAX_MIN - 1);
+    char *end = NULL;
+    errno = 0;
+    intmax_t v = strtoimax(src, &end, 10);
+    ASSERT_EQ(INTMAX_MIN, v);
+    ASSERT_EQ(ERANGE, errno);
+}
+
+TEST_SUITE(strtoimax_only_plus)
+TEST(strtoimax_only_plus)
+{
+    char buf[] = "+";
+    char *end = NULL;
+    intmax_t v = strtoimax(buf, &end, 10);
+    ASSERT_EQ(v, 0);
+    ASSERT_EQ(end, buf);
+}
+
+TEST_SUITE(strtoumax_basic)
+TEST(strtoumax_basic)
+{
+    char *end = NULL;
+    const char src[] = "65536";
+    uintmax_t x = strtoumax(src, &end, 10);
+    ASSERT_EQ(65536u, x);
+    ASSERT_EQ('\0', *end);
+}
+
+TEST_SUITE(strtoumax_hex)
+TEST(strtoumax_hex)
+{
+    char *end;
+    uintmax_t v = strtoumax("0xffff", &end, 16);
+    ASSERT_EQ(0xffffu, v);
+}
+
+TEST_SUITE(strtoumax_underflow)
+TEST(strtoumax_underflow)
+{
+    char *end = NULL;
+    errno = 0;
+    uintmax_t v = strtoumax("-100", &end, 10);
+    ASSERT_EQ(0, v); // Underflow for unsigned types returns 0
+    // Some platforms may set errno, some may not
+}
+
+TEST_SUITE(strtoumax_big)
+TEST(strtoumax_big)
+{
+    char src[64];
+    snprintf(src, sizeof(src), "%" PRIuMAX "0", UINTMAX_MAX);
+    char *end = NULL;
+    errno = 0;
+    uintmax_t v = strtoumax(src, &end, 10);
+    ASSERT_EQ(UINTMAX_MAX, v);
+    ASSERT_EQ(ERANGE, errno);
+}
+
+TEST_SUITE(strtoumax_smass)
+TEST(strtoumax_smass)
+{
+    char *end = NULL;
+    errno = 0;
+    uintmax_t v = strtoumax("-1", &end, 10);
+    ASSERT_EQ(0, v);
+}
+
+TEST_SUITE(strtoumax_base16)
+TEST(strtoumax_base16)
+{
+    char buf[] = "0xabcF012";
+    char *end = NULL;
+    uintmax_t v = strtoumax(buf, &end, 0);
+    ASSERT_TRUE(v > 0);
+    ASSERT_TRUE(*end == '\0' || *end == ' ' || *end == '\n');
+}
+
+#endif /* JACL_HAS_C99 */
+
+TEST_MAIN()

@@ -1,147 +1,188 @@
-// (c) 2025 FRINKnet & Friends – MIT licence
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef TGMATH_H
 #define TGMATH_H
 #pragma once
 
-/*
-* This libc requires C11 or later  because of _Generic.
-* While C99 wanted this header it didn't provide the construct to make it viable.
-* Use <math.h> or explicit casts for legacy C code.
-*/
-
 #include <config.h>
+
+#if !JACL_HAS_C11
+#if JACL_HAS_C99
+#error "Even though tgmath.h was included in C99 there was no general mechanism to make it work."
+#endif
+#error "tgmath.h requires C11 or later"
+#else
+
 #include <math.h>
 #include <complex.h>
 
-#if !JACL_HAS_C11
-#error "tgmath.h requires C11 or later"
-#endif
+// Integer promotion helper (C11 7.25 requirement)
+#define __tg_real_promote(x) _Generic((x), \
+	float: (float)(x), \
+	double: (double)(x), \
+	long double: (long double)(x), \
+	default: (double)(x))
 
-#if JACL_HAS_C11
+// Type classification for real/complex dispatch
+#define __tg_type_tag(x) _Generic((x), \
+	float: 1.0f, \
+	long double: 1.0L, \
+	float complex: 1.0if, \
+	long double complex: 1.0iL, \
+	default: 1.0)
 
-// Absolute value
-#define fabs(x)					_Generic((x), \
-		float: fabsf, double: fabs, long double: fabsl, \
-		float complex: cabsf, double complex: cabs, long double complex: cabsl)(x)
+// Real-only dispatch with integer promotion
+#define __tg_real(fn, x) _Generic(__tg_real_promote(x), \
+	float: fn##f, \
+	long double: fn##l, \
+	default: fn)(x)
 
-// Elementary
-#define sqrt(x)					_Generic((x), \
-		float: sqrtf, double: sqrt, long double: sqrtl, \
-		float complex: csqrtf, double complex: csqrt, long double complex: csqrtl)(x)
-#define cbrt(x)					_Generic((x), \
-		float: cbrtf, double: cbrt, long double: cbrtl)(x)
-#define exp(x)					_Generic((x), \
-		float: expf, double: exp, long double: expl, \
-		float complex: cexpf, double complex: cexp, long double complex: cexpl)(x)
-#define exp2(x)					_Generic((x), \
-		float: exp2f, double: exp2, long double: exp2l)(x)
-#define expm1(x)				_Generic((x), \
-		float: expm1f, double: expm1, long double: expm1l)(x)
-#define log(x)					_Generic((x), \
-		float: logf, double: log, long double: logl, \
-		float complex: clogf, double complex: clog, long double complex: clogl)(x)
-#define log10(x)				_Generic((x), \
-		float: log10f, double: log10, long double: log10l)(x)
-#define log1p(x)				_Generic((x), \
-		float: log1pf, double: log1p, long double: log1pl)(x)
-#define log2(x)					_Generic((x), \
-		float: log2f, double: log2, long double: log2l)(x)
-#define logb(x)					_Generic((x), \
-		float: logbf, double: logb, long double: logbl)(x)
-#define ilogb(x)				_Generic((x), \
-		float: ilogbf, double: ilogb, long double: ilogbl)(x)
-#define frexp(x,e)			_Generic((x), \
-		float: frexpf, double: frexp, long double: frexpl)(x,e)
-#define ldexp(x,e)			_Generic((x), \
-		float: ldexpf, double: ldexp, long double: ldexpl)(x,e)
+#define __tg_real2(fn, x, y) _Generic( \
+	__tg_real_promote(x) + __tg_real_promote(y), \
+	float: fn##f, \
+	long double: fn##l, \
+	default: fn)(x, y)
 
-// Trigonometric
-#define sin(x)					_Generic((x), \
-		float: sinf, double: sin, long double: sinl, \
-		float complex: csinf, double complex: csin, long double complex: csinl)(x)
-#define cos(x)					_Generic((x), \
-		float: cosf, double: cos, long double: cosl, \
-		float complex: ccosf, double complex: ccos, long double complex: ccosl)(x)
-#define tan(x)					_Generic((x), \
-		float: tanf, double: tan, long double: tanl, \
-		float complex: ctanf, double complex: ctan, long double complex: ctanl)(x)
-#define asin(x)					_Generic((x), \
-		float: asinf, double: asin, long double: asinl, \
-		float complex: casinf, double complex: casin, long double complex: casinl)(x)
-#define acos(x)					_Generic((x), \
-		float: acosf, double: acos, long double: acosl, \
-		float complex: cacosf, double complex: cacos, long double complex: cacosl)(x)
-#define atan(x)					_Generic((x), \
-		float: atanf, double: atan, long double: atanl, \
-		float complex: catanf, double complex: catan, long double complex: catanl)(x)
-#define atan2(y,x)			_Generic((y)+(x), \
-		float: atan2f, double: atan2, long double: atan2l)(y,x)
+#define __tg_real3(fn, x, y, z) _Generic( \
+	__tg_real_promote(x) + __tg_real_promote(y) + __tg_real_promote(z), \
+	float: fn##f, \
+	long double: fn##l, \
+	default: fn)(x, y, z)
 
-// Hyperbolic
-#define sinh(x)					_Generic((x), \
-		float: sinhf, double: sinh, long double: sinhl, \
-		float complex: csinhf, double complex: csinh, long double complex: csinhl)(x)
-#define cosh(x)					_Generic((x), \
-		float: coshf, double: cosh, long double: coshl, \
-		float complex: ccoshf, double complex: ccosh, long double complex: ccoshl)(x)
-#define tanh(x)					_Generic((x), \
-		float: tanhf, double: tanh, long double: tanhl, \
-		float complex: ctanhf, double complex: ctanh, long double complex: ctanhl)(x)
-#define asinh(x)				_Generic((x), \
-		float: asinhf, double: asinh, long double: asinhl, \
-		float complex: casinhf, double complex: casinh, long double complex: casinhl)(x)
-#define acosh(x)				_Generic((x), \
-		float: acoshf, double: acosh, long double: acoshl, \
-		float complex: cacoshf, double complex: cacosh, long double complex: cacoshl)(x)
-#define atanh(x)				_Generic((x), \
-		float: atanhf, double: atanh, long double: atanhl, \
-		float complex: catanhf, double complex: catanh, long double complex: catanhl)(x)
+// Real/complex dispatch
+#define __tg_complex(fn, x) _Generic(__tg_type_tag(x), \
+	float: fn##f, \
+	long double: fn##l, \
+	float complex: c##fn##f, \
+	long double complex: c##fn##l, \
+	default: fn)(x)
 
-// Special
-#define hypot(x,y)			_Generic((x)+(y), \
-		float: hypotf, double: hypot, long double: hypotl, \
-		float complex: chypotf, double complex: chypot, long double complex: chypotl)(x,y)
-#define erf(x)					_Generic((x), \
-		float: erff, double: erf, long double: erfl)(x)
-#define erfc(x)					_Generic((x), \
-		float: erfcf, double: erfc, long double: erfcl)(x)
-#define tgamma(x)				_Generic((x), \
-		float: tgammaf, double: tgamma, long double: tgammal)(x)
-#define lgamma(x)				_Generic((x), \
-		float: lgammaf, double: lgamma, long double: lgammal)(x)
+#define __tg_complex2(fn, x, y) _Generic( \
+	__tg_type_tag(x) + __tg_type_tag(y), \
+	float: fn##f, \
+	long double: fn##l, \
+	float complex: c##fn##f, \
+	long double complex: c##fn##l, \
+	default: fn)(x, y)
 
-// Rounding and remainder
-#define ceil(x)					_Generic((x), float: ceilf, double: ceil, long double: ceill)(x)
-#define floor(x)				_Generic((x), float: floorf, double: floor, long double: floorl)(x)
-#define trunc(x)				_Generic((x), float: truncf, double: trunc, long double: truncl)(x)
-#define round(x)				_Generic((x), float: roundf, double: round, long double: roundl)(x)
-#define nearbyint(x)		_Generic((x), float: nearbyintf, double: nearbyint, long double: nearbyintl)(x)
-#define rint(x)					_Generic((x), float: rintf, double: rint, long double: rintl)(x)
+// fabs - special case: complex uses cabs not cfabs
+#define fabs(x) _Generic(__tg_type_tag(x), \
+	float: fabsf, \
+	long double: fabsl, \
+	float complex: cabsf, \
+	long double complex: cabsl, \
+	default: fabs)(x)
 
-#define fmod(x,y)				_Generic((x)+(y), float: fmodf, double: fmod, long double: fmodl)(x,y)
-#define remainder(x,y)	_Generic((x)+(y), float: remainderf, double: remainder, long double: remainderl)(x,y)
+// sqrt, cbrt, exp, exp2, expm1, log, log10, log1p, log2, logb
+#define sqrt(x) __tg_complex(sqrt, x)
+#define cbrt(x) __tg_real(cbrt, x)
+#define exp(x) __tg_complex(exp, x)
+#define exp2(x) __tg_real(exp2, x)
+#define expm1(x) __tg_real(expm1, x)
+#define log(x) __tg_complex(log, x)
+#define log10(x) __tg_real(log10, x)
+#define log1p(x) __tg_real(log1p, x)
+#define log2(x) __tg_real(log2, x)
+#define logb(x) __tg_real(logb, x)
 
-// FP manipulation
-#define scalbn(x,n)			_Generic((x), float: scalbnf, double: scalbn, long double: scalbnl)(x,n)
-#define scalbln(x,n)		_Generic((x), float: scalblnf, double: scalbln, long double: scalblnl)(x,n)
-#define copysign(x,y)		_Generic((x)+(y), float: copysignf, double: copysign, long double: copysignl)(x,y)
-#define nextafter(x,y)	_Generic((x)+(y), float: nextafterf, double: nextafter, long double: nextafterl)(x,y)
-#define nexttoward(x,y) _Generic((x), float: nexttowardf, double: nexttoward, long double: nexttowardl)(x,y)
+// ilogb, frexp, ldexp - functions with extra non-generic integer parameters
+#define ilogb(x) _Generic(__tg_real_promote(x), \
+	float: ilogbf, \
+	long double: ilogbl, \
+	default: ilogb)(x)
 
-// Complex accessors
-#define carg(z)					_Generic((z), float complex: cargf, double complex: carg, long double complex: cargl)(z)
-#define cimag(z)				_Generic((z), float complex: cimagf, double complex: cimag, long double complex: cimagl)(z)
-#define creal(z)				_Generic((z), float complex: crealf, double complex: creal, long double complex: creall)(z)
-#define conj(z)					_Generic((z), float complex: conjf, double complex: conj, long double complex: conjl)(z)
-#define cproj(z)				_Generic((z), float complex: cprojf, double complex: cproj, long double complex: cprojl)(z)
+#define frexp(x, e) _Generic(__tg_real_promote(x), \
+	float: frexpf, \
+	long double: frexpl, \
+	default: frexp)(x, e)
 
-// Power, min/max
-#define pow(x,y)				_Generic((x)+(y), \
-		float: powf, double: pow, long double: powl, \
-		float complex: cpowf, double complex: cpow, long double complex: cpowl)(x,y)
-#define fdim(x,y)				_Generic((x)+(y), float: fdimf, double: fdim, long double: fdiml)(x,y)
-#define fmax(x,y)				_Generic((x)+(y), float: fmaxf, double: fmax, long double: fmaxl)(x,y)
-#define fmin(x,y)				_Generic((x)+(y), float: fminf, double: fmin, long double: fminl)(x,y)
-#define fma(x,y,z)			_Generic((x)+(y)+(z), float: fmaf, double: fma, long double: fmal)(x,y,z)
+#define ldexp(x, e) _Generic(__tg_real_promote(x), \
+	float: ldexpf, \
+	long double: ldexpl, \
+	default: ldexp)(x, e)
 
-#endif /* TGMATH_H */
+// sin, cos, tan, asin, acos, atan, atan2
+#define sin(x) __tg_complex(sin, x)
+#define cos(x) __tg_complex(cos, x)
+#define tan(x) __tg_complex(tan, x)
+#define asin(x) __tg_complex(asin, x)
+#define acos(x) __tg_complex(acos, x)
+#define atan(x) __tg_complex(atan, x)
+#define atan2(y, x) __tg_real2(atan2, y, x)
+
+// sinh, cosh, tanh, asinh, acosh, atanh
+#define sinh(x) __tg_complex(sinh, x)
+#define cosh(x) __tg_complex(cosh, x)
+#define tanh(x) __tg_complex(tanh, x)
+#define asinh(x) __tg_complex(asinh, x)
+#define acosh(x) __tg_complex(acosh, x)
+#define atanh(x) __tg_complex(atanh, x)
+
+// hypot, erf, erfc, tgamma, lgamma
+#define hypot(x, y) __tg_real2(hypot, x, y)
+#define erf(x) __tg_real(erf, x)
+#define erfc(x) __tg_real(erfc, x)
+#define tgamma(x) __tg_real(tgamma, x)
+#define lgamma(x) __tg_real(lgamma, x)
+
+// ceil, floor, trunc, round, nearbyint, rint
+#define ceil(x) __tg_real(ceil, x)
+#define floor(x) __tg_real(floor, x)
+#define trunc(x) __tg_real(trunc, x)
+#define round(x) __tg_real(round, x)
+#define nearbyint(x) __tg_real(nearbyint, x)
+#define rint(x) __tg_real(rint, x)
+
+// fmod, remainder
+#define fmod(x, y) __tg_real2(fmod, x, y)
+#define remainder(x, y) __tg_real2(remainder, x, y)
+
+// scalbn, scalbln, copysign, nextafter, nexttoward - functions with extra non-generic parameters
+#define scalbn(x, n) _Generic(__tg_real_promote(x), \
+	float: scalbnf, \
+	long double: scalbnl, \
+	default: scalbn)(x, n)
+
+#define scalbln(x, n) _Generic(__tg_real_promote(x), \
+	float: scalblnf, \
+	long double: scalblnl, \
+	default: scalbln)(x, n)
+
+#define copysign(x, y) __tg_real2(copysign, x, y)
+#define nextafter(x, y) __tg_real2(nextafter, x, y)
+
+#define nexttoward(x, y) _Generic(__tg_real_promote(x), \
+	float: nexttowardf, \
+	long double: nexttowardl, \
+	default: nexttoward)(x, y)
+
+// carg, cimag, creal, conj, cproj
+#define carg(z) _Generic((z), \
+	float complex: cargf, \
+	long double complex: cargl, \
+	default: carg)(z)
+#define cimag(z) _Generic((z), \
+	float complex: cimagf, \
+	long double complex: cimagl, \
+	default: cimag)(z)
+#define creal(z) _Generic((z), \
+	float complex: crealf, \
+	long double complex: creall, \
+	default: creal)(z)
+#define conj(z) _Generic((z), \
+	float complex: conjf, \
+	long double complex: conjl, \
+	default: conj)(z)
+#define cproj(z) _Generic((z), \
+	float complex: cprojf, \
+	long double complex: cprojl, \
+	default: cproj)(z)
+
+// pow, fdim, fmax, fmin, fma
+#define pow(x, y) __tg_complex2(pow, x, y)
+#define fdim(x, y) __tg_real2(fdim, x, y)
+#define fmax(x, y) __tg_real2(fmax, x, y)
+#define fmin(x, y) __tg_real2(fmin, x, y)
+#define fma(x, y, z) __tg_real3(fma, x, y, z)
+
+#endif // JACL_HAS_C11
+#endif // TGMATH_H

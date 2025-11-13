@@ -3,7 +3,6 @@
 #define CORE_JSIO_H
 
 #include <jsio.h>
-#include <setjmp.h>
 #include <unistd.h>
 
 #ifdef __cplusplus
@@ -507,22 +506,13 @@ static ssize_t js_write(int fd, const void *buf, size_t count) {
 
 // Slep and async
 #ifndef NO_JS_ASYNCIFY
-#define JS_ASYNC_ENV *__jacl_async_env()
-static jmp_buf* __jacl_async_env(void) {
-	static jmp_buf env;
-
-	return &env;
-}
-
 #define JS_PAUSE JS_EXEC(js_property(JS_ASYNC, "pause"), (uint32_t)(uintptr_t)__builtin_frame_address(0));
 JS_EXPORT(sleep) void js_sleep(uint32_t ms) {
-	if (setjmp(JS_ASYNC_ENV) == 0) {
-		JS_PAUSE;
-		JS_EXEC(js_property(JS_ASYNC, "sleep"), ms);
-	}
+	JS_PAUSE;
+	JS_EXEC(js_property(JS_ASYNC, "sleep"), ms);
 }
 JS_EXPORT(pause) void js_pause() { JS_PAUSE; }
-JS_EXPORT(resume) void js_resume(void) { longjmp(JS_ASYNC_ENV, 1); }
+JS_EXPORT(resume) void js_resume(void) {  }
 #undef JS_PAUSE
 #endif /* !NO_JS_ASYNCIFY */
 

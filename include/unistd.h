@@ -18,14 +18,18 @@ extern "C" {
 #endif
 
 extern char **environ;
+typedef unsigned int useconds_t;
 
 #define STDIN_FILENO    0
 #define STDOUT_FILENO   1
 #define STDERR_FILENO   2
+
 #define F_OK 0
 #define R_OK 4
 #define W_OK 2
 #define X_OK 1
+
+#define HOST_NAME_MAX 256
 
 #if JACL_HAS_POSIX
 
@@ -34,6 +38,7 @@ noreturn static inline void _exit(int status) { syscall(SYS_exit, status); while
 static inline pid_t getpid(void) { return (pid_t)syscall(SYS_getpid); }
 static inline pid_t getppid(void) { return (pid_t)syscall(SYS_getppid); }
 static inline pid_t fork(void) { return (pid_t)syscall(SYS_fork); }
+static inline pid_t vfork(void) { return fork(); }
 
 /* File I/O */
 static inline ssize_t read(int fd, void *buf, size_t count) { return syscall(SYS_read, fd, buf, count); }
@@ -72,7 +77,6 @@ static inline char *getcwd(char *buf, size_t size) { return (char*)syscall(SYS_g
 static inline int execve(const char *pathname, char *const argv[], char *const envp[]) { return (int)syscall(SYS_execve, pathname, argv, envp); }
 static inline int execv(const char *pathname, char *const argv[]) { return (int)syscall(SYS_execve, pathname, argv, environ); }
 static inline int execvp(const char *file, char *const argv[]) { return (int)syscall(SYS_execve, file, argv, environ); }
-
 static inline int execl(const char *pathname, const char *arg, ...) {
 	const char *argv[256];
 	va_list ap;
@@ -90,7 +94,6 @@ static inline int execl(const char *pathname, const char *arg, ...) {
 
 	return execve(pathname, (char *const*)argv, environ);
 }
-
 static inline int execlp(const char *file, const char *arg, ...) {
 	const char *argv[256];
 	va_list ap;
@@ -108,7 +111,6 @@ static inline int execlp(const char *file, const char *arg, ...) {
 
 	return execvp(file, (char *const*)argv);
 }
-
 static inline int execle(const char *pathname, const char *arg, ...) {
 	const char *argv[256];
 	char *const *envp;
@@ -139,6 +141,26 @@ static inline pid_t getpgrp(void) { return (pid_t)syscall(SYS_getpgrp); }
 static inline int setpgid(pid_t pid, pid_t pgid) { return (int)syscall(SYS_setpgid, pid, pgid); }
 static inline pid_t setsid(void) { return (pid_t)syscall(SYS_setsid); }
 
+/* Hostname */
+static inline int gethostname(char *name, size_t len) {
+	#if defined(SYS_gethostname)
+		return (int)syscall(SYS_gethostname, name, len);
+	#else
+		errno = ENOSYS;
+
+		return -1;
+	#endif
+}
+static inline int sethostname(const char *name, size_t len) {
+	#if defined(SYS_sethostname)
+		return (int)syscall(SYS_sethostname, name, len);
+	#else
+		errno = ENOSYS;
+
+		return -1;
+	#endif
+}
+
 /* File properties */
 static inline int isatty(int fd) {
 	#if defined(SYS_ioctl) && defined(TIOCGWINSZ)
@@ -157,6 +179,7 @@ static inline int lchown(const char *pathname, uid_t owner, gid_t group) { retur
 static inline int fchdir(int fd) { return (int)syscall(SYS_fchdir, fd); }
 
 /* File synchronization */
+static inline void sync(void) { syscall(SYS_sync); }
 static inline int fsync(int fd) { return (int)syscall(SYS_fsync, fd); }
 static inline int fdatasync(int fd) {
 	#if defined(SYS_fdatasync)
@@ -171,11 +194,24 @@ static inline unsigned int sleep(unsigned int seconds) {
 	#if defined(SYS_nanosleep)
 		struct timespec req = {seconds, 0}, rem = {0, 0};
 
-		syscall(SYS_nanosleep, &req, &rem);
+		if (syscall(SYS_nanosleep, &req, &rem) == -1) {
+			return (unsigned int)rem.tv_sec + (rem.tv_nsec > 0 ? 1 : 0);
+		}
 
 		return 0;
 	#else
-		errno = ENOSYS; return 0;
+		errno = ENOSYS;
+		return seconds;
+	#endif
+}
+static inline int usleep(useconds_t usec) {
+	#if defined(SYS_nanosleep)
+		struct timespec req = {usec / 1000000, (usec % 1000000) * 1000};
+
+		return (int)syscall(SYS_nanosleep, &req, NULL);
+	#else
+		errno = ENOSYS;
+		return -1;
 	#endif
 }
 static inline unsigned int alarm(unsigned int seconds) {
@@ -200,6 +236,7 @@ static inline noreturn void _exit(int status) { (void)status; while(1); }
 static inline pid_t getpid(void) { return 1; }
 static inline pid_t getppid(void) { return 1; }
 static inline pid_t fork(void) { errno = ENOSYS; return -1; }
+static inline pid_t vfork(void) { return fork(); }
 
 /* File I/O */
 static inline ssize_t read(int fd, void *buf, size_t count) { (void)fd; (void)buf; (void)count; errno = ENOSYS; return -1; }
@@ -248,6 +285,8 @@ static inline pid_t getpgrp(void) { return 1; }
 static inline int setpgid(pid_t pid, pid_t pgid) { (void)pid; (void)pgid; errno = ENOSYS; return -1; }
 static inline pid_t setsid(void) { errno = ENOSYS; return -1; }
 
+static inline int gethostname(char *name, size_t len) { (void)name; (void)len; errno = ENOSYS; return -1; }
+static inline int sethostname(const char *name, size_t len) { (void)name; (void)len; errno = ENOSYS; return -1; }
 
 /* File properties */
 static inline int isatty(int fd) { (void)fd; errno = ENOSYS; return 0; }
@@ -259,11 +298,13 @@ static inline int lchown(const char *pathname, uid_t owner, gid_t group) { (void
 static inline int fchdir(int fd) { (void)fd; errno = ENOSYS; return -1; }
 
 /* File synchronization */
+static inline void sync(void) { /* noop */ }
 static inline int fsync(int fd) { (void)fd; errno = ENOSYS; return -1; }
 static inline int fdatasync(int fd) { (void)fd; errno = ENOSYS; return -1; }
 
 /* Sleep/alarm */
-static inline unsigned int sleep(unsigned int seconds) { (void)seconds; return 0; }
+static inline unsigned int sleep(unsigned int seconds) { return seconds; }
+static inline int usleep(useconds_t usec) { (void)usec; errno = ENOSYS; return -1; }
 static inline unsigned int alarm(unsigned int seconds) { (void)seconds; errno = ENOSYS; return 0; }
 static inline int pause(void) { errno = ENOSYS; return -1; }
 

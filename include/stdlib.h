@@ -41,30 +41,16 @@ extern "C" {
 #define TMP_MAX 238328
 #endif
 
-	/* Builtin compatibility  */
-#if defined(__GNUC__) || defined(__clang__)
-#define __jacl_trap() __builtin_trap()
-#elif defined(_MSC_VER)
-#include <intrin.h>
-#define __jacl_trap() __debugbreak()
-#else
-#define __jacl_trap() (*(volatile int*)0 = 0)
-#endif
-
 /* ============================================================= */
 /* Type Definitions                                              */
 /* ============================================================= */
 
-typedef struct {
-	int quot, rem;
-} div_t;
-
-typedef struct {
-	long quot, rem;
-} ldiv_t;
+typedef struct { int8_t quot, rem; } div8_t;
+typedef struct { int quot, rem; } div_t;
+typedef struct { long quot, rem; } ldiv_t;
 
 #if JACL_HAS_C99
-typedef struct { long long quot, rem;}	lldiv_t;
+	typedef struct { long long quot, rem; } lldiv_t;
 #endif
 
 /* ============================================================= */
@@ -82,36 +68,34 @@ void *aligned_alloc(size_t a, size_t s);
 /* ============================================================= */
 /* Integer Conversion & Parsing                                  */
 /* ============================================================= */
-int atoi(const char *nptr);
-long atol(const char *nptr);
-double atof(const char *nptr);
 
-#if JACL_HAS_C99
-long long atoll(const char *nptr);
-#endif
-
-long strtol(const char *nptr, char **endptr, int base);
-unsigned long strtoul(const char *nptr, char **endptr, int base);
+int atoi(const char*);
+long atol(const char*);
+long strtol(const char*, char **, int);
 double strtod(const char *nptr, char **endptr);
 
 #if JACL_HAS_C99
+long long atoll(const char*);
+
+unsigned long strtoul(const char*, char **, int);
+long long strtoll(const char*, char **, int);
+unsigned long long strtoull(const char*, char **, int);
+
 float strtof(const char *nptr, char **endptr);
 long double strtold(const char *nptr, char **endptr);
-long long strtoll(const char *nptr, char **endptr, int base);
-unsigned long long strtoull(const char *nptr, char **endptr, int base);
 #endif /* JACL_HAS_C99 */
 
 /* ============================================================= */
 /* Absolute Value & Division                                     */
 /* ============================================================= */
 static inline int abs(int n) { return n < 0 ? -n : n; }
+static inline div_t div(int n, int d) { return (n == INT_MIN && d == -1) ? (div_t){ INT_MIN, 0 } : (div_t){ n/d, n%d }; }
 static inline long labs(long n) { return n < 0 ? -n : n; }
-static inline div_t div(int n, int d) { return (div_t){ n/d, n%d }; }
-static inline ldiv_t ldiv(long n, long d) { return (ldiv_t){ n/d, n%d }; }
+static inline ldiv_t ldiv(long n, long d) { return (n == LONG_MIN && d == -1) ? (ldiv_t){ LONG_MIN, 0 } : (ldiv_t){ n/d, n%d }; }
 
 #if JACL_HAS_C99
 static inline long long llabs(long long n) { return n < 0 ? -n : n; }
-static inline lldiv_t lldiv(long long n, long long d) { return (lldiv_t){ n/d, n%d }; }
+static inline lldiv_t lldiv(long long n, long long d) { return (n == LLONG_MIN && d == -1) ? (lldiv_t){ LLONG_MIN, 0 } : (lldiv_t){ n/d, n%d }; }
 #endif
 
 /* ============================================================= */
@@ -122,11 +106,7 @@ static inline lldiv_t lldiv(long long n, long long d) { return (lldiv_t){ n/d, n
 static unsigned __jacl_seed = 1;
 
 static inline void srand(unsigned s) { __jacl_seed = s ? s : 1; }
-static inline int rand(void) {
-	__jacl_seed = __jacl_seed * 1103515245u + 12345u;
-
-	return (int)((__jacl_seed >> 16) & RAND_MAX);
-}
+static inline int rand(void) { __jacl_seed = __jacl_seed * 1103515245u + 12345u; return (int)((__jacl_seed >> 16) & RAND_MAX); }
 
 /* ============================================================= */
 /* Sorting & Searching                                           */
@@ -149,7 +129,6 @@ int at_quick_exit(void (*func)(void));
 #if JACL_HAS_C99
 static inline void _Exit(int status) { _exit(status); }
 #endif
-
 
 static inline void abort(void) {
 	raise(SIGABRT);  // Standard attempt
@@ -211,7 +190,6 @@ static inline int system(const char* command) {
 	#endif
 }
 
-
 #if JACL_HAS_POSIX
 static inline int putenv(char *string) {
 	extern char **environ;
@@ -246,7 +224,6 @@ static inline int putenv(char *string) {
 
 	return 0;
 }
-
 static inline int setenv(const char *name, const char *value, int overwrite) {
 	if (!name || !*name || strchr(name, '=')) { errno = EINVAL; return -1; }
 	if (!overwrite && getenv(name)) return 0;
@@ -260,7 +237,6 @@ static inline int setenv(const char *name, const char *value, int overwrite) {
 
 	return putenv(str);
 }
-
 static inline int unsetenv(const char *name) {
 	extern char **environ;
 
@@ -286,13 +262,7 @@ static inline int unsetenv(const char *name) {
 /* Multibyte Character Conversion                                */
 /* ============================================================= */
 
-static inline int mblen(const char *s, size_t n) {
-	if (!s) return 0;
-	if (n == 0) return -1;
-
-	return *s ? 1 : 0;
-}
-
+static inline int mblen(const char *s, size_t n) { if (!s) return 0; if (n == 0) return -1; return *s ? 1 : 0; }
 static inline int mbtowc(wchar_t *restrict pwc, const char *restrict s, size_t n) {
 	if (!s) return 0;
 	if (n == 0) return -1;
@@ -307,7 +277,6 @@ static inline int mbtowc(wchar_t *restrict pwc, const char *restrict s, size_t n
 
 	return 1;
 }
-
 static inline int wctomb(char *s, wchar_t wc) {
 	if (!s) return 0;
 
@@ -317,7 +286,6 @@ static inline int wctomb(char *s, wchar_t wc) {
 
 	return 1;
 }
-
 static inline size_t mbstowcs(wchar_t *restrict pwcs, const char *restrict s, size_t n) {
 	size_t count = 0;
 
@@ -334,7 +302,6 @@ static inline size_t mbstowcs(wchar_t *restrict pwcs, const char *restrict s, si
 
 	return count;
 }
-
 static inline size_t wcstombs(char *restrict s, const wchar_t *restrict pwcs, size_t n) {
 	size_t count = 0;
 
@@ -356,12 +323,7 @@ static inline size_t wcstombs(char *restrict s, const wchar_t *restrict pwcs, si
 /* String Duplication                                            */
 /* ============================================================= */
 
-static inline char *strdup(const char *s) {
-	size_t n = strlen(s) + 1;
-	char *p = (char *)malloc(n);
-
-	return p ? (char *)memcpy(p, s, n) : NULL;
-}
+static inline char *strdup(const char *s) { size_t n = strlen(s) + 1; char *p = (char *)malloc(n); return p ? (char *)memcpy(p, s, n) : NULL; }
 
 #if JACL_HAS_C99
 static inline char *strndup(const char *s, size_t n) {

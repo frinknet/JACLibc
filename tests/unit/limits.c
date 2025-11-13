@@ -73,7 +73,7 @@ TEST(int_size_consistency) {
 TEST(int_boundary_values) {
 	int min = INT_MIN;
 	int max = INT_MAX;
-	
+
 	ASSERT_TRUE(min < 0);
 	ASSERT_TRUE(max > 0);
 	ASSERT_TRUE(max > min);
@@ -139,7 +139,7 @@ TEST(integer_size_progression) {
 	ASSERT_TRUE(sizeof(char) <= sizeof(short));
 	ASSERT_TRUE(sizeof(short) <= sizeof(int));
 	ASSERT_TRUE(sizeof(int) <= sizeof(long));
-	
+
 	#if JACL_HAS_C99
 	ASSERT_TRUE(sizeof(long) <= sizeof(long long));
 	#endif
@@ -168,14 +168,14 @@ TEST_SUITE(arithmetic_boundaries);
 TEST(int_overflow_detection) {
 	int max = INT_MAX;
 	int min = INT_MIN;
-	
+
 	ASSERT_TRUE(max > 0);
 	ASSERT_TRUE(min < 0);
 }
 
 TEST(unsigned_wraparound) {
 	unsigned int max = UINT_MAX;
-	
+
 	// Unsigned overflow is well-defined (wraps to 0)
 	ASSERT_EQ(0, max + 1);
 }
@@ -188,7 +188,7 @@ TEST_SUITE(practical_usage);
 TEST(safe_int_addition_check) {
 	int a = 1000000;
 	int b = 1000000;
-	
+
 	// Check if addition would overflow
 	if (a > INT_MAX - b) {
 		ASSERT_TRUE(0);  // Should not reach
@@ -204,7 +204,7 @@ TEST(type_range_validation) {
 	short s = SHRT_MAX;
 	int i = INT_MAX;
 	long l = LONG_MAX;
-	
+
 	ASSERT_EQ(CHAR_MAX, c);
 	ASSERT_EQ(SHRT_MAX, s);
 	ASSERT_EQ(INT_MAX, i);
@@ -217,11 +217,11 @@ TEST(type_range_validation) {
 TEST_SUITE(compile_time);
 
 TEST(static_assertions) {
-	_Static_assert(CHAR_BIT == 8, "char must be 8 bits");
-	_Static_assert(sizeof(short) >= 2, "short must be at least 16 bits");
-	_Static_assert(sizeof(int) >= 4, "int must be at least 32 bits");
-	_Static_assert(sizeof(long) >= 4, "long must be at least 32 bits");
-	
+	static_assert(CHAR_BIT == 8, "char must be 8 bits");
+	static_assert(sizeof(short) >= 2, "short must be at least 16 bits");
+	static_assert(sizeof(int) >= 4, "int must be at least 32 bits");
+	static_assert(sizeof(long) >= 4, "long must be at least 32 bits");
+
 	ASSERT_TRUE(1);
 }
 
@@ -232,7 +232,7 @@ TEST_SUITE(edge_cases);
 
 TEST(zero_handling) {
 	int zero = 0;
-	
+
 	ASSERT_TRUE(zero < INT_MAX);
 	ASSERT_TRUE(zero > INT_MIN);
 }

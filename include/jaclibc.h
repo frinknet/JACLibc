@@ -95,7 +95,6 @@
 
 // Process Control
 #include <signal.h>       // Signal handling and generation
-#include <setjmp.h>       // Non-local jump control flow
 
 // Concurrency
 #include <sched.h>        // CPU scheduling policies

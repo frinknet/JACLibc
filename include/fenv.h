@@ -29,33 +29,27 @@ extern "C" {
 typedef unsigned fexcept_t;
 typedef struct { fexcept_t excepts; int round; } fenv_t;
 
-//TODO: movethis andit's dependents to core
-
-/* Default environment object (C/C++ friendly) */
+// Default environment object (C/C++ friendly)
 static const fenv_t __jacl_fenv_default = { 0u, FE_TONEAREST };
 #define FE_DFL_ENV ((const fenv_t*)&__jacl_fenv_default)
 
 extern _Thread_local fenv_t __jacl_fenv;
 
-/* Inline API functions */
 static inline int feclearexcept(int e) {
 	__jacl_fenv.excepts &= (fexcept_t)~(unsigned)e;
 	return 0;
 }
 
-/* Store selected exception flags into *f */
 static inline int fegetexceptflag(fexcept_t *f, int e) {
 	if (f) *f = __jacl_fenv.excepts & (fexcept_t)e;
 	return 0;
 }
 
-/* Raise (set) exception flags indicated by e */
 static inline int feraiseexcept(int e) {
 	__jacl_fenv.excepts |= (fexcept_t)e;
 	return 0;
 }
 
-/* Set exception flags from *f, masked by e */
 static inline int fesetexceptflag(const fexcept_t *f, int e) {
 	if (f) {
 		__jacl_fenv.excepts &= (fexcept_t)~(unsigned)e;
@@ -64,30 +58,25 @@ static inline int fesetexceptflag(const fexcept_t *f, int e) {
 	return 0;
 }
 
-/* Test which flags in e are currently set */
 static inline int fetestexcept(int e) {
 	return (int)(__jacl_fenv.excepts & (fexcept_t)e);
 }
 
-/* Get current rounding mode */
 static inline int fegetround(void) {
 	return __jacl_fenv.round;
 }
 
-/* Set rounding mode */
 static inline int fesetround(int m) {
 	if (m < FE_TONEAREST || m > FE_TOWARDZERO) return 1;
 	__jacl_fenv.round = m;
 	return 0;
 }
 
-/* Copy current env to *envp */
 static inline int fegetenv(fenv_t *envp) {
 	if (envp) *envp = __jacl_fenv;
 	return 0;
 }
 
-/* Install environment (or default if envp==FE_DFL_ENV) */
 static inline int fesetenv(const fenv_t *envp) {
 	if (envp == FE_DFL_ENV || envp == (const fenv_t*)0) {
 		__jacl_fenv.excepts = 0u;
@@ -98,14 +87,12 @@ static inline int fesetenv(const fenv_t *envp) {
 	return 0;
 }
 
-/* Save env to *envp and clear exceptions */
 static inline int feholdexcept(fenv_t *envp) {
 	if (envp) *envp = __jacl_fenv;
 	__jacl_fenv.excepts = 0u;
 	return 0;
 }
 
-/* Merge saved env’s flags and set its rounding mode */
 static inline int feupdateenv(const fenv_t *envp) {
 	if (envp) {
 		__jacl_fenv.round = envp->round;

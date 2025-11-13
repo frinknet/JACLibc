@@ -64,13 +64,17 @@ extern "C" {
 #endif
 
 /* Internal State */
-typedef struct { uint32_t size, prev_size, flags; } __jacl_hdr_t;
-typedef struct { _Atomic uint32_t next, owner; } __jacl_lock_t;
+typedef struct {
+	size_t size, prev_size, flags;
+} __jacl_hdr_t;
+
+typedef struct {
+	_Atomic uint32_t next, owner;
+} __jacl_lock_t;
 
 typedef struct __jacl_segment {
 	uint8_t* base;
-	size_t size;
-	uint32_t bins[32];
+	size_t size, bins[32];
 	uint32_t bitmap;
 	struct __jacl_segment* next;
 } __jacl_segment_t;
@@ -117,41 +121,39 @@ static inline void __jacl_lock_release(__jacl_lock_t* l) {
 	atomic_fetch_add_explicit(&l->owner, 1, memory_order_release);
 }
 
-static inline int __jacl_bin_idx(uint32_t sz) {
+static inline int __jacl_bin_idx(size_t sz) {
 	if (sz <= 128) return (sz + 7) >> 3;
 
 	int i = 16;
-	uint32_t q = sz >> 7;
+	size_t q = sz >> 7;
 
 	while (q > 1 && i < 31) { q >>= 1; i++; }
 
 	return i;
 }
 
-static inline void __jacl_bin_push(__jacl_segment_t* seg, uint32_t off) {
+static inline void __jacl_bin_push(__jacl_segment_t* seg, size_t off) {
 	int i = __jacl_bin_idx(((__jacl_hdr_t*)(seg->base + off))->size);
-	*(uint32_t*)(seg->base + off + sizeof(__jacl_hdr_t)) = seg->bins[i];
+	*(size_t*)(seg->base + off + sizeof(__jacl_hdr_t)) = seg->bins[i];
 
 	seg->bins[i] = off;
 	seg->bitmap |= 1u << i;
 }
 
-static inline void __jacl_bin_remove(__jacl_segment_t* seg, uint32_t off) {
+static inline void __jacl_bin_remove(__jacl_segment_t* seg, size_t off) {
 	int i = __jacl_bin_idx(((__jacl_hdr_t*)(seg->base + off))->size);
-	uint32_t cur = seg->bins[i];
+	size_t cur = seg->bins[i];
 
 	if (cur == off) {
-		seg->bins[i] = *(uint32_t*)(seg->base + off + sizeof(__jacl_hdr_t));
+		seg->bins[i] = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
 	} else {
 		while (cur) {
-			uint32_t next = *(uint32_t*)(seg->base + cur + sizeof(__jacl_hdr_t));
+			size_t next = *(size_t*)(seg->base + cur + sizeof(__jacl_hdr_t));
 
-			#if __has_builtin(__builtin_prefetch)
-				if (next) __builtin_prefetch(seg->base + next, 0, 1);
-			#endif
+			if (next) __builtin_prefetch(seg->base + next, 0, 1);
 
 			if (next == off) {
-				*(uint32_t*)(seg->base + cur + sizeof(__jacl_hdr_t)) = *(uint32_t*)(seg->base + off + sizeof(__jacl_hdr_t));
+				*(size_t*)(seg->base + cur + sizeof(__jacl_hdr_t)) = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
 
 				break;
 			}
@@ -163,7 +165,7 @@ static inline void __jacl_bin_remove(__jacl_segment_t* seg, uint32_t off) {
 	if (!seg->bins[i]) seg->bitmap &= ~(1u << i);
 }
 
-static inline uint32_t __jacl_bin_pop(__jacl_segment_t* seg, uint32_t need) {
+static inline size_t __jacl_bin_pop(__jacl_segment_t* seg, size_t need) {
 	int i = __jacl_bin_idx(need);
 	uint32_t mask = (~0u) << i;
 	uint32_t m = seg->bitmap & mask;
@@ -171,7 +173,8 @@ static inline uint32_t __jacl_bin_pop(__jacl_segment_t* seg, uint32_t need) {
 	if (!m) return 0;
 
 	i = __jacl_ctz32(m);
-	uint32_t off = seg->bins[i];
+
+	size_t off = seg->bins[i];
 
 	if (!off) {
 		seg->bitmap &= ~(1u << i);
@@ -179,7 +182,7 @@ static inline uint32_t __jacl_bin_pop(__jacl_segment_t* seg, uint32_t need) {
 		return 0;
 	}
 
-	seg->bins[i] = *(uint32_t*)(seg->base + off + sizeof(__jacl_hdr_t));
+	seg->bins[i] = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
 
 	if (!seg->bins[i]) seg->bitmap &= ~(1u << i);
 
@@ -214,12 +217,11 @@ static inline void __jacl_init_once(void) {
 	memset(__jacl_initial_segment.bins, 0, sizeof(__jacl_initial_segment.bins));
 
 	__jacl_initial_segment.bitmap = 0;
-
 	__jacl_segment_head = &__jacl_initial_segment;
 
 	atomic_store_explicit(&__jacl_tls_cursor, 0, memory_order_relaxed);
 
-	uint32_t base = JACL_ALIGN_UP(JACL_HEAP_INIT/4, JACL_ALIGNMENT);
+	size_t base = JACL_ALIGN_UP(JACL_HEAP_INIT/4, JACL_ALIGNMENT);
 
 	if (base + sizeof(__jacl_hdr_t) < JACL_HEAP_INIT) {
 		__jacl_hdr_t* h = (__jacl_hdr_t*)(__jacl_static_heap + base);
@@ -248,7 +250,7 @@ static inline int __jacl_tls_refill(void) {
 	return 1;
 }
 
-static inline uint32_t __jacl_round_size(uint32_t sz) {
+static inline size_t __jacl_round_size(size_t sz) {
 	if (sz <= 128) return (sz + 7) & ~7u;
 	if (sz <= 512) return (sz + 15) & ~15u;
 
@@ -277,57 +279,43 @@ static inline __jacl_segment_t* __jacl_grow_heap(size_t min_needed) {
 	// Allocate memory for segment + metadata
 	void* mem = NULL;
 
-	#if defined(__linux__)
-		mem = mmap(NULL, seg_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+#if JACL_OS_WINDOWS
+	mem = VirtualAlloc(NULL, seg_size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
 
-		if (mem == MAP_FAILED) return NULL;
+	if (!mem) return NULL;
 
-	#elif JACL_OS_WINDOWS
-		mem = VirtualAlloc(NULL, seg_size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+#elif JACL_ARCH_WASM
+	size_t pages = (seg_size + 65535) / 65536;
+	int old_pages = __builtin_wasm_memory_grow(0, pages);
 
-		if (!mem) return NULL;
+	if (old_pages < 0) return NULL;
 
-	#elif JACL_OS_WASM
-		// Grow WASM linear memory
-		size_t pages = (seg_size + 65535) / 65536;
-		int old_pages = __builtin_wasm_memory_grow(0, pages);
+	mem = (void*)(old_pages * 65536);
+#elif JACL_HAS_POSIX
+	mem = mmap(NULL, seg_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 
-		if (old_pages < 0) return NULL;
+	if (mem == MAP_FAILED) return NULL;
+#else
+	return NULL;
+#endif
 
-		mem = (void*)(old_pages * 65536);
-
-	#elif JACL_HAS_POSIX
-		// Generic POSIX (macOS, BSD, etc)
-		mem = mmap(NULL, seg_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-
-		if (mem == MAP_FAILED) return NULL;
-
-	#else
-		// No OS support - can't grow
-		return NULL;
-	#endif
-
-	// Allocate segment metadata from the segment itself
 	__jacl_segment_t* seg = (__jacl_segment_t*)mem;
-
 	seg->base = (uint8_t*)mem + sizeof(__jacl_segment_t);
 	seg->size = seg_size - sizeof(__jacl_segment_t);
 	seg->next = NULL;
-
 	memset(seg->bins, 0, sizeof(seg->bins));
-
 	seg->bitmap = 0;
 
-	// Add one big free block to segment
-	__jacl_hdr_t* h = (__jacl_hdr_t*)seg->base;
+	// Place initial free block at a non-zero offset to avoid sentinel confusion
+	size_t initial_off = sizeof(__jacl_hdr_t);
 
-	h->size = seg->size;
+	__jacl_hdr_t* h = (__jacl_hdr_t*)(seg->base + initial_off);
+	h->size = seg->size - initial_off;
 	h->prev_size = 0;
 	h->flags = 0;
 
-	__jacl_bin_push(seg, 0);
+	__jacl_bin_push(seg, initial_off);
 
-	// Link to segment list (at end to prefer older segments)
 	__jacl_segment_t* tail = __jacl_segment_head;
 
 	while (tail->next) tail = tail->next;
@@ -342,11 +330,11 @@ static inline __jacl_segment_t* __jacl_grow_heap(size_t min_needed) {
 /* Public API */
 void* malloc(size_t n) {
 	if (n == 0) n = 1;
-	if (n > UINT32_MAX - sizeof(__jacl_hdr_t)) return NULL;
+	if (n > SIZE_MAX - sizeof(__jacl_hdr_t)) return NULL;
 
 	__jacl_init_once();
 
-	uint32_t need = __jacl_round_size(n + sizeof(__jacl_hdr_t));
+	size_t need = __jacl_round_size(n + sizeof(__jacl_hdr_t));
 
 	/* Quicklist - UNCHANGED */
 	if (n <= 40 && n >= 16) {
@@ -378,20 +366,18 @@ void* malloc(size_t n) {
 	}
 
 large_path:
-	/* Search all segments */
 	__jacl_lock_acquire(&__jacl_lock);
 
 	__jacl_segment_t* seg = __jacl_segment_head;
 
 	while (seg) {
-		uint32_t off = __jacl_bin_pop(seg, need);
+		size_t off = __jacl_bin_pop(seg, need);
 
 		if (off) {
 			__jacl_hdr_t* h = (__jacl_hdr_t*)(seg->base + off);
 
-			/* Split if remainder large enough */
 			if (h->size >= need + sizeof(__jacl_hdr_t) + 8) {
-				uint32_t rem_off = off + need;
+				size_t rem_off = off + need;
 				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 
 				rem->size = h->size - need;
@@ -403,8 +389,7 @@ large_path:
 				h->size = need;
 			}
 
-			/* Update next's prev_size */
-			uint32_t next_off = off + h->size;
+			size_t next_off = off + h->size;
 
 			if (next_off < seg->size) ((__jacl_hdr_t*)(seg->base + next_off))->prev_size = h->size;
 
@@ -418,18 +403,16 @@ large_path:
 		seg = seg->next;
 	}
 
-	// All segments exhausted - try to grow
 	seg = __jacl_grow_heap(need);
 
 	if (seg) {
-		uint32_t off = __jacl_bin_pop(seg, need);
+		size_t off = __jacl_bin_pop(seg, need);
 
 		if (off) {
 			__jacl_hdr_t* h = (__jacl_hdr_t*)(seg->base + off);
 
-			/* Split if needed */
 			if (h->size >= need + sizeof(__jacl_hdr_t) + 8) {
-				uint32_t rem_off = off + need;
+				size_t rem_off = off + need;
 				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 
 				rem->size = h->size - need;
@@ -481,7 +464,7 @@ void free(void* p) {
 
 	if (JACL_UNLIKELY(!(h->flags & JACL_HDR_ALLOC))) return;
 
-	uint32_t size = h->size - sizeof(__jacl_hdr_t);
+	size_t size = h->size - sizeof(__jacl_hdr_t);
 
 	/* Quicklist */
 	if (size <= 40 && size >= 16 && !(h->flags & JACL_HDR_ARENA)) {
@@ -505,14 +488,14 @@ void free(void* p) {
 
 	h->flags = 0;
 
-	uint32_t off = (uint32_t)((uint8_t*)h - seg->base);
+	size_t off = (size_t)((uint8_t*)h - seg->base);
 
 	/* Coalescing */
 	if (h->size >= 1024) {
 		__jacl_lock_acquire(&__jacl_lock);
 
 		/* Coalesce next */
-		uint32_t next_off = off + h->size;
+		size_t next_off = off + h->size;
 
 		if (next_off < seg->size) {
 			__jacl_hdr_t* next = (__jacl_hdr_t*)(seg->base + next_off);
@@ -530,7 +513,7 @@ void free(void* p) {
 
 		/* Coalesce prev */
 		if (off > 0 && h->prev_size > 0) {
-			uint32_t prev_off = off - h->prev_size;
+			size_t prev_off = off - h->prev_size;
 
 			__jacl_hdr_t* prev = (__jacl_hdr_t*)(seg->base + prev_off);
 
@@ -539,7 +522,7 @@ void free(void* p) {
 
 				prev->size += h->size;
 
-				uint32_t after_off = prev_off + prev->size;
+				size_t after_off = prev_off + prev->size;
 
 				if (after_off < seg->size) ((__jacl_hdr_t*)(seg->base + after_off))->prev_size = prev->size;
 
@@ -801,54 +784,64 @@ void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int 
 /* ============================================================= */
 /* String Conversion                                             */
 /* ============================================================= */
-
-#define __jacl_ato_int(name, type, len, sign) type ato##name(const char* str) { \
+#define __jacl_ato_int(name, type, len, usig) type ato##name(const char* str) { \
 	const char* p = str; \
-	int read = 0; \
+	int read = 0, ch = 0; \
 	uintptr_t val = 0; \
-	if (__jacl_input_int(&p, NULL, &read, (__jacl_fmt_t)(sign ?  10 | JACL_FMT_FLAG_sign : 10), INT_MAX, &val)) return (type)val; \
+	__jacl_fmt_t spec = usig? 10 : 10 | JACL_FMT_VAL(FLAG, sign); \
+	__jacl_read_skip(ch, &p, NULL, &read); \
+	if (__jacl_input_int(&p, NULL, &read, JACL_FMT_SET(LENGTH, spec, len), INT_MAX, &val)) return (type)val; \
 	return 0; \
 }
-#define __jacl_strto_num(suf, type, size, sign) type strto##suf(const char* restrict str, char** restrict endptr, int base) { \
+#define __jacl_strto_int(suf, type, len, usig) type strto##suf(const char* restrict str, char** restrict endptr, int base) { \
+	if (base != 0 && (base < 2 || base > 36)) { \
+		errno = EINVAL; \
+		if (endptr) *endptr = (char*)str; \
+		return 0; \
+	} \
 	const char* p = str; \
-	int read = 0; \
+	int read = 0, ch = 0; \
 	uintptr_t val = 0; \
-	if (base != 0 && (base < 2 || base > 36)) { if (endptr) *endptr = (char*)str; return 0; } \
-	if (base == 0) base = 10; \
-	if (__jacl_input_int(&p, NULL, &read, (__jacl_fmt_t)(sign ? base | JACL_FMT_FLAG_sign : base), INT_MAX, &val)) { \
+	__jacl_fmt_t spec = usig? base : base | JACL_FMT_VAL(FLAG, sign); \
+	__jacl_read_skip(ch, &p, NULL, &read); \
+	if (__jacl_input_int(&p, NULL, &read, JACL_FMT_SET(LENGTH, spec, len), INT_MAX, &val)) { \
 		if (endptr) *endptr = (char*)p; \
 		return (type)val; \
 	} \
 	if (endptr) *endptr = (char*)str; \
 	return 0; \
 }
-#define __jacl_strto_float(suf, type) type strto##suf(const char* restrict str, char** restrict endptr) { \
+
+#define __jacl_strto_float(suf, type, len) type strto##suf(const char* restrict str, char** restrict endptr) { \
 	const char* p = str; \
-	int read = 0; \
-	__jacl_fmt_t spec = {0}; \
+	int read = 0, ch = 0; \
 	long double val = 0.0; \
-	if (__jacl_input_float(&p, NULL, &read, 10, INT_MAX, &val)) { \
+	__jacl_read_skip(ch, &p, NULL, &read); \
+	__jacl_fmt_t spec = 10; \
+	JACL_FMT_SET(LENGTH, spec, len); \
+	if (__jacl_input_special(&p, NULL, &read, spec, INT_MAX, &val) || __jacl_input_float(&p, NULL, &read, spec, INT_MAX, &val)) { \
 		if (endptr) *endptr = (char*)p; \
 		return (type)val; \
 	} \
 	if (endptr) *endptr = (char*)str; \
-	return 0.0; \
 }
 
-__jacl_ato_int(i, int, 0, 1)
-__jacl_ato_int(l, long, 1, 1)
 
-__jacl_strto_num(l, long, l, 1)
-__jacl_strto_num(ul, unsigned long, l, 0)
+__jacl_ato_int(i, int, 0, 0)
+__jacl_ato_int(l, long, l, 0)
+
+__jacl_strto_int(l, long, l, 0)
+__jacl_strto_int(ul, unsigned long, l, 1)
 
 #if JACL_HAS_C99
-__jacl_ato_int(ll, long long, 2, 1)
+__jacl_ato_int(ll, long long, ll, 0)
 
-__jacl_strto_num(ll, long long, 2, 1)
-__jacl_strto_num(ull, unsigned long long, 2, 0)
-__jacl_strto_float(d, double)
-__jacl_strto_float(f, float)
-__jacl_strto_float(ld, long double)
+__jacl_strto_int(ll, long long, ll, 0)
+__jacl_strto_int(ull, unsigned long long, ll, 1)
+
+__jacl_strto_float(f, float, 0)
+__jacl_strto_float(d, double, l)
+__jacl_strto_float(ld, long double, L)
 #endif
 
 double atof(const char* str) {
@@ -856,7 +849,7 @@ double atof(const char* str) {
 	int _read = 0;
 	long double val = 0.0;
 
-	if (__jacl_input_float(&p, NULL, &_read, 10, INT_MAX, &val)) return (double)val;
+	if (__jacl_input_float(&p, NULL, &_read, JACL_FMT_BASE_exp, INT_MAX, &val)) return (double)val;
 
 	return 0.0;
 }

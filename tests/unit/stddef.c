@@ -1,108 +1,71 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
-
-#if JACL_HAS_C99
-#include <stdbool.h>
 #include <stddef.h>
 
 TEST_TYPE(unit);
-TEST_UNIT(stdbool.h + stddef.h);
+TEST_UNIT(stddef.h);
 
 /* ============================================================================
- * STDBOOL.H TESTS
+ * Helper functions - must be at file scope
  * ============================================================================ */
-TEST_SUITE(stdbool);
+static __inline int helper_inline_test(void) { return 42; }
 
-TEST(bool_type_exists) {
-	bool b = true;
-	ASSERT_TRUE(b);
-}
-
-TEST(true_value) {
-	ASSERT_TRUE(true);
-	ASSERT_EQ(1, true);
-}
-
-TEST(false_value) {
-	ASSERT_FALSE(false);
-	ASSERT_EQ(0, false);
-}
-
-TEST(bool_assignment) {
-	bool b1 = true;
-	bool b2 = false;
-	
-	ASSERT_TRUE(b1);
-	ASSERT_FALSE(b2);
-}
-
-TEST(bool_comparison) {
-	ASSERT_TRUE(true == true);
-	ASSERT_TRUE(false == false);
-	ASSERT_TRUE(true != false);
-}
-
-TEST(bool_logic) {
-	ASSERT_TRUE(true && true);
-	ASSERT_FALSE(true && false);
-	ASSERT_TRUE(true || false);
-	ASSERT_FALSE(false || false);
-	ASSERT_TRUE(!false);
-	ASSERT_FALSE(!true);
-}
-
-TEST(bool_conversion) {
-	bool b1 = 1;
-	bool b2 = 0;
-	bool b3 = 42;
-	
-	ASSERT_TRUE(b1);
-	ASSERT_FALSE(b2);
-	ASSERT_TRUE(b3);
-}
-
-TEST(bool_macro_defined) {
-	ASSERT_EQ(1, __bool_true_false_are_defined);
-}
-
-TEST(bool_sizeof) {
-	ASSERT_TRUE(sizeof(bool) >= 1);
-	ASSERT_TRUE(sizeof(bool) <= sizeof(int));
-}
-
-TEST(bool_in_expressions) {
-	bool condition = (5 > 3);
-	ASSERT_TRUE(condition);
-	
-	bool result = (10 < 5);
-	ASSERT_FALSE(result);
+static int helper_restrict_test(int * __restrict ptr) {
+	return ptr[0];
 }
 
 /* ============================================================================
- * STDDEF.H - BASIC TYPES
+ * NULL
  * ============================================================================ */
-TEST_SUITE(stddef_basic);
+TEST_SUITE(null);
 
-TEST(null_defined) {
+TEST(null_pointer_constant) {
 	void *ptr = NULL;
 	ASSERT_NULL(ptr);
 }
 
-TEST(null_value) {
+TEST(null_value_is_zero) {
 	ASSERT_EQ(0, (intptr_t)NULL);
 }
 
-TEST(size_t_defined) {
-	size_t sz = 42;
-	ASSERT_EQ(42, sz);
+TEST(null_equality) {
+	void *p1 = NULL;
+	void *p2 = NULL;
+	ASSERT_TRUE(p1 == p2);
+	ASSERT_TRUE(p1 == NULL);
 }
 
-TEST(size_t_unsigned) {
-	size_t sz = -1;
+TEST(null_pointer_checks) {
+	int *p1 = NULL;
+	int val = 5;
+	int *p2 = &val;
+
+	ASSERT_TRUE(p1 == NULL);
+	ASSERT_TRUE(p2 != NULL);
+}
+
+/* ============================================================================
+ * SIZE_T
+ * ============================================================================ */
+TEST_SUITE(size_t);
+
+TEST(size_t_basic) {
+	size_t sz = 42;
+	ASSERT_EQ(42, sz);
+	ASSERT_TRUE(sizeof(size_t) > 0);
+}
+
+TEST(size_t_is_unsigned) {
+	size_t sz = (size_t)-1;
 	ASSERT_TRUE(sz > 0);
 }
 
-TEST(size_t_architecture_aware) {
+TEST(size_t_max_value) {
+	ASSERT_TRUE(SIZE_MAX > 0);
+	ASSERT_EQ((size_t)-1, SIZE_MAX);
+}
+
+TEST(size_t_architecture_dependent) {
 	#if JACL_64BIT
 		ASSERT_EQ(8, sizeof(size_t));
 	#else
@@ -110,27 +73,45 @@ TEST(size_t_architecture_aware) {
 	#endif
 }
 
-TEST(ptrdiff_t_defined) {
+TEST(size_t_sizeof_operator) {
+	int arr[10];
+	size_t sz = sizeof(arr);
+	ASSERT_EQ(40, sz);
+}
+
+TEST(size_t_array_indexing) {
+	int arr[10];
+	size_t idx = 0;
+	for (idx = 0; idx < 10; idx++) {
+		arr[idx] = (int)idx;
+	}
+	ASSERT_EQ(9, arr[9]);
+}
+
+/* ============================================================================
+ * PTRDIFF_T
+ * ============================================================================ */
+TEST_SUITE(ptrdiff_t);
+
+TEST(ptrdiff_t_basic_arithmetic) {
 	ptrdiff_t diff = 10 - 5;
 	ASSERT_EQ(5, diff);
 }
 
-TEST(ptrdiff_t_signed) {
-	ptrdiff_t positive = 10;
-	ptrdiff_t negative = -10;
-	
-	ASSERT_TRUE(positive > 0);
-	ASSERT_TRUE(negative < 0);
+TEST(ptrdiff_t_is_signed) {
+	ptrdiff_t pos = 10;
+	ptrdiff_t neg = -10;
+	ASSERT_TRUE(pos > 0);
+	ASSERT_TRUE(neg < 0);
 }
 
-TEST(ptrdiff_t_pointer_arithmetic) {
+TEST(ptrdiff_t_pointer_subtraction) {
 	int arr[10];
-	ptrdiff_t diff = &arr[5] - &arr[2];
-	
-	ASSERT_EQ(3, diff);
+	ptrdiff_t diff = &arr[7] - &arr[2];
+	ASSERT_EQ(5, diff);
 }
 
-TEST(ptrdiff_t_architecture_aware) {
+TEST(ptrdiff_t_architecture_dependent) {
 	#if JACL_64BIT
 		ASSERT_EQ(8, sizeof(ptrdiff_t));
 	#else
@@ -138,76 +119,110 @@ TEST(ptrdiff_t_architecture_aware) {
 	#endif
 }
 
-TEST(wchar_t_defined) {
-	wchar_t wc = L'A';
-	ASSERT_TRUE(wc > 0);
+TEST(ptrdiff_t_negative_difference) {
+	int arr[10];
+	ptrdiff_t diff = &arr[2] - &arr[7];
+	ASSERT_EQ(-5, diff);
+}
+
+TEST(ptrdiff_t_pointer_distance) {
+	int buf[100];
+	int *start = &buf[10];
+	int *end = &buf[90];
+	ptrdiff_t dist = end - start;
+	ASSERT_EQ(80, dist);
 }
 
 /* ============================================================================
- * STDDEF.H - OFFSETOF
+ * WCHAR_T
+ * ============================================================================ */
+TEST_SUITE(wchar_t);
+
+TEST(wchar_t_basic) {
+	wchar_t wc = L'X';
+	ASSERT_TRUE(sizeof(wchar_t) >= 1);
+}
+
+TEST(wchar_t_wide_literal) {
+	wchar_t wc = L'A';
+	ASSERT_TRUE(wc == L'A');
+}
+
+/* ============================================================================
+ * OFFSETOF MACRO
  * ============================================================================ */
 TEST_SUITE(offsetof);
 
-TEST(offsetof_basic) {
-	struct test {
-		char a;
-		int b;
-	};
-	
-	size_t offset = offsetof(struct test, b);
-	ASSERT_TRUE(offset > 0);
+TEST(offsetof_first_member_is_zero) {
+	struct s { int a; int b; };
+	ASSERT_EQ(0, offsetof(struct s, a));
 }
 
-TEST(offsetof_first_member) {
-	struct test {
-		int first;
-		int second;
-	};
-	
-	ASSERT_EQ(0, offsetof(struct test, first));
+TEST(offsetof_second_member_nonzero) {
+	struct s { char a; int b; };
+	ASSERT_TRUE(offsetof(struct s, b) > 0);
 }
 
-TEST(offsetof_multiple_members) {
-	struct test {
-		char a;
-		int b;
-		char c;
-		long d;
-	};
-	
-	size_t off_b = offsetof(struct test, b);
-	size_t off_c = offsetof(struct test, c);
-	size_t off_d = offsetof(struct test, d);
-	
-	ASSERT_TRUE(off_b > 0);
+TEST(offsetof_respects_member_order) {
+	struct s { char a; int b; char c; long d; };
+	size_t off_a = offsetof(struct s, a);
+	size_t off_b = offsetof(struct s, b);
+	size_t off_c = offsetof(struct s, c);
+	size_t off_d = offsetof(struct s, d);
+
+	ASSERT_EQ(0, off_a);
+	ASSERT_TRUE(off_b > off_a);
 	ASSERT_TRUE(off_c > off_b);
 	ASSERT_TRUE(off_d > off_c);
 }
 
 TEST(offsetof_array_member) {
-	struct test {
-		int x;
-		char arr[10];
+	struct s { int x; char buf[16]; };
+	size_t off = offsetof(struct s, buf);
+	ASSERT_TRUE(off >= sizeof(int));
+}
+
+TEST(offsetof_nested_struct) {
+	struct inner { int x; };
+	struct outer { char a; struct inner b; };
+
+	size_t off = offsetof(struct outer, b);
+	ASSERT_TRUE(off > 0);
+}
+
+TEST(offsetof_packed_struct) {
+	struct s { char a; char b; char c; };
+	ASSERT_EQ(0, offsetof(struct s, a));
+	ASSERT_EQ(1, offsetof(struct s, b));
+	ASSERT_EQ(2, offsetof(struct s, c));
+}
+
+TEST(offsetof_struct_layout_analysis) {
+	struct packet {
+		char header[4];
+		int length;
+		char data[64];
 	};
-	
-	size_t offset = offsetof(struct test, arr);
-	ASSERT_TRUE(offset >= sizeof(int));
+
+	ASSERT_EQ(0, offsetof(struct packet, header));
+	ASSERT_TRUE(offsetof(struct packet, length) >= 4);
+	ASSERT_TRUE(offsetof(struct packet, data) > offsetof(struct packet, length));
+	ASSERT_TRUE(sizeof(struct packet) > offsetof(struct packet, data));
 }
 
 /* ============================================================================
- * STDDEF.H - MAX_ALIGN_T (C11)
+ * MAX_ALIGN_T (C11)
  * ============================================================================ */
 #if JACL_HAS_C11
 TEST_SUITE(max_align_t);
 
-TEST(max_align_t_defined) {
+TEST(max_align_t_exists) {
 	max_align_t m;
 	(void)m;
 	ASSERT_TRUE(sizeof(max_align_t) > 0);
 }
 
-TEST(max_align_t_alignment) {
-	// max_align_t should have largest alignment
+TEST(max_align_t_largest_alignment) {
 	ASSERT_TRUE(sizeof(max_align_t) >= sizeof(long long));
 	ASSERT_TRUE(sizeof(max_align_t) >= sizeof(long double));
 	ASSERT_TRUE(sizeof(max_align_t) >= sizeof(void*));
@@ -215,89 +230,18 @@ TEST(max_align_t_alignment) {
 #endif
 
 /* ============================================================================
- * STDDEF.H - KEYWORD MACROS
+ * LANGUAGE COMPATIBILITY MACROS
  * ============================================================================ */
-TEST_SUITE(keyword_macros);
+TEST_SUITE(compat_macros);
 
-TEST(restrict_defined) {
-	// __restrict should be defined
-	int arr[10];
-	int * __restrict ptr = arr;
-	ptr[0] = 42;
-	ASSERT_EQ(42, ptr[0]);
+TEST(restrict_keyword_macro) {
+	int arr[5] = {10, 20, 30, 40, 50};
+	ASSERT_EQ(10, helper_restrict_test(arr));
 }
 
-TEST(inline_defined) {
-	// __inline should be defined
-	__inline int test_func(void) { return 42; }
-	ASSERT_EQ(42, test_func());
-}
-
-/* ============================================================================
- * COMBINED USAGE TESTS
- * ============================================================================ */
-TEST_SUITE(combined_usage);
-
-TEST(bool_array) {
-	bool flags[5] = {true, false, true, true, false};
-	
-	ASSERT_TRUE(flags[0]);
-	ASSERT_FALSE(flags[1]);
-	ASSERT_TRUE(flags[2]);
-}
-
-TEST(bool_in_struct) {
-	struct data {
-		bool valid;
-		size_t count;
-	};
-	
-	struct data d = {true, 42};
-	ASSERT_TRUE(d.valid);
-	ASSERT_EQ(42, d.count);
-}
-
-TEST(size_t_loop) {
-	size_t count = 0;
-	for (size_t i = 0; i < 10; i++) {
-		count++;
-	}
-	ASSERT_EQ(10, count);
-}
-
-TEST(null_pointer_check) {
-	int *ptr = NULL;
-	bool is_null = (ptr == NULL);
-	
-	ASSERT_TRUE(is_null);
-}
-
-TEST(pointer_difference_with_ptrdiff) {
-	int arr[100];
-	ptrdiff_t diff = &arr[99] - &arr[0];
-	ASSERT_EQ(99, diff);
-}
-
-TEST(offsetof_with_sizeof) {
-	struct test {
-		int a;
-		char b;
-		long c;
-	};
-	
-	size_t total = sizeof(struct test);
-	size_t offset_c = offsetof(struct test, c);
-	
-	ASSERT_TRUE(total > offset_c);
+TEST(inline_keyword_macro) {
+	ASSERT_EQ(42, helper_inline_test());
 }
 
 TEST_MAIN()
 
-#else
-
-int main(void) {
-	printf("Tests require C99 or later\n");
-	return 0;
-}
-
-#endif

@@ -127,13 +127,8 @@ __jacl_imath_xx(hypot)
   typedef double __m128d __attribute__((vector_size(16)));
 #endif /* JACL_HAS_NEON */
 
-#ifdef __cplusplus
-  static_assert(sizeof(__m128) == 16, "Vector size mismatch");
-  static_assert(sizeof(__m128d) == 16, "Vector size mismatch");
-#else
-  _Static_assert(sizeof(__m128) == 16, "Vector size mismatch");
-  _Static_assert(sizeof(__m128d) == 16, "Vector size mismatch");
-#endif
+static_assert(sizeof(__m128) == 16, "Vector size mismatch");
+static_assert(sizeof(__m128d) == 16, "Vector size mismatch");
 
 /* ============================================================ */
 /* Vector Initialization                                        */

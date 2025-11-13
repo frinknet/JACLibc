@@ -3,13 +3,9 @@
 
 #if JACL_HAS_C99
 #include <fenv.h>
-#include <math.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(fenv.h);
-
-/* Need to define the thread-local environment */
-_Thread_local fenv_t __jacl_fenv = { 0u, FE_TONEAREST };
 
 /* ============================================================================
  * EXCEPTION FLAG CONSTANTS
@@ -83,9 +79,9 @@ TEST_SUITE(clear_exceptions);
 
 TEST(feclearexcept_all) {
 	feraiseexcept(FE_ALL_EXCEPT);
-	
+
 	int result = feclearexcept(FE_ALL_EXCEPT);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_EQ(0, fetestexcept(FE_ALL_EXCEPT));
 }
@@ -93,7 +89,7 @@ TEST(feclearexcept_all) {
 TEST(feclearexcept_single) {
 	feraiseexcept(FE_INVALID | FE_OVERFLOW);
 	feclearexcept(FE_INVALID);
-	
+
 	ASSERT_FALSE(fetestexcept(FE_INVALID));
 	ASSERT_TRUE(fetestexcept(FE_OVERFLOW));
 }
@@ -101,7 +97,7 @@ TEST(feclearexcept_single) {
 TEST(feclearexcept_multiple) {
 	feraiseexcept(FE_ALL_EXCEPT);
 	feclearexcept(FE_INVALID | FE_DIVBYZERO);
-	
+
 	ASSERT_FALSE(fetestexcept(FE_INVALID));
 	ASSERT_FALSE(fetestexcept(FE_DIVBYZERO));
 	ASSERT_TRUE(fetestexcept(FE_OVERFLOW));
@@ -114,18 +110,18 @@ TEST_SUITE(raise_exceptions);
 
 TEST(feraiseexcept_single) {
 	feclearexcept(FE_ALL_EXCEPT);
-	
+
 	int result = feraiseexcept(FE_INVALID);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_TRUE(fetestexcept(FE_INVALID));
 }
 
 TEST(feraiseexcept_multiple) {
 	feclearexcept(FE_ALL_EXCEPT);
-	
+
 	feraiseexcept(FE_OVERFLOW | FE_UNDERFLOW);
-	
+
 	ASSERT_TRUE(fetestexcept(FE_OVERFLOW));
 	ASSERT_TRUE(fetestexcept(FE_UNDERFLOW));
 	ASSERT_FALSE(fetestexcept(FE_INVALID));
@@ -133,10 +129,10 @@ TEST(feraiseexcept_multiple) {
 
 TEST(feraiseexcept_accumulate) {
 	feclearexcept(FE_ALL_EXCEPT);
-	
+
 	feraiseexcept(FE_INVALID);
 	feraiseexcept(FE_OVERFLOW);
-	
+
 	ASSERT_TRUE(fetestexcept(FE_INVALID));
 	ASSERT_TRUE(fetestexcept(FE_OVERFLOW));
 }
@@ -148,14 +144,14 @@ TEST_SUITE(test_exceptions);
 
 TEST(fetestexcept_none) {
 	feclearexcept(FE_ALL_EXCEPT);
-	
+
 	ASSERT_EQ(0, fetestexcept(FE_ALL_EXCEPT));
 }
 
 TEST(fetestexcept_single) {
 	feclearexcept(FE_ALL_EXCEPT);
 	feraiseexcept(FE_INVALID);
-	
+
 	ASSERT_EQ(FE_INVALID, fetestexcept(FE_INVALID));
 	ASSERT_EQ(0, fetestexcept(FE_OVERFLOW));
 }
@@ -163,7 +159,7 @@ TEST(fetestexcept_single) {
 TEST(fetestexcept_multiple) {
 	feclearexcept(FE_ALL_EXCEPT);
 	feraiseexcept(FE_INVALID | FE_OVERFLOW);
-	
+
 	int flags = fetestexcept(FE_INVALID | FE_OVERFLOW);
 	ASSERT_TRUE(flags & FE_INVALID);
 	ASSERT_TRUE(flags & FE_OVERFLOW);
@@ -172,7 +168,7 @@ TEST(fetestexcept_multiple) {
 TEST(fetestexcept_mask) {
 	feclearexcept(FE_ALL_EXCEPT);
 	feraiseexcept(FE_ALL_EXCEPT);
-	
+
 	int some_flags = fetestexcept(FE_INVALID | FE_OVERFLOW);
 	ASSERT_TRUE(some_flags & FE_INVALID);
 	ASSERT_TRUE(some_flags & FE_OVERFLOW);
@@ -187,9 +183,9 @@ TEST(fegetexceptflag_basic) {
 	fexcept_t flags;
 	feclearexcept(FE_ALL_EXCEPT);
 	feraiseexcept(FE_INVALID);
-	
+
 	int result = fegetexceptflag(&flags, FE_INVALID);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_TRUE(flags & FE_INVALID);
 }
@@ -198,9 +194,9 @@ TEST(fegetexceptflag_multiple) {
 	fexcept_t flags;
 	feclearexcept(FE_ALL_EXCEPT);
 	feraiseexcept(FE_INVALID | FE_OVERFLOW);
-	
+
 	fegetexceptflag(&flags, FE_INVALID | FE_OVERFLOW);
-	
+
 	ASSERT_TRUE(flags & FE_INVALID);
 	ASSERT_TRUE(flags & FE_OVERFLOW);
 }
@@ -208,9 +204,9 @@ TEST(fegetexceptflag_multiple) {
 TEST(fesetexceptflag_basic) {
 	fexcept_t flags = FE_OVERFLOW;
 	feclearexcept(FE_ALL_EXCEPT);
-	
+
 	int result = fesetexceptflag(&flags, FE_OVERFLOW);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_TRUE(fetestexcept(FE_OVERFLOW));
 }
@@ -218,9 +214,9 @@ TEST(fesetexceptflag_basic) {
 TEST(fesetexceptflag_masked) {
 	fexcept_t flags = FE_INVALID | FE_OVERFLOW;
 	feclearexcept(FE_ALL_EXCEPT);
-	
+
 	fesetexceptflag(&flags, FE_INVALID);
-	
+
 	ASSERT_TRUE(fetestexcept(FE_INVALID));
 	ASSERT_FALSE(fetestexcept(FE_OVERFLOW));
 }
@@ -237,28 +233,28 @@ TEST(fegetround_default) {
 
 TEST(fesetround_tonearest) {
 	int result = fesetround(FE_TONEAREST);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_EQ(FE_TONEAREST, fegetround());
 }
 
 TEST(fesetround_downward) {
 	int result = fesetround(FE_DOWNWARD);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_EQ(FE_DOWNWARD, fegetround());
 }
 
 TEST(fesetround_upward) {
 	int result = fesetround(FE_UPWARD);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_EQ(FE_UPWARD, fegetround());
 }
 
 TEST(fesetround_towardzero) {
 	int result = fesetround(FE_TOWARDZERO);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_EQ(FE_TOWARDZERO, fegetround());
 }
@@ -271,10 +267,10 @@ TEST(fesetround_invalid) {
 TEST(fesetround_sequence) {
 	fesetround(FE_UPWARD);
 	ASSERT_EQ(FE_UPWARD, fegetround());
-	
+
 	fesetround(FE_DOWNWARD);
 	ASSERT_EQ(FE_DOWNWARD, fegetround());
-	
+
 	fesetround(FE_TONEAREST);
 	ASSERT_EQ(FE_TONEAREST, fegetround());
 }
@@ -286,18 +282,18 @@ TEST_SUITE(environment_ops);
 
 TEST(fegetenv_basic) {
 	fenv_t env;
-	
+
 	int result = fegetenv(&env);
-	
+
 	ASSERT_EQ(0, result);
 }
 
 TEST(fesetenv_default) {
 	feraiseexcept(FE_ALL_EXCEPT);
 	fesetround(FE_UPWARD);
-	
+
 	int result = fesetenv(FE_DFL_ENV);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_EQ(0, fetestexcept(FE_ALL_EXCEPT));
 	ASSERT_EQ(FE_TONEAREST, fegetround());
@@ -305,30 +301,30 @@ TEST(fesetenv_default) {
 
 TEST(fegetenv_fesetenv_roundtrip) {
 	fenv_t saved;
-	
+
 	feraiseexcept(FE_INVALID);
 	fesetround(FE_UPWARD);
-	
+
 	fegetenv(&saved);
-	
+
 	// Change state
 	feclearexcept(FE_ALL_EXCEPT);
 	fesetround(FE_DOWNWARD);
-	
+
 	// Restore
 	fesetenv(&saved);
-	
+
 	ASSERT_TRUE(fetestexcept(FE_INVALID));
 	ASSERT_EQ(FE_UPWARD, fegetround());
 }
 
 TEST(feholdexcept_basic) {
 	fenv_t env;
-	
+
 	feraiseexcept(FE_OVERFLOW);
-	
+
 	int result = feholdexcept(&env);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_TRUE(env.excepts & FE_OVERFLOW);
 	ASSERT_EQ(0, fetestexcept(FE_ALL_EXCEPT));
@@ -336,18 +332,18 @@ TEST(feholdexcept_basic) {
 
 TEST(feupdateenv_basic) {
 	fenv_t env;
-	
+
 	feclearexcept(FE_ALL_EXCEPT);
 	feraiseexcept(FE_INVALID);
 	fesetround(FE_UPWARD);
 	fegetenv(&env);
-	
+
 	feclearexcept(FE_ALL_EXCEPT);
 	feraiseexcept(FE_OVERFLOW);
 	fesetround(FE_DOWNWARD);
-	
+
 	int result = feupdateenv(&env);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_EQ(FE_UPWARD, fegetround());
 	ASSERT_TRUE(fetestexcept(FE_INVALID));
@@ -361,29 +357,29 @@ TEST_SUITE(practical_usage);
 
 TEST(save_restore_pattern) {
 	fenv_t saved;
-	
+
 	// Save current state
 	fegetenv(&saved);
-	
+
 	// Do something that might change state
 	feraiseexcept(FE_INVALID);
 	fesetround(FE_UPWARD);
-	
+
 	// Restore
 	fesetenv(&saved);
-	
+
 	ASSERT_TRUE(1);  // If we got here, save/restore worked
 }
 
 TEST(hold_update_pattern) {
 	fenv_t env;
-	
+
 	feraiseexcept(FE_OVERFLOW);
 	feholdexcept(&env);
-	
+
 	// Do computation (exceptions cleared)
 	ASSERT_EQ(0, fetestexcept(FE_ALL_EXCEPT));
-	
+
 	// Restore and merge
 	feupdateenv(&env);
 	ASSERT_TRUE(fetestexcept(FE_OVERFLOW));
@@ -391,13 +387,13 @@ TEST(hold_update_pattern) {
 
 TEST(selective_exception_handling) {
 	feclearexcept(FE_ALL_EXCEPT);
-	
+
 	// Raise multiple exceptions
 	feraiseexcept(FE_INVALID | FE_OVERFLOW | FE_UNDERFLOW);
-	
+
 	// Clear only some
 	feclearexcept(FE_INVALID);
-	
+
 	// Check state
 	ASSERT_FALSE(fetestexcept(FE_INVALID));
 	ASSERT_TRUE(fetestexcept(FE_OVERFLOW));
@@ -411,18 +407,18 @@ TEST_SUITE(edge_cases);
 
 TEST(multiple_raises_same_flag) {
 	feclearexcept(FE_ALL_EXCEPT);
-	
+
 	feraiseexcept(FE_INVALID);
 	feraiseexcept(FE_INVALID);
 	feraiseexcept(FE_INVALID);
-	
+
 	ASSERT_TRUE(fetestexcept(FE_INVALID));
 }
 
 TEST(clear_already_cleared) {
 	feclearexcept(FE_ALL_EXCEPT);
 	int result = feclearexcept(FE_ALL_EXCEPT);
-	
+
 	ASSERT_EQ(0, result);
 	ASSERT_EQ(0, fetestexcept(FE_ALL_EXCEPT));
 }
@@ -430,17 +426,19 @@ TEST(clear_already_cleared) {
 TEST(raise_no_flags) {
 	feclearexcept(FE_ALL_EXCEPT);
 	feraiseexcept(0);
-	
+
 	ASSERT_EQ(0, fetestexcept(FE_ALL_EXCEPT));
 }
 
-TEST_MAIN()
 
 #else
 
-int main(void) {
-	printf("fenv.h requires C99 or later\n");
-	return 0;
+TEST_SUITE(fenv_basics);
+
+TEST(fenv_not_avaialable) {
+	TEST_SKIP("NO C99 SUPPORT");
 }
 
 #endif
+
+TEST_MAIN()

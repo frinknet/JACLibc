@@ -3,8 +3,8 @@
 #define CONFIG_H
 #pragma once
 
-#define JACL_VERSION 1.34
-#define JACL_RELEASE 202510L
+#define JACL_VERSION 1.83
+#define JACL_RELEASE 202511L
 
 // avoid compile screams
 #if defined(__GNUC__) || defined(__clang__)
@@ -84,6 +84,10 @@
 
 // C23 features
 #if !JACL_HAS_C23
+	#ifndef __cplusplus
+		#define static_assert _Static_assert
+	#endif
+
 	#if !defined(__cplusplus)
   	#define thread_local _Thread_local
 	#endif /* !__cplusplus */
@@ -212,6 +216,21 @@
   #define JACL_LDBL_BITS 64     // Everywhere else: double
 #endif /* long double bits check */
 
+// Intenter max precision bits
+#ifdef __INTMAX_WIDTH__
+  #define JACL_INTMAX_BITS __INTMAX_WIDTH__
+#else
+  #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+    #define JACL_INTMAX_BITS 64
+  #elif defined(__LONG_LONG_MAX__)
+    #define JACL_INTMAX_BITS 64
+  #elif defined(LONG_MAX) && LONG_MAX > 2147483647L
+    #define JACL_INTMAX_BITS 64
+  #else
+    #define JACL_INTMAX_BITS 32
+  #endif
+#endif
+
 // HAS large file support
 #if JACL_64BIT
   #define JACL_HAS_LFS 1
@@ -237,18 +256,40 @@
 		#define JACL_UNLIKELY(x) (x)
 #endif /* __builtin_expect */
 
-// Builtin Polyfills
-#if !__has_builtin(__builtin_unreachable)
-	#define __builtin_unreachable()
-#endif /* __builtin_unreachable */
-
+// Builtin Prefetch Polyfill
 #if !__has_builtin(__builtin_prefetch)
 	#define __builtin_prefetch(addr, rw, locality) ((void)(addr))
 #endif /* __builtin_prefetch */
 
+// Builtin Trap Polyfill
 #if !__has_builtin(__builtin_trap)
-	#define __builtin_trap() do { *(volatile int*)0 = 0; } while(0)
+	#if JACL_ARCH_WASM
+		#define __builtin_trap() __asm__ volatile("unreachable")
+	#else
+		#define __builtin_trap() do { *(volatile int*)0 = 0; } while(0)
+	#endif
 #endif /* __builtin_trap */
+
+// Builtin Popcount Polyfill
+#if !__has_builtin(__builtin_popcount)
+static inline int __builtin_popcount(unsigned int x) {
+	x = x - ((x >> 1) & 0x55555555);
+	x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+
+	return (((x + (x >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+}
+#endif /* __builtin_popcount */
+
+// Builtin Frame Polyfill
+#if !__has_builtin(__builtin_frame_address)
+static inline void* __jacl_frame_address(int level) {
+	if (level == 0) {
+		volatile char frame_marker;
+		return (void*)&frame_marker;
+	}
+	return NULL;
+}
+#endif /* __builtin_frame_address */
 
 // Fast math detection
 #ifndef JACL_FAST_MATH

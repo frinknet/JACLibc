@@ -1,4 +1,4 @@
-I/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef SYS_TIME_H
 #define SYS_TIME_H
 #pragma once

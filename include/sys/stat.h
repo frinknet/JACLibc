@@ -93,6 +93,7 @@ extern "C" {
 #define AT_SYMLINK_FOLLOW    0x400 /* Follow symbolic links */
 #define AT_REMOVEDIR         0x200 /* Remove directory instead of file */
 #define AT_EACCESS           0x200 /* Use effective IDs for access check */
+#define AT_EMPTY_PATH        0x1000 /* Allow empty pathname for fd-relative ops */
 #endif
 
 /* ================================================================ */
@@ -419,7 +420,14 @@ static inline int stat(const char *pathname, struct stat *statbuf) {
 static inline int fstat(int fd, struct stat *statbuf) {
 	if (!statbuf) return -1;
 
-	return (int)syscall(SYS_fstat, fd, statbuf);
+	#if defined(SYS_fstat)
+		return (int)syscall(SYS_fstat, fd, statbuf);
+	#elif defined(SYS_newfstatat)
+		return (int)syscall(SYS_newfstatat, fd, "", statbuf, AT_EMPTY_PATH);
+	#else
+		errno = ENOSYS;
+		return -1;
+	#endif
 }
 
 static inline int lstat(const char *pathname, struct stat *statbuf) {

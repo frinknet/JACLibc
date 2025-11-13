@@ -73,7 +73,7 @@ typedef struct { int done; } once_flag;
 #define tss_set(k,v)							(thrd_error)
 #define tss_get(k)								(NULL)
 
-#if JACL_ARCH_WASM
+#elif JACL_ARCH_WASM
 /* Basic atomic synchronization only */
 #include <stdatomic.h>
 
@@ -266,7 +266,6 @@ static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
 
 static inline _Noreturn void thrd_exit(int res) {
 		pthread_exit((void*)(intptr_t)res);
-		__builtin_unreachable();
 }
 
 static inline int thrd_join(thrd_t thr, int *res) {

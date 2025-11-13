@@ -3,10 +3,6 @@
 #define DIRENT_H
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <config.h>
 #include <limits.h>
 #include <stdlib.h>     // malloc(), free(), qsort()
@@ -23,6 +19,11 @@ extern "C" {
 	#include <unistd.h>
 	#include <fcntl.h>
 	#include <sys/syscall.h>
+	#include <sys/stat.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #if JACL_HAS_PTHREADS && JACL_HAS_C11
@@ -193,12 +194,12 @@ static inline DIR *opendir(const char *dirname) {
 	}
 
 	DIR *dirp = (DIR *)malloc(sizeof(DIR));
+
 	if (!dirp) {
 		errno = ENOMEM;
 		return NULL;
 	}
 
-	/* Convert UTF-8 to UTF-16 */
 	if (win32_utf8_to_wchar(dirname, dirp->path, PATH_MAX) != 0) {
 		free(dirp);
 		errno = EINVAL;
@@ -207,6 +208,7 @@ static inline DIR *opendir(const char *dirname) {
 
 	/* Build search pattern: "dirname\*" */
 	size_t len = wcslen(dirp->path);
+
 	if (len >= PATH_MAX - 3) {
 		free(dirp);
 		errno = ENAMETOOLONG;
@@ -216,6 +218,7 @@ static inline DIR *opendir(const char *dirname) {
 	if (len > 0 && dirp->path[len - 1] != L'\\' && dirp->path[len - 1] != L'/') {
 		wcscat(dirp->path, L"\\");
 	}
+
 	wcscat(dirp->path, L"*");
 
 	dirp->handle = INVALID_HANDLE_VALUE;
@@ -382,31 +385,31 @@ static inline void dir_unlock(DIR *dirp) {
 }
 #endif
 
-
 static inline DIR *opendir(const char *dirname) {
-	if (!dirname) {
-		errno = EINVAL;
-		return NULL;
-	}
+	if (!dirname) { errno = EINVAL; return NULL; }
 
-	int fd;
-
-	fd = open(dirname, O_RDONLY | O_CLOEXEC);
+	int fd = open(dirname, O_RDONLY | O_CLOEXEC);
 
 	if (fd == -1) return NULL;
 
 	DIR *dirp = (DIR *)malloc(sizeof(DIR));
+
 	if (!dirp) {
 		close(fd);
+
 		errno = ENOMEM;
+
 		return NULL;
 	}
 
 	dirp->buffer = (char *)malloc(DIRENT_BUFFER_SIZE);
+
 	if (!dirp->buffer) {
 		close(fd);
 		free(dirp);
+
 		errno = ENOMEM;
+
 		return NULL;
 	}
 
@@ -432,9 +435,6 @@ static inline dirent *readdir(DIR *dirp) {
 		return NULL;
 	}
 
-	/* Note: readdir() is NOT thread-safe when multiple threads access the same DIR* */
-	/* Use external synchronization or separate DIR* objects per thread */
-
 	/* Refill buffer if needed */
 	if (dirp->buffer_pos >= dirp->buffer_end) {
 		#if defined(SYS_getdents)
@@ -445,7 +445,8 @@ static inline dirent *readdir(DIR *dirp) {
 		#endif
 
 		if (bytes <= 0) {
-			if (bytes == 0) errno = 0;  /* End of directory */
+			if (bytes == 0) errno = 0;
+
 			return NULL;
 		}
 
@@ -493,34 +494,35 @@ static inline dirent *readdir(DIR *dirp) {
 	return &dirp->current;
 }
 
-/* Thread-safe readdir_r (deprecated but provided for POSIX compliance) */
 static inline int readdir_r(DIR *dirp, dirent *entry, dirent **result) {
 	if (!dirp || !entry || !result) return EINVAL;
 
 	*result = NULL;
 
-	/* Use internal locking for thread safety */
-	dir_lock(dirp);
+	#if DIRENT_THREADS
+		dir_lock(dirp);
+	#endif
 
 	dirent *current = readdir(dirp);
 	int saved_errno = errno;
 
 	if (current) {
-		/* Check for potential buffer overflow */
 		size_t name_len = strlen(current->d_name);
 
 		if (name_len > NAME_MAX) {
-			dir_unlock(dirp);
-
+			#if DIRENT_THREADS
+				dir_unlock(dirp);
+			#endif
 			return ENAMETOOLONG;
 		}
 
-		/* Copy to provided buffer */
-		*entry = *current;  /* Struct copy */
+		*entry = *current;
 		*result = entry;
 	}
 
-	dir_unlock(dirp);
+	#if DIRENT_THREADS
+		dir_unlock(dirp);
+	#endif
 
 	return current ? 0 : saved_errno;
 }
@@ -633,23 +635,24 @@ static inline DIR *fdopendir(int fd) {
 /* Additional POSIX functions (improved implementations)           */
 /* ================================================================ */
 
-/* Directory entry comparison for scandir */
-static inline int alphasort(const dirent **a, const dirent **b) {
+// Directory entry comparison for scandir
+static inline int alphasort(dirent **a, dirent **b) {
 	if (!a || !*a || !b || !*b) return 0;
+
 	return strcmp((*a)->d_name, (*b)->d_name);
 }
 
-/* Reverse alphabetical sort */
-static inline int versionsort(const dirent **a, const dirent **b) {
+// Reverse alphabetical sort
+static inline int versionsort(dirent **a, dirent **b) {
 	if (!a || !*a || !b || !*b) return 0;
-	/* Simplified version sort - just use strcmp for now */
+
 	return strcmp((*a)->d_name, (*b)->d_name);
 }
 
-/* Scan directory and sort entries (improved error handling) */
+// Scan directory and sort entries
 static inline int scandir(const char *dirpath, dirent ***namelist,
                          int (*select_fn)(const dirent *),
-                         int (*compar)(const dirent **, const dirent **)) {
+                         int (*compar)(dirent **, dirent **)) {
 	if (!dirpath || !namelist) {
 		errno = EINVAL;
 		return -1;
@@ -715,7 +718,7 @@ static inline int scandir(const char *dirpath, dirent ***namelist,
 	return count;
 }
 
-/* POSIX.1-2008 getdents function */
+// POSIX.1-2008 getdents function
 static inline ssize_t posix_getdents(int fd, void *buf, size_t nbyte, int flags) {
 	(void)flags;  /* Not used in basic implementation */
 

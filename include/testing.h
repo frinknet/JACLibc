@@ -3,11 +3,80 @@
 #define TESTING_H
 #pragma once
 
+/**
+ * INSTRUCTIONS:
+ *
+ *   TEST_TYPE(name)              an identifier displayed in the front end
+ *   TEST_UNIT(filename.h)        filename of the unit you are testing
+ *   TEST_SUITE(function)         name of the specific function you are testing
+ *   TEST(function_specific_test) {  name of specific thing you are checking
+ *     TEST_SKIP("reason");       skip tests that segfault until you can fix
+ *     TEST_INFO("essay");        add as much explanation as you want
+ *     code
+ *     ASSERT...                  run whatever assertions you need
+ *   }
+ *
+ *   TEST_MAIN()                  use this instead of defining main yourself
+ *
+ * ASSERTIONS:
+ *
+ *   Boolean:
+ *     ASSERT_TRUE(x)             - value is true
+ *     ASSERT_FALSE(x)            - value is false
+ *
+ *   Comparisons:
+ *     ASSERT_EQ(a, b)            - equal (alias for ASSERT_INT_EQ)
+ *     ASSERT_NE(a, b)            - not equal
+ *     ASSERT_GT(a, b)            - greater than
+ *     ASSERT_LT(a, b)            - less than
+ *     ASSERT_GE(a, b)            - greater or equal
+ *     ASSERT_LE(a, b)            - less or equal
+ *
+ *   Strings Comparisons:
+ *     ASSERT_STR_EQ(expected, actual)  - strings equal
+ *     ASSERT_STR_NE(expected, actual)  - strings not equal
+ *     ASSERT_STR_PRE(prefix, actual)   - string starts with prefix
+ *     ASSERT_STR_SUF(suffix, actual)   - string ends with suffix
+ *     ASSERT_STR_HAS(needle, actual)   - string contains substring
+ *
+ *   Numeric Comparisons:
+ *     ASSERT_INT_EQ/NE/GT/LT/GE/LE(a, b)  - explicit integer comparison
+ *     ASSERT_FLT_EQ/NE/GT/LT/GE/LE(a, b)  - float comparisons
+ *     ASSERT_DBL_EQ/NE/GT/LT/GE/LE(a, b)  - double comparisons
+ *     ASSERT_LDBL_EQ/NE/GT/LT/GE/LE(a, b) - long double comparisons
+ *
+ *   Tolerant Comparisons:
+ *     ASSERT_FLT_NEAR(expected, actual, tolerance)   - float within tolerance
+ *     ASSERT_DBL_NEAR(expected, actual, tolerance)   - double within tolerance
+ *     ASSERT_LDBL_NEAR(expected, actual, tolerance)  - long double within tolerance
+ *
+ *   Complex Comparisons:
+ *     ASSERT_FLT_COMPLEX(real, imag, actual, tolerance)
+ *     ASSERT_DBL_COMPLEX(real, imag, actual, tolerance)
+ *     ASSERT_LDBL_COMPLEX(real, imag, actual, tolerance)
+ *
+ *   Memory Comparisons:
+ *     ASSERT_MEM_EQ(expected, actual, size)  - memory regions equal
+ *
+ *   Pointer Comparisons:
+ *     ASSERT_NULL(ptr)           - pointer is NULL
+ *     ASSERT_NOT_NULL(ptr)       - pointer is not NULL
+ *
+ *   Special Values:
+ *     ASSERT_NAN(x)              - value is NaN
+ *     ASSERT_INF(x)              - value is infinity
+ *     ASSERT_FINITE(x)           - value is finite
+ *
+ *   Errno Checks:
+ *     ASSERT_ERRNO_EQ(err)       - errno equals expected value
+ */
+
 #include <config.h>
 #include <stdio.h>   // fprintf(), printf(), puts()
 #include <stdlib.h>  // exit()
 #include <string.h>  // strcmp(), memset()
-#include <stdarg.h>  // (if needed)
+#include <stdarg.h>  // va_arg()
+#include <inttypes.h>  // PRIdMAX, PRIuMAX
 #include <math.h>
 
 /* ============================================================= */
@@ -133,6 +202,7 @@ static inline void __jacl_test_run(test_suite_t *suite, test_t *t) {
 
   __jacl_test_stats.total++;
   suite->stats.total++;
+	errno = 0;
 
   printf("  %s%-60s%s", __jacl_test_color() ? COLOR_TEST : "", t->name, __jacl_test_color() ? COLOR_NORM : "");
   fflush(stdout);
@@ -187,18 +257,10 @@ static inline int __jacl_test_each(const char *suite_name) {
 	test_suite_t *suite = NULL;
 
 	for (int i = 0; i < __jacl_test_suite_count; i++) {
-		if (!strcmp(__jacl_test_suites[i].suite, suite_name)) {
-			suite = &__jacl_test_suites[i];
-
-			break;
-		}
+		if (!strcmp(__jacl_test_suites[i].suite, suite_name)) { suite = &__jacl_test_suites[i]; break; }
 	}
 
-	if (!suite) {
-		printf("  Suite '%s' not found\n", suite_name);
-
-		return 1;
-	}
+	if (!suite) { printf("  Suite '%s' not found\n", suite_name); return 1; }
 
   printf("\n  %sRunning '%s' suite…%s\n",
 	       __jacl_test_color() ? COLOR_TEST : "",
@@ -216,16 +278,11 @@ static inline int __jacl_test_each(const char *suite_name) {
 }
 
 static inline int __jacl_test_all(void) {
-  if (__jacl_test_suite_count == 0) {
-    puts("No tests registered.");
-
-    return 0;
-  }
+  if (__jacl_test_suite_count == 0) { puts("No tests registered."); return 0; }
 
   int total = 0;
-  for (int i = 0; i < __jacl_test_suite_count; i++) {
-    total += __jacl_test_suites[i].test_count;
-  }
+
+  for (int i = 0; i < __jacl_test_suite_count; i++) total += __jacl_test_suites[i].test_count;
 
   // Add blank line before, color the "Running" message like test names (blue)
   printf("\n  %sRunning all %d test%s…%s\n",
@@ -243,9 +300,7 @@ static inline int __jacl_test_all(void) {
            suite->suite, suite->unit, suite->type,
            __jacl_test_color() ? COLOR_NORM : "");
 
-    for (int j = 0; j < suite->test_count; j++) {
-      __jacl_test_run(suite, &suite->tests[j]);
-    }
+    for (int j = 0; j < suite->test_count; j++) __jacl_test_run(suite, &suite->tests[j]);
   }
 
   return __jacl_test_stats.failed > 0;
@@ -255,11 +310,7 @@ static inline int __jacl_test_all(void) {
 /* Print Summary                                                 */
 /* ============================================================= */
 static inline void __jacl_test_report(void) {
-  if (!__jacl_test_stats.total) {
-    puts("No tests run.");
-
-    return;
-  }
+  if (!__jacl_test_stats.total) { puts("No tests run."); return; }
 
   printf("\n%s\n",
     __jacl_test_stats.failed
@@ -271,15 +322,15 @@ static inline void __jacl_test_report(void) {
       : "  🎉 ALL CHECKS PASSED 🎉")
   );
 
-  printf("\n  %s%d total   %s%d passed   %s%d failed   %s%d skipped%s\n\n",
+  printf("\n  %s%d total   %s%d passed   %s%d skipped   %s%d failed%s\n\n",
     __jacl_test_color() ? COLOR_TEST : "",
     __jacl_test_stats.total,
     __jacl_test_color() ? COLOR_PASS : "",
 		__jacl_test_stats.passed,
-    __jacl_test_color() ? COLOR_FAIL : "",
-    __jacl_test_stats.failed,
     __jacl_test_color() ? COLOR_SKIP : "",
 		__jacl_test_stats.skipped,
+    __jacl_test_color() ? COLOR_FAIL : "",
+    __jacl_test_stats.failed,
     __jacl_test_color() ? COLOR_NORM : ""
   );
 }
@@ -307,6 +358,67 @@ static inline void __jacl_test_report(void) {
 #define ASSERT_LT(a, b)  ASSERT_INT_LT(a, b)
 #define ASSERT_GE(a, b)  ASSERT_INT_GE(a, b)
 #define ASSERT_LE(a, b)  ASSERT_INT_LE(a, b)
+
+#define ASSERT_STR_EQ(expected, actual) do { \
+	if (!expected || !actual || strcmp((expected), (actual)) != 0) { \
+		TEST_FAIL("\tFAIL: %s:%d - Strings not equal\n" \
+		          "\tTEST: \"%s\" == \"%s\"", \
+		          __FILE__, __LINE__, \
+		          (actual) ? (actual) : "(null)", \
+		          (expected) ? (expected) : "(null)"); \
+	} \
+} while(0)
+
+#define ASSERT_STR_NE(expected, actual) do { \
+	if (expected && actual && strcmp((expected), (actual)) == 0) { \
+		TEST_FAIL("\tFAIL: %s:%d - Strings should not match\n" \
+		          "\tTEST: \"%s\" != \"%s\"", \
+		          __FILE__, __LINE__, \
+		          (actual) ? (actual) : "(null)", \
+		          (expected) ? (expected) : "(null)"); \
+	} \
+} while(0)
+
+#define ASSERT_STR_PRE(prefix, actual) do { \
+	if (!prefix || !actual || strncmp((actual), (prefix), strlen(prefix)) != 0) { \
+		TEST_FAIL("\tFAIL: %s:%d - String should have prefix\n" \
+		          "\tTEST: \"%s\" starts with \"%s\"", \
+		          __FILE__, __LINE__, \
+		          (actual) ? (actual) : "(null)", \
+		          (prefix) ? (prefix) : "(null)"); \
+	} \
+} while(0)
+
+#define ASSERT_STR_SUF(suffix, actual) do { \
+	size_t __test_suf_len = suffix ? strlen(suffix) : 0; \
+	size_t __test_act_len = actual ? strlen(actual) : 0; \
+	if (!suffix || !actual || __test_act_len < __test_suf_len || \
+	    strcmp((actual) + __test_act_len - __test_suf_len, (suffix)) != 0) { \
+		TEST_FAIL("\tFAIL: %s:%d - String should have suffix\n" \
+		          "\tTEST: \"%s\" ends with \"%s\"", \
+		          __FILE__, __LINE__, \
+		          (actual) ? (actual) : "(null)", \
+		          (suffix) ? (suffix) : "(null)"); \
+	} \
+} while(0)
+
+
+#define ASSERT_STR_HAS(needle, actual) do { \
+	if (!needle || !actual || strstr((actual), (needle)) == NULL) { \
+		TEST_FAIL("\tFAIL: %s:%d - String should contain substring\n" \
+		          "\tTEST: \"%s\" includes \"%s\"", \
+		          __FILE__, __LINE__, \
+		          (actual) ? (actual) : "(null)", \
+		          (needle) ? (needle) : "(null)"); \
+	} \
+} while(0)
+
+#define ASSERT_ERRNO_EQ(err) do { \
+	if (!((errno) == (err))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Error should match\n" \
+		          "\tTEST: %d == %d", __FILE__, __LINE__, (errno), (err)); \
+	} \
+} while(0)
 
 #define ASSERT_INT_EQ(a, b) do { \
 	if (!((long)(a) == (long)(b))) { \
@@ -350,60 +462,6 @@ static inline void __jacl_test_report(void) {
 	} \
 } while(0)
 
-#define ASSERT_STR_EQ(expected, actual) do { \
-	if (!expected || !actual || strcmp((expected), (actual)) != 0) { \
-		TEST_FAIL("\tFAIL: %s:%d - Strings not equal\n" \
-		          "\tTEST: \"%s\" == \"%s\"", \
-		          __FILE__, __LINE__, \
-		          (actual) ? (actual) : "(null)", \
-		          (expected) ? (expected) : "(null)"); \
-	} \
-} while(0)
-
-#define ASSERT_STR_NE(expected, actual) do { \
-	if (expected && actual && strcmp((expected), (actual)) == 0) { \
-		TEST_FAIL("\tFAIL: %s:%d - Strings should not match\n" \
-		          "\tTEST: \"%s\" != \"%s\"", \
-		          __FILE__, __LINE__, \
-		          (actual) ? (actual) : "(null)", \
-		          (expected) ? (expected) : "(null)"); \
-	} \
-} while(0)
-
-#define ASSERT_STR_PRE(prefix, actual) do { \
-	if (!prefix || !actual || strncmp((actual), (prefix), strlen(prefix)) != 0) { \
-		TEST_FAIL("\tFAIL: %s:%d - String should have prefix\n" \
-		          "\tTEST: \"%s\" starts with \"%s\"", \
-		          __FILE__, __LINE__, \
-		          (actual) ? (actual) : "(null)", \
-		          (prefix) ? (prefix) : "(null)"); \
-	} \
-} while(0)
-
-#define ASSERT_STR_SUF(suffix, actual) do { \
-	size_t suf_len = suffix ? strlen(suffix) : 0; \
-	size_t act_len = actual ? strlen(actual) : 0; \
-	if (!suffix || !actual || act_len < suf_len || \
-	    strcmp((actual) + act_len - suf_len, (suffix)) != 0) { \
-		TEST_FAIL("\tFAIL: %s:%d - String should have suffix\n" \
-		          "\tTEST: \"%s\" ends with \"%s\"", \
-		          __FILE__, __LINE__, \
-		          (actual) ? (actual) : "(null)", \
-		          (suffix) ? (suffix) : "(null)"); \
-	} \
-} while(0)
-
-#define ASSERT_STR_HAS(needle, actual) do { \
-	if (!needle || !actual || strstr((actual), (needle)) == NULL) { \
-		TEST_FAIL("\tFAIL: %s:%d - String should contain substring\n" \
-		          "\tTEST: \"%s\" includes \"%s\"", \
-		          __FILE__, __LINE__, \
-		          (actual) ? (actual) : "(null)", \
-		          (needle) ? (needle) : "(null)"); \
-	} \
-} while(0)
-
-// More specific float assertions
 #define ASSERT_NAN(x) do { \
 	if (!isnan(x)) { \
 		TEST_FAIL("\tFAIL: %s:%d - Expected NaN\n" \
@@ -436,6 +494,76 @@ static inline void __jacl_test_report(void) {
 	if ((ptr) == NULL) { \
 		TEST_FAIL("\tFAIL: %s:%d - Expected non-NULL pointer\n" \
 		          "\tTEST: NULL != NULL", __FILE__, __LINE__); \
+	} \
+} while(0)
+
+#define ASSERT_FLT_EQ(a, b) do { \
+	if (!((float)(a) == (float)(b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be equal\n" \
+		          "\tTEST: %f == %f", __FILE__, __LINE__, (float)(a), (float)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_FLT_GT(a, b) do { \
+	if (!((float)(a) > (float)(b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
+		          "\tTEST: %f > %f", __FILE__, __LINE__, (float)(a), (float)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_FLT_LT(a, b) do { \
+	if (!((float)(a) < (float)(b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
+		          "\tTEST: %f < %f", __FILE__, __LINE__, (float)(a), (float)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_FLT_GE(a, b) do { \
+	if (!((float)(a) >= (float)(b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
+		          "\tTEST: %f >= %f", __FILE__, __LINE__, (float)(a), (float)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_FLT_LE(a, b) do { \
+	if (!((float)(a) <= (float)(b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
+		          "\tTEST: %f <= %f", __FILE__, __LINE__, (float)(a), (float)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_FLT_NE(a, b) do { \
+	if (!((float)(a) != (float)(b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Values should be different\n" \
+		          "\tTEST: %f != %f", __FILE__, __LINE__, (float)(a), (float)(b)); \
+	} \
+} while(0)
+
+#define ASSERT_FLT_NEAR(expected, actual, tolerance) do { \
+	float __test_diff = (float)(expected) - (float)(actual); \
+	if (__test_diff < 0) __test_diff = -__test_diff; \
+	if (__test_diff > (tolerance)) { \
+		TEST_FAIL("\tFAIL: %s:%d - not within tolerance\n" \
+		          "\tTEST: %e ≈ %e\n" \
+		          "\tWITH: ϵ = %e, Δ = %e", \
+		          __FILE__, __LINE__, (actual), (expected), (double)(tolerance), __test_diff); \
+	} \
+} while(0)
+
+#define ASSERT_FLT_COMPLEX(expt_real, expt_imgn, actual, tolerance) do { \
+	float __test_r = creal(actual); \
+	float __test_i = cimag(actual); \
+	float __test_diff_r = (float)(expt_real) - __test_r; \
+	float __test_diff_i = (float)(expt_imgn) - __test_i; \
+	if (__test_diff_r < 0) __test_diff_r = -__test_diff_r; \
+	if (__test_diff_i < 0) __test_diff_i = -__test_diff_i; \
+	if (__test_diff_r > (tolerance) || __test_diff_i > (tolerance)) { \
+		TEST_FAIL("\tFAIL: %s:%d - complex not in tolerance\n" \
+		          "\tTEST: %.6fr%+.6fi ≈ %.6fr%+.6fi\n" \
+		          "\tWITH: ϵ = %f, Δr = %f, Δi = %f", \
+		          __FILE__, __LINE__, __test_r, __test_i, \
+		          (float)(expt_real), (float)(expt_imgn), \
+		          (float)(tolerance), __test_diff_r, __test_diff_i); \
 	} \
 } while(0)
 
@@ -482,100 +610,100 @@ static inline void __jacl_test_report(void) {
 } while(0)
 
 #define ASSERT_DBL_NEAR(expected, actual, tolerance) do { \
-	double diff = (double)(expected) - (double)(actual); \
-	if (diff < 0) diff = -diff; \
-	if (diff > (tolerance)) { \
+	double __test_diff = (double)(expected) - (double)(actual); \
+	if (__test_diff < 0) __test_diff = -__test_diff; \
+	if (__test_diff > (tolerance)) { \
 		TEST_FAIL("\tFAIL: %s:%d - not within tolerance\n" \
 		          "\tTEST: %e ≈ %e\n" \
 		          "\tWITH: ϵ = %e, Δ = %e", \
-		          __FILE__, __LINE__, (actual), (expected), (double)(tolerance), diff); \
+		          __FILE__, __LINE__, (actual), (expected), (double)(tolerance), __test_diff); \
 	} \
 } while(0)
 
 #define ASSERT_DBL_COMPLEX(expt_real, expt_imgn, actual, tolerance) do { \
-	double _r = creal(actual); \
-	double _i = cimag(actual); \
-	double diff_r = (double)(expt_real) - _r; \
-	double diff_i = (double)(expt_imgn) - _i; \
-	if (diff_r < 0) diff_r = -diff_r; \
-	if (diff_i < 0) diff_i = -diff_i; \
-	if (diff_r > (tolerance) || diff_i > (tolerance)) { \
+	double __test_r = creal(actual); \
+	double __test_i = cimag(actual); \
+	double __test_diff_r = (double)(expt_real) - __test_r; \
+	double __test_diff_i = (double)(expt_imgn) - __test_i; \
+	if (__test_diff_r < 0) __test_diff_r = -__test_diff_r; \
+	if (__test_diff_i < 0) __test_diff_i = -__test_diff_i; \
+	if (__test_diff_r > (tolerance) || __test_diff_i > (tolerance)) { \
 		TEST_FAIL("\tFAIL: %s:%d - complex not in tolerance\n" \
 		          "\tTEST: %.6fr%+.6fi ≈ %.6fr%+.6fi\n" \
 		          "\tWITH: ϵ = %f, Δr = %f, Δi = %f", \
-		          __FILE__, __LINE__, _r, _i, \
+		          __FILE__, __LINE__, __test_r, __test_i, \
 		          (double)(expt_real), (double)(expt_imgn), \
-		          (double)(tolerance), diff_r, diff_i); \
+		          (double)(tolerance), __test_diff_r, __test_diff_i); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_EQ(a, b) do { \
 	if (!((long double)(a) == (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be equal\n" \
-		          "\tTEST: %f == %f", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf == %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_GT(a, b) do { \
 	if (!((long double)(a) > (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-		          "\tTEST: %f > %f", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf > %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_LT(a, b) do { \
 	if (!((long double)(a) < (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-		          "\tTEST: %f < %f", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf < %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_GE(a, b) do { \
 	if (!((long double)(a) >= (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-		          "\tTEST: %f >= %f", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf >= %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_LE(a, b) do { \
 	if (!((long double)(a) <= (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-		          "\tTEST: %f <= %f", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf <= %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_NE(a, b) do { \
 	if (!((long double)(a) != (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be different\n" \
-		          "\tTEST: %f != %f", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf != %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_NEAR(expected, actual, tolerance) do { \
-	long double diff = (long double)(expected) - (long double)(actual); \
-	if (diff < 0) diff = -diff; \
-	if (diff > (long double)(tolerance)) { \
+	long double __test_diff = (long double)(expected) - (long double)(actual); \
+	if (__test_diff < 0) __test_diff = -__test_diff; \
+	if (__test_diff > (long double)(tolerance)) { \
 		TEST_FAIL("\tFAIL: %s:%d - not within tolerance\n" \
-		          "\tTEST: %Le ≈ %Le\n" \
+		          "\tTEST: %Lg ≈ %Lg\n" \
 		          "\tWITH: ϵ = %Le, Δ = %Le", \
-		          __FILE__, __LINE__, (long double)(actual), (long double)(expected), (long double)(tolerance), diff); \
+		          __FILE__, __LINE__, (long double)(actual), (long double)(expected), (long double)(tolerance), __test_diff); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_COMPLEX(expt_real, expt_imgn, actual, tolerance) do { \
-	long double _r = creal(actual); \
-	long double _i = cimag(actual); \
-	long double diff_r = (long double)(expt_real) - _r; \
-	long double diff_i = (long double)(expt_imgn) - _i; \
-	if (diff_r < 0) diff_r = -diff_r; \
-	if (diff_i < 0) diff_i = -diff_i; \
-	if (diff_r > (tolerance) || diff_i > (tolerance)) { \
+	long double __test_r = creal(actual); \
+	long double __test_i = cimag(actual); \
+	long double __test_diff_r = (long double)(expt_real) - __test_r; \
+	long double __test_diff_i = (long double)(expt_imgn) - __test_i; \
+	if (__test_diff_r < 0) __test_diff_r = -__test_diff_r; \
+	if (__test_diff_i < 0) __test_diff_i = -__test_diff_i; \
+	if (__test_diff_r > (tolerance) || __test_diff_i > (tolerance)) { \
 		TEST_FAIL("\tFAIL: %s:%d - complex not in tolerance\n" \
-		          "\tTEST: %.6fr%+.6fi ≈ %.6fr%+.6fi\n" \
-		          "\tWITH: ϵ = %f, Δr = %f, Δi = %f", \
-		          __FILE__, __LINE__, _r, _i, \
+		          "\tTEST: %.6Lgfr%+.6Lgfi ≈ %.6Lgfr%+.6Lgfi\n" \
+		          "\tWITH: ϵ = %Lf, Δr = %Lf, Δi = %Lf", \
+		          __FILE__, __LINE__, __test_r, __test_i, \
 		          (long double)(expt_real), (long double)(expt_imgn), \
-		          (long double)(tolerance), diff_r, diff_i); \
+		          (long double)(tolerance), __test_diff_r, __test_diff_i); \
 	} \
 } while(0)
 

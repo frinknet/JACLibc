@@ -776,8 +776,8 @@ TEST(manip_nextafter_edges) {
 TEST(manip_nexttoward_increment) {
 	double x = 1.0;
 	double next = nexttoward(x, 2.0L);
-	ASSERT_TRUE(next > x);
-	ASSERT_TRUE(next < 1.0 + 0.0001);
+	ASSERT_DBL_GT(next, x);
+	ASSERT_DBL_LT(next, 1.0001);
 }
 #endif
 

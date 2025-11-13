@@ -382,6 +382,13 @@ TEST(printf_e_minus_plus_width) {
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
+TEST(printf_e_negative_nan)
+{
+	char buf[256];
+	snprintf(buf, sizeof(buf), "%.2e", -NAN);
+	ASSERT_TRUE(strchr(buf, 'n') != NULL);
+}
+
 /* ============= Printf: %f, %F (fixed-point) ============= */
 TEST_SUITE(printf_f);
 
@@ -517,6 +524,14 @@ TEST(printf_f_dynamic_width_precision) {
 	ASSERT_TRUE(strchr(buf, '.') != NULL);
 }
 
+TEST(printf_f_negative_nan)
+{
+	char buf[256];
+	long double ld = -NAN;
+	snprintf(buf, sizeof(buf), "%.2Lf", ld);
+	ASSERT_TRUE(strchr(buf, 'n') != NULL || strchr(buf, 'N') != NULL);
+}
+
 /* ============= Printf: %g, %G (shortest) ============= */
 TEST_SUITE(printf_g);
 
@@ -612,6 +627,13 @@ TEST(printf_g_plus_zero_width) {
 	snprintf(buf, sizeof(buf), "%+010.3g", 123.456);
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_TRUE(buf[0] == '+');
+}
+
+TEST(printf_g_negative_nan)
+{
+	char buf[256];
+	snprintf(buf, sizeof(buf), "%.3g", -NAN);
+	ASSERT_TRUE(strchr(buf, 'n') != NULL);
 }
 
 /* ============= Printf: %n (chars written) ============= */
@@ -973,7 +995,7 @@ TEST(scanf_d_width) {
 	ASSERT_INT_EQ(42, parsed);
 }
 
-TEST(scanf_d_sign) {
+TEST(scanf_d_negative) {
 	char buf[256];
 	int parsed;
 	snprintf(buf, sizeof(buf), "-1234");
@@ -1044,6 +1066,14 @@ TEST(scanf_e_nan) {
 	sscanf("nan", "%le", &parsed);
 	ASSERT_TRUE(isnan(parsed));
 }
+
+TEST(scanf_e_negative_infinity)
+{
+	double parsed;
+	sscanf("-INFINITY", "%le", &parsed);
+	ASSERT_TRUE(isinf(parsed));
+	ASSERT_TRUE(parsed < 0);
+}
 #endif
 
 /* ============= Scanf: %f, %F (float) ============= */
@@ -1105,6 +1135,21 @@ TEST(scanf_f_nan_payload) {
 	ASSERT_TRUE(isnan(parsed));
 }
 
+TEST(scanf_f_negative_nan)
+{
+	double parsed;
+	sscanf("-nan", "%lf", &parsed);
+	ASSERT_TRUE(isnan(parsed));
+}
+
+TEST(scanf_f_negative_inf)
+{
+	double parsed;
+	sscanf("-inf", "%lf", &parsed);
+	ASSERT_TRUE(isinf(parsed));
+	ASSERT_TRUE(parsed < 0);
+}
+
 /* ============= Scanf: %g, %G (shortest) - C99+ ============= */
 #if JACL_HAS_C99
 TEST_SUITE(scanf_g);
@@ -1140,6 +1185,13 @@ TEST(scanf_g_nan) {
 	sscanf("nan", "%lg", &parsed);
 	ASSERT_TRUE(isnan(parsed));
 }
+
+TEST(scanf_g_negative_nan_payload)
+{
+	double parsed;
+	sscanf("-nan(0xabcd)", "%lg", &parsed);
+	ASSERT_TRUE(isnan(parsed));
+}
 #endif
 
 /* ============= Scanf: %i (auto-base) ============= */
@@ -1169,6 +1221,24 @@ TEST(scanf_i_hex_lowercase) {
 	ASSERT_INT_EQ(255, parsed);
 }
 
+TEST(scanf_i_negative) {
+	int v = 0;
+	sscanf("-31", "%i", &v);
+	ASSERT_EQ(-31, v);
+}
+
+TEST(scanf_i_negative_0x) {
+	int v = 0;
+	sscanf("-0x20", "%i", &v);
+	ASSERT_EQ(-32, v);
+}
+
+TEST(scanf_i_negative_0) {
+	int v = 0;
+	sscanf("-077", "%i", &v);
+	ASSERT_EQ(-63, v);
+}
+
 /* ============= Scanf: %o (octal) ============= */
 TEST_SUITE(scanf_o);
 
@@ -1182,6 +1252,12 @@ TEST(scanf_o_precision) {
 	unsigned int parsed;
 	sscanf("777", "%o", &parsed);
 	ASSERT_INT_EQ(0777, parsed);
+}
+
+TEST(scanf_o_negative) {
+	int v = 0;
+	sscanf("-77", "%o", &v);
+	ASSERT_EQ(-63, v);
 }
 
 TEST(scanf_o_zero) {
@@ -1251,6 +1327,20 @@ TEST(scanf_u_large) {
 	ASSERT_INT_EQ(4294967295u, parsed);
 }
 
+TEST(scanf_u_negative) {
+	unsigned int v = 1234;
+	int n = sscanf("-42", "%u", &v);
+	ASSERT_EQ(n, EOF);
+	ASSERT_EQ(v, 1234);
+}
+
+TEST(scanf_u_plus_sign) {
+	unsigned int v = 1234;
+	int n = sscanf("+42", "%u", &v);
+	ASSERT_EQ(n, EOF);
+	ASSERT_EQ(v, 1234);
+}
+
 /* ============= Scanf: %x, %X (hexadecimal) ============= */
 TEST_SUITE(scanf_x);
 
@@ -1282,6 +1372,12 @@ TEST(scanf_x_prefix) {
 	unsigned int parsed;
 	sscanf("0xFF", "%x", &parsed);
 	ASSERT_INT_EQ(255u, parsed);
+}
+
+TEST(scanf_x_negative) {
+	int v = 0;
+	sscanf("-1f", "%x", &v);
+	ASSERT_EQ(-31, v);
 }
 
 /* ============= Scanf: %[ (character class) ============= */
@@ -1367,8 +1463,8 @@ TEST(scanf_return_eof) {
 }
 
 TEST(scanf_return_failfirst) {
-	int d;
-	int ret = sscanf("abc", "%d", &d);
+	int d = 123;
+	int ret = sscanf("stop", "%d", &d);
 	ASSERT_INT_EQ(EOF, ret);
 }
 
@@ -2070,12 +2166,6 @@ TEST_SUITE(tmpnam);
 TEST(tmpnam_generates_name) {
 	char name[L_tmpnam];
 	char *result = tmpnam(name);
-
-	/* Debug: see what errno was */
-	if (!result) {
-		fprintf(stderr, "tmpnam failed: errno=%d (%s)\n", errno, strerror(errno));
-	}
-
 	ASSERT_NOT_NULL(result);
 	ASSERT_TRUE(strlen(name) > 0);
 }

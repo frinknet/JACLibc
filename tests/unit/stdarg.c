@@ -12,12 +12,12 @@ TEST_UNIT(stdarg.h);
 static int sum_ints(int count, ...) {
 	va_list args;
 	va_start(args, count);
-	
+
 	int sum = 0;
 	for (int i = 0; i < count; i++) {
 		sum += va_arg(args, int);
 	}
-	
+
 	va_end(args);
 	return sum;
 }
@@ -25,12 +25,12 @@ static int sum_ints(int count, ...) {
 static double sum_doubles(int count, ...) {
 	va_list args;
 	va_start(args, count);
-	
+
 	double sum = 0.0;
 	for (int i = 0; i < count; i++) {
 		sum += va_arg(args, double);
 	}
-	
+
 	va_end(args);
 	return sum;
 }
@@ -38,12 +38,12 @@ static double sum_doubles(int count, ...) {
 static char first_char(int count, ...) {
 	va_list args;
 	va_start(args, count);
-	
+
 	char result = '\0';
 	if (count > 0) {
 		result = (char)va_arg(args, int);  // char promoted to int
 	}
-	
+
 	va_end(args);
 	return result;
 }
@@ -51,13 +51,13 @@ static char first_char(int count, ...) {
 static int find_max(int count, ...) {
 	va_list args;
 	va_start(args, count);
-	
+
 	int max = va_arg(args, int);
 	for (int i = 1; i < count; i++) {
 		int val = va_arg(args, int);
 		if (val > max) max = val;
 	}
-	
+
 	va_end(args);
 	return max;
 }
@@ -65,14 +65,14 @@ static int find_max(int count, ...) {
 static int count_above_threshold(int threshold, int count, ...) {
 	va_list args;
 	va_start(args, count);
-	
+
 	int result = 0;
 	for (int i = 0; i < count; i++) {
 		if (va_arg(args, int) > threshold) {
 			result++;
 		}
 	}
-	
+
 	va_end(args);
 	return result;
 }
@@ -109,7 +109,7 @@ TEST_SUITE(different_types);
 
 TEST(sum_doubles) {
 	double result = sum_doubles(3, 1.5, 2.5, 3.0);
-	ASSERT_FLOAT_EQ(7.0, result, 0.001);
+	ASSERT_DBL_NEAR(7.0, result, 0.001);
 }
 
 TEST(char_argument) {
@@ -131,20 +131,20 @@ static int sum_twice(int count, ...) {
 	va_list args1, args2;
 	va_start(args1, count);
 	va_copy(args2, args1);
-	
+
 	int sum1 = 0;
 	for (int i = 0; i < count; i++) {
 		sum1 += va_arg(args1, int);
 	}
-	
+
 	int sum2 = 0;
 	for (int i = 0; i < count; i++) {
 		sum2 += va_arg(args2, int);
 	}
-	
+
 	va_end(args1);
 	va_end(args2);
-	
+
 	return sum1 + sum2;
 }
 
@@ -161,13 +161,13 @@ TEST_SUITE(multiple_traversals);
 static int count_and_sum(int count, int *out_count, ...) {
 	va_list args;
 	va_start(args, out_count);
-	
+
 	*out_count = count;
 	int sum = 0;
 	for (int i = 0; i < count; i++) {
 		sum += va_arg(args, int);
 	}
-	
+
 	va_end(args);
 	return sum;
 }
@@ -175,7 +175,7 @@ static int count_and_sum(int count, int *out_count, ...) {
 TEST(count_and_sum_together) {
 	int count;
 	int sum = count_and_sum(4, &count, 1, 2, 3, 4);
-	
+
 	ASSERT_EQ(4, count);
 	ASSERT_EQ(10, sum);
 }
@@ -228,7 +228,7 @@ TEST_SUITE(practical_patterns);
 static int printf_style_function(const char *format, ...) {
 	va_list args;
 	va_start(args, format);
-	
+
 	int count = 0;
 	while (*format) {
 		if (*format == '%' && *(format + 1) == 'd') {
@@ -238,7 +238,7 @@ static int printf_style_function(const char *format, ...) {
 		}
 		format++;
 	}
-	
+
 	va_end(args);
 	return count;
 }

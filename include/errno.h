@@ -14,18 +14,8 @@
 /* ERRNO ACCESSOR FUNCTIONS                                         */
 /* ================================================================ */
 
-/* Header-only errno implementation */
-static inline int* __errno(void) {
-	#if JACL_HAS_THREADS
-		static _Thread_local int errno_value = 0;
-	#else
-		static int errno_value = 0;
-	#endif
-
-	return &errno_value;
-}
-
-#define errno (*__errno())
+extern _Thread_local int __jacl_errno;
+#define errno __jacl_errno
 
 /* ================================================================ */
 /* ERRNO VALUE DEFINITIONS                                          */

@@ -119,6 +119,8 @@ void js_resume(void);
 
 // Accessors
 static inline char* js_key(js_t* v) {
+	if (!v) return NULL;
+
 	return v->key;
 }
 static inline size_t js_length(js_t* v) {

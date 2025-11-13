@@ -1,18 +1,18 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CORE_FENV_H
-#define CORE_FENV_H
+#ifndef CORE_ERRNO_H
+#define CORE_ERRNO_H
+#pragma once
 
 #include <config.h>
-#include <fenv.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-_Thread_local fenv_t __jacl_fenv = { 0u, FE_TONEAREST };
+_Thread_local int __jacl_errno = 0;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CORE_FENV_H */
+#endif /* CORE_ERRNO_H */
