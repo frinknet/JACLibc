@@ -69,17 +69,19 @@ void *aligned_alloc(size_t a, size_t s);
 /* Integer Conversion & Parsing                                  */
 /* ============================================================= */
 
-int atoi(const char*);
-long atol(const char*);
-long strtol(const char*, char **, int);
+int atoi(const char* str);
+double atof(const char* str);
+
+long atol(const char* str);
+long strtol(const char* str, char ** endptr, int base);
 double strtod(const char *nptr, char **endptr);
 
 #if JACL_HAS_C99
 long long atoll(const char*);
 
-unsigned long strtoul(const char*, char **, int);
-long long strtoll(const char*, char **, int);
-unsigned long long strtoull(const char*, char **, int);
+unsigned long strtoul(const char* str, char** endptr, int base);
+long long strtoll(const char*, char ** str, int base);
+unsigned long long strtoull(const char* str, char** endptr, int base);
 
 float strtof(const char *nptr, char **endptr);
 long double strtold(const char *nptr, char **endptr);
@@ -257,67 +259,6 @@ static inline int unsetenv(const char *name) {
 	return 0;
 }
 #endif
-
-/* ============================================================= */
-/* Multibyte Character Conversion                                */
-/* ============================================================= */
-
-static inline int mblen(const char *s, size_t n) { if (!s) return 0; if (n == 0) return -1; return *s ? 1 : 0; }
-static inline int mbtowc(wchar_t *restrict pwc, const char *restrict s, size_t n) {
-	if (!s) return 0;
-	if (n == 0) return -1;
-
-	if (!*s) {
-		if (pwc) *pwc = 0;
-
-		return 0;
-	}
-
-	if (pwc) *pwc = (wchar_t)(unsigned char)*s;
-
-	return 1;
-}
-static inline int wctomb(char *s, wchar_t wc) {
-	if (!s) return 0;
-
-	if (wc > 0xFF) { errno = EILSEQ; return -1; }
-
-	*s = (char)wc;
-
-	return 1;
-}
-static inline size_t mbstowcs(wchar_t *restrict pwcs, const char *restrict s, size_t n) {
-	size_t count = 0;
-
-	if (!s) return 0;
-
-	while (count < n && *s) {
-		if (pwcs) pwcs[count] = (wchar_t)(unsigned char)*s;
-
-		s++;
-		count++;
-	}
-
-	if (pwcs && count < n) pwcs[count] = L'\0';
-
-	return count;
-}
-static inline size_t wcstombs(char *restrict s, const wchar_t *restrict pwcs, size_t n) {
-	size_t count = 0;
-
-	if (!pwcs) return 0;
-
-	while (count < n && *pwcs) {
-		if (*pwcs > 0xFF) { errno = EILSEQ; return (size_t)-1; }
-
-		if (s) s[count] = (char)*pwcs;
-
-		pwcs++;
-		count++;
-	}
-
-	return count;
-}
 
 /* ============================================================= */
 /* String Duplication                                            */

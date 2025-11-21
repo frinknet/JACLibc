@@ -3,6 +3,7 @@
 #define CORE_STDLIB_H
 
 #include <stdlib.h>
+#include <assert.h>
 #include <core/format.h>
 
 #if JACL_OS_WINDOWS
@@ -69,13 +70,13 @@ typedef struct {
 } __jacl_hdr_t;
 
 typedef struct {
-	_Atomic uint32_t next, owner;
+	_Atomic uint_fast32_t next, owner;
 } __jacl_lock_t;
 
 typedef struct __jacl_segment {
 	uint8_t* base;
 	size_t size, bins[32];
-	uint32_t bitmap;
+	uint_least32_t bitmap;
 	struct __jacl_segment* next;
 } __jacl_segment_t;
 
@@ -121,6 +122,12 @@ static inline void __jacl_lock_release(__jacl_lock_t* l) {
 	atomic_fetch_add_explicit(&l->owner, 1, memory_order_release);
 }
 
+#define __jacl_bin_safety(seg, off, where) do { \
+	if ((off) >= (seg)->size || (off) + sizeof(__jacl_hdr_t) > (seg)->size) { \
+		return 0; \
+	} \
+} while (0)
+
 static inline int __jacl_bin_idx(size_t sz) {
 	if (sz <= 128) return (sz + 7) >> 3;
 
@@ -130,39 +137,6 @@ static inline int __jacl_bin_idx(size_t sz) {
 	while (q > 1 && i < 31) { q >>= 1; i++; }
 
 	return i;
-}
-
-static inline void __jacl_bin_push(__jacl_segment_t* seg, size_t off) {
-	int i = __jacl_bin_idx(((__jacl_hdr_t*)(seg->base + off))->size);
-	*(size_t*)(seg->base + off + sizeof(__jacl_hdr_t)) = seg->bins[i];
-
-	seg->bins[i] = off;
-	seg->bitmap |= 1u << i;
-}
-
-static inline void __jacl_bin_remove(__jacl_segment_t* seg, size_t off) {
-	int i = __jacl_bin_idx(((__jacl_hdr_t*)(seg->base + off))->size);
-	size_t cur = seg->bins[i];
-
-	if (cur == off) {
-		seg->bins[i] = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
-	} else {
-		while (cur) {
-			size_t next = *(size_t*)(seg->base + cur + sizeof(__jacl_hdr_t));
-
-			if (next) __builtin_prefetch(seg->base + next, 0, 1);
-
-			if (next == off) {
-				*(size_t*)(seg->base + cur + sizeof(__jacl_hdr_t)) = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
-
-				break;
-			}
-
-			cur = next;
-		}
-	}
-
-	if (!seg->bins[i]) seg->bitmap &= ~(1u << i);
 }
 
 static inline size_t __jacl_bin_pop(__jacl_segment_t* seg, size_t need) {
@@ -176,17 +150,60 @@ static inline size_t __jacl_bin_pop(__jacl_segment_t* seg, size_t need) {
 
 	size_t off = seg->bins[i];
 
-	if (!off) {
-		seg->bitmap &= ~(1u << i);
+	if (!off) { seg->bitmap &= ~(1u << i); return 0; }
 
-		return 0;
-	}
+	__jacl_bin_safety(seg, off, "pop");
 
-	seg->bins[i] = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
+	uint8_t *ptr = seg->base + off + sizeof(__jacl_hdr_t);
+
+	if (ptr < seg->base + sizeof(__jacl_hdr_t) ||
+		ptr > seg->base + seg->size - sizeof(size_t)) {
+			seg->bins[i] = 0;
+			seg->bitmap &= ~(1u << i);
+
+			return 0;
+		}
+
+	seg->bins[i] = *(size_t*)ptr;
 
 	if (!seg->bins[i]) seg->bitmap &= ~(1u << i);
 
 	return off;
+}
+
+static inline void __jacl_bin_push(__jacl_segment_t* seg, size_t off) {
+	int i = __jacl_bin_idx(((__jacl_hdr_t*)(seg->base + off))->size);
+	__jacl_bin_safety(seg, off, "push");
+
+	*(size_t*)(seg->base + off + sizeof(__jacl_hdr_t)) = seg->bins[i];
+	seg->bins[i] = off;
+	seg->bitmap |= 1u << i;
+}
+
+static inline void __jacl_bin_remove(__jacl_segment_t* seg, size_t off) {
+	int i = __jacl_bin_idx(((__jacl_hdr_t*)(seg->base + off))->size);
+	size_t cur = seg->bins[i];
+
+	__jacl_bin_safety(seg, off, "remove");
+
+	if (cur == off) {
+		seg->bins[i] = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
+	} else {
+		while (cur) {
+			size_t next = *(size_t*)(seg->base + cur + sizeof(__jacl_hdr_t));
+
+			if (next) __builtin_prefetch(seg->base + next, 0, 1);
+
+			if (next == off) {
+				*(size_t*)(seg->base + cur + sizeof(__jacl_hdr_t)) = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
+				break;
+			}
+			cur = next;
+		}
+	}
+
+	if (!seg->bins[i])
+		seg->bitmap &= ~(1u << i);
 }
 
 static inline __jacl_segment_t* __jacl_find_segment(void* ptr) {
@@ -336,7 +353,7 @@ void* malloc(size_t n) {
 
 	size_t need = __jacl_round_size(n + sizeof(__jacl_hdr_t));
 
-	/* Quicklist - UNCHANGED */
+	/* Quicklist */
 	if (n <= 40 && n >= 16) {
 		int qidx = (n >> 3) - 2;
 
@@ -350,7 +367,7 @@ void* malloc(size_t n) {
 		}
 	}
 
-	/* TLS arena - UNCHANGED */
+	/* TLS arena */
 	if (JACL_LIKELY(n <= JACL_SMALL_MAX)) {
 		if (JACL_UNLIKELY(__jacl_tls_off == 0 || __jacl_tls_off + need > __jacl_tls_end) && JACL_UNLIKELY(!__jacl_tls_refill())) goto large_path;
 
@@ -366,6 +383,10 @@ void* malloc(size_t n) {
 	}
 
 large_path:
+assert(__jacl_tls_off <= JACL_HEAP_INIT / 4);
+assert(__jacl_tls_end <= JACL_HEAP_INIT / 4);
+assert(__jacl_tls_off <= __jacl_tls_end);
+
 	__jacl_lock_acquire(&__jacl_lock);
 
 	__jacl_segment_t* seg = __jacl_segment_head;
@@ -787,10 +808,10 @@ void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int 
 #define __jacl_ato_int(name, type, len, usig) type ato##name(const char* str) { \
 	const char* p = str; \
 	int read = 0, ch = 0; \
-	uintptr_t val = 0; \
+	uintmax_t val = 0; \
 	__jacl_fmt_t spec = usig? 10 : 10 | JACL_FMT_VAL(FLAG, sign); \
-	__jacl_read_skip(ch, &p, NULL, &read); \
-	if (__jacl_input_int(&p, NULL, &read, JACL_FMT_SET(LENGTH, spec, len), INT_MAX, &val)) return (type)val; \
+	__jacl_read_skip(ch, NULL, &p, &read); \
+	if (__jacl_input_int(NULL, &p, &read, JACL_FMT_SET(LENGTH, spec, len), INT_MAX, &val)) return (type)val; \
 	return 0; \
 }
 #define __jacl_strto_int(suf, type, len, usig) type strto##suf(const char* restrict str, char** restrict endptr, int base) { \
@@ -801,25 +822,24 @@ void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int 
 	} \
 	const char* p = str; \
 	int read = 0, ch = 0; \
-	uintptr_t val = 0; \
+	uintmax_t val = 0; \
 	__jacl_fmt_t spec = usig? base : base | JACL_FMT_VAL(FLAG, sign); \
-	__jacl_read_skip(ch, &p, NULL, &read); \
-	if (__jacl_input_int(&p, NULL, &read, JACL_FMT_SET(LENGTH, spec, len), INT_MAX, &val)) { \
+	__jacl_read_skip(ch, NULL, &p, &read); \
+	if (__jacl_input_int(NULL, &p, &read, JACL_FMT_SET(LENGTH, spec, len), INT_MAX, &val)) { \
 		if (endptr) *endptr = (char*)p; \
 		return (type)val; \
 	} \
 	if (endptr) *endptr = (char*)str; \
 	return 0; \
 }
-
 #define __jacl_strto_float(suf, type, len) type strto##suf(const char* restrict str, char** restrict endptr) { \
 	const char* p = str; \
 	int read = 0, ch = 0; \
 	long double val = 0.0; \
-	__jacl_read_skip(ch, &p, NULL, &read); \
+	__jacl_read_skip(ch, NULL, &p, &read); \
 	__jacl_fmt_t spec = 10; \
 	JACL_FMT_SET(LENGTH, spec, len); \
-	if (__jacl_input_special(&p, NULL, &read, spec, INT_MAX, &val) || __jacl_input_float(&p, NULL, &read, spec, INT_MAX, &val)) { \
+	if (__jacl_input_special(NULL, &p, &read, spec, INT_MAX, &val) || __jacl_input_float(NULL, &p, &read, spec, INT_MAX, &val)) { \
 		if (endptr) *endptr = (char*)p; \
 		return (type)val; \
 	} \
@@ -849,7 +869,7 @@ double atof(const char* str) {
 	int _read = 0;
 	long double val = 0.0;
 
-	if (__jacl_input_float(&p, NULL, &_read, JACL_FMT_BASE_exp, INT_MAX, &val)) return (double)val;
+	if (__jacl_input_float(NULL, &p, &_read, JACL_FMT_BASE_exp, INT_MAX, &val)) return (double)val;
 
 	return 0.0;
 }

@@ -1,10 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <limits.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(stdio.h);
@@ -18,8 +14,52 @@ static const double dbl_vals[] = {0.0, -0.0, 1.5, -1.5, 123.456, -123.456, 0.001
 static const int widths[] = {0, 1, 5, 10, 15, 20, 25};
 static const int precisions[] = {0, 1, 2, 3, 4, 6, 10};
 
+#if INTMAX_MAX == LLONG_MAX
+  #define CAST_INTMAX(x)    ((long long)(x))
+  #define READ_INTMAX(xptr) ((long long*)(xptr))
+#elif INTMAX_MAX == LONG_MAX
+  #define CAST_INTMAX(x)    ((long)(x))
+  #define READ_INTMAX(xptr) ((long*)(xptr))
+#else
+  #define CAST_INTMAX(x)    ((int)(x))
+  #define READ_INTMAX(xptr) ((int*)(xptr))
+#endif
+
+#if UINTMAX_MAX == ULLONG_MAX
+  #define CAST_UINTMAX(x)    ((unsigned long long)(x))
+  #define READ_UINTMAX(xptr) ((unsigned long long*)(xptr))
+#elif UINTMAX_MAX == ULONG_MAX
+  #define CAST_UINTMAX(x)    ((unsigned long)(x))
+  #define READ_UINTMAX(xptr) ((unsigned long*)(xptr))
+#else
+  #define CAST_UINTMAX(x)    ((unsigned)(x))
+  #define READ_UINTMAX(xptr) ((unsigned*)(xptr))
+#endif
+
+#if INTPTR_MAX == LLONG_MAX
+  #define CAST_INTPTR(x)    ((long long)(x))
+  #define READ_INTPTR(xptr) ((long long*)(xptr))
+#elif INTPTR_MAX == LONG_MAX
+  #define CAST_INTPTR(x)    ((long)(x))
+  #define READ_INTPTR(xptr) ((long*)(xptr))
+#else
+  #define CAST_INTPTR(x)    ((int)(x))
+  #define READ_INTPTR(xptr) ((int*)(xptr))
+#endif
+
+#if UINTPTR_MAX == ULLONG_MAX
+  #define CAST_UINTPTR(x)    ((unsigned long long)(x))
+  #define READ_UINTPTR(xptr) ((unsigned long long*)(xptr))
+#elif UINTPTR_MAX == ULONG_MAX
+  #define CAST_UINTPTR(x)    ((unsigned long)(x))
+  #define READ_UINTPTR(xptr) ((unsigned long*)(xptr))
+#else
+  #define CAST_UINTPTR(x)    ((unsigned)(x))
+  #define READ_UINTPTR(xptr) ((unsigned*)(xptr))
+#endif
+
 /* ============================================================= */
-/* PRINTF TESTS (Alphabetical by Specifier)                     */
+/* PRINTF TESTS (Alphabetical by Specifier)                      */
 /* ============================================================= */
 
 /* ============= Printf: %a, %A (hex float) - C99+ ============= */
@@ -27,20 +67,20 @@ static const int precisions[] = {0, 1, 2, 3, 4, 6, 10};
 TEST_SUITE(printf_a);
 
 TEST(printf_a_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3a", 1.5);
 	ASSERT_TRUE(strchr(buf, 'p') != NULL);
 }
 
 TEST(printf_a_uppercase) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3A", 1.5);
 	ASSERT_TRUE(strchr(buf, 'P') != NULL);
 }
 
 TEST(printf_a_precision) {
 	for (int p = 1; p < 4; p++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%.%da", p);
 		snprintf(buf, sizeof(buf), fmt, 0.5);
 		ASSERT_TRUE(strchr(buf, 'p') != NULL);
@@ -48,61 +88,61 @@ TEST(printf_a_precision) {
 }
 
 TEST(printf_a_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%15.3a", 1.5);
 	ASSERT_TRUE(strlen(buf) >= 15);
 }
 
 TEST(printf_a_left_align) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-15.3a", 1.5);
 	ASSERT_TRUE(buf[0] != ' ');
 }
 
 TEST(printf_a_negative) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2a", -2.75);
 	ASSERT_TRUE(buf[0] == '-');
 }
 
 TEST(printf_a_plus_flag) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+.2a", 1.5);
 	ASSERT_TRUE(buf[0] == '+');
 }
 
 TEST(printf_a_space_flag) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "% .2a", 1.5);
 	ASSERT_TRUE(buf[0] == ' ');
 }
 
 TEST(printf_a_hash_flag) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#.0a", 1.5);
 	ASSERT_TRUE(strchr(buf, '.') != NULL);
 }
 
 TEST(printf_a_inf) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2a", INFINITY);
 	ASSERT_STR_HAS("inf", buf);
 }
 
 TEST(printf_a_nan) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2a", NAN);
 	ASSERT_STR_HAS("nan", buf);
 }
 
 TEST(printf_a_longdouble) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2La", 1.5L);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_a_plus_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+15.2a", 1.5);
 	ASSERT_TRUE(strlen(buf) >= 15);
 	ASSERT_TRUE(buf[strlen(buf)-1] != ' ');
@@ -113,44 +153,44 @@ TEST(printf_a_plus_width) {
 TEST_SUITE(printf_c);
 
 TEST(printf_c_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%c", 'A');
 	ASSERT_STR_EQ("A", buf);
 }
 
 TEST(printf_c_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%5c", 'X');
 	ASSERT_TRUE(strlen(buf) >= 5);
 }
 
 TEST(printf_c_left_align) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-5c", 'Y');
 	ASSERT_TRUE(buf[0] == 'Y');
 }
 
 TEST(printf_c_digit) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%c", '7');
 	ASSERT_STR_EQ("7", buf);
 }
 
 TEST(printf_c_space) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%c", ' ');
 	ASSERT_STR_EQ(" ", buf);
 }
 
 TEST(printf_c_width_pad) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%10c", 'X');
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_TRUE(strchr(buf, 'X') != NULL);
 }
 
 TEST(printf_c_minus_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-10c", 'Y');
 	ASSERT_TRUE(buf[0] == 'Y');
 	ASSERT_TRUE(strlen(buf) >= 10);
@@ -161,7 +201,7 @@ TEST_SUITE(printf_d);
 
 TEST(printf_d_basic) {
 	for (int i = 0; i < sizeof(int_vals)/sizeof(int_vals[0]); i++) {
-		char buf[256];
+		char buf[256] = {0};
 		snprintf(buf, sizeof(buf), "%d", int_vals[i]);
 		ASSERT_TRUE(strlen(buf) > 0);
 	}
@@ -170,7 +210,7 @@ TEST(printf_d_basic) {
 TEST(printf_d_width) {
 	for (int w = 0; w < sizeof(widths)/sizeof(widths[0]); w++) {
 		for (int i = 0; i < 3; i++) {
-			char fmt[32], buf[256];
+			char fmt[32] = {0}, buf[256] = {0};
 			snprintf(fmt, sizeof(fmt), "%%%dd", widths[w]);
 			snprintf(buf, sizeof(buf), fmt, int_vals[i]);
 			ASSERT_TRUE(strlen(buf) > 0);
@@ -180,7 +220,7 @@ TEST(printf_d_width) {
 
 TEST(printf_d_left_align) {
 	for (int w = 1; w < 5; w++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%-%dd", widths[w]);
 		snprintf(buf, sizeof(buf), fmt, 42);
 		ASSERT_TRUE(buf[0] != ' ');
@@ -189,7 +229,7 @@ TEST(printf_d_left_align) {
 
 TEST(printf_d_zero_pad) {
 	for (int w = 1; w < 5; w++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%0%dd", widths[w]);
 		snprintf(buf, sizeof(buf), fmt, 42);
 		ASSERT_TRUE(strlen(buf) >= widths[w]);
@@ -197,20 +237,20 @@ TEST(printf_d_zero_pad) {
 }
 
 TEST(printf_d_sign_plus) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+d", 42);
 	ASSERT_TRUE(buf[0] == '+');
 }
 
 TEST(printf_d_sign_space) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "% d", 42);
 	ASSERT_TRUE(buf[0] == ' ');
 }
 
 TEST(printf_d_precision) {
 	for (int p = 0; p < 4; p++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%.%dd", precisions[p]);
 		snprintf(buf, sizeof(buf), fmt, 42);
 		ASSERT_TRUE(strlen(buf) > 0);
@@ -218,60 +258,60 @@ TEST(printf_d_precision) {
 }
 
 TEST(printf_d_negative) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%d", -999);
 	ASSERT_TRUE(buf[0] == '-');
 }
 
 TEST(printf_d_h_short) {
-	char buf[256];
+	char buf[256] = {0};
 	short s = 42;
 	snprintf(buf, sizeof(buf), "%hd", s);
 	ASSERT_STR_EQ("42", buf);
 }
 
 TEST(printf_d_l_long) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%ld", 123456789L);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_d_ll_longlong) {
-	char buf[256];
+	char buf[256] = {0};
 	long long val = 123456LL;
 	snprintf(buf, sizeof(buf), "%lld", val);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_d_plus_zero_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+010d", 42);
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_TRUE(buf[0] == '+');
 }
 
 TEST(printf_d_space_zero_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "% 010d", 42);
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_TRUE(buf[0] == ' ');
 }
 
 TEST(printf_d_minus_plus_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-+10d", 42);
 	ASSERT_TRUE(buf[0] == '+');
 	ASSERT_TRUE(buf[1] != ' ');
 }
 
 TEST(printf_d_dynamic_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%*d", 10, 42);
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
 TEST(printf_d_negative_dynamic_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%*d", -10, 42);
 	ASSERT_TRUE(buf[0] != ' ');
 	ASSERT_TRUE(strlen(buf) >= 10);
@@ -281,20 +321,20 @@ TEST(printf_d_negative_dynamic_width) {
 TEST_SUITE(printf_e);
 
 TEST(printf_e_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2e", 1.23e5);
 	ASSERT_TRUE(strchr(buf, 'e') != NULL);
 }
 
 TEST(printf_e_uppercase) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2E", 1.23e5);
 	ASSERT_TRUE(strchr(buf, 'E') != NULL);
 }
 
 TEST(printf_e_precision) {
 	for (int p = 0; p < 4; p++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%.%de", p);
 		snprintf(buf, sizeof(buf), fmt, 1.23e-5);
 		ASSERT_TRUE(strlen(buf) > 0);
@@ -302,81 +342,81 @@ TEST(printf_e_precision) {
 }
 
 TEST(printf_e_width) {
-	char fmt[32], buf[256];
+	char fmt[32] = {0}, buf[256] = {0};
 	snprintf(fmt, sizeof(fmt), "%%15.3e");
 	snprintf(buf, sizeof(buf), fmt, 1.23e-5);
 	ASSERT_TRUE(strlen(buf) >= 15);
 }
 
 TEST(printf_e_left_align) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-15.3e", 1.23e-5);
 	ASSERT_TRUE(buf[0] != ' ');
 }
 
 TEST(printf_e_zero_pad) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%015.3e", 1.23e-5);
 	ASSERT_TRUE(strlen(buf) >= 15);
 }
 
 TEST(printf_e_negative) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2e", -1.5e3);
 	ASSERT_TRUE(buf[0] == '-');
 }
 
 TEST(printf_e_plus_flag) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+.2e", 1.5e3);
 	ASSERT_TRUE(buf[0] == '+');
 }
 
 TEST(printf_e_space_flag) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "% .2e", 1.5e3);
 	ASSERT_TRUE(buf[0] == ' ');
 }
 
 TEST(printf_e_inf) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2e", INFINITY);
 	ASSERT_STR_HAS("inf", buf);
 }
 
 TEST(printf_e_nan) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2e", NAN);
 	ASSERT_STR_HAS("nan", buf);
 }
 
 TEST(printf_e_small) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2e", 0.00001);
 	ASSERT_TRUE(strchr(buf, 'e') != NULL);
 }
 
 TEST(printf_e_longdouble) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2Le", 1.5e3L);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_e_hash) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#.0e", 1.5e3);
 	ASSERT_TRUE(strchr(buf, '.') != NULL);
 }
 
 TEST(printf_e_plus_zero_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+010.2e", 1.5e3);
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_TRUE(buf[0] == '+');
 }
 
 TEST(printf_e_minus_plus_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-+10.2e", 1.5e3);
 	ASSERT_TRUE(buf[0] == '+');
 	ASSERT_TRUE(strlen(buf) >= 10);
@@ -384,7 +424,7 @@ TEST(printf_e_minus_plus_width) {
 
 TEST(printf_e_negative_nan)
 {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2e", -NAN);
 	ASSERT_TRUE(strchr(buf, 'n') != NULL);
 }
@@ -393,14 +433,14 @@ TEST(printf_e_negative_nan)
 TEST_SUITE(printf_f);
 
 TEST(printf_f_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2f", 1.5);
 	ASSERT_STR_EQ("1.50", buf);
 }
 
 TEST(printf_f_precision) {
 	for (int p = 0; p < 5; p++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%.%df", p);
 		snprintf(buf, sizeof(buf), fmt, 123.456);
 		ASSERT_TRUE(strlen(buf) > 0);
@@ -409,7 +449,7 @@ TEST(printf_f_precision) {
 
 TEST(printf_f_width) {
 	for (int w = 1; w < 5; w++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%%d.2f", widths[w]);
 		snprintf(buf, sizeof(buf), fmt, 1.5);
 		ASSERT_TRUE(strlen(buf) >= 3);
@@ -417,108 +457,108 @@ TEST(printf_f_width) {
 }
 
 TEST(printf_f_left_align) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-10.2f", 1.5);
 	ASSERT_TRUE(buf[0] != ' ');
 }
 
 TEST(printf_f_zero_pad) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%010.2f", 1.5);
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
 TEST(printf_f_sign_plus) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+.2f", 1.5);
 	ASSERT_TRUE(buf[0] == '+');
 }
 
 TEST(printf_f_sign_space) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "% .2f", 1.5);
 	ASSERT_TRUE(buf[0] == ' ');
 }
 
 TEST(printf_f_hash_flag) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#.0f", 1.5);
 	ASSERT_TRUE(strchr(buf, '.') != NULL);
 }
 
 TEST(printf_f_nan) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2f", NAN);
 	ASSERT_STR_HAS("nan", buf);
 }
 
 TEST(printf_f_inf) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2f", INFINITY);
 	ASSERT_STR_HAS("inf", buf);
 }
 
 TEST(printf_f_negative_inf) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2f", -INFINITY);
 	ASSERT_STR_HAS("inf", buf);
 	ASSERT_TRUE(buf[0] == '-');
 }
 
 TEST(printf_f_negative_zero) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2f", -0.0);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_f_rounding) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.0f", 1.999);
 	ASSERT_STR_EQ("2", buf);
 }
 
 TEST(printf_f_longdouble) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.2Lf", 1.5L);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_f_plus_zero_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+010.2f", 3.14);
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_TRUE(buf[0] == '+');
 }
 
 TEST(printf_f_space_zero_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "% 010.2f", 3.14);
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_TRUE(buf[0] == ' ');
 }
 
 TEST(printf_f_minus_plus_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-+10.2f", 3.14);
 	ASSERT_TRUE(buf[0] == '+');
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
 TEST(printf_f_zero_minus_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-10.2f", 3.14);  // Remove the conflicting 0 flag
 	ASSERT_TRUE(buf[0] != ' ' && buf[0] != '0');
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
 TEST(printf_f_dynamic_precision) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.*f", 3, 3.14159);
 	ASSERT_STR_EQ("3.142", buf);
 }
 
 TEST(printf_f_dynamic_width_precision) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%*.*f", 10, 2, 3.14159);
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_TRUE(strchr(buf, '.') != NULL);
@@ -526,7 +566,7 @@ TEST(printf_f_dynamic_width_precision) {
 
 TEST(printf_f_negative_nan)
 {
-	char buf[256];
+	char buf[256] = {0};
 	long double ld = -NAN;
 	snprintf(buf, sizeof(buf), "%.2Lf", ld);
 	ASSERT_TRUE(strchr(buf, 'n') != NULL || strchr(buf, 'N') != NULL);
@@ -536,20 +576,20 @@ TEST(printf_f_negative_nan)
 TEST_SUITE(printf_g);
 
 TEST(printf_g_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3g", 0.001);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_g_uppercase) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3G", 1.23e5);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_g_precision) {
 	for (int p = 1; p < 5; p++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%.%dg", p);
 		snprintf(buf, sizeof(buf), fmt, 123.456);
 		ASSERT_TRUE(strlen(buf) > 0);
@@ -557,73 +597,73 @@ TEST(printf_g_precision) {
 }
 
 TEST(printf_g_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%15.3g", 123.456);
 	ASSERT_TRUE(strlen(buf) >= 15);
 }
 
 TEST(printf_g_left_align) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-15.3g", 123.456);
 	ASSERT_TRUE(buf[0] != ' ');
 }
 
 TEST(printf_g_zero_pad) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%015.3g", 123.456);
 	ASSERT_TRUE(strlen(buf) >= 15);
 }
 
 TEST(printf_g_plus_flag) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+.3g", 123.456);
 	ASSERT_TRUE(buf[0] == '+');
 }
 
 TEST(printf_g_space_flag) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "% .3g", 123.456);
 	ASSERT_TRUE(buf[0] == ' ');
 }
 
 TEST(printf_g_hash_flag) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#.3g", 123.456);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_g_large) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3g", 123456.789);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_g_small) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3g", 0.000001);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_g_inf) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3g", INFINITY);
 	ASSERT_STR_HAS("inf", buf);
 }
 
 TEST(printf_g_nan) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3g", NAN);
 	ASSERT_STR_HAS("nan", buf);
 }
 
 TEST(printf_g_longdouble) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3Lg", 123.456L);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_g_plus_zero_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%+010.3g", 123.456);
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_TRUE(buf[0] == '+');
@@ -631,7 +671,7 @@ TEST(printf_g_plus_zero_width) {
 
 TEST(printf_g_negative_nan)
 {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3g", -NAN);
 	ASSERT_TRUE(strchr(buf, 'n') != NULL);
 }
@@ -640,14 +680,14 @@ TEST(printf_g_negative_nan)
 TEST_SUITE(printf_n);
 
 TEST(printf_n_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	int count;
 	snprintf(buf, sizeof(buf), "hello%n", &count);
 	ASSERT_INT_EQ(5, count);
 }
 
 TEST(printf_n_multiple) {
-	char buf[256];
+	char buf[256] = {0};
 	int count1, count2;
 	snprintf(buf, sizeof(buf), "hi%nthere%n", &count1, &count2);
 	ASSERT_INT_EQ(2, count1);
@@ -655,21 +695,21 @@ TEST(printf_n_multiple) {
 }
 
 TEST(printf_n_short) {
-	char buf[256];
+	char buf[256] = {0};
 	short count;
 	snprintf(buf, sizeof(buf), "test%hn", &count);
 	ASSERT_INT_EQ(4, count);
 }
 
 TEST(printf_n_long) {
-	char buf[256];
+	char buf[256] = {0};
 	long count;
 	snprintf(buf, sizeof(buf), "lengthy%ln", &count);
 	ASSERT_INT_EQ(7, count);
 }
 
 TEST(printf_n_longlong) {
-	char buf[256];
+	char buf[256] = {0};
 	long long count;
 	snprintf(buf, sizeof(buf), "longlong%lln", &count);
 	ASSERT_INT_EQ(8, count);
@@ -679,50 +719,50 @@ TEST(printf_n_longlong) {
 TEST_SUITE(printf_o);
 
 TEST(printf_o_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%o", 64);
 	ASSERT_STR_EQ("100", buf);
 }
 
 TEST(printf_o_hash) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#o", 64);
 	ASSERT_TRUE(buf[0] == '0');
 }
 
 TEST(printf_o_width) {
-	char fmt[32], buf[256];
+	char fmt[32] = {0}, buf[256] = {0};
 	snprintf(fmt, sizeof(fmt), "%%10o");
 	snprintf(buf, sizeof(buf), fmt, 64);
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
 TEST(printf_o_zero) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%o", 0);
 	ASSERT_STR_EQ("0", buf);
 }
 
 TEST(printf_o_large) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%o", 777);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_o_hash_zero) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#o", 0);
 	ASSERT_STR_EQ("0", buf);
 }
 
 TEST(printf_o_hash_zero_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#010o", 64);
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
 TEST(printf_o_minus_hash_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-#10o", 64);
 	ASSERT_TRUE(buf[0] == '0');
 	ASSERT_TRUE(strlen(buf) >= 10);
@@ -732,34 +772,34 @@ TEST(printf_o_minus_hash_width) {
 TEST_SUITE(printf_p);
 
 TEST(printf_p_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	int x = 42;
 	snprintf(buf, sizeof(buf), "%p", (void*)&x);
 	ASSERT_STR_HAS("0x", buf);
 }
 
 TEST(printf_p_null) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%p", (void*)NULL);
 	ASSERT_STR_PRE("0x", buf);
 }
 
 TEST(printf_p_width) {
-	char buf[256];
+	char buf[256] = {0};
 	int y = 99;
 	snprintf(buf, sizeof(buf), "%20p", (void*)&y);
 	ASSERT_TRUE(strlen(buf) >= 20);
 }
 
 TEST(printf_p_left_align) {
-	char buf[256];
+	char buf[256] = {0};
 	int z = 77;
 	snprintf(buf, sizeof(buf), "%-20p", (void*)&z);
 	ASSERT_TRUE(buf[0] == '0');
 }
 
 TEST(printf_p_minus_width) {
-	char buf[256];
+	char buf[256] = {0};
 	int x;
 	snprintf(buf, sizeof(buf), "%-20p", (void*)&x);
 	ASSERT_TRUE(buf[0] == '0');
@@ -767,7 +807,7 @@ TEST(printf_p_minus_width) {
 }
 
 TEST(printf_p_width_pad) {
-	char buf[256];
+	char buf[256] = {0};
 	int x;
 	snprintf(buf, sizeof(buf), "%20p", (void*)&x);
 	ASSERT_TRUE(strlen(buf) >= 20);
@@ -777,43 +817,43 @@ TEST(printf_p_width_pad) {
 TEST_SUITE(printf_s);
 
 TEST(printf_s_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%s", "hello");
 	ASSERT_STR_EQ("hello", buf);
 }
 
 TEST(printf_s_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%10s", "hi");
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
 TEST(printf_s_left_align) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-10s", "left");
 	ASSERT_TRUE(buf[0] == 'l');
 }
 
 TEST(printf_s_precision) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%.3s", "hello");
 	ASSERT_STR_EQ("hel", buf);
 }
 
 TEST(printf_s_empty) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%s", "");
 	ASSERT_STR_EQ("", buf);
 }
 
 TEST(printf_s_null) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%s", (const char*)NULL);
 	ASSERT_STR_HAS("null", buf);
 }
 
 TEST(printf_s_minus_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-15s", "test");
 	ASSERT_TRUE(buf[0] == 't');
 	ASSERT_TRUE(strlen(buf) >= 15);
@@ -824,7 +864,7 @@ TEST_SUITE(printf_u);
 
 TEST(printf_u_basic) {
 	for (int i = 0; i < sizeof(uint_vals)/sizeof(uint_vals[0]); i++) {
-		char buf[256];
+		char buf[256] = {0};
 		snprintf(buf, sizeof(buf), "%u", uint_vals[i]);
 		ASSERT_TRUE(strlen(buf) > 0);
 	}
@@ -832,7 +872,7 @@ TEST(printf_u_basic) {
 
 TEST(printf_u_width) {
 	for (int w = 0; w < 5; w++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%%du", widths[w]);
 		snprintf(buf, sizeof(buf), fmt, 42u);
 		ASSERT_TRUE(strlen(buf) > 0);
@@ -840,32 +880,32 @@ TEST(printf_u_width) {
 }
 
 TEST(printf_u_zero_pad) {
-	char fmt[32], buf[256];
+	char fmt[32] = {0}, buf[256] = {0};
 	snprintf(fmt, sizeof(fmt), "%%010u");
 	snprintf(buf, sizeof(buf), fmt, 42u);
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
 TEST(printf_u_large) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%u", 4294967295u);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_u_zero) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%u", 0);
 	ASSERT_STR_EQ("0", buf);
 }
 
 TEST(printf_u_zero_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%010u", 42);
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
 TEST(printf_u_minus_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-10u", 42);
 	ASSERT_TRUE(buf[0] != ' ');
 }
@@ -874,26 +914,26 @@ TEST(printf_u_minus_width) {
 TEST_SUITE(printf_x);
 
 TEST(printf_x_lowercase) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%x", 255);
 	ASSERT_STR_EQ("ff", buf);
 }
 
 TEST(printf_x_uppercase) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%X", 255);
 	ASSERT_STR_EQ("FF", buf);
 }
 
 TEST(printf_x_hash) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#x", 255);
 	ASSERT_TRUE(buf[0] == '0' && buf[1] == 'x');
 }
 
 TEST(printf_x_width) {
 	for (int w = 0; w < 5; w++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%%dx", widths[w]);
 		snprintf(buf, sizeof(buf), fmt, 42);
 		ASSERT_TRUE(strlen(buf) > 0);
@@ -902,7 +942,7 @@ TEST(printf_x_width) {
 
 TEST(printf_x_precision) {
 	for (int p = 0; p < 4; p++) {
-		char fmt[32], buf[256];
+		char fmt[32] = {0}, buf[256] = {0};
 		snprintf(fmt, sizeof(fmt), "%%.%dx", precisions[p]);
 		snprintf(buf, sizeof(buf), fmt, 42);
 		ASSERT_TRUE(strlen(buf) > 0);
@@ -910,52 +950,106 @@ TEST(printf_x_precision) {
 }
 
 TEST(printf_x_zero) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%x", 0);
 	ASSERT_STR_EQ("0", buf);
 }
 
 TEST(printf_x_large) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%x", 0xdeadbeef);
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
 TEST(printf_x_hash_zero) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#x", 0);
 	ASSERT_STR_EQ("0", buf);
 }
 
 TEST(printf_x_hash_zero_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#010x", 255);
 	ASSERT_TRUE(strlen(buf) >= 10);
 	ASSERT_STR_HAS("0x", buf);
 }
 
 TEST(printf_x_hash_uppercase) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%#X", 255);
 	ASSERT_TRUE(strchr(buf, 'X') || strchr(buf, 'x'));
 }
 
 TEST(printf_x_minus_hash_width) {
-	char buf[256];
+	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%-#10x", 255);
 	ASSERT_TRUE(buf[0] == '0');
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
+/* ============= Printf: max ============= */
+TEST_SUITE(printf_max)
+
+TEST(printf_max_intmax) {
+	char buf[128] = {0};
+	snprintf(buf, sizeof(buf), "%" PRIdMAX, CAST_INTMAX(INTMAX_MAX));
+	ASSERT_TRUE(strlen(buf) > 0);
+}
+
+TEST(printf_max_uintmax) {
+	char buf[128] = {0};
+	snprintf(buf, sizeof(buf), "%" PRIuMAX, CAST_UINTMAX(UINTMAX_MAX));
+	ASSERT_TRUE(strlen(buf) > 0);
+}
+
+TEST(printf_max_intptr) {
+	char buf[64] = {0};
+	snprintf(buf, sizeof(buf), "%" PRIdPTR, CAST_INTPTR(INTPTR_MAX));
+	ASSERT_TRUE(strlen(buf) > 0);
+}
+
+TEST(printf_max_uintptr) {
+	char buf[64] = {0};
+	snprintf(buf, sizeof(buf), "%" PRIuPTR, CAST_UINTPTR(UINTPTR_MAX));
+	ASSERT_TRUE(strlen(buf) > 0);
+}
+
+/* ============= Printf: min ============= */
+TEST_SUITE(printf_min)
+
+TEST(printf_min_intmax) {
+	char buf[128] = {0};
+	snprintf(buf, sizeof(buf), "%" PRIdMAX, CAST_INTMAX(INTMAX_MIN));
+	ASSERT_TRUE(strlen(buf) > 0 && buf[0] == '-');
+}
+
+TEST(printf_min_uintmax) {
+	char buf[128] = {0};
+	snprintf(buf, sizeof(buf), "%" PRIuMAX, CAST_UINTMAX(0));
+	ASSERT_STR_EQ(buf, "0");
+}
+
+TEST(printf_min_intptr) {
+	char buf[64] = {0};
+	snprintf(buf, sizeof(buf), "%" PRIdPTR, CAST_INTPTR(INTPTR_MIN));
+	ASSERT_TRUE(strlen(buf) > 0 && buf[0] == '-');
+}
+
+TEST(printf_min_uintptr) {
+	char buf[64] = {0};
+	snprintf(buf, sizeof(buf), "%" PRIuPTR, CAST_UINTPTR(0));
+	ASSERT_STR_EQ(buf, "0");
+}
+
 /* ============================================================= */
-/* SCANF TESTS (Alphabetical by Specifier)                      */
+/* SCANF TESTS (Alphabetical by Specifier)					  */
 /* ============================================================= */
 
 /* ============= Scanf: %c (character) ============= */
 TEST_SUITE(scanf_c);
 
 TEST(scanf_c_basic) {
-	char buf[256];
+	char buf[256] = {0};
 	char parsed;
 	snprintf(buf, sizeof(buf), "%c", 'Z');
 	sscanf(buf, "%c", &parsed);
@@ -979,7 +1073,7 @@ TEST_SUITE(scanf_d);
 
 TEST(scanf_d_roundtrip) {
 	for (int i = 0; i < sizeof(int_vals)/sizeof(int_vals[0]); i++) {
-		char buf[256];
+		char buf[256] = {0};
 		int parsed;
 		snprintf(buf, sizeof(buf), "%d", int_vals[i]);
 		sscanf(buf, "%d", &parsed);
@@ -988,7 +1082,7 @@ TEST(scanf_d_roundtrip) {
 }
 
 TEST(scanf_d_width) {
-	char buf[256];
+	char buf[256] = {0};
 	int parsed = 99;
 	snprintf(buf, sizeof(buf), "   42");
 	int ret = sscanf(buf, "%5d", &parsed);
@@ -996,7 +1090,7 @@ TEST(scanf_d_width) {
 }
 
 TEST(scanf_d_negative) {
-	char buf[256];
+	char buf[256] = {0};
 	int parsed;
 	snprintf(buf, sizeof(buf), "-1234");
 	sscanf(buf, "%d", &parsed);
@@ -1081,7 +1175,7 @@ TEST_SUITE(scanf_f);
 
 TEST(scanf_f_roundtrip) {
 	for (int i = 0; i < 6; i++) {
-		char buf[256];
+		char buf[256] = {0};
 		double parsed;
 		snprintf(buf, sizeof(buf), "%.6f", dbl_vals[i]);
 		sscanf(buf, "%lf", &parsed);
@@ -1090,7 +1184,7 @@ TEST(scanf_f_roundtrip) {
 }
 
 TEST(scanf_f_precision) {
-	char buf[256];
+	char buf[256] = {0};
 	double parsed;
 	snprintf(buf, sizeof(buf), "%.4f", 123.456);
 	sscanf(buf, "%lf", &parsed);
@@ -1098,7 +1192,7 @@ TEST(scanf_f_precision) {
 }
 
 TEST(scanf_f_width) {
-	char buf[256];
+	char buf[256] = {0};
 	double parsed;
 	snprintf(buf, sizeof(buf), "%15.6f", 1.23e5);
 	sscanf(buf, "%lf", &parsed);
@@ -1167,7 +1261,7 @@ TEST(scanf_g_uppercase) {
 }
 
 TEST(scanf_g_roundtrip) {
-	char buf[256];
+	char buf[256] = {0};
 	double parsed;
 	snprintf(buf, sizeof(buf), "%.3g", 0.001);
 	sscanf(buf, "%lg", &parsed);
@@ -1270,26 +1364,35 @@ TEST(scanf_o_zero) {
 TEST_SUITE(scanf_s);
 
 TEST(scanf_s_basic) {
-	char parsed[256];
+	char parsed[256] = {0};
 	sscanf("hello", "%s", parsed);
 	ASSERT_STR_EQ("hello", parsed);
 }
 
 TEST(scanf_s_width) {
-	char s[256];
+	char s[256] = {0};
 	sscanf("hello world", "%5s", s);
 	ASSERT_STR_EQ("hello", s);
 }
 
 TEST(scanf_s_multiple) {
-	char s1[256], s2[256];
+	char s1[256] = {0}, s2[256] = {0};
 	sscanf("one two", "%s %s", s1, s2);
 	ASSERT_STR_EQ("one", s1);
 	ASSERT_STR_EQ("two", s2);
 }
 
+TEST(scanf_s_multiple2) {
+	char s1[256] = "BEFORE", s2[256] = "BEFORE";
+	int ret = sscanf("one two", "%s %s", s1, s2);
+
+	ASSERT_STR_EQ("one", s1);
+	ASSERT_STR_EQ("two", s2);
+}
+
+
 TEST(scanf_s_single) {
-	char s[256];
+	char s[256] = {0};
 	sscanf("x", "%s", s);
 	ASSERT_STR_EQ("x", s);
 }
@@ -1299,7 +1402,7 @@ TEST_SUITE(scanf_u);
 
 TEST(scanf_u_roundtrip) {
 	for (int i = 0; i < 5; i++) {
-		char buf[256];
+		char buf[256] = {0};
 		unsigned int parsed;
 		snprintf(buf, sizeof(buf), "%u", uint_vals[i]);
 		sscanf(buf, "%u", &parsed);
@@ -1308,7 +1411,7 @@ TEST(scanf_u_roundtrip) {
 }
 
 TEST(scanf_u_width) {
-	char buf[256];
+	char buf[256] = {0};
 	unsigned int parsed;
 	snprintf(buf, sizeof(buf), "0000042");
 	sscanf(buf, "%7u", &parsed);
@@ -1384,19 +1487,19 @@ TEST(scanf_x_negative) {
 TEST_SUITE(scanf_bracket);
 
 TEST(scanf_bracket_include) {
-	char s[256];
+	char s[256] = {0};
 	sscanf("abc123xyz", "%[a-z]", s);
 	ASSERT_STR_EQ("abc", s);
 }
 
 TEST(scanf_bracket_exclude) {
-	char s[256];
+	char s[256] = {0};
 	sscanf("abc123xyz", "%[^0-9]", s);
 	ASSERT_STR_EQ("abc", s);
 }
 
 TEST(scanf_bracket_opendash) {
-	char s1[8], s2[8], s3[8];
+	char s1[8] = {0}, s2[8] = {0}, s3[8] = {0};
 	sscanf("abc-123-xyz", "%[^0-9-]-%[1-3]%[-x-z]", s1, s2, s3);
 	ASSERT_STR_EQ("abc", s1);
 	ASSERT_STR_EQ("123", s2);
@@ -1404,7 +1507,7 @@ TEST(scanf_bracket_opendash) {
 }
 
 TEST(scanf_bracket_digits) {
-	char s[256];
+	char s[256] = {0};
 	sscanf("12345abc", "%[0-9]", s);
 	ASSERT_STR_EQ("12345", s);
 }
@@ -1427,21 +1530,21 @@ TEST(scanf_suppress_float) {
 }
 
 TEST(scanf_suppress_string) {
-	char s[256];
+	char s[256] = {0};
 	int ret = sscanf("hello world", "%*s %s", s);
 	ASSERT_INT_EQ(1, ret);
 	ASSERT_STR_EQ("world", s);
 }
 
 TEST(scanf_suppress_char) {
-	char s[2];
+	char s[2] = {0};
 	int ret = sscanf("OK", "%*c%c", s);
 	ASSERT_INT_EQ(1, ret);
 	ASSERT_STR_EQ("K", s);
 }
 
 TEST(scanf_suppress_scan) {
-	char s[16];
+	char s[16] = {0};
 	int ret = sscanf("asdf", "%*[as]%[df]]", s);
 	ASSERT_INT_EQ(1, ret);
 	ASSERT_STR_EQ("df", s);
@@ -1495,15 +1598,81 @@ TEST(scanf_edge_leading_space) {
 	ASSERT_INT_EQ(99, d);
 }
 
+/* ============= Scanf: max ============= */
+TEST_SUITE(scanf_max)
+
+TEST(scanf_max_intmax) {
+	char input[128] = {0};
+	snprintf(input, sizeof(input), "%" PRIdMAX, CAST_INTMAX(INTMAX_MAX));
+	intmax_t actual = 0;
+	sscanf(input, "%" SCNdMAX, READ_INTMAX(&actual));
+	ASSERT_EQ(actual, INTMAX_MAX);
+}
+
+TEST(scanf_max_uintmax) {
+	char input[128] = {0};
+	snprintf(input, sizeof(input), "%" PRIuMAX, CAST_UINTMAX(UINTMAX_MAX));
+	uintmax_t actual = 0;
+	sscanf(input, "%" SCNuMAX, READ_UINTMAX(&actual));
+	ASSERT_EQ(actual, UINTMAX_MAX);
+}
+
+TEST(scanf_max_intptr) {
+	char input[64] = {0};
+	snprintf(input, sizeof(input), "%" PRIdPTR, CAST_INTPTR(INTPTR_MAX));
+	intptr_t actual = 0;
+	sscanf(input, "%" SCNdPTR, READ_INTPTR(&actual));
+	ASSERT_EQ(actual, INTPTR_MAX);
+}
+
+TEST(scanf_max_uintptr) {
+	char input[64] = {0};
+	snprintf(input, sizeof(input), "%" PRIuPTR, CAST_UINTPTR(UINTPTR_MAX));
+	uintptr_t actual = 0;
+	sscanf(input, "%" SCNuPTR, READ_UINTPTR(&actual));
+	ASSERT_EQ(actual, UINTPTR_MAX);
+}
+
+/* ============= Scanf: min ============= */
+TEST_SUITE(scanf_min)
+
+TEST(scanf_min_intmax) {
+	char input[128] = {0};
+	snprintf(input, sizeof(input), "%" PRIdMAX, CAST_INTMAX(INTMAX_MIN));
+	intmax_t actual = 0;
+	sscanf(input, "%" SCNdMAX, READ_INTMAX(&actual));
+	ASSERT_EQ(actual, INTMAX_MIN);
+}
+
+TEST(scanf_min_uintmax) {
+	uintmax_t actual = 999;
+	sscanf("0", "%" SCNuMAX, READ_UINTMAX(&actual));
+	ASSERT_EQ(actual, 0);
+}
+
+TEST(scanf_min_intptr) {
+	char input[64] = {0};
+	snprintf(input, sizeof(input), "%" PRIdPTR, CAST_INTPTR(INTPTR_MIN));
+	intptr_t actual = 0;
+	sscanf(input, "%" SCNdPTR, READ_INTPTR(&actual));
+	ASSERT_EQ(actual, INTPTR_MIN);
+}
+
+TEST(scanf_min_uintptr) {
+	uintptr_t actual = 999;
+	sscanf("0", "%" SCNuPTR, READ_UINTPTR(&actual));
+	ASSERT_EQ(actual, 0);
+}
+
 /* ============================================================= */
-/* ROUNDTRIP TESTS (printf → scanf)                              */
+/* ROUNDTRIP TESTS (printf → scanf)							  */
 /* ============================================================= */
 
 TEST_SUITE(roundtrip);
 
 TEST(roundtrip_d_d) {
 	for (int i = 0; i < sizeof(int_vals)/sizeof(int_vals[0]); i++) {
-		char buf[256];
+		char buf[256] = {0};
 		int parsed;
 		snprintf(buf, sizeof(buf), "%d", int_vals[i]);
 		sscanf(buf, "%d", &parsed);
@@ -1513,7 +1682,7 @@ TEST(roundtrip_d_d) {
 
 TEST(roundtrip_u_u) {
 	for (int i = 0; i < 5; i++) {
-		char buf[256];
+		char buf[256] = {0};
 		unsigned int parsed;
 		snprintf(buf, sizeof(buf), "%u", uint_vals[i]);
 		sscanf(buf, "%u", &parsed);
@@ -1524,7 +1693,7 @@ TEST(roundtrip_u_u) {
 TEST(roundtrip_x_x) {
 	unsigned int test_vals[] = {0, 255, 0xdeadbeef, 0xFFFFFFFF};
 	for (int i = 0; i < sizeof(test_vals)/sizeof(test_vals[0]); i++) {
-		char buf[256];
+		char buf[256] = {0};
 		unsigned int parsed;
 		snprintf(buf, sizeof(buf), "%x", test_vals[i]);
 		sscanf(buf, "%x", &parsed);
@@ -1534,7 +1703,7 @@ TEST(roundtrip_x_x) {
 
 TEST(roundtrip_f_f) {
 	for (int i = 0; i < 6; i++) {
-		char buf[256];
+		char buf[256] = {0};
 		double parsed;
 		snprintf(buf, sizeof(buf), "%.6f", dbl_vals[i]);
 		sscanf(buf, "%lf", &parsed);
@@ -1543,7 +1712,7 @@ TEST(roundtrip_f_f) {
 }
 
 TEST(roundtrip_f_inf) {
-	char buf[256];
+	char buf[256] = {0};
 	double parsed;
 	snprintf(buf, sizeof(buf), "%.2f", INFINITY);
 	sscanf(buf, "%lf", &parsed);
@@ -1551,7 +1720,7 @@ TEST(roundtrip_f_inf) {
 }
 
 TEST(roundtrip_f_nan) {
-	char buf[256];
+	char buf[256] = {0};
 	double parsed;
 	snprintf(buf, sizeof(buf), "%.2f", NAN);
 	sscanf(buf, "%lf", &parsed);
@@ -1561,7 +1730,7 @@ TEST(roundtrip_f_nan) {
 TEST(roundtrip_e_e) {
 	double test_vals[] = {1.23e-5, 1.23e5, -4.56e3, 0.0};
 	for (int i = 0; i < sizeof(test_vals)/sizeof(test_vals[0]); i++) {
-		char buf[256];
+		char buf[256] = {0};
 		double parsed;
 		snprintf(buf, sizeof(buf), "%.2e", test_vals[i]);
 		sscanf(buf, "%le", &parsed);
@@ -1572,7 +1741,7 @@ TEST(roundtrip_e_e) {
 TEST(roundtrip_g_g) {
 	double test_vals[] = {0.001, 123.456, 0.000001, 123456.789};
 	for (int i = 0; i < sizeof(test_vals)/sizeof(test_vals[0]); i++) {
-		char buf[256];
+		char buf[256] = {0};
 		double parsed;
 		snprintf(buf, sizeof(buf), "%.9g", test_vals[i]);
 		sscanf(buf, "%lg", &parsed);
@@ -1642,14 +1811,14 @@ TEST(roundtrip_tmpfile_mixed) {
 }
 
 /* ============================================================= */
-/* FILE I/O TESTS                                                */
+/* FILE I/O TESTS												*/
 /* ============================================================= */
 
 /* ============= fopen (file opening modes) ============= */
 TEST_SUITE(fopen);
 
 TEST(fopen_write_truncate) {
-	char tmpname[L_tmpnam];
+	char tmpname[L_tmpnam] = {0};
 	tmpnam(tmpname);
 
 	FILE *f = fopen(tmpname, "w");
@@ -1661,7 +1830,7 @@ TEST(fopen_write_truncate) {
 }
 
 TEST(fopen_read_after_write) {
-	char tmpname[L_tmpnam];
+	char tmpname[L_tmpnam] = {0};
 	tmpnam(tmpname);
 
 	FILE *f = fopen(tmpname, "w");
@@ -1670,7 +1839,7 @@ TEST(fopen_read_after_write) {
 
 	FILE *r = fopen(tmpname, "r");
 	ASSERT_NOT_NULL(r);
-	char buf[256];
+	char buf[256] = {0};
 	fgets(buf, sizeof(buf), r);
 	ASSERT_STR_EQ("hello", buf);
 	fclose(r);
@@ -1679,14 +1848,14 @@ TEST(fopen_read_after_write) {
 }
 
 TEST(fopen_read_write_plus) {
-	char tmpname[L_tmpnam];
+	char tmpname[L_tmpnam] = {0};
 	tmpnam(tmpname);
 
 	FILE *f = fopen(tmpname, "w+");
 	ASSERT_NOT_NULL(f);
 	fprintf(f, "test");
 	rewind(f);
-	char buf[256];
+	char buf[256] = {0};
 	fgets(buf, sizeof(buf), f);
 	ASSERT_STR_EQ("test", buf);
 	fclose(f);
@@ -1695,7 +1864,7 @@ TEST(fopen_read_write_plus) {
 }
 
 TEST(fopen_append_mode) {
-	char tmpname[L_tmpnam];
+	char tmpname[L_tmpnam] = {0};
 	tmpnam(tmpname);
 
 	/* Write line1 */
@@ -1713,7 +1882,7 @@ TEST(fopen_append_mode) {
 	/* Read back and check */
 	FILE *f3 = fopen(tmpname, "r");
 	ASSERT_NOT_NULL(f3);
-	char line1[64], line2[64];
+	char line1[64] = {0}, line2[64] = {0};
 	fgets(line1, sizeof(line1), f3);
 	fgets(line2, sizeof(line2), f3);
 	fclose(f3);
@@ -1742,7 +1911,7 @@ TEST(fclose_after_read) {
 	FILE *f = tmpfile();
 	fprintf(f, "content");
 	rewind(f);
-	char buf[256];
+	char buf[256] = {0};
 	fread(buf, 1, 7, f);
 	ASSERT_INT_EQ(0, fclose(f));
 }
@@ -1761,7 +1930,7 @@ TEST(fread_exact_size) {
 	fwrite("hello world", 1, 11, f);
 	rewind(f);
 
-	char buf[256];
+	char buf[256] = {0};
 	size_t n = fread(buf, 1, 11, f);
 	ASSERT_INT_EQ(11, n);
 	buf[11] = '\0';
@@ -1774,7 +1943,7 @@ TEST(fread_partial) {
 	fwrite("0123456789", 1, 10, f);
 	rewind(f);
 
-	char buf[256];
+	char buf[256] = {0};
 	size_t n = fread(buf, 1, 5, f);
 	ASSERT_INT_EQ(5, n);
 	buf[5] = '\0';
@@ -1787,7 +1956,7 @@ TEST(fread_multi_item) {
 	fwrite("ABCDEF", 2, 3, f);
 	rewind(f);
 
-	char buf[256];
+	char buf[256] = {0};
 	size_t n = fread(buf, 2, 3, f);
 	ASSERT_INT_EQ(3, n);
 	fclose(f);
@@ -1798,7 +1967,7 @@ TEST(fread_eof) {
 	fwrite("hi", 1, 2, f);
 	rewind(f);
 
-	char buf[256];
+	char buf[256] = {0};
 	fread(buf, 1, 2, f);
 	size_t n = fread(buf, 1, 10, f);
 	ASSERT_INT_EQ(0, n);
@@ -1896,7 +2065,7 @@ TEST(fgets_full_line) {
 	fputs("hello\n", f);
 	rewind(f);
 
-	char buf[256];
+	char buf[256] = {0};
 	char *result = fgets(buf, sizeof(buf), f);
 	ASSERT_NOT_NULL(result);
 	ASSERT_STR_EQ("hello\n", buf);
@@ -1908,7 +2077,7 @@ TEST(fgets_truncate_long_line) {
 	fputs("0123456789", f);
 	rewind(f);
 
-	char buf[5];
+	char buf[5] = {0};
 	char *result = fgets(buf, 5, f);
 	ASSERT_NOT_NULL(result);
 	ASSERT_STR_EQ("0123", buf);
@@ -1920,7 +2089,7 @@ TEST(fgets_eof) {
 	fputs("data", f);
 	rewind(f);
 
-	char buf[256];
+	char buf[256] = {0};
 	fgets(buf, sizeof(buf), f);
 	char *result = fgets(buf, sizeof(buf), f);
 	ASSERT_NULL(result);
@@ -1936,7 +2105,7 @@ TEST(fputs_basic) {
 	ASSERT_INT_EQ(0, ret);
 	rewind(f);
 
-	char buf[256];
+	char buf[256] = {0};
 	fgets(buf, sizeof(buf), f);
 	ASSERT_STR_EQ("hello", buf);
 	fclose(f);
@@ -1948,7 +2117,7 @@ TEST(fputs_with_newline) {
 	fputs("line2\n", f);
 	rewind(f);
 
-	char buf[256];
+	char buf[256] = {0};
 	fgets(buf, sizeof(buf), f);
 	ASSERT_STR_EQ("line1\n", buf);
 	fclose(f);
@@ -2069,7 +2238,7 @@ TEST(feof_at_end) {
 	fflush(f);
 	rewind(f);
 
-	char buf[2];
+	char buf[2] = {0};
 	fread(buf, 1, 1, f);
 
 	int c = fgetc(f);
@@ -2125,7 +2294,7 @@ TEST_SUITE(setbuf);
 
 TEST(setbuf_user_buffer) {
 	FILE *f = tmpfile();
-	char mybuf[512];
+	char mybuf[512] = {0};
 	setbuf(f, mybuf);
 	fprintf(f, "test");
 	fclose(f);
@@ -2137,7 +2306,7 @@ TEST(setbuf_user_buffer) {
 TEST_SUITE(fdopen);
 
 TEST(fdopen_from_pipe) {
-	int pipefd[2];
+	int pipefd[2] = {0};
 	ASSERT_INT_EQ(0, pipe(pipefd));
 
 	FILE *f = fdopen(pipefd[0], "r");
@@ -2154,7 +2323,7 @@ TEST(tmpfile_read_write) {
 	ASSERT_NOT_NULL(f);
 	fprintf(f, "temporary");
 	rewind(f);
-	char buf[256];
+	char buf[256] = {0};
 	fgets(buf, sizeof(buf), f);
 	ASSERT_STR_EQ("temporary", buf);
 	fclose(f);
@@ -2164,7 +2333,7 @@ TEST(tmpfile_read_write) {
 TEST_SUITE(tmpnam);
 
 TEST(tmpnam_generates_name) {
-	char name[L_tmpnam];
+	char name[L_tmpnam] = {0};
 	char *result = tmpnam(name);
 	ASSERT_NOT_NULL(result);
 	ASSERT_TRUE(strlen(name) > 0);

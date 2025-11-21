@@ -5,7 +5,7 @@
 
 /* Include basic types */
 #include <config.h>
-#include <stdint.h>  // fixed-width types
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,40 +32,40 @@ extern "C" {
 #endif
 
 /* Process and user types */
-typedef int pid_t;                /* Process ID type */
-typedef unsigned int uid_t;       /* User ID type */
-typedef unsigned int gid_t;       /* Group ID type */
-typedef unsigned int id_t;        /* General ID type */
+typedef int            pid_t;        /* Process ID type */
+typedef unsigned int   uid_t;        /* User ID type */
+typedef unsigned int   gid_t;        /* Group ID type */
+typedef unsigned int   id_t;         /* General ID type */
 
 /* File system types */
-typedef unsigned int mode_t;      /* File mode/permissions */
-typedef unsigned long ino_t;      /* Inode number */
-typedef unsigned int dev_t;       /* Device ID */
-typedef unsigned int nlink_t;     /* Link count */
+typedef unsigned int   mode_t;       /* File mode/permissions */
+typedef unsigned long  ino_t;        /* Inode number */
+typedef unsigned int   dev_t;        /* Device ID */
+typedef unsigned int   nlink_t;      /* Link count */
 
 /* Block and file system types */
-typedef long blkcnt_t;            /* Block count */
-typedef long blksize_t;           /* Block size */
-typedef unsigned long fsblkcnt_t; /* File system block count */
-typedef unsigned long fsfilcnt_t; /* File system file count */
+typedef long           blkcnt_t;     /* Block count */
+typedef long           blksize_t;    /* Block size */
+typedef unsigned long  fsblkcnt_t;   /* File system block count */
+typedef unsigned long  fsfilcnt_t;   /* File system file count */
 
 /* Timing types */
-typedef int clockid_t;            /* Clock identifier */
+typedef int            clockid_t;    /* Clock identifier */
 
 /* Microseconds types */
-typedef unsigned int useconds_t;  /* Microseconds (0 to 1000000) */
-typedef int suseconds_t;          /* Signed microseconds */
+typedef unsigned int   useconds_t;   /* Microseconds (0 to 1000000) */
+typedef int            suseconds_t;  /* Signed microseconds */
 
 /* Large file support types */
 #if JACL_HAS_LFS
-typedef long long off64_t;      /* 64-bit file offset */
-typedef long long blkcnt64_t;   /* 64-bit block count */
+typedef long long      off64_t;      /* 64-bit file offset */
+typedef long long      blkcnt64_t;   /* 64-bit block count */
 #endif
 
 #if JACL_64BIT
-	typedef long ssize_t;
+typedef long           ssize_t;
 #else
-	typedef int ssize_t;
+typedef int            ssize_t;
 #endif
 
 #ifdef __cplusplus

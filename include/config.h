@@ -20,6 +20,10 @@
 #define JACL_INIT(name) static void __attribute__((constructor)) JACL_CONCAT_EXPAND(__jacl_init_##name, __LINE__, _)(void)
 #define JACL_HEADER(dir, file) <dir/file.h>
 
+/* ============================================================= */
+/* C Standards Detection                                         */
+/* ============================================================= */
+
 // standard version
 #if defined(__STDC_VERSION__)
 	#if __STDC_VERSION__ >= 202311L
@@ -93,31 +97,10 @@
 	#endif /* !__cplusplus */
 #endif /* !JACL_HAS_C23 */
 
-// thread support detection
-#if defined(_POSIX_THREADS) || defined(__pthreads__)
-  #define JACL_HAS_PTHREADS 1
-#else /* no pthreads */
-  #define JACL_HAS_PTHREADS 0
-#endif /* pthreads */
+/* ============================================================= */
+/* Architecture Detection                                        */
+/* ============================================================= */
 
-// Feature attribute detection
-#ifndef __has_attribute
-  #define __has_attribute(x) 0
-#endif /* !__has_attribute */
-
-// Feature attribute detection
-#ifndef __has_builtin
-  #define __has_builtin(x) 0
-#endif /* !__has_builtin */
-
-// Check for atomic builtin support
-#if __has_builtin(__atomic_load_n) && __has_builtin(__atomic_compare_exchange_n) && __has_builtin(__atomic_store_n)
-	#define JACL_HAS_ATOMIC_BUILTINS 1
-#else /* no atomic builtins */
-	#define JACL_HAS_ATOMIC_BUILTINS 0
-#endif /*atomic builtins */
-
-// architecture
 #if defined(__i386__)
 	#undef x86
 	#define JACL_ARCH x86
@@ -163,7 +146,10 @@
 	#error "JACLibc - Unsupported Architecture"
 #endif /* arch check */
 
-// operating system
+/* ============================================================= */
+/* Operating System Detection                                    */
+/* ============================================================= */
+
 #if defined(__linux__)
 	#undef linux
 	#define JACL_OS linux
@@ -171,7 +157,7 @@
 	#define __jacl_os_syscall __linux_syscall
 #elif defined(_WIN32)
 	#undef windows
-	#define JACL_OS windows
+#define JACL_OS windows
 	#define JACL_OS_WINDOWS 1
 	#define __jacl_os_syscall __windows_syscall
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -198,25 +184,38 @@
 	#error "JACLibc - Unsupported Operating System"
 #endif /* os check */
 
-// bit depth
+/* ============================================================= */
+/* Bit Depth Definitions                                         */
+/* ============================================================= */
+
+// Define bit depth
+#define JACL_8BIT  (JACL_BITS == 8)
 #define JACL_16BIT (JACL_BITS == 16)
 #define JACL_32BIT (JACL_BITS == 32)
 #define JACL_64BIT (JACL_BITS == 64)
 
 // Long double precision bits
 #if defined(JACL_ARCH_X86) || defined(JACL_ARCH_X64)
-  #if defined(_MSC_VER)
-    #define JACL_LDBL_BITS 64   // MSVC: long double == double
-  #else /* linux has 80bit long doubles */
-    #define JACL_LDBL_BITS 80   // GCC/Clang: 80-bit extended
-  #endif
-#elif defined(JACL_ARCH_ARM64) && defined(JACL_OS_LINUX) && defined(__LONG_DOUBLE_128__)
-  #define JACL_LDBL_BITS 128    // ARM64 quad precision
-#else /* arm64 has 128bit long doubles but regular arm has 64bit */
-  #define JACL_LDBL_BITS 64     // Everywhere else: double
+	#if defined(_MSC_VER)
+		#define JACL_LDBL_BITS 64
+	#elif defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 113
+		#define JACL_LDBL_BITS 128  // binary128
+	#elif defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+		#define JACL_LDBL_BITS 80   // x87
+	#elif defined(__SIZEOF_LONG_DOUBLE__) && __SIZEOF_LONG_DOUBLE__ == 16
+		#define JACL_LDBL_BITS 80   // probably x87 padded
+	#else
+		#define JACL_LDBL_BITS 64   // fallback to double
+	#endif
+#elif defined(JACL_ARCH_ARM64)
+	#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 113
+		#define JACL_LDBL_BITS 128
+	#else
+		#define JACL_LDBL_BITS 64
+	#endif
 #endif /* long double bits check */
 
-// Intenter max precision bits
+// Integer max precision bits
 #ifdef __INTMAX_WIDTH__
   #define JACL_INTMAX_BITS __INTMAX_WIDTH__
 #else
@@ -231,30 +230,32 @@
   #endif
 #endif
 
-// HAS large file support
-#if JACL_64BIT
-  #define JACL_HAS_LFS 1
-#elif defined(_LARGEFILE64_SOURCE) || defined(_GNU_SOURCE)
-  #define JACL_HAS_LFS 1
-#else /* no large file support */
-  #define JACL_HAS_LFS 0
-#endif /* large file support check */
+// wchar_t width detection
+#ifdef __WCHAR_WIDTH__
+  #define JACL_WCHAR_BITS __WCHAR_WIDTH__
+#elif defined(__SIZEOF_WCHAR_T__)
+  #define JACL_WCHAR_BITS (__SIZEOF_WCHAR_T__ * 8)
+#elif defined(_WIN32) || defined(_WIN64)
+  #define JACL_WCHAR_BITS 16    // Windows uses UTF-16
+#elif defined(__ARM_SIZEOF_WCHAR_T)
+  #define JACL_WCHAR_BITS (__ARM_SIZEOF_WCHAR_T * 8)
+#else
+  #define JACL_WCHAR_BITS 32    // Default: UTF-32/UCS-4
+#endif
 
-// Has POSIX
-#ifdef JACL_OS_WINDOWS
-	#define JACL_HAS_POSIX 0
-#else /* everything else */
-	#define JACL_HAS_POSIX 1
-#endif /* posix check */
+/* ============================================================= */
+/* Builtin Polyfills                                             */
+/* ============================================================= */
 
-//Compiler Optimization
-#if __has_builtin(__builtin_expect)
-		#define JACL_LIKELY(x)   __builtin_expect(!!(x), 1)
-		#define JACL_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#else /* notexpectation builtin */
-		#define JACL_LIKELY(x)   (x)
-		#define JACL_UNLIKELY(x) (x)
-#endif /* __builtin_expect */
+// Feature attribute detection
+#ifndef __has_attribute
+  #define __has_attribute(x) 0
+#endif /* !__has_attribute */
+
+// Guarantee builtin detection
+#ifndef __has_builtin
+  #define __has_builtin(x) 0
+#endif /* !__has_builtin */
 
 // Builtin Prefetch Polyfill
 #if !__has_builtin(__builtin_prefetch)
@@ -291,14 +292,59 @@ static inline void* __jacl_frame_address(int level) {
 }
 #endif /* __builtin_frame_address */
 
+/* ============================================================= */
+/* Speed Optimizations                                           */
+/* ============================================================= */
+
 // Fast math detection
 #ifndef JACL_FAST_MATH
-  #if defined(__FAST_MATH__) || defined(__FINITE_MATH_ONLY__)
+  #if (__FAST_MATH__ + 0 == 1) || (__FINITE_MATH_ONLY__ + 0 == 1)
     #define JACL_FAST_MATH 1
   #else /* no fast math */
     #define JACL_FAST_MATH 0
   #endif /* fast math check */
 #endif /* !JACL_FAST_MATH */
+
+// Safety check macro - compiles away in fast-math mode
+#if JACL_FAST_MATH
+  #define JACL_SAFETY(chk, rtn) do {} while(0)
+#else /* safe but slower */
+  #define JACL_SAFETY(chk, rtn) if (chk) return (rtn)
+#endif /* JACL_FAST_MATH */
+
+//Compiler Optimization
+#if __has_builtin(__builtin_expect)
+		#define JACL_LIKELY(x)   __builtin_expect(!!(x), 1)
+		#define JACL_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else /* notexpectation builtin */
+		#define JACL_LIKELY(x)   (x)
+		#define JACL_UNLIKELY(x) (x)
+#endif /* __builtin_expect */
+
+/* ============================================================= */
+/* Feature Flags                                                 */
+/* ============================================================= */
+
+// Has POSIX
+#ifdef JACL_OS_WINDOWS
+	#define JACL_HAS_POSIX 0
+#else /* everything else */
+	#define JACL_HAS_POSIX 1
+#endif /* posix check */
+
+// Check for atomic builtin support
+#if __has_builtin(__atomic_load_n) && __has_builtin(__atomic_compare_exchange_n) && __has_builtin(__atomic_store_n)
+	#define JACL_HAS_ATOMIC_BUILTINS 1
+#else /* no atomic builtins */
+	#define JACL_HAS_ATOMIC_BUILTINS 0
+#endif /*atomic builtins */
+
+// Thread support detection
+#if defined(_POSIX_THREADS) || defined(__pthreads__)
+  #define JACL_HAS_PTHREADS 1
+#else /* no pthreads */
+  #define JACL_HAS_PTHREADS 0
+#endif /* pthreads */
 
 // SIMD intrinsics
 #ifndef JACL_HAS_IMMINTRIN
@@ -309,11 +355,31 @@ static inline void* __jacl_frame_address(int level) {
   #endif /* immintrin check */
 #endif /* !JACL_HAS_IMMINTRIN */
 
-// Safety check macro - compiles away in fast-math mode
-#if JACL_FAST_MATH
-  #define JACL_SAFETY(chk, rtn) do {} while(0)
-#else /* safe but slower */
-  #define JACL_SAFETY(chk, rtn) if (chk) return (rtn)
-#endif /* JACL_FAST_MATH */
+// Floating point math
+#ifndef JACL_HAS_FLOAT
+  #if defined(__STDC_NO_FLOAT__)
+    #define JACL_HAS_FLOAT 0
+  #else
+    #define JACL_HAS_FLOAT 1
+  #endif
+#endif /* !JACL_HAS_FLOAT */
 
-#endif // CONFIG_H
+// Wide character support
+#ifndef JACL_HAS_WCHAR
+  #if defined(__STDC_NO_WCHAR_T__) || !JACL_HAS_POSIX
+    #define JACL_HAS_WCHAR 0
+  #else
+    #define JACL_HAS_WCHAR 1
+  #endif
+#endif /* !JACL_HAS_WCHAR */
+
+// Large file support
+#if JACL_64BIT
+  #define JACL_HAS_LFS 1
+#elif defined(_LARGEFILE64_SOURCE) || defined(_GNU_SOURCE)
+  #define JACL_HAS_LFS 1
+#else /* no large file support */
+  #define JACL_HAS_LFS 0
+#endif /* large file support check */
+
+#endif /* CONFIG_H */

@@ -4,18 +4,44 @@
 #pragma once
 
 #include <config.h>
+#include <limits.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Architecture-aware fundamental types */
+/* ============================================================= */
+/* Standard Types                                                */
+/* ============================================================= */
+
+/* size_t - unsigned size type */
 #if JACL_64BIT
 	typedef unsigned long size_t;
-	typedef long ptrdiff_t;
 #else
 	typedef unsigned int size_t;
+#endif
+
+/* ssize_t - signed size type (POSIX) */
+#if JACL_64BIT
+	typedef long ssize_t;
+#else
+	typedef int ssize_t;
+#endif
+
+/* ptrdiff_t - pointer difference type */
+#if JACL_64BIT
+	typedef long ptrdiff_t;
+#elif JACL_32BIT
 	typedef int ptrdiff_t;
+#elif JACL_16BIT
+	typedef short ptrdiff_t;
+#elif JACL_8BIT
+	typedef char ptrdiff_t;
+#endif
+
+/* wchar_t - wide character type */
+#ifndef __cplusplus
+	typedef int wchar_t;
 #endif
 
 /* NULL pointer constant */
@@ -87,18 +113,6 @@ extern "C" {
 
 /* Symbol redirection helper */
 #define __REDIR(name, proto, alias) static inline __typeof__(proto) name { return alias; }
-
-#ifndef __cplusplus
-#ifdef __WCHAR_TYPE__
-typedef __WCHAR_TYPE__ wchar_t;
-#else
-typedef long wchar_t;
-#endif
-#endif
-
-#ifndef SIZE_MAX
-#define SIZE_MAX           ((size_t)-1)
-#endif
 
 #ifdef __cplusplus
 }

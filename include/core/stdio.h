@@ -75,36 +75,29 @@ int __jacl_stream_flush(FILE* stream) {
 /* ============================================================= */
 /* Printf Implementations                                        */
 /* ============================================================= */
-int vprintf(const char * restrict fmt, va_list ap) {
-	char buf[BUFSIZ];
-	int len = __jacl_printf(buf, BUFSIZ, fmt, ap);
-	size_t to_write = (len >= BUFSIZ) ? BUFSIZ - 1 : (size_t)len;
-	if (fwrite(buf, 1, to_write, stdout) != to_write) return -1;
-	return (int)to_write;  // ✓ Actual written
-}
-int vfprintf(FILE * restrict stream, const char * restrict fmt, va_list ap) {
-	char buf[BUFSIZ];
-	int len = __jacl_printf(buf, BUFSIZ, fmt, ap);
-	size_t to_write = (len >= BUFSIZ) ? BUFSIZ - 1 : (size_t)len;
-	if (fwrite(buf, 1, to_write, stream) != to_write) return -1;
-	return (int)to_write;  // ✓ Actual written
-}
-int vsprintf(char * restrict s, const char * restrict fmt, va_list ap) {
-	return __jacl_printf(s, LLONG_MAX, fmt, ap);  // Unbounded
-}
+int vprintf(const char * restrict fmt, va_list ap) { return __jacl_printf(stdout, NULL, 0, fmt, ap); }
+int vfprintf(FILE * restrict stream, const char * restrict fmt, va_list ap) { return __jacl_printf(stream, NULL, 0, fmt, ap); }
+int vsprintf(char * restrict s, const char * restrict fmt, va_list ap) { return __jacl_printf(NULL, s, SIZE_MAX, fmt, ap); }
 
 int printf(const char* restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vprintf(fmt, ap); va_end(ap); return r; }
 int fprintf(FILE* restrict stream, const char* restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vfprintf(stream, fmt, ap); va_end(ap); return r; }
 int sprintf(char * restrict s, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsprintf(s, fmt, ap); va_end(ap); return r; }
 
 #if JACL_HAS_C99
-int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap) { return __jacl_printf(s, n, fmt, ap); }
+int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap) { return __jacl_printf(NULL, s, n, fmt, ap); }
 int vdprintf(int fd, const char* restrict fmt, va_list ap) {
-	char buf[BUFSIZ];
-	int len = vsnprintf(buf, BUFSIZ, fmt, ap);
-	size_t to_write = (len >= BUFSIZ) ? BUFSIZ - 1 : (size_t)len;
-	ssize_t written = write(fd, buf, to_write);
-	return written < 0 ? -1 : (int)written;  // ✓ Actual written
+	if (fd < 0) { errno = EBADF; return -1; }
+
+	__jacl_init_stdio();
+
+	for (STREAM_NODE* n = __jacl_stream_list; n; n = n->next) {
+		if (n->stream && n->stream->_fd == fd) return __jacl_printf(n->stream, NULL, 0, fmt, ap);
+	}
+
+	char dummy[1] = {0};
+	FILE temp = FILE_INIT(fd, __SWR, _IONBF, dummy);
+
+	return __jacl_printf(&temp, NULL, 0, fmt, ap);
 }
 int vasprintf(char **strp, const char *fmt, va_list ap) {
 	if (!strp || !fmt) { errno = EINVAL; return -1; }
@@ -153,12 +146,12 @@ int asprintf(char **strp, const char *fmt, ...) {
 /* ============================================================= */
 /* Scanf Implementations                                         */
 /* ============================================================= */
-int vscanf(const char * restrict fmt, va_list ap) { return __jacl_scanf(NULL, stdin, fmt, ap); }
+int vscanf(const char * restrict fmt, va_list ap) { return __jacl_scanf(stdin, NULL, fmt, ap); }
 int scanf(const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vscanf(fmt, ap); va_end(ap); return r; }
-int vfscanf(FILE * restrict stream, const char * restrict fmt, va_list ap) { return __jacl_scanf(NULL, stream, fmt, ap); }
+int vfscanf(FILE * restrict stream, const char * restrict fmt, va_list ap) { return __jacl_scanf(stream, NULL, fmt, ap); }
 int fscanf(FILE* restrict stream, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vfscanf(stream, fmt, ap); va_end(ap); return r; }
-int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap) { const char *in = s; return __jacl_scanf(&in, NULL, fmt, ap); }
-int sscanf(const char * restrict s, const char * restrict fmt, ...) { const char *in = s; va_list ap; va_start(ap, fmt); int r = vsscanf(s, fmt, ap); va_end(ap); return r; }
+int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap) { const char *in = s; return __jacl_scanf(NULL, &in, fmt, ap); }
+int sscanf(const char * restrict s, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsscanf(s, fmt, ap); va_end(ap); return r; }
 
 #ifdef __cplusplus
 }

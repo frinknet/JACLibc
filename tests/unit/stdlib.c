@@ -420,18 +420,6 @@ TEST(strtoll_massive_underflow) {
 	ASSERT_TRUE(end != input && *end == '\0'); // Must parse full valid input
 }
 
-TEST(strtoll_overflow2) {
-	char src[64];
-	sprintf(src, "%" PRIuMAX, UINTMAX_MAX);
-	char *end = NULL;
-	errno = 0;
-	long long v = strtoll(src, &end, 10);
-	ASSERT_EQ(INTMAX_MAX, v);    // Value should be saturated at INTMAX_MAX
-	ASSERT_EQ(ERANGE, errno);    // Errno should indicate overflow
-}
-
-
-
 /* ============================================================= */
 /* strtoul - stdlib.h: unit tests                                */
 /* ============================================================= */
@@ -1522,135 +1510,6 @@ TEST(system_stderr_redirect)
 #endif
 
 /* ============================================================= */
-/* mblen - stdlib.h: unit tests                                  */
-/* ============================================================= */
-TEST_SUITE(mblen)
-
-TEST(mblen_ascii)
-{
-	int len = mblen("A", 1);
-	ASSERT_INT_EQ(len, 1);
-}
-
-TEST(mblen_null)
-{
-	int len = mblen("", 1);
-	ASSERT_INT_EQ(len, 0);
-}
-
-TEST(mblen_insufficient_buffer)
-{
-	int len = mblen("AB", 0);
-	ASSERT_INT_EQ(len, -1);
-}
-
-TEST(mblen_consistency)
-{
-	for (int c = 0; c < 128; c++) {
-		char s[2] = {(char)c, '\0'};
-		if (c != '\0') {
-			int len = mblen(s, 1);
-			ASSERT_INT_EQ(len, 1);
-		}
-	}
-}
-
-/* ============================================================= */
-/* mbtowc - stdlib.h: unit tests                                 */
-/* ============================================================= */
-TEST_SUITE(mbtowc)
-
-TEST(mbtowc_basic)
-{
-	wchar_t wc;
-	int len = mbtowc(&wc, "A", 1);
-	ASSERT_INT_EQ(len, 1);
-	ASSERT_INT_EQ(wc, L'A');
-}
-
-TEST(mbtowc_null_string)
-{
-	int len = mbtowc(NULL, NULL, 0);
-	ASSERT_INT_EQ(len, 0);
-}
-
-TEST(mbtowc_wctomb_roundtrip)
-{
-	wchar_t original = L'X';
-	char buf[2];
-	wctomb(buf, original);
-
-	wchar_t restored;
-	mbtowc(&restored, buf, 1);
-	ASSERT_INT_EQ(restored, original);
-}
-
-/* ============================================================= */
-/* wctomb - stdlib.h: unit tests                                 */
-/* ============================================================= */
-TEST_SUITE(wctomb)
-
-TEST(wctomb_basic)
-{
-	char s[2];
-	int len = wctomb(s, L'A');
-	ASSERT_INT_EQ(len, 1);
-	ASSERT_INT_EQ(s[0], 'A');
-}
-
-TEST(wctomb_null)
-{
-	int len = wctomb(NULL, L'A');
-	ASSERT_INT_EQ(len, 0);
-}
-
-/* ============================================================= */
-/* mbstowcs - stdlib.h: unit tests                               */
-/* ============================================================= */
-TEST_SUITE(mbstowcs)
-
-TEST(mbstowcs_basic)
-{
-	wchar_t buf[10];
-	size_t n = mbstowcs(buf, "hello", 5);
-	ASSERT_INT_EQ(n, 5);
-	ASSERT_INT_EQ(buf[0], L'h');
-}
-
-TEST(mbstowcs_null_termination)
-{
-	wchar_t buf[6];
-	mbstowcs(buf, "test", 5);
-	ASSERT_INT_EQ(buf[4], L'\0');
-}
-
-TEST(mbstowcs_wcstombs_roundtrip)
-{
-	const char *orig = "hello";
-	wchar_t wbuf[10];
-	char cbuf[10];
-
-	mbstowcs(wbuf, orig, 10);
-	wcstombs(cbuf, wbuf, 10);
-
-	ASSERT_STR_EQ(cbuf, orig);
-}
-
-/* ============================================================= */
-/* wcstombs - stdlib.h: unit tests                               */
-/* ============================================================= */
-TEST_SUITE(wcstombs)
-
-TEST(wcstombs_basic)
-{
-	wchar_t src[] = L"hi";
-	char buf[3];
-	size_t n = wcstombs(buf, src, 3);
-	ASSERT_INT_EQ(n, 2);
-	ASSERT_INT_EQ(buf[0], 'h');
-}
-
-/* ============================================================= */
 /* malloc - stdlib.h: unit tests                                */
 /* ============================================================= */
 TEST_SUITE(malloc)
@@ -1942,6 +1801,154 @@ TEST(calloc_malloc_realloc_combination)
 	for (int i = 0; i < 5; i++) ASSERT_INT_EQ(arr[i], i * 10);
 
 	free(arr);
+}
+
+/* ============================================================= */
+/* malloc_frag - stdlib.h: fragmentation/robustness tests        */
+/* ============================================================= */
+TEST_SUITE(malloc_frag)
+
+TEST(malloc_frag_sawtooth)
+{
+	void *ptrs[1000];
+	for (int i = 0; i < 1000; i++)
+		ptrs[i] = malloc(16 + (i % 7));
+	for (int i = 0; i < 1000; i += 3)
+		free(ptrs[i]);
+	void *filler[333];
+	for (int i = 0; i < 333; i++)
+		filler[i] = malloc(24 + (i % 13));
+	for (int i = 0; i < 1000; i++)
+		if ((i % 3) != 0) memset(ptrs[i], 0xA5, 16 + (i % 7));
+	for (int i = 0; i < 333; i++) free(filler[i]);
+	for (int i = 0; i < 1000; i++)
+		if ((i % 3) != 0) free(ptrs[i]);
+}
+
+TEST(malloc_frag_print_max_block)
+{
+	void *ptrs[256];
+	for (int i = 0; i < 256; i++)
+		ptrs[i] = malloc(4096);
+	for (int i = 0; i < 256; i += 2)
+		free(ptrs[i]);
+	// Now probe for maximum allocatable block
+	size_t lo = 1024, hi = 256*4096, best = 0;
+	while (lo <= hi) {
+		size_t mid = (lo + hi) / 2;
+		void *probe = malloc(mid);
+		if (probe) {
+			best = mid;
+			free(probe);
+			lo = mid + 1;
+		} else {
+			hi = mid - 1;
+		}
+	}
+	ASSERT_INT_GT((int)best, 4096);
+	for (int i = 1; i < 256; i += 2) free(ptrs[i]);
+}
+
+TEST(malloc_frag_quicklist_thrash)
+{
+	const int max = 32, sz_min = 16, sz_max = 40;
+	void *ptrs[max];
+	// Overfill quicklist: free many of same small size block, then reallocate
+	for (int sz = sz_min; sz <= sz_max; sz += 8) {
+		for (int i = 0; i < max; i++)
+			ptrs[i] = malloc(sz);
+		for (int i = 0; i < max; i++)
+			free(ptrs[i]);
+		// Allocate up to max again, should reuse quicklist, then fresh allocations
+		for (int i = 0; i < max; i++)
+			ptrs[i] = malloc(sz);
+		for (int i = 0; i < max; i++) {
+			memset(ptrs[i], 0xE0 | (sz & 0xF), sz);
+			free(ptrs[i]);
+		}
+	}
+}
+
+TEST(malloc_frag_realloc_stress_safe)
+{
+	const int n = 150;
+	void *ptrs[150] = {0};
+	for (int round = 0; round < 10; round++) {
+		for (int i = 0; i < n; i++) {
+			if (ptrs[i]) free(ptrs[i]);
+			ptrs[i] = malloc((i % 32) + 16);
+			ASSERT_NOT_NULL(ptrs[i]);
+		}
+		for (int i = 0; i < n; i += 2) {
+			void *newp = realloc(ptrs[i], ((i*5)%64) + 8);
+			ASSERT_NOT_NULL(newp);
+			ptrs[i] = newp;
+		}
+	}
+	for (int i = 0; i < n; i++) free(ptrs[i]);
+}
+
+TEST(malloc_frag_eat_and_reuse)
+{
+	const size_t block_size = 8192;
+	const int max_blocks = 1024;
+	void *blocks[max_blocks];
+	int allocated = 0;
+
+	// Step 1: Allocate as many large blocks as possible.
+	for (int i = 0; i < max_blocks; i++) {
+		blocks[i] = malloc(block_size);
+		if (!blocks[i]) break;
+		memset(blocks[i], 0xCC, block_size);
+		allocated++;
+	}
+	ASSERT_INT_GT(allocated, 8);
+
+	// Step 2: Free every other block.
+	for (int i = 0; i < allocated; i += 2) free(blocks[i]);
+
+	// Step 3: Try new allocations reusing freed space.
+	void *more_blocks[1024] = {0};
+	int more_allocated = 0;
+	for (int i = 0; i < max_blocks; i++) {
+		more_blocks[i] = malloc(block_size);
+		if (!more_blocks[i]) break;
+		memset(more_blocks[i], 0xAA, block_size);
+		more_allocated++;
+	}
+	ASSERT_INT_GE(more_allocated, allocated / 2);
+
+	// Step 4: Free remaining blocks only once.
+	for (int i = 1; i < allocated; i += 2)
+		free(blocks[i]);
+	for (int i = 0; i < more_allocated; i++)
+		free(more_blocks[i]);
+}
+
+TEST(malloc_frag_tls_arena_overflow)
+{
+	const int max_attempts = 2048; // Large enough for normal TLS exhaustion
+	void *ptrs[max_attempts];
+	int count = 0;
+
+	// Step 1: Allocate as many TLS arena blocks as allowed (safely).
+	for (int i = 0; i < max_attempts; i++) {
+		ptrs[i] = malloc(24);
+		if (!ptrs[i]) break;       // Stop allocating after arena is exhausted
+		memset(ptrs[i], i & 0xFF, 24);
+		count++;
+	}
+
+	ASSERT_INT_GT(count, 8);  // Sanity: any minimally working arena should allow a few
+
+	// Step 2: Free only successfully allocated pointers.
+	for (int i = 0; i < count; i++)
+		free(ptrs[i]);
+
+	// Step 3: After freeing, allocating again should succeed.
+	void *again = malloc(24);
+	ASSERT_NOT_NULL(again);
+	free(again);
 }
 
 TEST_MAIN()

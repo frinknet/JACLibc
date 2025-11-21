@@ -1,48 +1,59 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 #include <inttypes.h>
+#include <errno.h>
+#include <string.h>
+#include <limits.h>
+
+// Provide imaxabs if not prototyped in your C lib
+#ifndef imaxabs
+intmax_t imaxabs(intmax_t x) { return x < 0 ? -x : x; }
+#endif
 
 TEST_TYPE(unit)
 TEST_UNIT(inttypes.h)
 
-/* ---- PRI Macro Suites ---- */
-TEST_SUITE(macro_pri_8bit)
-TEST(macro_pri_8bit)
-{
+// -------- PRI MACROS --------
+TEST_SUITE(PRI_macros)
+TEST(PRI_macros_PRId8) {
     ASSERT_STR_EQ("hhd", PRId8);
+}
+TEST(PRI_macros_PRIi8) {
     ASSERT_STR_EQ("hhi", PRIi8);
 }
-
-#if JACL_INTMAX_BITS >= 16
-TEST_SUITE(macro_pri_16bit)
-TEST(macro_pri_16bit)
-{
+TEST(PRI_macros_PRIu8) {
+    ASSERT_STR_EQ("hhu", PRIu8);
+}
+TEST(PRI_macros_PRId16) {
     ASSERT_STR_EQ("hd", PRId16);
+}
+TEST(PRI_macros_PRIi16) {
     ASSERT_STR_EQ("hi", PRIi16);
 }
-#endif
-
-#if JACL_INTMAX_BITS >= 32
-TEST_SUITE(macro_pri_32bit)
-TEST(macro_pri_32bit)
-{
+TEST(PRI_macros_PRIu16) {
+    ASSERT_STR_EQ("hu", PRIu16);
+}
+TEST(PRI_macros_PRId32) {
     ASSERT_STR_EQ("d", PRId32);
+}
+TEST(PRI_macros_PRIi32) {
     ASSERT_STR_EQ("i", PRIi32);
 }
-#endif
-
+TEST(PRI_macros_PRIu32) {
+    ASSERT_STR_EQ("u", PRIu32);
+}
 #if JACL_INTMAX_BITS >= 64
-TEST_SUITE(macro_pri_64bit)
-TEST(macro_pri_64bit)
-{
+TEST(PRI_macros_PRId64) {
     ASSERT_STR_EQ("lld", PRId64);
+}
+TEST(PRI_macros_PRIi64) {
     ASSERT_STR_EQ("lli", PRIi64);
 }
+TEST(PRI_macros_PRIu64) {
+    ASSERT_STR_EQ("llu", PRIu64);
+}
 #endif
-
-TEST_SUITE(macro_pri_ptr)
-TEST(macro_pri_ptr)
-{
+TEST(PRI_macros_PRIdPTR) {
 #if JACL_64BIT
     ASSERT_STR_EQ("lld", PRIdPTR);
 #elif JACL_32BIT
@@ -54,44 +65,47 @@ TEST(macro_pri_ptr)
 #endif
 }
 
-/* ---- SCN Macro Suites ---- */
-TEST_SUITE(macro_scn_8bit)
-TEST(macro_scn_8bit)
-{
+// -------- SCN MACROS --------
+TEST_SUITE(SCN_macros)
+TEST(SCN_macros_SCNd8) {
     ASSERT_STR_EQ("hhd", SCNd8);
+}
+TEST(SCN_macros_SCNi8) {
     ASSERT_STR_EQ("hhi", SCNi8);
 }
-
-#if JACL_INTMAX_BITS >= 16
-TEST_SUITE(macro_scn_16bit)
-TEST(macro_scn_16bit)
-{
+TEST(SCN_macros_SCNu8) {
+    ASSERT_STR_EQ("hhu", SCNu8);
+}
+TEST(SCN_macros_SCNd16) {
     ASSERT_STR_EQ("hd", SCNd16);
+}
+TEST(SCN_macros_SCNi16) {
     ASSERT_STR_EQ("hi", SCNi16);
 }
-#endif
-
-#if JACL_INTMAX_BITS >= 32
-TEST_SUITE(macro_scn_32bit)
-TEST(macro_scn_32bit)
-{
+TEST(SCN_macros_SCNu16) {
+    ASSERT_STR_EQ("hu", SCNu16);
+}
+TEST(SCN_macros_SCNd32) {
     ASSERT_STR_EQ("d", SCNd32);
+}
+TEST(SCN_macros_SCNi32) {
     ASSERT_STR_EQ("i", SCNi32);
 }
-#endif
-
+TEST(SCN_macros_SCNu32) {
+    ASSERT_STR_EQ("u", SCNu32);
+}
 #if JACL_INTMAX_BITS >= 64
-TEST_SUITE(macro_scn_64bit)
-TEST(macro_scn_64bit)
-{
+TEST(SCN_macros_SCNd64) {
     ASSERT_STR_EQ("lld", SCNd64);
+}
+TEST(SCN_macros_SCNi64) {
     ASSERT_STR_EQ("lli", SCNi64);
 }
+TEST(SCN_macros_SCNu64) {
+    ASSERT_STR_EQ("llu", SCNu64);
+}
 #endif
-
-TEST_SUITE(macro_scn_ptr)
-TEST(macro_scn_ptr)
-{
+TEST(SCN_macros_SCNdPTR) {
 #if JACL_64BIT
     ASSERT_STR_EQ("lld", SCNdPTR);
 #elif JACL_32BIT
@@ -103,265 +117,260 @@ TEST(macro_scn_ptr)
 #endif
 }
 
-/* ---- Formatted Print Suites ---- */
-TEST_SUITE(formatted_8bit)
-TEST(formatted_8bit)
-{
-    char buf[16];
-    int8_t a = 127;
-    snprintf(buf, sizeof(buf), "%" PRId8, a);
+// -------- TYPES --------
+TEST_SUITE(types)
+TEST(types_intmax_t) {
+    intmax_t x = 1;
+    ASSERT_EQ((int)sizeof(x), (int)sizeof(intmax_t));
+}
+TEST(types_uintmax_t) {
+    uintmax_t x = 1;
+    ASSERT_EQ((int)sizeof(x), (int)sizeof(uintmax_t));
+}
+TEST(types_imaxdiv_t) {
+    imaxdiv_t t = { 77, -23 };
+    ASSERT_EQ(t.quot, 77);
+    ASSERT_EQ(t.rem, -23);
+}
+TEST(types_imaxdiv_t_size) {
+    ASSERT_EQ(sizeof(imaxdiv_t), 2 * sizeof(intmax_t));
+}
+
+// -------- snprintf/printers --------
+TEST_SUITE(snprintf)
+TEST(snprintf_int8) {
+    char buf[16]; int8_t x = 127;
+    snprintf(buf, sizeof(buf), "%" PRId8, (int)x);
     ASSERT_STR_EQ("127", buf);
 }
-
-#if JACL_INTMAX_BITS >= 16
-TEST_SUITE(formatted_16bit)
-TEST(formatted_16bit)
-{
-    char buf[16];
-    int16_t a = 4123;
-    snprintf(buf, sizeof(buf), "%" PRId16, a);
+TEST(snprintf_int16) {
+    char buf[16]; int16_t x = 4123;
+    snprintf(buf, sizeof(buf), "%" PRId16, (int)x);
     ASSERT_STR_EQ("4123", buf);
 }
-#endif
-
-#if JACL_INTMAX_BITS >= 32
-TEST_SUITE(formatted_32bit)
-TEST(formatted_32bit)
-{
-    char buf[32];
-    int32_t a = 12345678;
-    snprintf(buf, sizeof(buf), "%" PRId32, a);
+TEST(snprintf_int32) {
+    char buf[32]; int32_t x = 12345678;
+    snprintf(buf, sizeof(buf), "%" PRId32, (int)x);
     ASSERT_TRUE(strstr(buf, "12345678") != NULL);
 }
-#endif
-
 #if JACL_INTMAX_BITS >= 64
-TEST_SUITE(formatted_64bit)
-TEST(formatted_64bit)
-{
-    char buf[64];
-    int64_t x = INT64_MAX;
+TEST(snprintf_int64) {
+    char buf[64]; int64_t x = INT64_MAX;
     snprintf(buf, sizeof(buf), "%" PRId64, (long long)x);
     ASSERT_STR_EQ("9223372036854775807", buf);
 }
 #endif
-
-TEST_SUITE(formatted_ptr)
-TEST(formatted_ptr)
-{
-    char buf[64];
-    uintptr_t p = 0xCAFEBABEULL;
-    snprintf(buf, sizeof(buf), "%" PRIxPTR, p);
-    ASSERT_TRUE(strstr(buf, "cafebabe") != NULL || strstr(buf, "CAFEBABE") != NULL);
+TEST(snprintf_ptr) {
+    char buf[64]; uintptr_t p = 0xCAFEBABEULL;
+    snprintf(buf, sizeof(buf), "%" PRIxPTR, (uintptr_t)p);
+    ASSERT_TRUE(strstr(buf, "cafebabe") || strstr(buf, "CAFEBABE"));
+}
+TEST(snprintf_neg_zero) {
+    char buf[16]; intmax_t x = -0;
+    snprintf(buf, sizeof(buf), "%" PRIdMAX, (intmax_t)x);
+    ASSERT_STR_EQ("0", buf);
 }
 
-/* ---- C99 Function/Test Suites ---- */
-#if JACL_HAS_C99
-
-TEST_SUITE(type_definitions)
-TEST(type_definitions)
-{
-    intmax_t x = 123;
-    ASSERT_EQ(123, x);
-    uintmax_t y = 456u;
-    ASSERT_EQ(456u, y);
-    imaxdiv_t r = { .quot = 17, .rem = 3 };
-    ASSERT_EQ(17, r.quot);
-    ASSERT_EQ(3, r.rem);
-}
-
-TEST_SUITE(imaxdiv_basic)
-TEST(imaxdiv_basic)
-{
+// -------- imaxdiv --------
+TEST_SUITE(imaxdiv)
+TEST(imaxdiv_basic) {
     imaxdiv_t d = imaxdiv(13, 5);
     ASSERT_EQ(2, d.quot);
     ASSERT_EQ(3, d.rem);
 }
-
-TEST_SUITE(imaxdiv_signed_cases)
-TEST(imaxdiv_signed_cases)
-{
+TEST(imaxdiv_neg_dividend) {
     imaxdiv_t d = imaxdiv(-13, 5);
     ASSERT_EQ(-2, d.quot);
     ASSERT_EQ(-3, d.rem);
-    d = imaxdiv(13, -5);
+}
+TEST(imaxdiv_neg_divisor) {
+    imaxdiv_t d = imaxdiv(13, -5);
     ASSERT_EQ(-2, d.quot);
     ASSERT_EQ(3, d.rem);
-    d = imaxdiv(-13, -5);
+}
+TEST(imaxdiv_both_neg) {
+    imaxdiv_t d = imaxdiv(-13, -5);
     ASSERT_EQ(2, d.quot);
     ASSERT_EQ(-3, d.rem);
 }
-
-TEST_SUITE(imaxdiv_zero)
-TEST(imaxdiv_zero)
-{
+TEST(imaxdiv_zero) {
     imaxdiv_t d = imaxdiv(0, 7);
     ASSERT_EQ(0, d.quot);
     ASSERT_EQ(0, d.rem);
 }
-
-TEST_SUITE(imaxdiv_min_by_one)
-TEST(imaxdiv_min_by_one)
-{
+TEST(imaxdiv_min_by_one) {
     imaxdiv_t d = imaxdiv(INTMAX_MIN, 1);
     ASSERT_EQ(INTMAX_MIN, d.quot);
     ASSERT_EQ(0, d.rem);
 }
-
-TEST_SUITE(imaxdiv_min_by_max)
-TEST(imaxdiv_min_by_max)
-{
+TEST(imaxdiv_min_by_max) {
     imaxdiv_t d = imaxdiv(INTMAX_MIN, INTMAX_MAX);
     ASSERT_EQ(-1, d.quot);
     ASSERT_EQ(-1, d.rem);
 }
-
-TEST_SUITE(strtoimax_basic)
-TEST(strtoimax_basic)
-{
-    char *end = NULL;
-    const char src[] = "12345";
-    intmax_t x = strtoimax(src, &end, 10);
-    ASSERT_EQ(12345, x);
-    ASSERT_EQ('\0', *end);
+TEST(imaxdiv_one_by_one) {
+    imaxdiv_t d = imaxdiv(1, 1);
+    ASSERT_EQ(1, d.quot);
+    ASSERT_EQ(0, d.rem);
 }
 
-TEST_SUITE(strtoimax_partial)
-TEST(strtoimax_partial)
-{
-    char buf[] = "123junk";
-    char *end = NULL;
-    intmax_t v = strtoimax(buf, &end, 10);
-    ASSERT_EQ(v, 123);
-    ASSERT_EQ(*end, 'j');
-    ASSERT_TRUE(end > buf && end <= buf + strlen(buf));
+// -------- imaxabs --------
+TEST_SUITE(imaxabs)
+TEST(imaxabs_positive) {
+    intmax_t y = imaxabs(42);
+    ASSERT_EQ(y, 42);
+}
+TEST(imaxabs_negative) {
+    intmax_t y = imaxabs(-42);
+    ASSERT_EQ(y, 42);
+}
+TEST(imaxabs_zero) {
+    intmax_t y = imaxabs(0);
+    ASSERT_EQ(y, 0);
+}
+TEST(imaxabs_max) {
+    intmax_t y = imaxabs(INTMAX_MAX);
+    ASSERT_EQ(y, INTMAX_MAX);
 }
 
-TEST_SUITE(strtoimax_dec)
-TEST(strtoimax_dec)
-{
-    char *end;
-    intmax_t a = strtoimax("123", &end, 0);
-    ASSERT_EQ(123, a);
+// -------- strtoimax --------
+TEST_SUITE(strtoimax)
+TEST(strtoimax_basic) {
+    char *e = NULL;
+    intmax_t x = strtoimax("42", &e, 10);
+    ASSERT_EQ(42, x);
+    ASSERT_TRUE(*e == '\0');
 }
-
-TEST_SUITE(strtoimax_hex)
-TEST(strtoimax_hex)
-{
-    char *end;
-    intmax_t b = strtoimax("0x123", &end, 0);
-    ASSERT_EQ(0x123, b);
+TEST(strtoimax_partial) {
+    char buf[] = "1337h4xx0rz"; char *e = NULL;
+    intmax_t x = strtoimax(buf, &e, 10);
+    ASSERT_EQ(1337, x);
+    ASSERT_TRUE(*e == 'h');
 }
-
-TEST_SUITE(strtoimax_oct)
-TEST(strtoimax_oct)
-{
-    char *end;
-    intmax_t c = strtoimax("0755", &end, 0);
-    ASSERT_EQ(493, c);
-}
-
-TEST_SUITE(strtoimax_negative)
-TEST(strtoimax_negative)
-{
-    char *end;
-    intmax_t v = strtoimax("-0x11", &end, 0);
-    ASSERT_EQ(-17, v);
-}
-
-TEST_SUITE(strtoimax_big)
-TEST(strtoimax_big)
-{
+TEST(strtoimax_overflow) {
     char src[64];
-    snprintf(src, sizeof(src), "%" PRIuMAX, (uintmax_t)INTMAX_MAX + 1);
-    char *end = NULL;
-    errno = 0;
-    intmax_t v = strtoimax(src, &end, 10);
-    ASSERT_EQ(INTMAX_MAX, v);
+		strcpy(src, "999999999999999999999999999999");
+    char *e = NULL; errno = 0;
+    intmax_t x = strtoimax(src, &e, 10);
+    ASSERT_EQ(INTMAX_MAX, x);
     ASSERT_EQ(ERANGE, errno);
 }
-
-TEST_SUITE(strtoimax_smass)
-TEST(strtoimax_smass)
-{
+TEST(strtoimax_underflow) {
     char src[64];
-    snprintf(src, sizeof(src), "%jd", (intmax_t)INTMAX_MIN - 1);
-    char *end = NULL;
-    errno = 0;
-    intmax_t v = strtoimax(src, &end, 10);
-    ASSERT_EQ(INTMAX_MIN, v);
+		strcpy(src, "-999999999999999999999999999999");
+    char *e = NULL; errno = 0;
+    intmax_t x = strtoimax(src, &e, 10);
+    ASSERT_EQ(INTMAX_MIN, x);
     ASSERT_EQ(ERANGE, errno);
 }
-
-TEST_SUITE(strtoimax_only_plus)
-TEST(strtoimax_only_plus)
-{
-    char buf[] = "+";
-    char *end = NULL;
-    intmax_t v = strtoimax(buf, &end, 10);
-    ASSERT_EQ(v, 0);
-    ASSERT_EQ(end, buf);
+TEST(strtoimax_hex) {
+    char *e = NULL;
+    intmax_t x = strtoimax("0xA5", &e, 0);
+    ASSERT_EQ(0xA5, x);
+}
+TEST(strtoimax_octal) {
+    char *e = NULL;
+    intmax_t x = strtoimax("077", &e, 0);
+    ASSERT_EQ(63, x);
+}
+TEST(strtoimax_negative) {
+    char *e = NULL;
+    intmax_t x = strtoimax("-42", &e, 10);
+    ASSERT_EQ(-42, x);
+}
+TEST(strtoimax_leading_ws) {
+    char *e = NULL;
+    intmax_t x = strtoimax("   999", &e, 10);
+    ASSERT_EQ(999, x);
+}
+TEST(strtoimax_only_sign) {
+    char buf[] = "+"; char *e = NULL;
+    intmax_t x = strtoimax(buf, &e, 10);
+    ASSERT_EQ(0, x);
+    ASSERT_TRUE(e == buf);
+}
+TEST(strtoimax_empty) {
+    char *e = NULL;
+    intmax_t x = strtoimax("", &e, 10);
+    ASSERT_EQ(0, x);
+    ASSERT_TRUE(strcmp(e, "") == 0);
+}
+TEST(strtoimax_max) {
+    char *e = NULL; char src[64]; snprintf(src,sizeof(src),"%" PRIdMAX,INTMAX_MAX);
+    intmax_t x = strtoimax(src, &e, 10);
+    ASSERT_EQ(INTMAX_MAX, x);
+}
+TEST(strtoimax_min) {
+    char *e = NULL; char src[64]; snprintf(src,sizeof(src),"%" PRIdMAX,INTMAX_MIN);
+    intmax_t x = strtoimax(src, &e, 10);
+    ASSERT_EQ(INTMAX_MIN, x);
 }
 
-TEST_SUITE(strtoumax_basic)
-TEST(strtoumax_basic)
-{
-    char *end = NULL;
-    const char src[] = "65536";
-    uintmax_t x = strtoumax(src, &end, 10);
-    ASSERT_EQ(65536u, x);
-    ASSERT_EQ('\0', *end);
+// -------- strtoumax --------
+TEST_SUITE(strtoumax)
+TEST(strtoumax_basic) {
+    char *e = NULL;
+    uintmax_t x = strtoumax("12345", &e, 10);
+    ASSERT_EQ(12345u, x);
+    ASSERT_TRUE(*e == '\0');
 }
-
-TEST_SUITE(strtoumax_hex)
-TEST(strtoumax_hex)
-{
-    char *end;
-    uintmax_t v = strtoumax("0xffff", &end, 16);
-    ASSERT_EQ(0xffffu, v);
+TEST(strtoumax_hex) {
+    char *e = NULL;
+    uintmax_t x = strtoumax("0xfF", &e, 0);
+    ASSERT_EQ(255u, x);
 }
-
-TEST_SUITE(strtoumax_underflow)
-TEST(strtoumax_underflow)
-{
-    char *end = NULL;
-    errno = 0;
-    uintmax_t v = strtoumax("-100", &end, 10);
-    ASSERT_EQ(0, v); // Underflow for unsigned types returns 0
-    // Some platforms may set errno, some may not
+TEST(strtoumax_octal) {
+    char *e = NULL;
+    uintmax_t x = strtoumax("077", &e, 0);
+    ASSERT_EQ(63u, x);
 }
-
-TEST_SUITE(strtoumax_big)
-TEST(strtoumax_big)
-{
-    char src[64];
-    snprintf(src, sizeof(src), "%" PRIuMAX "0", UINTMAX_MAX);
-    char *end = NULL;
-    errno = 0;
-    uintmax_t v = strtoumax(src, &end, 10);
-    ASSERT_EQ(UINTMAX_MAX, v);
+TEST(strtoumax_neg) {
+    char *e = NULL; errno = 0;
+    uintmax_t x = strtoumax("-5", &e, 10);
+    ASSERT_EQ(0u, x);
+}
+TEST(strtoumax_junk) {
+    char *e = NULL;
+    uintmax_t x = strtoumax("straw", &e, 10);
+    ASSERT_EQ(0u, x);
+    ASSERT_TRUE(strcmp(e, "straw") == 0);
+}
+TEST(strtoumax_partial) {
+    char buf[] = "456abc"; char *e = NULL;
+    uintmax_t x = strtoumax(buf, &e, 10);
+    ASSERT_EQ(456u, x);
+    ASSERT_TRUE(*e == 'a');
+}
+TEST(strtoumax_ws) {
+    char *e = NULL;
+    uintmax_t x = strtoumax("  88 ", &e, 10);
+    ASSERT_EQ(88u, x);
+}
+TEST(strtoumax_empty) {
+    char *e = NULL;
+    uintmax_t x = strtoumax("", &e, 10);
+    ASSERT_EQ(0u, x);
+    ASSERT_TRUE(strcmp(e, "") == 0);
+}
+TEST(strtoumax_zero) {
+    char *e = NULL;
+    uintmax_t x = strtoumax("0", &e, 10);
+    ASSERT_EQ(0u, x);
+}
+TEST(strtoumax_max) {
+    char src[64]; snprintf(src,sizeof(src),"%" PRIuMAX,UINTMAX_MAX);
+    char *e = NULL; errno = 0;
+    uintmax_t x = strtoumax(src, &e, 10);
+    ASSERT_EQ(UINTMAX_MAX, x);
+    ASSERT_EQ(0, errno);
+}
+TEST(strtoumax_overflow) {
+    char src[64]; snprintf(src,sizeof(src),"%" PRIuMAX "1",UINTMAX_MAX);
+    char *e = NULL; errno = 0;
+    uintmax_t x = strtoumax(src, &e, 10);
+    ASSERT_EQ(UINTMAX_MAX, x);
     ASSERT_EQ(ERANGE, errno);
 }
-
-TEST_SUITE(strtoumax_smass)
-TEST(strtoumax_smass)
-{
-    char *end = NULL;
-    errno = 0;
-    uintmax_t v = strtoumax("-1", &end, 10);
-    ASSERT_EQ(0, v);
-}
-
-TEST_SUITE(strtoumax_base16)
-TEST(strtoumax_base16)
-{
-    char buf[] = "0xabcF012";
-    char *end = NULL;
-    uintmax_t v = strtoumax(buf, &end, 0);
-    ASSERT_TRUE(v > 0);
-    ASSERT_TRUE(*end == '\0' || *end == ' ' || *end == '\n');
-}
-
-#endif /* JACL_HAS_C99 */
 
 TEST_MAIN()
+
