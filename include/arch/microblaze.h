@@ -1,0 +1,72 @@
+/* (c) 2025 FRINKnet & Friends – MIT licence */
+
+#ifdef __cplusplus
+	extern "C" {
+#endif
+
+#ifdef __ARCH_CONFIG
+	#undef microblaze
+	#define JACL_ARCH microblaze
+	#define JACL_ARCH_MICROBLAZE 1
+	#define __jacl_arch_syscall __microblaze_syscall
+	#define __jacl_arch_tls_set __microblaze_set_tp_register
+	#define __jacl_arch_tls_get __microblaze_get_tp_register
+	#define JACL_BITS 32
+#undef __ARCH_CONFIG
+#endif
+
+#ifdef __ARCH_SYSCALL
+	static inline long __microblaze_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+		long result;
+		register long r12 __asm__("r12") = num;
+		register long r5 __asm__("r5") = a1;
+		register long r6 __asm__("r6") = a2;
+		register long r7 __asm__("r7") = a3;
+		register long r8 __asm__("r8") = a4;
+		register long r9 __asm__("r9") = a5;
+		register long r10 __asm__("r10") = a6;
+
+		__asm__ volatile ("brki r14, 0x08"
+			: "=r"(r3)
+			: "r"(r12), "r"(r5), "r"(r6), "r"(r7), "r"(r8), "r"(r9), "r"(r10)
+			: "memory");
+
+		result = r3;
+
+		return result;
+	}
+#undef __ARCH_SYSCALL
+#endif
+
+#ifdef __ARCH_START
+	__asm__(
+		".global _start\n"
+		"_start:\n"
+		"add r19, r0, r0\n"
+		"add r5, r1, r0\n"
+		"andi r1, r1, -16\n"
+		"brlid r15, _start_main\n"
+		"nop\n"
+	);
+#undef __ARCH_START
+#endif
+
+#ifdef __ARCH_TLS
+	static inline void __microblaze_set_tp_register(void* addr) {
+		__asm__ volatile("add r21, %0, r0" : : "r"(addr) : "memory");
+	}
+
+	static inline void* __microblaze_get_tp_register(void) {
+		void* result;
+
+		__asm__("add %0, r21, r0" : "=r"(result));
+
+		return result;
+	}
+#undef __ARCH_TLS
+#endif
+
+#ifdef __cplusplus
+	}
+#endif
+

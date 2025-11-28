@@ -50,13 +50,13 @@ static inline off_t lseek(int fd, off_t offset, int whence) { return (off_t)sysc
 static inline int dup(int fd) { return (int)syscall(SYS_dup, fd); }
 static inline int dup2(int oldfd, int newfd) { return (int)syscall(SYS_dup2, oldfd, newfd); }
 static inline int pipe(int pipefd[2]) {
-#if defined(SYS_pipe2)
-	    return (int)syscall(SYS_pipe2, pipefd, 0);
-#elif defined(SYS_pipe)
-			    return (int)syscall(SYS_pipe, pipefd);
-#else
-					    errno = ENOSYS; return -1;
-#endif
+	#if JACL_HASSYS(pipe2)
+		return (int)syscall(SYS_pipe2, pipefd, 0);
+	#elif JACL_HASSYS(pipe)
+		return (int)syscall(SYS_pipe, pipefd);
+	#else
+		errno = ENOSYS; return -1;
+	#endif
 }
 
 /* File operations */
@@ -143,7 +143,7 @@ static inline pid_t setsid(void) { return (pid_t)syscall(SYS_setsid); }
 
 /* Hostname */
 static inline int gethostname(char *name, size_t len) {
-	#if defined(SYS_gethostname)
+	#if JACL_HASSYS(gethostname)
 		return (int)syscall(SYS_gethostname, name, len);
 	#else
 		errno = ENOSYS;
@@ -152,7 +152,7 @@ static inline int gethostname(char *name, size_t len) {
 	#endif
 }
 static inline int sethostname(const char *name, size_t len) {
-	#if defined(SYS_sethostname)
+	#if JACL_HASSYS(sethostname)
 		return (int)syscall(SYS_sethostname, name, len);
 	#else
 		errno = ENOSYS;
@@ -163,7 +163,7 @@ static inline int sethostname(const char *name, size_t len) {
 
 /* File properties */
 static inline int isatty(int fd) {
-	#if defined(SYS_ioctl) && defined(TIOCGWINSZ)
+	#if JACL_HASSYS(ioctl) && defined(TIOCGWINSZ)
 		struct winsize ws;
 		return syscall(SYS_ioctl, fd, TIOCGWINSZ, &ws) + 1;
 	#else
@@ -182,7 +182,7 @@ static inline int fchdir(int fd) { return (int)syscall(SYS_fchdir, fd); }
 static inline void sync(void) { syscall(SYS_sync); }
 static inline int fsync(int fd) { return (int)syscall(SYS_fsync, fd); }
 static inline int fdatasync(int fd) {
-	#if defined(SYS_fdatasync)
+	#if JACL_HASSYS(fdatasync)
 		return (int)syscall(SYS_fdatasync, fd);
 	#else
 		return fsync(fd);
@@ -191,7 +191,7 @@ static inline int fdatasync(int fd) {
 
 /* Sleep/alarm */
 static inline unsigned int sleep(unsigned int seconds) {
-	#if defined(SYS_nanosleep)
+	#if JACL_HASSYS(nanosleep)
 		struct timespec req = {seconds, 0}, rem = {0, 0};
 
 		if (syscall(SYS_nanosleep, &req, &rem) == -1) {
@@ -205,7 +205,7 @@ static inline unsigned int sleep(unsigned int seconds) {
 	#endif
 }
 static inline int usleep(useconds_t usec) {
-	#if defined(SYS_nanosleep)
+	#if JACL_HASSYS(nanosleep)
 		struct timespec req = {usec / 1000000, (usec % 1000000) * 1000};
 
 		return (int)syscall(SYS_nanosleep, &req, NULL);
@@ -215,14 +215,14 @@ static inline int usleep(useconds_t usec) {
 	#endif
 }
 static inline unsigned int alarm(unsigned int seconds) {
-	#if defined(SYS_alarm)
+	#if JACL_HASSYS(alarm)
 		return (unsigned int)syscall(SYS_alarm, seconds);
 	#else
 		errno = ENOSYS; return 0;
 	#endif
 }
 static inline int pause(void) {
-	#if defined(SYS_pause)
+	#if JACL_HASSYS(pause)
 		return (int)syscall(SYS_pause);
 	#else
 		errno = ENOSYS; return -1;

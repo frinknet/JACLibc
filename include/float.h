@@ -14,7 +14,10 @@ extern "C" {
 #if JACL_HAS_FLOAT
 
 #ifdef JACL_ARCH_FLOAT
+
 // provide your arch float definition
+#include JACL_ARCH_FLOAT
+
 #define JACL_HAS_IEEE754 0
 
 #else /* IEEE-754 COMPLIANT */

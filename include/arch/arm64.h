@@ -1,35 +1,69 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef ARCH_ARM64_H
-#define ARCH_ARM64_H
-#pragma once
 
 #ifdef __cplusplus
-extern "C" {
+	extern "C" {
 #endif
 
-/* ARM64 syscall assembly */
-static inline long __arm64_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
-	long result;
-	register long x8 __asm__("x8") = num;
-	register long x0 __asm__("x0") = a1;
-	register long x1 __asm__("x1") = a2;
-	register long x2 __asm__("x2") = a3;
-	register long x3 __asm__("x3") = a4;
-	register long x4 __asm__("x4") = a5;
-	register long x5 __asm__("x5") = a6;
+#ifdef __ARCH_CONFIG
+	#undef arm64
+	#define JACL_ARCH arm64
+	#define JACL_ARCH_ARM64 1
+	#define __jacl_arch_syscall __arm64_syscall
+	#define __jacl_arch_tls_set __arm64_set_tp_register
+	#define __jacl_arch_tls_get __arm64_get_tp_register
+	#define JACL_BITS 64
+#undef __ARCH_CONFIG
+#endif
 
-	__asm__ volatile ("svc #0"
-		: "=r"(x0)
-		: "r"(x8), "r"(x0), "r"(x1), "r"(x2), "r"(x3), "r"(x4), "r"(x5)
-		: "memory");
+#ifdef __ARCH_SYSCALL
+	static inline long __arm64_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+		long result;
+		register long x8 __asm__("x8") = num;
+		register long x0 __asm__("x0") = a1;
+		register long x1 __asm__("x1") = a2;
+		register long x2 __asm__("x2") = a3;
+		register long x3 __asm__("x3") = a4;
+		register long x4 __asm__("x4") = a5;
+		register long x5 __asm__("x5") = a6;
 
-	result = x0;
+		__asm__ volatile ("svc #0"
+			: "=r"(x0)
+			: "r"(x8), "r"(x0), "r"(x1), "r"(x2), "r"(x3), "r"(x4), "r"(x5)
+			: "memory");
 
-	return result;
-}
+		result = x0;
+
+		return result;
+	}
+#undef __ARCH_SYSCALL
+#endif
+
+#ifdef __ARCH_START
+	__asm__(
+		".global _start\n"
+		"_start:\n"
+		"mov x29, #0\n"
+		"mov x30, #0\n"
+		"mov x0, sp\n"
+		"and sp, x0, #-16\n"
+		"bl _start_main\n"
+	);
+#undef __ARCH_START
+#endif
+
+#ifdef __ARCH_TLS
+	static inline void __arm64_set_tp_register(void* addr) {
+		__asm__ volatile("msr tpidr_el0, %0" : : "r"(addr) : "memory");
+	}
+
+	static inline void* __arm64_get_tp_register(void) {
+		void* result;
+		__asm__("mrs %0, tpidr_el0" : "=r"(result));
+		return result;
+	}
+#undef __ARCH_TLS
+#endif
 
 #ifdef __cplusplus
-}
+	}
 #endif
-
-#endif // ARCH_ARM64_H

@@ -745,10 +745,10 @@ static inline void __jacl_test_report(void) {
 /* ============================================================= */
 #define TEST_TYPE(name) JACL_INIT(type) { __jacl_test_type = #name; }
 #define TEST_UNIT(name) JACL_INIT(unit) { __jacl_test_unit = #name; }
-#define TEST_SUITE(name) JACL_INIT(suite) { __jacl_test_suite = #name; }
+#define TEST_SUITE(name) JACL_INIT(suite_##name) { __jacl_test_suite = #name; }
 #define TEST(name) \
 	static void test_##name(void); \
-	JACL_INIT(test) { __jacl_test_register(#name, test_##name); } \
+	JACL_INIT(test_##name) { __jacl_test_register(#name, test_##name); } \
 	static void test_##name(void)
 
 /* ============================================================= */

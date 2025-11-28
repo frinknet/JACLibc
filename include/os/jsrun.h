@@ -1,7 +1,14 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef ARCH_WASM_H
-#define ARCH_WASM_H
-#pragma once
+
+#ifdef __OS_CONFIG
+	#undef jsrun
+	#define JACL_OS jsrun
+	#define JACL_OS_JSRUN 1
+	#define __jacl_os_syscall __jsrun_syscall
+#undef __OS_CONFIG
+#endif
+
+#ifdef __OS_SYSCALL
 
 /* Generic fallback syscall numbers */
 #define SYS_read      0
@@ -42,10 +49,6 @@
 
 #include <jsio.h>  // For js_read/js_write
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 static inline long __jsrun_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
   switch ((int)num) {
     case SYS_read:
@@ -58,9 +61,12 @@ static inline long __jsrun_syscall(long num, long a1, long a2, long a3, long a4,
       return 0; // Or return -1/ENOSYS for unsupported
   }
 }
-
-#ifdef __cplusplus
-}
+#undef __OS_SYSCALL
 #endif
 
-#endif // ARCH_WASM_H
+#ifdef __OS_INIT
+	static inline void __jacl_init_os(void) {
+		/* noop */
+	}
+#undef __OS_INIT
+#endif

@@ -162,7 +162,6 @@ char* js_stringify(js_t* v);
 
 // JS Start if wasm
 #if JACL_OS_JSRUN
-JS_EXPORT(_start) void js_start();
 ssize_t js_read(int fd, void* buf, size_t cnt);
 ssize_t js_write(int fd, const void* buf, size_t cnt);
 #endif

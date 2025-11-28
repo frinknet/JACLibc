@@ -1,0 +1,72 @@
+/* (c) 2025 FRINKnet & Friends – MIT licence */
+
+#ifdef __cplusplus
+	extern "C" {
+#endif
+
+#ifdef __ARCH_CONFIG
+	#undef or1k
+	#define JACL_ARCH or1k
+	#define JACL_ARCH_OR1K 1
+	#define __jacl_arch_syscall __or1k_syscall
+	#define __jacl_arch_tls_set __or1k_set_tp_register
+	#define __jacl_arch_tls_get __or1k_get_tp_register
+	#define JACL_BITS 32
+#undef __ARCH_CONFIG
+#endif
+
+#ifdef __ARCH_SYSCALL
+	static inline long __or1k_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+		long result;
+		register long r11 __asm__("r11") = num;
+		register long r3 __asm__("r3") = a1;
+		register long r4 __asm__("r4") = a2;
+		register long r5 __asm__("r5") = a3;
+		register long r6 __asm__("r6") = a4;
+		register long r7 __asm__("r7") = a5;
+		register long r8 __asm__("r8") = a6;
+
+		__asm__ volatile ("l.sys 1"
+			: "=r"(r11)
+			: "r"(r11), "r"(r3), "r"(r4), "r"(r5), "r"(r6), "r"(r7), "r"(r8)
+			: "memory");
+
+		result = r11;
+
+		return result;
+	}
+#undef __ARCH_SYSCALL
+#endif
+
+#ifdef __ARCH_START
+	__asm__(
+		".global _start\n"
+		"_start:\n"
+		"l.or r2, r0, r0\n"
+		"l.or r3, r1, r0\n"
+		"l.andi r1, r1, -16\n"
+		"l.jal _start_main\n"
+		"l.nop\n"
+	);
+#undef __ARCH_START
+#endif
+
+#ifdef __ARCH_TLS
+	static inline void __or1k_set_tp_register(void* addr) {
+		__asm__ volatile("l.or r10, %0, r0" : : "r"(addr) : "memory");
+	}
+
+	static inline void* __or1k_get_tp_register(void) {
+		void* result;
+
+		__asm__("l.or %0, r10, r0" : "=r"(result));
+
+		return result;
+	}
+#undef __ARCH_TLS
+#endif
+
+#ifdef __cplusplus
+	}
+#endif
+

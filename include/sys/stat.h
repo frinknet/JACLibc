@@ -420,9 +420,9 @@ static inline int stat(const char *pathname, struct stat *statbuf) {
 static inline int fstat(int fd, struct stat *statbuf) {
 	if (!statbuf) return -1;
 
-	#if defined(SYS_fstat)
+	#if JACL_HASSYS(fstat)
 		return (int)syscall(SYS_fstat, fd, statbuf);
-	#elif defined(SYS_newfstatat)
+	#elif JACL_HASSYS(newfstatat)
 		return (int)syscall(SYS_newfstatat, fd, "", statbuf, AT_EMPTY_PATH);
 	#else
 		errno = ENOSYS;
@@ -460,7 +460,7 @@ static inline mode_t umask(mode_t mask) {
 static inline int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags) {
 	if (!pathname || !statbuf) return -1;
 
-	#ifdef SYS_newfstatat
+	#if JACL_HASSYS(newfstatat)
 		return (int)syscall(SYS_newfstatat, dirfd, pathname, statbuf, flags);
 	#else
 		errno = ENOSYS;
@@ -485,7 +485,7 @@ static inline int mkfifo(const char *pathname, mode_t mode) {
 static inline int stat64(const char *pathname, struct stat64 *statbuf) {
 	if (!pathname || !statbuf) return -1;
 
-	#ifdef SYS_stat64
+	#if JACL_HASSYS(stat64)
 		return (int)syscall(SYS_stat64, pathname, statbuf);
 	#else
 		errno = ENOSYS;
@@ -497,7 +497,7 @@ static inline int stat64(const char *pathname, struct stat64 *statbuf) {
 static inline int fstat64(int fd, struct stat64 *statbuf) {
 	if (!statbuf) return -1;
 
-	#ifdef SYS_fstat64
+	#if JACL_HASSYS(fstat64)
 		return (int)syscall(SYS_fstat64, fd, statbuf);
 	#else
 		errno = ENOSYS;
@@ -509,7 +509,7 @@ static inline int fstat64(int fd, struct stat64 *statbuf) {
 static inline int lstat64(const char *pathname, struct stat64 *statbuf) {
 	if (!pathname || !statbuf) return -1;
 
-	#ifdef SYS_lstat64
+	#if JACL_HASSYS(lstat64)
 		return (int)syscall(SYS_lstat64, pathname, statbuf);
 	#else
 		errno = ENOSYS;
@@ -522,7 +522,7 @@ static inline int lstat64(const char *pathname, struct stat64 *statbuf) {
 static inline int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags) {
 	if (!pathname) return -1;
 
-	#ifdef SYS_utimensat
+	#if JACL_HASSYS(utimensat)
 		return (int)syscall(SYS_utimensat, dirfd, pathname, times, flags);
 	#else
 		errno = ENOSYS;
@@ -532,7 +532,7 @@ static inline int utimensat(int dirfd, const char *pathname, const struct timesp
 }
 
 static inline int futimens(int fd, const struct timespec times[2]) {
-	#ifdef SYS_futimens
+	#if JACL_HASSYS(futimens)
 		return (int)syscall(SYS_futimens, fd, times);
 	#else
 		errno = ENOSYS;

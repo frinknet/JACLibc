@@ -12,9 +12,11 @@
  */
 
 #include <core/errno.h>
+#include <core/stack.h>
 #include <core/fenv.h>
 #include <core/stdio.h>
 #include <core/stdlib.h>
 #include <core/jsio.h>
+#include <core/start.h>
 
 #endif /* STATIC_H */

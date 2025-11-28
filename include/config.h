@@ -17,8 +17,12 @@
 #define JACL_EXPAND(x) x
 #define JACL_CONCAT(a, b, space) a##space##b
 #define JACL_CONCAT_EXPAND(a, b, space) JACL_CONCAT(a,b,space)
-#define JACL_INIT(name) static void __attribute__((constructor)) JACL_CONCAT_EXPAND(__jacl_init_##name, __LINE__, _)(void)
+#define JACL_CONCAT_HAS(a, b) __##a##_has_##b
+#define JACL_CONCAT_HAS_EXPAND(a, b) JACL_CONCAT_HAS(a, b)
 #define JACL_HEADER(dir, file) <dir/file.h>
+#define JACL_X_FILES JACL_HEADER(x, JACL_CONCAT_EXPAND(JACL_OS,JACL_ARCH,_))
+#define JACL_OS_ARCH JACL_CONCAT_EXPAND(JACL_OS, JACL_ARCH, _)
+#define JACL_HASSYS(name) JACL_CONCAT_HAS_EXPAND(JACL_OS_ARCH, name)
 
 /* ============================================================= */
 /* C Standards Detection                                         */
@@ -46,6 +50,38 @@
 #define JACL_HAS_C11 (JACL_STDC_VERSION >= 2011)
 #define JACL_HAS_C17 (JACL_STDC_VERSION >= 2017)
 #define JACL_HAS_C23 (JACL_STDC_VERSION >= 2023)
+
+// Deprecation polyfill
+#if JACL_HAS_C23
+	#define __deprecated            [[deprecated]]
+	#define __deprecated_msg(msg)   [[deprecated(msg)]]
+#elif defined(__GNUC__) || defined(__clang__)
+	#define __deprecated            __attribute__((deprecated))
+	#define __deprecated_msg(msg)   __attribute__((deprecated(msg)))
+#elif defined(_MSC_VER)
+	#define __deprecated            __declspec(deprecated)
+	#define __deprecated_msg(msg)   __declspec(deprecated(msg))
+#else
+	#define __deprecated
+	#define __deprecated_msg(msg)
+#endif
+
+// Noreturn polyfill
+#if JACL_HAS_C23
+	#define noreturn [[noreturn]]
+#elif JACL_HAS_C11
+	/* C11/C17: standard keyword */
+	#define noreturn _Noreturn
+#else
+	/* Pre-C11: compiler extensions */
+	#if defined(__GNUC__) || defined(__clang__)
+		#define noreturn __attribute__((noreturn))
+	#elif defined(_MSC_VER)
+		#define noreturn __declspec(noreturn)
+	#else
+		#define noreturn
+	#endif
+#endif
 
 // C99 features polyfill
 #if !JACL_HAS_C99
@@ -98,91 +134,14 @@
 #endif /* !JACL_HAS_C23 */
 
 /* ============================================================= */
-/* Architecture Detection                                        */
+/* Architecture and Operating System Detection                   */
 /* ============================================================= */
 
-#if defined(__i386__)
-	#undef x86
-	#define JACL_ARCH x86
-	#define JACL_ARCH_X86 1
-	#define __jacl_arch_syscall __x86_syscall
-	#define JACL_BITS 32
-#elif defined(__x86_64__) || defined(__amd64__)
-	#undef x64
-	#define JACL_ARCH x64
-	#define JACL_ARCH_X64 1
-	#define __jacl_arch_syscall __x64_syscall
-	#define JACL_BITS 64
-#elif defined(__aarch64__)
-	#undef arm64
-	#define JACL_ARCH arm64
-	#define JACL_ARCH_ARM64 1
-	#define __jacl_arch_syscall __arm64_syscall
-	#define JACL_BITS 64
-#elif defined(__arm__) || defined(_ARM_) || defined(_M_ARM)
-	#undef arm32
-	#define JACL_ARCH arm32
-	#define JACL_ARCH_ARM32 1
-	#define __jacl_arch_syscall __arm32_syscall
-	#define JACL_BITS 32
-#elif defined(__riscv) || defined(__riscv__)
-	#undef riscv
-	#define JACL_ARCH riscv
-	#define JACL_ARCH_RISCV 1
-	#define __jacl_arch_syscall __riscv_syscall
-	#if defined(__riscv_xlen) && __riscv_xlen == 64
-		#define JACL_BITS 64
-	#else /* 32bit risc */
-		#define JACL_BITS 32
-	#endif /* bit check */
-#elif defined(__wasm__)
-	#undef wasm
-	#define JACL_ARCH wasm
-	#define JACL_ARCH_WASM 1
-	#define __jacl_arch_syscall __wasm_syscall
-	#define JACL_BITS 32
-	#include <arch/wasm_helpers.h>
-#else /* unknown */
-	#error "JACLibc - Unsupported Architecture"
-#endif /* arch check */
+#define __ARCH_CONFIG
+#include JACL_HEADER(arch,detect)
 
-/* ============================================================= */
-/* Operating System Detection                                    */
-/* ============================================================= */
-
-#if defined(__linux__)
-	#undef linux
-	#define JACL_OS linux
-	#define JACL_OS_LINUX 1
-	#define __jacl_os_syscall __linux_syscall
-#elif defined(_WIN32)
-	#undef windows
-#define JACL_OS windows
-	#define JACL_OS_WINDOWS 1
-	#define __jacl_os_syscall __windows_syscall
-#elif defined(__APPLE__) && defined(__MACH__)
-	#undef darwin
-	#define JACL_OS darwin
-	#define JACL_OS_DARWIN 1
-	#define __jacl_os_syscall __darwin_syscall
-#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
-	#undef bsd
-	#define JACL_OS bsd
-	#define JACL_OS_BSD 1
-	#define __jacl_os_syscall __bsd_syscall
-#elif defined(__wasi__)
-	#undef wasi
-	#define JACL_OS wasi
-	#define JACL_OS_WASI 1
-	#define __jacl_os_syscall __wasi_syscall
-#elif defined(__wasm__)
-	#undef jsrun
-	#define JACL_OS jsrun
-	#define JACL_OS_JSRUN 1
-	#define __jacl_os_syscall __jsrun_syscall
-#else /* unknown */
-	#error "JACLibc - Unsupported Operating System"
-#endif /* os check */
+#define __OS_CONFIG
+#include JACL_HEADER(os,detect)
 
 /* ============================================================= */
 /* Bit Depth Definitions                                         */
@@ -241,6 +200,37 @@
   #define JACL_WCHAR_BITS (__ARM_SIZEOF_WCHAR_T * 8)
 #else
   #define JACL_WCHAR_BITS 32    // Default: UTF-32/UCS-4
+#endif
+
+/* ============================================================= */
+/* Constructor Initialization                                    */
+/* ============================================================= */
+
+typedef void (*__jacl_init_fn)(void);
+
+#if JACL_OS_DARWIN
+  #define JACL_INIT_SECTION "__mod_init_func"
+#elif JACL_OS_WINDOWS
+  #define JACL_INIT_SECTION ".CRT$XCU"
+#else
+  #define JACL_INIT_SECTION ".init_array"
+#endif
+
+#if defined(_MSC_VER) && JACL_OS_WINDOWS
+	/* MSVC uses different syntax */
+	#define JACL_INIT(name) \
+		static void __jacl_init_##name(void); \
+		__pragma(section(JACL_INIT_SECTION, read)) \
+		__declspec(allocate(JACL_INIT_SECTION)) \
+		static const __jacl_init_fn __jacl_init_ptr_##name = __jacl_init_##name; \
+		static void __jacl_init_##name(void)
+#else
+	/* everybody else is standard */
+	#define JACL_INIT(name) \
+		static void __jacl_init_##name(void); \
+		static const __jacl_init_fn __jacl_init_ptr_##name \
+		__attribute__((section(JACL_INIT_SECTION), used)) = __jacl_init_##name; \
+		static void __jacl_init_##name(void)
 #endif
 
 /* ============================================================= */
@@ -381,5 +371,8 @@ static inline void* __jacl_frame_address(int level) {
 #else /* no large file support */
   #define JACL_HAS_LFS 0
 #endif /* large file support check */
+
+// Syscall checks
+#include JACL_HEADER(x, config_has)
 
 #endif /* CONFIG_H */

@@ -355,4 +355,3 @@ extern _Thread_local int __jacl_errno;
 #endif
 
 #endif /* ERRNO_H */
-

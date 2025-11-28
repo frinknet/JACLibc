@@ -221,6 +221,9 @@ static inline __jacl_segment_t* __jacl_find_segment(void* ptr) {
 }
 
 static inline void __jacl_init_once(void) {
+	static int canary = 0;
+	canary++;
+
 	if (atomic_load_explicit(&__jacl_once, memory_order_acquire)) return;
 
 	uint32_t expect = 0;

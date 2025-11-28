@@ -122,16 +122,14 @@ static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 
 	if (flags & MAP_ANONYMOUS) {
 		/* Anonymous mapping */
-		hMapping = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, win_prot,
-		                             (DWORD)(length >> 32), (DWORD)length, NULL);
+		hMapping = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, win_prot, (DWORD)(length >> 32), (DWORD)length, NULL);
 	} else {
 		/* File mapping */
 		hFile = (HANDLE)_get_osfhandle(fd);
+
 		if (hFile == INVALID_HANDLE_VALUE) return MAP_FAILED;
 
-		hMapping = CreateFileMappingA(hFile, NULL, win_prot,
-		                             (DWORD)((offset + length) >> 32),
-		                             (DWORD)(offset + length), NULL);
+		hMapping = CreateFileMappingA(hFile, NULL, win_prot, (DWORD)((offset + length) >> 32), (DWORD)(offset + length), NULL);
 	}
 
 	if (!hMapping) return MAP_FAILED;
@@ -141,8 +139,7 @@ static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 	else if (prot & PROT_READ) access = FILE_MAP_READ;
 	if (prot & PROT_EXEC) access |= FILE_MAP_EXECUTE;
 
-	result = MapViewOfFile(hMapping, access, (DWORD)(offset >> 32),
-	                       (DWORD)offset, length);
+	result = MapViewOfFile(hMapping, access, (DWORD)(offset >> 32), (DWORD)offset, length);
 
 	CloseHandle(hMapping);
 
@@ -266,97 +263,36 @@ static inline int mincore(void *addr, size_t length, unsigned char *vec) {
 /* ================================================================ */
 
 static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
-#ifdef SYS_mmap
-	long result = syscall(SYS_mmap, (long)addr, (long)length, (long)prot,
-	                      (long)flags, (long)fd, (long)offset);
+	long result = syscall(SYS_mmap, (long)addr, (long)length, (long)prot, (long)flags, (long)fd, (long)offset);
+
 	return (void*)result;
-#else
-	/* Fallback - try to use libc if available */
-	extern void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
-	return mmap(addr, length, prot, flags, fd, offset);
-#endif
 }
-
 static inline int munmap(void *addr, size_t length) {
-#ifdef SYS_munmap
 	return (int)syscall(SYS_munmap, (long)addr, (long)length);
-#else
-	extern int munmap(void *addr, size_t length);
-	return munmap(addr, length);
-#endif
 }
-
 static inline int mprotect(void *addr, size_t len, int prot) {
-#ifdef SYS_mprotect
 	return (int)syscall(SYS_mprotect, (long)addr, (long)len, (long)prot);
-#else
-	extern int mprotect(void *addr, size_t len, int prot);
-	return mprotect(addr, len, prot);
-#endif
 }
-
 static inline int msync(void *addr, size_t length, int flags) {
-#ifdef SYS_msync
 	return (int)syscall(SYS_msync, (long)addr, (long)length, (long)flags);
-#else
-	extern int msync(void *addr, size_t length, int flags);
-	return msync(addr, length, flags);
-#endif
 }
-
 static inline int madvise(void *addr, size_t length, int advice) {
-#ifdef SYS_madvise
 	return (int)syscall(SYS_madvise, (long)addr, (long)length, (long)advice);
-#else
-	/* Best effort - often not critical if this fails */
-	(void)addr; (void)length; (void)advice;
-	return 0;
-#endif
 }
-
 static inline int mlock(const void *addr, size_t len) {
-#ifdef SYS_mlock
 	return (int)syscall(SYS_mlock, (long)addr, (long)len);
-#else
-	extern int mlock(const void *addr, size_t len);
-	return mlock(addr, len);
-#endif
 }
-
 static inline int munlock(const void *addr, size_t len) {
-#ifdef SYS_munlock
 	return (int)syscall(SYS_munlock, (long)addr, (long)len);
-#else
-	extern int munlock(const void *addr, size_t len);
-	return munlock(addr, len);
-#endif
 }
-
 static inline int mlockall(int flags) {
-#ifdef SYS_mlockall
 	return (int)syscall(SYS_mlockall, (long)flags);
-#else
-	extern int mlockall(int flags);
-	return mlockall(flags);
-#endif
 }
-
 static inline int munlockall(void) {
-#ifdef SYS_munlockall
 	return (int)syscall(SYS_munlockall);
-#else
-	extern int munlockall(void);
-	return munlockall();
-#endif
 }
-
 static inline int mincore(void *addr, size_t length, unsigned char *vec) {
-#ifdef SYS_mincore
 	return (int)syscall(SYS_mincore, (long)addr, (long)length, (long)vec);
-#else
-	extern int mincore(void *addr, size_t length, unsigned char *vec);
-	return mincore(addr, length, vec);
-#endif
 }
 
 #endif
