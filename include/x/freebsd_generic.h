@@ -1,5 +1,5 @@
 /**
- * FREEBSD SYSCALLS IMPORTED  //  last updated: 2025-12-03 04:08:52 UTC
+ * FREEBSD SYSCALLS IMPORTED  //  last updated: 2026-03-04 00:35:36 UTC
  * https://cgit.freebsd.org/src/plain/sys/kern/syscalls.master
  */
 
@@ -497,3 +497,5 @@ X(SYS_setgroups, 596, setgroups)
 X(SYS_jail_attach_jd, 597, jail_attach_jd)
 X(SYS_jail_remove_jd, 598, jail_remove_jd)
 X(SYS_kexec_load, 599, kexec_load)
+X(SYS_pdrfork, 600, pdrfork)
+X(SYS_pdwait, 601, pdwait)

@@ -1,5 +1,5 @@
 /**
- * DRAGONFLY SYSCALLS IMPORTED  //  last updated: 2025-12-03 04:09:00 UTC
+ * DRAGONFLY SYSCALLS IMPORTED  //  last updated: 2026-03-04 00:35:46 UTC
  * https://gitweb.dragonflybsd.org/dragonfly.git/blob_plain/master:/sys/kern/syscalls.master
  */
 

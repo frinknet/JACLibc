@@ -1,5 +1,5 @@
 /**
- * LINUX SYSCALLS IMPORTED  //  last updated: 2025-12-03 04:08:43 UTC
+ * LINUX SYSCALLS IMPORTED  //  last updated: 2026-03-04 00:35:22 UTC
  * https://raw.githubusercontent.com/torvalds/linux/v6.17/arch/s390/kernel/syscalls/syscall.tbl
  */
 

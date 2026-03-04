@@ -1,5 +1,5 @@
 /**
- * FREEBSD SIGNALS IMPORTED  //  last updated: 2025-12-01 15:16:58 UTC
+ * FREEBSD SIGNALS IMPORTED  //  last updated: 2026-03-04 00:58:10 UTC
  * https://cgit.freebsd.org/src/plain/sys/sys/signal.h
  */
 

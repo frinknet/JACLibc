@@ -1,5 +1,5 @@
 /**
- * LINUX AUXV FORMAT IMPORTED  //  last updated: 2025-11-28 19:21:55 UTC
+ * LINUX AUXV FORMAT IMPORTED  //  last updated: 2026-03-04 00:30:34 UTC
  * https://raw.githubusercontent.com/torvalds/linux/v6.17/include/uapi/linux/auxvec.h
  */
 

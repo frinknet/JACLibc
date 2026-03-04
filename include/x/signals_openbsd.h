@@ -1,7 +1,7 @@
 /**
- * OPENBSD SIGNALS IMPORTED  //  last updated: 2025-12-01 15:17:04 UTC
- * https://cvsweb.openbsd.org/cgi-bin/cvsweb/~checkout~/src/sys/sys/signal.h
- * https://cvsweb.openbsd.org/cgi-bin/cvsweb/~checkout~/src/sys/sys/siginfo.h
+ * OPENBSD SIGNALS IMPORTED  //  last updated: 2026-03-04 00:58:15 UTC
+ * https://cvsweb.openbsd.org/checkout/src/sys/sys/signal.h
+ * https://cvsweb.openbsd.org/checkout/src/sys/sys/siginfo.h
  */
 
 /* Signal numbers */

@@ -1,5 +1,5 @@
 /**
- * DRAGONFLY SIGNALS IMPORTED  //  last updated: 2025-12-01 15:17:05 UTC
+ * DRAGONFLY SIGNALS IMPORTED  //  last updated: 2026-03-04 00:58:17 UTC
  * https://gitweb.dragonflybsd.org/dragonfly.git/blob_plain/master:/sys/sys/signal.h
  */
 
@@ -39,8 +39,8 @@
 	X(SIGTHR, 32) \
 	X(SIGCKPT, 33) \
 	X(SIGCKPTEXIT, 34) \
-	X(SIGRTMAX, 35) \
-	X(SIGRTMIN, 36)
+	X(SIGRTMIN, 65) \
+	X(SIGRTMAX, 126)
 
 /* Signal action flags */
 #define SIGNAL_ACTION_FLAGS(X) \

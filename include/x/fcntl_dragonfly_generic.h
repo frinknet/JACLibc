@@ -1,0 +1,97 @@
+/**
+ * DRAGONFLY FCNTL CONSTANTS  //  last updated: 2026-03-04 00:30:13 UTC
+ * https://gitweb.dragonflybsd.org/dragonfly.git/blob_plain/master:/sys/sys/fcntl.h
+ */
+
+/* Open flags */
+#define FCNTL_O_FLAGS(X) \
+	X(O_RDONLY, 0x0000) \
+	X(O_WRONLY, 0x0001) \
+	X(O_RDWR, 0x0002) \
+	X(O_ACCMODE, 0x0003) \
+	X(O_NDELAY, 0x0004) \
+	X(O_NONBLOCK, 0x0004) \
+	X(O_APPEND, 0x0008) \
+	X(O_SHLOCK, 0x0010) \
+	X(O_EXLOCK, 0x0020) \
+	X(O_ASYNC, 0x0040) \
+	X(O_FSYNC, 0x0080) \
+	X(O_SYNC, 0x0080) \
+	X(O_NOFOLLOW, 0x0100) \
+	X(O_CREAT, 0x0200) \
+	X(O_TRUNC, 0x0400) \
+	X(O_EXCL, 0x0800) \
+	X(O_NOCTTY, 0x8000) \
+	X(O_DIRECT, 0x00010000) \
+	X(O_CLOEXEC, 0x00020000) \
+	X(O_FBLOCKING, 0x00040000) \
+	X(O_FNONBLOCKING, 0x00080000) \
+	X(O_FAPPEND, 0x00100000) \
+	X(O_FOFFSET, 0x00200000) \
+	X(O_FSYNCWRITE, 0x00400000) \
+	X(O_FASYNCWRITE, 0x00800000) \
+	X(O_CLOFORK, 0x01000000) \
+	X(O_UNUSED25, 0x02000000) \
+	X(O_UNUSED26, 0x04000000) \
+	X(O_DIRECTORY, 0x08000000)
+
+/* Fcntl commands */
+#define FCNTL_F_COMMANDS(X) \
+	X(F_DUPFD, 0) \
+	X(F_GETFD, 1) \
+	X(F_SETFD, 2) \
+	X(F_GETFL, 3) \
+	X(F_SETFL, 4) \
+	X(F_GETOWN, 5) \
+	X(F_SETOWN, 6) \
+	X(F_GETLK, 7) \
+	X(F_SETLK, 8) \
+	X(F_SETLKW, 9) \
+	X(F_DUP2FD, 10) \
+	X(F_DUP3FD_SHIFT, 16) \
+	X(F_WAIT, 0x010) \
+	X(F_DUPFD_CLOEXEC, 17) \
+	X(F_DUP2FD_CLOEXEC, 18) \
+	X(F_GETPATH, 19) \
+	X(F_MAXFD, 20) \
+	X(F_DUPFD_CLOFORK, 21) \
+	X(F_DUP2FD_CLOFORK, 22) \
+	X(F_DUP3FD, 23) \
+	X(F_UNUSED020, 0x020) \
+	X(F_POSIX, 0x040) \
+	X(F_NOEND, 0x080)
+
+/* File descriptor flags */
+#define FCNTL_FD_FLAGS(X) \
+	X(FD_CLOEXEC, 1) \
+	X(FD_CLOFORK, 2)
+
+/* Lock types */
+#define FCNTL_LOCK_TYPES(X) \
+	X(F_RDLCK, 1) \
+	X(F_UNLCK, 2) \
+	X(F_WRLCK, 3)
+
+/* AT function flags */
+#define FCNTL_AT_FLAGS(X) \
+	X(AT_SYMLINK_NOFOLLOW, 1) \
+	X(AT_REMOVEDIR, 2) \
+	X(AT_EACCESS, 4) \
+	X(AT_SYMLINK_FOLLOW, 8) \
+	X(AT_FDCWD, 0xFFFAFDCD)
+
+/* POSIX advisory flags */
+#define FCNTL_POSIX_FADV(X) \
+	X(POSIX_FADV_NORMAL, 0) \
+	X(POSIX_FADV_SEQUENTIAL, 1) \
+	X(POSIX_FADV_RANDOM, 2) \
+	X(POSIX_FADV_WILLNEED, 3) \
+	X(POSIX_FADV_DONTNEED, 4) \
+	X(POSIX_FADV_NOREUSE, 5)
+
+/* Seek constants */
+#define FCNTL_SEEK(X) \
+	X(SEEK_SET, 0) \
+	X(SEEK_CUR, 1) \
+	X(SEEK_END, 2)
+

@@ -1,6 +1,6 @@
 /**
- * OPENBSD SYSCALLS IMPORTED  //  last updated: 2025-12-03 04:08:58 UTC
- * https://cvsweb.openbsd.org/cgi-bin/cvsweb/~checkout~/src/sys/kern/syscalls.master
+ * OPENBSD SYSCALLS IMPORTED  //  last updated: 2026-03-04 00:35:42 UTC
+ * https://cvsweb.openbsd.org/checkout/src/sys/kern/syscalls.master
  */
 
 X(SYS_exit, 1, exit, void, (int), (int)a0)

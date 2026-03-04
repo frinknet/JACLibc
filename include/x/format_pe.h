@@ -1,5 +1,5 @@
 /**
- * WINE PE FORMAT IMPORTED  //  last updated: 2025-11-28 19:21:57 UTC
+ * WINE PE FORMAT IMPORTED  //  last updated: 2026-03-04 00:30:37 UTC
  * https://raw.githubusercontent.com/wine-mirror/wine/master/include/winnt.h
  */
 
