@@ -7,7 +7,8 @@
 	#define JACL_OS_NONE 1
 	#define JACL_FMT elf
 	#define JACL_FMT_ELF
-	#define __jacl_os_syscall __none_syscall
+	#define __jacl_os_init     __none_init
+	#define __jacl_os_syscall  __none_syscall
 #undef __OS_CONFIG
 #endif
 
@@ -21,7 +22,7 @@
 #endif
 
 #ifdef __OS_INIT
-	static inline void __jacl_init_os(void) {
+	static inline void __none_init(void) {
 		// No OS: set up bootstrap TLS manually
 		static char _bootstrap_tls[256] __attribute__((aligned(16)));
 		*(void**)_bootstrap_tls = _bootstrap_tls;  // self-pointer
@@ -30,4 +31,3 @@
 	}
 #undef __OS_INIT
 #endif
-

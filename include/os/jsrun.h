@@ -4,6 +4,7 @@
 	#undef jsrun
 	#define JACL_OS jsrun
 	#define JACL_OS_JSRUN 1
+	#define __jacl_os_init    __jsrun_init
 	#define __jacl_os_syscall __jsrun_syscall
 #undef __OS_CONFIG
 #endif
@@ -65,7 +66,7 @@ static inline long __jsrun_syscall(long num, long a1, long a2, long a3, long a4,
 #endif
 
 #ifdef __OS_INIT
-	static inline void __jacl_init_os(void) {
+	static inline void __jsrun_init(void) {
 		/* noop */
 	}
 #undef __OS_INIT

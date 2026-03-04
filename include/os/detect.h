@@ -1,7 +1,7 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 
 #if defined(JACL_OS)
-	#include JACL_HEADER(os,JACL_OS)
+	#include JACL_HEADER(os, JACL_OS)
 #elif defined(__linux__)
 	#include <os/linux.h>
 #elif defined(_WIN32)
