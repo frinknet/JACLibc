@@ -247,7 +247,7 @@ static inline int utimes(const char *pathname, const timeval times[2]) {
 static inline int gettimeofday(timeval *tv, timezone *tz) {
 	if (!tv) return -1;
 
-	#if defined(SYS_gettimeofday)
+	#if JACL_HASSYS(gettimeofday)
 		return (int)syscall(SYS_gettimeofday, tv, tz);
 	#endif
 
@@ -273,7 +273,7 @@ static inline int settimeofday(const timeval *tv, const timezone *tz) {
 
 	if (!tv) return -1;
 
-	#if defined(SYS_settimeofday)
+	#if JACL_HASSYS(settimeofday)
 		return (int)syscall(SYS_settimeofday, tv, NULL);
 	#endif
 
@@ -289,7 +289,7 @@ static inline int settimeofday(const timeval *tv, const timezone *tz) {
 static inline int getitimer(int which, itimerval *curr_value) {
 	if (!curr_value) return -1;
 
-	#if defined(SYS_getitimer)
+	#if JACL_HASSYS(getitimer)
 		return (int)syscall(SYS_getitimer, which, curr_value);
 	#else
 		(void)which;
@@ -304,7 +304,7 @@ static inline int getitimer(int which, itimerval *curr_value) {
 static inline int setitimer(int which, const itimerval *new_value, itimerval *old_value) {
 	if (!new_value) return -1;
 
-	#if defined(SYS_setitimer)
+	#if JACL_HASSYS(setitimer)
 		return (int)syscall(SYS_setitimer, which, new_value, old_value);
 	#else
 		(void)which; (void)old_value;
@@ -318,7 +318,7 @@ static inline int setitimer(int which, const itimerval *new_value, itimerval *ol
 static inline int utimes(const char *pathname, const timeval times[2]) {
 	if (!pathname) return -1;
 
-	#if defined(SYS_utimes)
+	#if JACL_HASSYS(utimes)
 		return (int)syscall(SYS_utimes, pathname, times);
 	#else
 		(void)times;
@@ -332,7 +332,7 @@ static inline int utimes(const char *pathname, const timeval times[2]) {
 /* Additional POSIX.1-2008 functions */
 /* Additional POSIX.1-2008 functions */
 static inline int futimes(int fd, const timeval times[2]) {
-	#if defined(SYS_futimes)
+	#if JACL_HASSYS(futimes)
 		return (int)syscall(SYS_futimes, fd, times);
 	#else
 		(void)fd;
@@ -347,7 +347,7 @@ static inline int futimes(int fd, const timeval times[2]) {
 static inline int lutimes(const char *pathname, const timeval times[2]) {
 	if (!pathname) return -1;
 
-	#if defined(SYS_lutimes)
+	#if JACL_HASSYS(lutimes)
 		return (int)syscall(SYS_lutimes, pathname, times);
 	#else
 		(void)times;

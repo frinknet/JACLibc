@@ -124,7 +124,7 @@ void exit(int status);
 int atexit(void (*func)(void));
 
 #if JACL_HAS_C11
-_Noreturn void quick_exit(int status);
+noreturn void quick_exit(int status);
 int at_quick_exit(void (*func)(void));
 #endif
 

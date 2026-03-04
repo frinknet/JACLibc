@@ -66,7 +66,7 @@ typedef unsigned short reclen_t;
 /* Windows implementation with Unicode support                     */
 /* ================================================================ */
 
-typedef struct __jacl_dirent {
+typedef struct dirent {
 	ino_t d_ino;                /* File serial number */
 	unsigned char d_type;       /* File type */
 	unsigned short d_reclen;    /* Record length */
@@ -74,7 +74,7 @@ typedef struct __jacl_dirent {
 	char d_name[NAME_MAX + 1];  /* Filename (UTF-8) */
 } dirent;
 
-typedef struct __jacl_dir {
+typedef struct DIR {
 	HANDLE handle;              /* Windows search handle */
 	WIN32_FIND_DATAW find_data; /* Windows file data (Unicode) */
 	int first_call;             /* First call flag */
@@ -89,7 +89,7 @@ typedef struct __jacl_dir {
 /* POSIX implementation                                             */
 /* ================================================================ */
 
-typedef struct __jacl_dirent {
+typedef struct dirent {
 	ino_t d_ino;                /* File serial number */
 	off_t d_off;                /* File offset (Linux) */
 	unsigned short d_reclen;    /* Record length */
@@ -97,7 +97,7 @@ typedef struct __jacl_dirent {
 	char d_name[NAME_MAX + 1];  /* Filename */
 } dirent;
 
-typedef struct __jacl_dir {
+typedef struct DIR {
 	int fd;              /* Directory file descriptor */
 	char *buffer;        /* Buffer for getdents */
 	size_t buffer_size;  /* Buffer size */
@@ -111,14 +111,14 @@ typedef struct __jacl_dir {
 
 /* Linux getdents structure (different from dirent) */
 #if JACL_HAS_C99
-typedef struct __jacl_linux_dirent {
+typedef struct linux_dirent {
   unsigned long d_ino;
   unsigned long d_off;
   unsigned short d_reclen;
   char d_name[];          /* C99 flexible array member */
 } linux_dirent;
 #else
-typedef struct __jacl_linux_dirent {
+typedef struct linux_dirent {
   unsigned long d_ino;
   unsigned long d_off;
   unsigned short d_reclen;
@@ -126,10 +126,21 @@ typedef struct __jacl_linux_dirent {
 } linux_dirent;
 #endif
 
+#if JACL_HASSYS(getdents64)
+typedef struct __jacl_linux_dirent64 {
+	uint64_t d_ino;
+	int64_t d_off;
+	unsigned short d_reclen;
+	unsigned char d_type;
+	char d_name[];
+} linux_dirent64;
+#endif
+
+
 #endif
 
 /* POSIX.1-2008 addition - posix_dent structure */
-typedef struct __jacl_posix_dent {
+typedef struct posix_dent {
 	ino_t d_ino;               /* File serial number */
 	reclen_t d_reclen;         /* Length of this entry */
 	unsigned char d_type;      /* File type */
@@ -366,6 +377,27 @@ static inline DIR *fdopendir(int fd) {
 
 #define DIRENT_BUFFER_SIZE 4096
 
+// POSIX.1-2008 getdents function
+static inline ssize_t posix_getdents(int fd, void *buf, size_t nbyte, int flags) {
+	(void)flags;  /* Not used in basic implementation */
+
+	if (!buf || nbyte == 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	#if JACL_HASSYS(getdents64)
+		return syscall(SYS_getdents64, fd, buf, nbyte);
+	#elif JACL_HASSYS(getdents)
+		return syscall(SYS_getdents, fd, buf, nbyte);
+	#endif
+
+	/* Not supported or no syscall available */
+	(void)fd;
+	errno = ENOSYS;
+	return -1;
+}
+
 /* Simple atomic operations for spinlock */
 #if DIRENT_THREADS
 static inline void dir_lock(DIR *dirp) {
@@ -430,23 +462,14 @@ static inline DIR *opendir(const char *dirname) {
 }
 
 static inline dirent *readdir(DIR *dirp) {
-	if (!dirp) {
-		errno = EBADF;
-		return NULL;
-	}
+	if (!dirp) { errno = EBADF; return NULL; }
 
 	/* Refill buffer if needed */
 	if (dirp->buffer_pos >= dirp->buffer_end) {
-		#if defined(SYS_getdents)
-			ssize_t bytes = syscall(SYS_getdents, dirp->fd, dirp->buffer, dirp->buffer_size);
-		#else
-			ssize_t bytes = -1;
-			errno = ENOSYS;
-		#endif
+		ssize_t bytes = posix_getdents(dirp->fd, dirp->buffer, dirp->buffer_size, 0);
 
 		if (bytes <= 0) {
 			if (bytes == 0) errno = 0;
-
 			return NULL;
 		}
 
@@ -454,38 +477,65 @@ static inline dirent *readdir(DIR *dirp) {
 		dirp->buffer_pos = 0;
 	}
 
-	/* Validate buffer bounds */
-	if (dirp->buffer_pos + sizeof(linux_dirent) > dirp->buffer_end) {
-		errno = EIO;
-		return NULL;
-	}
+	#if JACL_HASSYS(getdents64)
+		/* Validate buffer bounds */
+		if (dirp->buffer_pos + sizeof(linux_dirent64) > dirp->buffer_end) {
+			errno = EIO;
+			return NULL;
+		}
 
-	/* Parse current entry from buffer */
-	linux_dirent *d = (linux_dirent *)(dirp->buffer + dirp->buffer_pos);
+		/* Parse current entry from buffer */
+		linux_dirent64 *d = (linux_dirent64 *)(dirp->buffer + dirp->buffer_pos);
 
-	/* Validate record length */
-	if (d->d_reclen < sizeof(linux_dirent) ||
-	    dirp->buffer_pos + d->d_reclen > dirp->buffer_end ||
-	    d->d_reclen > sizeof(linux_dirent) + NAME_MAX + 1) {
-		errno = EIO;
-		return NULL;
-	}
+		/* Validate record length */
+		if (d->d_reclen < sizeof(linux_dirent64) ||
+		    dirp->buffer_pos + d->d_reclen > dirp->buffer_end ||
+		    d->d_reclen > sizeof(linux_dirent64) + NAME_MAX + 1) {
+			errno = EIO;
+			return NULL;
+		}
 
-	/* Fill standard dirent structure */
-	dirp->current.d_ino = d->d_ino;
-	dirp->current.d_off = d->d_off;
-	dirp->current.d_reclen = d->d_reclen;
+		/* Fill standard dirent structure */
+		dirp->current.d_ino = d->d_ino;
+		dirp->current.d_off = d->d_off;
+		dirp->current.d_reclen = d->d_reclen;
+		dirp->current.d_type = d->d_type;
 
-	/* Get d_type from the byte after the name */
-	char *type_ptr = (char *)d + d->d_reclen - 1;
-	dirp->current.d_type = *type_ptr;
+		/* Copy name safely */
+		strncpy(dirp->current.d_name, d->d_name, NAME_MAX);
+		dirp->current.d_name[NAME_MAX] = '\0';
 
-	/* Copy name with bounds checking */
-	size_t name_len = strlen(d->d_name);
-	if (name_len > NAME_MAX) name_len = NAME_MAX;
+	#else
+		/* Validate buffer bounds */
+		if (dirp->buffer_pos + sizeof(linux_dirent) > dirp->buffer_end) {
+			errno = EIO;
+			return NULL;
+		}
 
-	memcpy(dirp->current.d_name, d->d_name, name_len);
-	dirp->current.d_name[name_len] = '\0';
+		/* Parse current entry from buffer */
+		linux_dirent *d = (linux_dirent *)(dirp->buffer + dirp->buffer_pos);
+
+		/* Validate record length */
+		if (d->d_reclen < sizeof(linux_dirent) ||
+		    dirp->buffer_pos + d->d_reclen > dirp->buffer_end ||
+		    d->d_reclen > sizeof(linux_dirent) + NAME_MAX + 1) {
+			errno = EIO;
+			return NULL;
+		}
+
+		/* Fill standard dirent structure */
+		dirp->current.d_ino = d->d_ino;
+		dirp->current.d_off = d->d_off;
+		dirp->current.d_reclen = d->d_reclen;
+
+		/* d_type is at end of record for getdents */
+		unsigned char *type_ptr = (unsigned char *)d + d->d_reclen - 1;
+		dirp->current.d_type = *type_ptr;
+
+		/* Copy name safely */
+		strncpy(dirp->current.d_name, d->d_name, NAME_MAX);
+		dirp->current.d_name[NAME_MAX] = '\0';
+	#endif
 
 	/* Move to next entry */
 	dirp->buffer_pos += d->d_reclen;
@@ -718,24 +768,6 @@ static inline int scandir(const char *dirpath, dirent ***namelist,
 	return count;
 }
 
-// POSIX.1-2008 getdents function
-static inline ssize_t posix_getdents(int fd, void *buf, size_t nbyte, int flags) {
-	(void)flags;  /* Not used in basic implementation */
-
-	if (!buf || nbyte == 0) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	#if defined(SYS_getdents) && JACL_HAS_POSIX
-		return syscall(SYS_getdents, fd, buf, nbyte);
-	#endif
-
-	/* Not supported or no syscall available */
-	(void)fd;
-	errno = ENOSYS;
-	return -1;
-}
 
 #ifdef __cplusplus
 }

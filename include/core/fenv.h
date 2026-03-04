@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-_Thread_local fenv_t __jacl_fenv = { 0u, FE_TONEAREST };
+thread_local fenv_t __jacl_fenv = { 0u, FE_TONEAREST };
 
 #ifdef __cplusplus
 }

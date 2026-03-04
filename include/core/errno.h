@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-_Thread_local int __jacl_errno = 0;
+thread_local int __jacl_errno = 0;
 
 #ifdef __cplusplus
 }

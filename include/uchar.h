@@ -29,33 +29,39 @@ typedef uint_least32_t char32_t;
 
 // UTF-8/UTF-16 conversion with proper surrogate pair handling
 static inline size_t mbrtoc16(char16_t *pc16, const char *s, size_t n, mbstate_t *ps) {
-		static unsigned internal_state;
-		if (!ps) ps = (mbstate_t *)&internal_state;
+	static unsigned internal_state;
+	if (!ps) ps = (mbstate_t *)&internal_state;
 
-		unsigned *pending = (unsigned *)ps;
+	unsigned *pending = (unsigned *)ps;
 
-		if (!s) return mbrtoc16(0, "", 1, ps);
+	if (!s) return mbrtoc16(0, "", 1, ps);
 
-		// Handle pending surrogate from previous call
-		if ((int)*pending > 0) {
-				if (pc16) *pc16 = *pending;
-				*pending = 0;
-				return (size_t)-3;	// Surrogate continuation
+	// Handle pending surrogate from previous call
+	if ((int)*pending > 0) {
+		if (pc16) *pc16 = *pending;
+		*pending = 0;
+		return (size_t)-3;	// Surrogate continuation
+	}
+
+	wchar_t wc;
+	size_t ret = mbrtowc(&wc, s, n, ps);
+
+	if (ret <= 4) {  // Valid multibyte conversion
+		// Null character special case - spec requires return 0
+		if (wc == 0) {
+			if (pc16) *pc16 = 0;
+			return 0;
 		}
 
-		wchar_t wc;
-		size_t ret = mbrtowc(&wc, s, n, ps);
-
-		if (ret <= 4) {  // Valid multibyte conversion
-				if (wc >= 0x10000) {
-						// Surrogate pair needed
-						*pending = (wc & 0x3ff) + 0xdc00;  // Low surrogate
-						wc = 0xd7c0 + (wc >> 10);					 // High surrogate
-				}
-				if (pc16) *pc16 = wc;
+		if (wc >= 0x10000) {
+			// Surrogate pair needed
+			*pending = (wc & 0x3ff) + 0xdc00;  // Low surrogate
+			wc = 0xd7c0 + (wc >> 10);          // High surrogate
 		}
+		if (pc16) *pc16 = wc;
+	}
 
-		return ret;
+	return ret;
 }
 
 static inline size_t c16rtomb(char *s, char16_t c16, mbstate_t *ps) {

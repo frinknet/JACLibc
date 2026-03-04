@@ -91,30 +91,95 @@ static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 
 	long r = syscall(SYS_clock_gettime, (long)clk_id, (long)tp);
 
-	return (int)r;
+	if (r < 0) { errno = (int)-r; return -1; }
+
+	return 0;
 }
 static inline int clock_getres(clockid_t clk_id, struct timespec *tp) {
-	if (!tp) { errno = EINVAL; return -1;	}
+	if (!tp) { errno = EINVAL; return -1; }
+
+	long r = syscall(SYS_clock_getres, (long)clk_id, (long)tp);
+
+	if (r < 0) { errno = (int)-r; return -1; }
+
+	return 0;
+}
+
+static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
+	if (!req || req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec >= 1000000000L) { errno = EINVAL; return -1; }
+
+	long r = syscall(SYS_nanosleep, (long)req, (long)rem);
+
+	if (r < 0) { errno = (int)-r; return -1; }
+
+	return 0;
+}
+static inline clock_t clock(void) {
+	struct timespec ts;
+
+	if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts) != 0) {
+		if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+			if (clock_gettime(CLOCK_REALTIME, &ts) != 0) return (clock_t)-1;
+		}
+	}
+
+	// Convert to CLOCKS_PER_SEC units
+	long double seconds = (long double)ts.tv_sec + (long double)ts.tv_nsec / 1000000000.0L;
+	long double ticks = seconds * (long double)CLOCKS_PER_SEC;
+
+	return (clock_t)ticks;  // no manual overflow check
+}
+
+static inline time_t time(time_t *tloc) {
+	struct timespec ts;
+
+	if (clock_gettime(CLOCK_REALTIME, &ts) != 0) return (time_t)-1;
+	if (tloc) *tloc = ts.tv_sec;
+
+	return ts.tv_sec;
+}
+
+#elif JACL_OS_DARWIN
+
+static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
+	if (!tp) { errno = EINVAL; return -1; }
+
+	// macOS 10.12+ has native clock_gettime, but for older versions
+	// we need a fallback using mach_absolute_time or gettimeofday
+
+	// Try syscall first (works on modern macOS)
+	long r = syscall(SYS_clock_gettime, (long)clk_id, (long)tp);
+
+	return (int)r;
+}
+
+static inline int clock_getres(clockid_t clk_id, struct timespec *tp) {
+	if (!tp) { errno = EINVAL; return -1; }
 
 	long r = syscall(SYS_clock_getres, (long)clk_id, (long)tp);
 
 	return (int)r;
 }
+
 static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
-	if (!req || req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec >= 1000000000L) { errno = EINVAL; return -1; }
+	if (!req || req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec >= 1000000000L) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	long r = syscall(SYS_nanosleep, (long)req, (long)rem);
 
 	return (int)r;
 }
 
-/* clock(): use CLOCK_PROCESS_CPUTIME_ID if available, else CLOCK_MONOTONIC.
-   Convert seconds+nanoseconds to CLOCKS_PER_SEC ticks. */
 static inline clock_t clock(void) {
 	struct timespec ts;
 
-	if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts) != 0) {
-		if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return (clock_t)-1;
+	// Darwin supports MONOTONIC and REALTIME
+	if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+		if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
+			return (clock_t)-1;
+		}
 	}
 
 	long double seconds = (long double)ts.tv_sec + (long double)ts.tv_nsec / 1000000000.0L;
@@ -125,7 +190,6 @@ static inline clock_t clock(void) {
 	return (clock_t)ticks;
 }
 
-/* time(): use CLOCK_REALTIME and ignore subsecond part. */
 static inline time_t time(time_t *tloc) {
 	struct timespec ts;
 

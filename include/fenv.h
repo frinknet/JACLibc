@@ -33,7 +33,7 @@ typedef struct { fexcept_t excepts; int round; } fenv_t;
 static const fenv_t __jacl_fenv_default = { 0u, FE_TONEAREST };
 #define FE_DFL_ENV ((const fenv_t*)&__jacl_fenv_default)
 
-extern _Thread_local fenv_t __jacl_fenv;
+extern thread_local fenv_t __jacl_fenv;
 
 static inline int feclearexcept(int e) {
 	__jacl_fenv.excepts &= (fexcept_t)~(unsigned)e;

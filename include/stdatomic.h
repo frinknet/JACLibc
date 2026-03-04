@@ -217,6 +217,8 @@ static inline void atomic_signal_fence(memory_order mo) {
 // Generic dispatch main macro
 #define __JACL_ATOMIC_DISPATCH(fn, obj) \
 	_Generic((obj), \
+		atomic_bool*: __jacl_atomic_##fn##_8, \
+		atomic_char*: __jacl_atomic_##fn##_8, \
 		atomic_uchar*: __jacl_atomic_##fn##_8, \
 		atomic_schar*: __jacl_atomic_##fn##_8, \
 		atomic_ushort*: __jacl_atomic_##fn##_16, \

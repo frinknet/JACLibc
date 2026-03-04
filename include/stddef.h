@@ -67,33 +67,6 @@ extern "C" {
 	} max_align_t;
 #endif
 
-/* C language feature compatibility */
-#if JACL_HAS_C99
-	#define __restrict restrict
-#elif defined(__GNUC__) || defined(__clang__)
-	#define __restrict __restrict__
-#else
-	#define __restrict
-#endif
-
-#if JACL_HAS_C99 || defined(__cplusplus)
-	#define __inline inline
-#elif defined(__GNUC__) || defined(__clang__)
-	#define __inline __inline__
-#else
-	#define __inline
-#endif
-
-#if JACL_HAS_C11
-	/* C11 has native _Noreturn */
-#elif defined(__GNUC__) || defined(__clang__)
-	#define _Noreturn __attribute__((__noreturn__))
-#elif defined(_MSC_VER)
-	#define _Noreturn __declspec(noreturn)
-#else
-	#define _Noreturn
-#endif
-
 /* Feature test macro normalization */
 #if defined(_ALL_SOURCE) && !defined(_GNU_SOURCE)
 	#define _GNU_SOURCE 1

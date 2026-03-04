@@ -6,7 +6,7 @@
 #include <config.h>
 
 /**
- * noreturn has gone through so much metamorphesis but we keep a polyfill in config
+ * NOTE: Polyfills are provided in config.h so we can write in modern C
  */
 
 #define __noreturn_is_defined 1

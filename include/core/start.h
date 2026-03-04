@@ -8,7 +8,7 @@
 
 /* Get TLS functions from format */
 #define __FMT_INIT
-#include JACL_HEADER(fmt, JACL_FMT)
+#include JACL_FMT_FILE
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +22,7 @@ extern int main();
 
 /* OS specific init */
 #define __OS_INIT
-#include JACL_HEADER(os, JACL_OS)
+#include JACL_OS_FILE
 
 /* Convergence Start */
 void _start_main(long *p) {
@@ -33,7 +33,7 @@ void _start_main(long *p) {
 	environ = envp;
 
 	/* Initialize os */
-	__jacl_init_os();
+	__jacl_os_init();
 
 	/* Initialize constructors */
 	if (INIT_START && INIT_END) {
@@ -49,7 +49,7 @@ void _start_main(long *p) {
 
 /* Arch _start is ASM */
 #define __ARCH_START
-#include JACL_HEADER(arch, JACL_ARCH)
+#include JACL_ARCH_FILE
 
 #ifdef __cplusplus
 }

@@ -14,7 +14,7 @@
 /* ERRNO ACCESSOR FUNCTIONS                                         */
 /* ================================================================ */
 
-extern _Thread_local int __jacl_errno;
+extern thread_local int __jacl_errno;
 #define errno __jacl_errno
 
 /* ================================================================ */

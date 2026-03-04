@@ -36,7 +36,6 @@
 #define JACL_ALIGNMENT 8u
 #endif
 
-#define JACL_ALIGN_UP(x,a) (((x)+((a)-1u))&~((a)-1u))
 #define JACL_HDR_ALLOC 1u
 #define JACL_HDR_ARENA 2u
 
@@ -92,13 +91,13 @@ static _Atomic uint32_t __jacl_once = 0;
 static __jacl_lock_t __jacl_lock = {0,0};
 
 // TLS state
-static _Atomic uint32_t __jacl_tls_cursor = 0;
-_Thread_local uint32_t __jacl_tls_off = 0;
-_Thread_local uint32_t __jacl_tls_end = 0;
+_Atomic uint32_t __jacl_tls_cursor = 0;
+thread_local uint32_t __jacl_tls_off = 0;
+thread_local uint32_t __jacl_tls_end = 0;
 
 // Quicklist
 #define QUICKLIST_MAX 7
-_Thread_local _Alignas(64) struct {
+thread_local _Alignas(64) struct {
 	void* slots[QUICKLIST_MAX];
 	int count;
 } __jacl_quicklist[4];
@@ -688,7 +687,7 @@ static inline void __jacl_exit_run_quick_handlers(void) {
 	}
 }
 
-_Noreturn void quick_exit(int status) {
+noreturn void quick_exit(int status) {
 	__jacl_exit_run_quick_handlers();
 	_Exit(status);
 

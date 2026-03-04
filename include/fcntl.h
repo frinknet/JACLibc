@@ -8,8 +8,10 @@ extern "C" {
 #endif
 
 #include <config.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include JACL_X_FCNTL
 
 #if JACL_OS_WINDOWS
 	#define FCNTL_WIN32 1
@@ -20,170 +22,31 @@ extern "C" {
 	#include <sys/syscall.h>
 #endif
 
-/* ================================================================ */
-/* File access modes (mutually exclusive)                          */
-/* ================================================================ */
+#define X(name, value) name = value,
+/* Open flags */
+enum { FCNTL_O_FLAGS(X) };
 
-#define O_RDONLY    0x0000  /* Open for reading only */
-#define O_WRONLY    0x0001  /* Open for writing only */
-#define O_RDWR      0x0002  /* Open for reading and writing */
-#define O_SEARCH    0x0003  /* Open directory for search only (POSIX.1-2008) */
-#define O_EXEC      0x0003  /* Open for execute only (POSIX.1-2008) */
-#define O_ACCMODE   0x0003  /* Mask for file access modes */
+/* Fcntl commands */
+enum { FCNTL_F_COMMANDS(X) };
 
-/* ================================================================ */
-/* File creation flags                                              */
-/* ================================================================ */
+/* File descriptor flags */
+enum { FCNTL_FD_FLAGS(X) };
 
-#define O_CREAT     0x0040  /* Create file if it doesn't exist */
-#define O_EXCL      0x0080  /* Fail if file exists (with O_CREAT) */
-#define O_NOCTTY    0x0100  /* Don't assign controlling terminal */
-#define O_TRUNC     0x0200  /* Truncate file to zero length */
+/* Lock types */
+enum { FCNTL_LOCK_TYPES(X) };
 
-/* POSIX.1-2008 additions */
-#define O_CLOEXEC   0x0400  /* Set FD_CLOEXEC on new FD */
-#define O_DIRECTORY 0x0800  /* Must be a directory */
-#define O_NOFOLLOW  0x1000  /* Don't follow symbolic links */
-#define O_TTY_INIT  0x2000  /* Initialize terminal parameters */
+/* Owner types */
+enum { FCNTL_OWNER_TYPES(X) };
 
-/* ================================================================ */
-/* File status flags                                                */
-/* ================================================================ */
+/* AT function flags */
+enum { FCNTL_AT_FLAGS(X) };
 
-#define O_APPEND    0x4000  /* Append on each write */
-#define O_NONBLOCK  0x8000  /* Non-blocking mode */
-#define O_NDELAY    O_NONBLOCK  /* BSD compatibility */
-#define O_SYNC      0x10000 /* Synchronous writes */
-#define O_DSYNC     0x20000 /* Synchronous data writes */
-#define O_RSYNC     0x40000 /* Synchronous reads */
+/* POSIX advisory flags */
+enum { FCNTL_POSIX_FADV(X) };
 
-/* Linux-specific flags */
-#if JACL_OS_LINUX
-#define O_DIRECT    0x80000  /* Direct I/O */
-#define O_NOATIME   0x100000 /* Don't update access time */
-#define O_PATH      0x200000 /* Path only (no file access) */
-#define O_TMPFILE   0x400000 /* Create temporary file */
-#define O_LARGEFILE 0x800000 /* Large file support */
-#endif
-
-/* ================================================================ */
-/* fcntl() commands                                                 */
-/* ================================================================ */
-
-#define F_DUPFD     0   /* Duplicate file descriptor */
-#define F_GETFD     1   /* Get file descriptor flags */
-#define F_SETFD     2   /* Set file descriptor flags */
-#define F_GETFL     3   /* Get file status flags */
-#define F_SETFL     4   /* Set file status flags */
-
-/* POSIX record locks */
-#define F_GETLK     5   /* Get record locking information */
-#define F_SETLK     6   /* Set record locking information */
-#define F_SETLKW    7   /* Set record locking information (wait) */
-
-/* POSIX.1-2008 additions */
-#define F_DUPFD_CLOEXEC 1030  /* Duplicate FD with O_CLOEXEC */
-
-/* Open file description locks (Linux) */
-#if JACL_OS_LINUX
-#define F_OFD_GETLK  36  /* Get OFD lock */
-#define F_OFD_SETLK  37  /* Set OFD lock */
-#define F_OFD_SETLKW 38  /* Set OFD lock (wait) */
-#endif
-
-/* Owner management */
-#define F_GETOWN    9   /* Get owner for SIGIO */
-#define F_SETOWN    8   /* Set owner for SIGIO */
-#define F_GETOWN_EX 16  /* Get owner (extended) */
-#define F_SETOWN_EX 15  /* Set owner (extended) */
-
-/* Signal management */
-#define F_GETSIG    11  /* Get signal sent when I/O possible */
-#define F_SETSIG    10  /* Set signal sent when I/O possible */
-
-/* Linux-specific extensions */
-#if JACL_OS_LINUX
-#define F_SETLEASE  1024  /* Set lease */
-#define F_GETLEASE  1025  /* Get lease */
-#define F_NOTIFY    1026  /* Notify on directory changes */
-#define F_SETPIPE_SZ 1031 /* Set pipe buffer size */
-#define F_GETPIPE_SZ 1032 /* Get pipe buffer size */
-
-/* File sealing (memfd) */
-#define F_ADD_SEALS 1033  /* Add seals */
-#define F_GET_SEALS 1034  /* Get seals */
-#endif
-
-/* ================================================================ */
-/* File descriptor flags                                            */
-/* ================================================================ */
-
-#define FD_CLOEXEC  1   /* Close on exec */
-#define FD_CLOFORK  2   /* Close on fork (POSIX.1-2008) */
-
-/* ================================================================ */
-/* File locking types                                               */
-/* ================================================================ */
-
-#define F_RDLCK     0   /* Shared (read) lock */
-#define F_WRLCK     1   /* Exclusive (write) lock */
-#define F_UNLCK     2   /* Unlock */
-
-/* ================================================================ */
-/* Owner types for F_*OWN_EX                                        */
-/* ================================================================ */
-
-#define F_OWNER_TID 0   /* Thread group */
-#define F_OWNER_PID 1   /* Process */
-#define F_OWNER_PGRP 2  /* Process group */
-
-/* ================================================================ */
-/* File sealing constants                                           */
-/* ================================================================ */
-
-#if JACL_OS_LINUX
-#define F_SEAL_SEAL    0x0001  /* Prevent further sealing */
-#define F_SEAL_SHRINK  0x0002  /* Prevent shrinking */
-#define F_SEAL_GROW    0x0004  /* Prevent growing */
-#define F_SEAL_WRITE   0x0008  /* Prevent writing */
-#define F_SEAL_FUTURE_WRITE 0x0010  /* Prevent future writes */
-#endif
-
-/* ================================================================ */
-/* AT_* constants for *at() functions                               */
-/* ================================================================ */
-
-#define AT_FDCWD            -100  /* Use current working directory */
-#define AT_SYMLINK_NOFOLLOW 0x100 /* Don't follow symbolic links */
-#define AT_SYMLINK_FOLLOW   0x400 /* Follow symbolic links */
-#define AT_REMOVEDIR        0x200 /* Remove directory instead of file */
-#define AT_EACCESS          0x200 /* Use effective IDs for access check */
-
-/* ================================================================ */
-/* POSIX advisory constants                                         */
-/* ================================================================ */
-
-#define POSIX_FADV_NORMAL     0  /* No special advice */
-#define POSIX_FADV_RANDOM     1  /* Random access pattern */
-#define POSIX_FADV_SEQUENTIAL 2  /* Sequential access pattern */
-#define POSIX_FADV_WILLNEED   3  /* Will need this data soon */
-#define POSIX_FADV_DONTNEED   4  /* Won't need this data soon */
-#define POSIX_FADV_NOREUSE    5  /* Data will be accessed once */
-
-/* ================================================================ */
-/* Seek constants                                                   */
-/* ================================================================ */
-
-#ifndef SEEK_SET
-#define SEEK_SET    0   /* Seek from beginning */
-#define SEEK_CUR    1   /* Seek from current position */
-#define SEEK_END    2   /* Seek from end */
-#endif
-
-#if JACL_OS_LINUX
-#define SEEK_DATA   3   /* Seek to next data region */
-#define SEEK_HOLE   4   /* Seek to next hole */
-#endif
+/* Seek constants */
+enum { FCNTL_SEEK(X) };
+#undef X
 
 /* ================================================================ */
 /* Structures                                                       */
@@ -215,6 +78,21 @@ struct f_owner_ex {
 	pid_t pid;   /* Process/thread/group ID */
 };
 
+#if JACL_OS_DARWIN
+struct radvisory {
+	off_t ra_offset;
+	int ra_count;
+};
+
+typedef struct fstore {
+	unsigned int fst_flags;
+	int fst_posmode;
+	off_t fst_offset;
+	off_t fst_length;
+	off_t fst_bytesalloc;
+} fstore_t;
+#endif
+
 /* ================================================================ */
 /* Function implementations                                         */
 /* ================================================================ */
@@ -232,17 +110,17 @@ static inline void win32_convert_flags(int flags, DWORD *access, DWORD *creation
 
 	/* Access modes */
 	switch (flags & O_ACCMODE) {
-		case O_RDONLY:
-		case O_SEARCH:
-			*access = GENERIC_READ;
-			break;
-		case O_WRONLY:
-			*access = GENERIC_WRITE;
-			break;
-		case O_RDWR:
-			*access = GENERIC_READ | GENERIC_WRITE;
-			break;
-		case O_EXEC:
+	case O_RDONLY:
+	case O_SEARCH:
+		*access = GENERIC_READ;
+		break;
+	case O_WRONLY:
+		*access = GENERIC_WRITE;
+		break;
+	case O_RDWR:
+		*access = GENERIC_READ | GENERIC_WRITE;
+		break;
+	case O_EXEC:
 			*access = GENERIC_EXECUTE;
 			break;
 	}
@@ -315,77 +193,77 @@ static inline int fcntl(int fd, int cmd, ...) {
 	va_start(args, cmd);
 
 	switch (cmd) {
-		case F_DUPFD: {
-			int min_fd = va_arg(args, int);
-			int new_fd = _dup(fd);
+	case F_DUPFD: {
+		int min_fd = va_arg(args, int);
+		int new_fd = _dup(fd);
 
-			va_end(args);
+		va_end(args);
 
-			return (new_fd >= min_fd) ? new_fd : -1;
+		return (new_fd >= min_fd) ? new_fd : -1;
+	}
+
+	case F_DUPFD_CLOEXEC: {
+		int min_fd = va_arg(args, int);
+		int new_fd = _dup(fd);
+
+		va_end(args);
+
+		/* Windows: Set inheritable to FALSE for CLOEXEC equivalent */
+		if (new_fd >= min_fd) {
+			HANDLE h = (HANDLE)_get_osfhandle(new_fd);
+			SetHandleInformation(h, HANDLE_FLAG_INHERIT, 0);
+
+			return new_fd;
 		}
 
-		case F_DUPFD_CLOEXEC: {
-			int min_fd = va_arg(args, int);
-			int new_fd = _dup(fd);
+		return -1;
+	}
 
-			va_end(args);
+	case F_GETFD:
+		va_end(args);
 
-			/* Windows: Set inheritable to FALSE for CLOEXEC equivalent */
-			if (new_fd >= min_fd) {
-				HANDLE h = (HANDLE)_get_osfhandle(new_fd);
-				SetHandleInformation(h, HANDLE_FLAG_INHERIT, 0);
-
-				return new_fd;
-			}
-
-			return -1;
-		}
-
-		case F_GETFD:
-			va_end(args);
-
-			/* Check if handle is inheritable */
-			{
-				HANDLE h = (HANDLE)_get_osfhandle(fd);
-				DWORD flags;
-
-				if (GetHandleInformation(h, &flags)) return (flags & HANDLE_FLAG_INHERIT) ? 0 : FD_CLOEXEC;
-			}
-
-			return 0;
-
-		case F_SETFD: {
-			int flags = va_arg(args, int);
-
-			va_end(args);
-
+		/* Check if handle is inheritable */
+		{
 			HANDLE h = (HANDLE)_get_osfhandle(fd);
-			DWORD win_flags = (flags & FD_CLOEXEC) ? 0 : HANDLE_FLAG_INHERIT;
+			DWORD flags;
 
-			return SetHandleInformation(h, HANDLE_FLAG_INHERIT, win_flags) ? 0 : -1;
+			if (GetHandleInformation(h, &flags)) return (flags & HANDLE_FLAG_INHERIT) ? 0 : FD_CLOEXEC;
 		}
 
-		case F_GETFL:
-			va_end(args);
+		return 0;
 
-			/* Cannot easily determine original open flags on Windows */
-			return 0;
+	case F_SETFD: {
+		int flags = va_arg(args, int);
 
-		case F_SETFL: {
-			int flags = va_arg(args, int);
+		va_end(args);
 
-			va_end(args);
+		HANDLE h = (HANDLE)_get_osfhandle(fd);
+		DWORD win_flags = (flags & FD_CLOEXEC) ? 0 : HANDLE_FLAG_INHERIT;
 
-			/* Limited flag setting support on Windows */
-			(void)flags;
+		return SetHandleInformation(h, HANDLE_FLAG_INHERIT, win_flags) ? 0 : -1;
+	}
 
-			return 0;
-		}
+	case F_GETFL:
+		va_end(args);
 
-		default:
-			va_end(args);
+		/* Cannot easily determine original open flags on Windows */
+		return 0;
 
-			return -1;
+	case F_SETFL: {
+		int flags = va_arg(args, int);
+
+		va_end(args);
+
+		/* Limited flag setting support on Windows */
+		(void)flags;
+
+		return 0;
+	}
+
+	default:
+		va_end(args);
+
+		return -1;
 	}
 }
 
@@ -418,7 +296,14 @@ static inline int open(const char *pathname, int flags, ...) {
 		va_end(args);
 	}
 
-	return (int)syscall(SYS_open, pathname, flags, mode);
+	#if JACL_HASSYS(openat)
+		return (int)syscall(SYS_openat, AT_FDCWD, pathname, flags, mode);
+	#elif JACL_HASSYS(open)
+		return (int)syscall(SYS_open, pathname, flags, mode);
+	#else
+		errno = ENOSYS;
+		return -1;
+	#endif
 }
 
 static inline int openat(int dirfd, const char *pathname, int flags, ...) {
@@ -449,25 +334,23 @@ static inline int fcntl(int fd, int cmd, ...) {
 
 	/* Get argument based on command type */
 	switch (cmd) {
-		case F_GETLK:
-		case F_SETLK:
-		case F_SETLKW:
-#if JACL_OS_LINUX
-		case F_OFD_GETLK:
-		case F_OFD_SETLK:
-		case F_OFD_SETLKW:
-#endif
-			lock = va_arg(args, struct flock *);
-			arg = (long)lock;
-			break;
-		case F_GETOWN_EX:
-		case F_SETOWN_EX:
-			owner = va_arg(args, struct f_owner_ex *);
-			arg = (long)owner;
-			break;
-		default:
-			arg = va_arg(args, long);
-			break;
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+	case F_OFD_GETLK:
+	case F_OFD_SETLK:
+	case F_OFD_SETLKW:
+		lock = va_arg(args, struct flock *);
+		arg = (long)lock;
+		break;
+	case F_GETOWN_EX:
+	case F_SETOWN_EX:
+		owner = va_arg(args, struct f_owner_ex *);
+		arg = (long)owner;
+		break;
+	default:
+		arg = va_arg(args, long);
+		break;
 	}
 
 	va_end(args);
@@ -477,11 +360,68 @@ static inline int fcntl(int fd, int cmd, ...) {
 
 /* POSIX advisory functions */
 static inline int posix_fadvise(int fd, off_t offset, off_t len, int advice) {
-	return (int)syscall(SYS_fadvise64, fd, offset, len, advice);
+	#if JACL_OS_LINUX
+		return (int)syscall(SYS_fadvise64, fd, offset, len, advice);
+	#elif JACL_OS_FREEBSD
+		return (int)syscall(SYS_posix_fadvise, fd, offset, len, advice);
+	#elif JACL_OS_NETBSD
+		return (int)syscall(SYS_posix_fadvise, fd, 0, offset, 0, len, advice);
+	#elif JACL_OS_DARWIN
+		/* macOS: use fcntl F_RDADVISE for sequential/random hints */
+		struct radvisory ra;
+		ra.ra_offset = offset;
+		ra.ra_count = (int)len;  // Cast needed here
+
+		if (advice == POSIX_FADV_SEQUENTIAL || advice == POSIX_FADV_RANDOM) {
+			return (int)syscall(SYS_fcntl, fd, F_RDADVISE, &ra);
+		}
+
+		return 0; /* Other hints ignored */
+	#elif JACL_OS_OPENBSD
+		/* OpenBSD doesn't support fadvise */
+		(void)fd; (void)offset; (void)len; (void)advice;
+
+		return 0;
+	#elif JACL_OS_DRAGONFLY
+		return (int)syscall(SYS_posix_fadvise, fd, offset, len, advice);
+	#else
+		(void)fd; (void)offset; (void)len; (void)advice;
+		errno = ENOSYS;
+
+		return -1;
+	#endif
 }
 
 static inline int posix_fallocate(int fd, off_t offset, off_t len) {
-	return (int)syscall(SYS_fallocate, fd, 0, offset, len);
+	#if JACL_OS_LINUX
+		return (int)syscall(SYS_fallocate, fd, 0, offset, len);
+	#elif JACL_OS_FREEBSD
+		return (int)syscall(SYS_posix_fallocate, fd, offset, len);
+	#elif JACL_OS_NETBSD
+		return (int)syscall(SYS_posix_fallocate, fd, 0, offset, 0, len);
+	#elif JACL_OS_DARWIN
+		/* macOS: use fcntl F_PREALLOCATE */
+		fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, offset, len, 0};
+		if (syscall(SYS_fcntl, fd, F_PREALLOCATE, &store) == -1) {
+			/* Try non-contiguous */
+			store.fst_flags = F_ALLOCATEALL;
+			if (syscall(SYS_fcntl, fd, F_PREALLOCATE, &store) == -1) {
+				return -1;
+			}
+		}
+		return (int)syscall(SYS_ftruncate, fd, offset + len);
+	#elif JACL_OS_OPENBSD
+		/* OpenBSD doesn't support fallocate */
+		(void)fd; (void)offset; (void)len;
+		errno = EOPNOTSUPP;
+		return -1;
+	#elif JACL_OS_DRAGONFLY
+		return (int)syscall(SYS_posix_fallocate, fd, offset, len);
+	#else
+		(void)fd; (void)offset; (void)len;
+		errno = ENOSYS;
+		return -1;
+	#endif
 }
 
 /* Large file support */
@@ -494,20 +434,20 @@ static inline int fcntl64(int fd, int cmd, ...) {
 	va_start(args, cmd);
 
 	switch (cmd) {
-		case F_GETLK:
-		case F_SETLK:
-		case F_SETLKW:
-			lock = va_arg(args, struct flock64 *);
-			arg = (long)lock;
-			break;
-		default:
-			arg = va_arg(args, long);
-			break;
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+		lock = va_arg(args, struct flock64 *);
+		arg = (long)lock;
+		break;
+	default:
+		arg = va_arg(args, long);
+		break;
 	}
 
 	va_end(args);
 
-	#if defined(SYS_fcntl64)
+	#if JACL_HASSYS(fcntl64)
 		return (int)syscall(SYS_fcntl64, fd, cmd, arg);
 	#endif
 
@@ -516,7 +456,7 @@ static inline int fcntl64(int fd, int cmd, ...) {
 }
 
 static inline int posix_fadvise64(int fd, off64_t offset, off64_t len, int advice) {
-	#if defined(SYS_fadvise64_64)
+	#if JACL_HASSYS(fadvise64_64)
 		return (int)syscall(SYS_fadvise64_64, fd, offset, len, advice);
 	#else
 		errno = ENOSYS;
@@ -527,7 +467,7 @@ static inline int posix_fadvise64(int fd, off64_t offset, off64_t len, int advic
 
 
 static inline int posix_fallocate64(int fd, off64_t offset, off64_t len) {
-	#if defined(SYS_fallocate)
+	#if JACL_HASSYS(fallocate)
 		return (int)syscall(SYS_fallocate, fd, 0, offset, len);
 	#endif
 
@@ -596,4 +536,3 @@ static inline int fcntl_dupfd_cloexec(int fd, int min_fd) {
 }
 #endif
 #endif /* FCNTL_H */
-

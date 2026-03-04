@@ -501,7 +501,7 @@ return x * y + z; \
 
 
 #define signgam (*__signgam_ptr())
-static inline int* __signgam_ptr(void) { static _Thread_local int signgam_val = 1;  return &signgam_val; }
+static inline int* __signgam_ptr(void) { static thread_local int signgam_val = 1;  return &signgam_val; }
 
 // Remainder and Quotient: fmod, remainder, remquo
 #define __jacl_fmod(type,suf,PRE)              static inline type fmod##suf(type x, type y){ \

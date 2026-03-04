@@ -179,7 +179,7 @@ static inline size_t strxfrm(char*  restrict dest, const char* src, size_t n) {
 
 /* Thread-safe strerror & strerror_r */
 #if JACL_HAS_C11
-static _Thread_local char _jacl_errbuf[64];
+static thread_local char _jacl_errbuf[64];
 #else
 static __thread char _jacl_errbuf[64];
 #endif

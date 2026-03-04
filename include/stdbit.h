@@ -140,12 +140,6 @@ __jacl_bitgen(64, unsigned long long,	ull)
 
 #endif /* JACL_HAS_C23 */
 
-/* Non-standard but handy rotates */
-static inline uint32_t rotl32(uint32_t v, int r) { return (v << (r&31)) | (v >> (32-(r&31))); }
-static inline uint32_t rotr32(uint32_t v, int r) { return (v >> (r&31)) | (v << (32-(r&31))); }
-static inline uint64_t rotl64(uint64_t v, int r) { return (v << (r&63)) | (v >> (64-(r&63))); }
-static inline uint64_t rotr64(uint64_t v, int r) { return (v >> (r&63)) | (v << (64-(r&63))); }
-
 #ifdef __cplusplus
 }
 #endif

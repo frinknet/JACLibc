@@ -44,7 +44,7 @@ struct winsize {
 
 /* ioctl() - device control operations */
 static inline int ioctl(int fd, unsigned long request, ...) {
-#if defined(SYS_ioctl)
+#if JACL_HASSYS(ioctl)
 	va_list ap;
 	void *arg;
 

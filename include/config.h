@@ -22,9 +22,14 @@
 #define JACL_HEADER(dir, file) <dir/file.h>
 #define JACL_OS_ARCH JACL_CONCAT_EXPAND(JACL_OS, JACL_ARCH, _)
 #define JACL_HASSYS(name) JACL_CONCAT_HAS_EXPAND(JACL_OS_ARCH, name)
+#define JACL_ALIGN_UP(x,a) (((x) + ((a) - 1u)) & ~((a) - 1u))
 
+#define JACL_OS_FILE JACL_HEADER(os, detect)
+#define JACL_FMT_FILE JACL_HEADER(fmt, JACL_FMT)
+#define JACL_ARCH_FILE JACL_HEADER(arch, detect)
 #define JACL_X_SYSCALL JACL_HEADER(x, JACL_OS_ARCH)
 #define JACL_X_SIGNALS JACL_HEADER(x, JACL_CONCAT_EXPAND(signals,JACL_OS,_))
+#define JACL_X_FCNTL JACL_HEADER(x, JACL_CONCAT_EXPAND(fcntl,JACL_OS_ARCH,_))
 
 /* ============================================================= */
 /* C Standards Detection                                         */
@@ -87,7 +92,15 @@
 
 // C99 features polyfill
 #if !JACL_HAS_C99
-  #define inline
+	#if defined(__GNUC__) || defined(__clang__)
+		#define inline __inline__
+	#else
+		#define inline
+	#endif
+
+	#ifndef __cplusplus
+		typedef unsigned char _Bool;
+	#endif
 
 	#if defined(__GNUC__) || defined(__clang__)
     #define restrict __restrict__
@@ -102,6 +115,9 @@
 #if !JACL_HAS_C11
 	#define _Static_assert(cond, msg) typedef char JACL_CONCAT(static_assertion_,__LINE__)[(cond) ? 1 : -1]
 	#define _Atomic volatile
+
+	#ifndef __cplusplus
+	#endif
 
   #if defined(__GNUC__) || defined(__clang__) || defined(__SUNPRO_C) || defined(__TINYC__)
     #define _Thread_local __thread
@@ -127,12 +143,35 @@
 // C23 features
 #if !JACL_HAS_C23
 	#ifndef __cplusplus
+		#define bool _Bool
 		#define static_assert _Static_assert
+		#define thread_local _Thread_local
+		#define nullptr ((void*)0)
+	#endif /* !__cplusplus */
+
+	#define true  1
+	#define false 0
+
+	/* unreachable - marks code as unreachable for optimization */
+	#if defined(__GNUC__) || defined(__clang__)
+		#define unreachable() __builtin_unreachable()
+	#elif defined(_MSC_VER)
+		#define unreachable() __assume(0)
+	#else
+		#define unreachable() __builtin_trap()
 	#endif
 
-	#if !defined(__cplusplus)
-  	#define thread_local _Thread_local
-	#endif /* !__cplusplus */
+	/* typeof - get type of expression */
+	#if defined(__GNUC__) || defined(__clang__)
+		#define typeof(x) __typeof__(x)
+		#define typeof_unqual(x) __typeof__(x)
+	#elif defined(_MSC_VER) && _MSC_VER >= 1920 && defined(__cplusplus)
+		#define typeof(x) decltype(x)
+		#define typeof_unqual(x) decltype(x)
+	#else
+		/* No typeof support on this compiler */
+	#endif
+
 #endif /* !JACL_HAS_C23 */
 
 #ifndef _Complex_I

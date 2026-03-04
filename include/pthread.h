@@ -48,7 +48,7 @@ extern "C" {
 	#include <sys/futex.h>
 
 	#define __ARCH_CLONE
-	#include JACL_HEADER(arch,detect)
+	#include JACL_ARCH_FILE
 #endif
 
 /* ================================================================ */

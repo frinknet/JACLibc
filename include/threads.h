@@ -90,7 +90,7 @@ static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
 		(void)thr; (void)func; (void)arg;
 		return thrd_error;
 }
-static inline _Noreturn void thrd_exit(int res) {
+static inline noreturn void thrd_exit(int res) {
 		(void)res;
 		__builtin_trap();
 }
@@ -264,7 +264,7 @@ static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
 		return thrd_success;
 }
 
-static inline _Noreturn void thrd_exit(int res) {
+static inline noreturn void thrd_exit(int res) {
 		pthread_exit((void*)(intptr_t)res);
 }
 

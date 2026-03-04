@@ -16,11 +16,13 @@ typedef enum {
 
 // Include OS-specific syscall
 #define __OS_SYSCALL
-#include JACL_HEADER(os,JACL_OS)
+#include JACL_OS_FILE
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern thread_local int __jacl_errno;
 
 static inline long syscall(long num, ...) {
 	va_list args;
@@ -39,7 +41,7 @@ static inline long syscall(long num, ...) {
 
 	// Convert Linux negative errno to POSIX -1 + errno
 	if (result < 0 && result >= -4095) {
-		errno = -result;
+		__jacl_errno = -result;
 
 		return -1;
 	}
