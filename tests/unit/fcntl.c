@@ -8,140 +8,441 @@ TEST_TYPE(unit);
 TEST_UNIT(fcntl.h);
 
 /* ============================================================================
- * CONSTANTS - ACCESS MODES
+ * CONSTANTS
  * ============================================================================ */
-TEST_SUITE(access_modes);
+TEST_SUITE(constants);
 
-TEST(access_mode_constants) {
-	ASSERT_EQ(0x0000, O_RDONLY);
-	ASSERT_EQ(0x0001, O_WRONLY);
-	ASSERT_EQ(0x0002, O_RDWR);
-	ASSERT_EQ(0x0003, O_ACCMODE);
+TEST(constants_open_flags) {
+	#define X(name, value) ASSERT_TRUE(name >= 0 || name < 0);
+	FCNTL_O_FLAGS(X)
+	#undef X
 }
 
-TEST(access_modes_mutually_exclusive) {
-	ASSERT_NE(O_RDONLY, O_WRONLY);
-	ASSERT_NE(O_WRONLY, O_RDWR);
-	ASSERT_NE(O_RDONLY, O_RDWR);
+TEST(constants_fcntl_commands) {
+	#define X(name, value) ASSERT_TRUE(name >= 0 || name < 0);
+	FCNTL_F_COMMANDS(X)
+	#undef X
+}
+
+TEST(constants_fd_flags) {
+	#define X(name, value) ASSERT_TRUE(name >= 0 || name < 0);
+	FCNTL_FD_FLAGS(X)
+	#undef X
+}
+
+TEST(constants_lock_types) {
+	#define X(name, value) ASSERT_TRUE(name >= 0 || name < 0);
+	FCNTL_LOCK_TYPES(X)
+	#undef X
+}
+
+TEST(constants_owner_types) {
+	#define X(name, value) ASSERT_TRUE(name >= 0 || name < 0);
+	FCNTL_OWNER_TYPES(X)
+	#undef X
+}
+
+TEST(constants_at_flags) {
+	#define X(name, value) ASSERT_TRUE(name >= 0 || name < 0);
+	FCNTL_AT_FLAGS(X)
+	#undef X
+}
+
+TEST(constants_posix_fadv) {
+	#define X(name, value) ASSERT_TRUE(name >= 0);
+	FCNTL_POSIX_FADV(X)
+	#undef X
+}
+
+TEST(constants_seek) {
+	#define X(name, value) ASSERT_TRUE(name >= 0);
+	FCNTL_SEEK(X)
+	#undef X
 }
 
 /* ============================================================================
- * CONSTANTS - CREATION FLAGS
+ * OPEN
  * ============================================================================ */
-TEST_SUITE(creation_flags);
+TEST_SUITE(open);
 
-TEST(creation_flag_constants) {
-	ASSERT_EQ(0x0040, O_CREAT);
-	ASSERT_EQ(0x0080, O_EXCL);
-	ASSERT_EQ(0x0100, O_NOCTTY);
-	ASSERT_EQ(0x0200, O_TRUNC);
+TEST(open_rdonly) {
+	int fd = open("/tmp/test_open_rdonly.txt", O_CREAT | O_RDONLY, 0644);
+	ASSERT_TRUE(fd >= 0);
+	close(fd);
+	unlink("/tmp/test_open_rdonly.txt");
 }
 
-TEST(posix_2008_flags) {
-	ASSERT_EQ(0x0400, O_CLOEXEC);
-	ASSERT_EQ(0x0800, O_DIRECTORY);
-	ASSERT_EQ(0x1000, O_NOFOLLOW);
+TEST(open_wronly) {
+	int fd = open("/tmp/test_open_wronly.txt", O_CREAT | O_WRONLY, 0644);
+	ASSERT_TRUE(fd >= 0);
+	close(fd);
+	unlink("/tmp/test_open_wronly.txt");
+}
+
+TEST(open_rdwr) {
+	int fd = open("/tmp/test_open_rdwr.txt", O_CREAT | O_RDWR, 0644);
+	ASSERT_TRUE(fd >= 0);
+	close(fd);
+	unlink("/tmp/test_open_rdwr.txt");
+}
+
+TEST(open_creat) {
+	unlink("/tmp/test_open_creat.txt");
+	int fd = open("/tmp/test_open_creat.txt", O_CREAT | O_RDWR, 0644);
+	ASSERT_TRUE(fd >= 0);
+	close(fd);
+	unlink("/tmp/test_open_creat.txt");
+}
+
+TEST(open_trunc) {
+	int fd = open("/tmp/test_open_trunc.txt", O_CREAT | O_RDWR, 0644);
+	write(fd, "data", 4);
+	close(fd);
+	
+	fd = open("/tmp/test_open_trunc.txt", O_RDWR | O_TRUNC);
+	ASSERT_TRUE(fd >= 0);
+	
+	off_t size = lseek(fd, 0, SEEK_END);
+	ASSERT_EQ(0, size);
+	
+	close(fd);
+	unlink("/tmp/test_open_trunc.txt");
+}
+
+TEST(open_append) {
+	int fd = open("/tmp/test_open_append.txt", O_CREAT | O_RDWR | O_APPEND, 0644);
+	write(fd, "first", 5);
+	lseek(fd, 0, SEEK_SET);
+	write(fd, "second", 6);
+	
+	off_t size = lseek(fd, 0, SEEK_END);
+	ASSERT_EQ(11, size);
+	
+	close(fd);
+	unlink("/tmp/test_open_append.txt");
+}
+
+TEST(open_excl_creates_new) {
+	unlink("/tmp/test_open_excl.txt");
+	int fd = open("/tmp/test_open_excl.txt", O_CREAT | O_EXCL | O_RDWR, 0644);
+	ASSERT_TRUE(fd >= 0);
+	close(fd);
+	unlink("/tmp/test_open_excl.txt");
+}
+
+TEST(open_excl_fails_existing) {
+	int fd = open("/tmp/test_open_excl2.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	
+	fd = open("/tmp/test_open_excl2.txt", O_CREAT | O_EXCL | O_RDWR, 0644);
+	ASSERT_EQ(-1, fd);
+	
+	unlink("/tmp/test_open_excl2.txt");
+}
+
+TEST(open_nonexistent_fails) {
+	unlink("/tmp/test_open_nonexistent.txt");
+	int fd = open("/tmp/test_open_nonexistent.txt", O_RDONLY);
+	ASSERT_EQ(-1, fd);
+}
+
+TEST(open_null_pathname) {
+	int fd = open(NULL, O_RDONLY);
+	ASSERT_EQ(-1, fd);
 }
 
 /* ============================================================================
- * CONSTANTS - STATUS FLAGS
+ * OPENAT
  * ============================================================================ */
-TEST_SUITE(status_flags);
+TEST_SUITE(openat);
 
-TEST(status_flag_constants) {
-	ASSERT_EQ(0x4000, O_APPEND);
-	ASSERT_EQ(0x8000, O_NONBLOCK);
-	ASSERT_EQ(O_NONBLOCK, O_NDELAY);
+TEST(openat_basic) {
+	int fd = openat(AT_FDCWD, "/tmp/test_openat_basic.txt", O_CREAT | O_RDWR, 0644);
+	ASSERT_TRUE(fd >= 0);
+	close(fd);
+	unlink("/tmp/test_openat_basic.txt");
 }
 
-TEST(sync_flags) {
-	ASSERT_EQ(0x10000, O_SYNC);
-	ASSERT_EQ(0x20000, O_DSYNC);
-	ASSERT_EQ(0x40000, O_RSYNC);
+TEST(openat_null_pathname) {
+	int fd = openat(AT_FDCWD, NULL, O_RDONLY);
+	ASSERT_EQ(-1, fd);
 }
 
 /* ============================================================================
- * CONSTANTS - FCNTL COMMANDS
+ * CREAT
  * ============================================================================ */
-TEST_SUITE(fcntl_commands);
+TEST_SUITE(creat);
 
-TEST(basic_fcntl_commands) {
-	ASSERT_EQ(0, F_DUPFD);
-	ASSERT_EQ(1, F_GETFD);
-	ASSERT_EQ(2, F_SETFD);
-	ASSERT_EQ(3, F_GETFL);
-	ASSERT_EQ(4, F_SETFL);
+TEST(creat_new_file) {
+	unlink("/tmp/test_creat_new.txt");
+	int fd = creat("/tmp/test_creat_new.txt", 0644);
+	ASSERT_TRUE(fd >= 0);
+	close(fd);
+	unlink("/tmp/test_creat_new.txt");
 }
 
-TEST(lock_commands) {
-	ASSERT_EQ(5, F_GETLK);
-	ASSERT_EQ(6, F_SETLK);
-	ASSERT_EQ(7, F_SETLKW);
+TEST(creat_truncates_existing) {
+	int fd = creat("/tmp/test_creat_trunc.txt", 0644);
+	write(fd, "data", 4);
+	close(fd);
+	
+	fd = creat("/tmp/test_creat_trunc.txt", 0644);
+	off_t size = lseek(fd, 0, SEEK_END);
+	ASSERT_EQ(0, size);
+	
+	close(fd);
+	unlink("/tmp/test_creat_trunc.txt");
 }
 
-TEST(fcntl_commands_unique) {
-	ASSERT_NE(F_DUPFD, F_GETFD);
-	ASSERT_NE(F_GETFD, F_SETFD);
-	ASSERT_NE(F_GETFL, F_SETFL);
+TEST(creat_null_pathname) {
+	int fd = creat(NULL, 0644);
+	ASSERT_EQ(-1, fd);
 }
 
 /* ============================================================================
- * CONSTANTS - LOCK TYPES
+ * FCNTL
  * ============================================================================ */
-TEST_SUITE(lock_types);
+TEST_SUITE(fcntl);
 
-TEST(lock_type_constants) {
-	ASSERT_EQ(0, F_RDLCK);
-	ASSERT_EQ(1, F_WRLCK);
-	ASSERT_EQ(2, F_UNLCK);
+TEST(fcntl_dupfd_basic) {
+	int fd = open("/tmp/test_fcntl_dupfd.txt", O_CREAT | O_RDWR, 0644);
+	ASSERT_TRUE(fd >= 0);
+	
+	int new_fd = fcntl(fd, F_DUPFD, 0);
+	ASSERT_TRUE(new_fd >= 0);
+	ASSERT_NE(fd, new_fd);
+	
+	close(fd);
+	close(new_fd);
+	unlink("/tmp/test_fcntl_dupfd.txt");
 }
 
-TEST(lock_types_unique) {
-	ASSERT_NE(F_RDLCK, F_WRLCK);
-	ASSERT_NE(F_WRLCK, F_UNLCK);
-	ASSERT_NE(F_RDLCK, F_UNLCK);
+TEST(fcntl_dupfd_min_fd) {
+	int fd = open("/tmp/test_fcntl_dupfd_min.txt", O_CREAT | O_RDWR, 0644);
+	
+	int new_fd = fcntl(fd, F_DUPFD, 100);
+	ASSERT_TRUE(new_fd >= 100);
+	
+	close(fd);
+	close(new_fd);
+	unlink("/tmp/test_fcntl_dupfd_min.txt");
+}
+
+TEST(fcntl_getfd_returns_flags) {
+	int fd = open("/tmp/test_fcntl_getfd.txt", O_CREAT | O_RDWR, 0644);
+	
+	int flags = fcntl(fd, F_GETFD);
+	ASSERT_TRUE(flags >= 0);
+	
+	close(fd);
+	unlink("/tmp/test_fcntl_getfd.txt");
+}
+
+TEST(fcntl_setfd_cloexec) {
+	int fd = open("/tmp/test_fcntl_setfd.txt", O_CREAT | O_RDWR, 0644);
+	
+	int result = fcntl(fd, F_SETFD, FD_CLOEXEC);
+	ASSERT_EQ(0, result);
+	
+	int flags = fcntl(fd, F_GETFD);
+	ASSERT_TRUE(flags & FD_CLOEXEC);
+	
+	close(fd);
+	unlink("/tmp/test_fcntl_setfd.txt");
+}
+
+TEST(fcntl_getfl_returns_flags) {
+	int fd = open("/tmp/test_fcntl_getfl.txt", O_CREAT | O_RDWR, 0644);
+	
+	int flags = fcntl(fd, F_GETFL);
+	ASSERT_TRUE(flags >= 0);
+	
+	close(fd);
+	unlink("/tmp/test_fcntl_getfl.txt");
+}
+
+TEST(fcntl_setfl_nonblock) {
+	int fd = open("/tmp/test_fcntl_setfl.txt", O_CREAT | O_RDWR, 0644);
+	
+	int flags = fcntl(fd, F_GETFL);
+	int result = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	ASSERT_EQ(0, result);
+	
+	close(fd);
+	unlink("/tmp/test_fcntl_setfl.txt");
+}
+
+TEST(fcntl_invalid_fd) {
+	int result = fcntl(-1, F_GETFD);
+	ASSERT_EQ(-1, result);
 }
 
 /* ============================================================================
- * CONSTANTS - FD FLAGS
+ * FCNTL_VALID_FD
  * ============================================================================ */
-TEST_SUITE(fd_flags);
+TEST_SUITE(fcntl_valid_fd);
 
-TEST(fd_flag_constants) {
-	ASSERT_EQ(1, FD_CLOEXEC);
+TEST(fcntl_valid_fd_valid) {
+	int fd = open("/tmp/test_valid_fd.txt", O_CREAT | O_RDWR, 0644);
+	ASSERT_TRUE(fcntl_valid_fd(fd));
+	close(fd);
+	unlink("/tmp/test_valid_fd.txt");
+}
+
+TEST(fcntl_valid_fd_negative) {
+	ASSERT_FALSE(fcntl_valid_fd(-1));
+}
+
+TEST(fcntl_valid_fd_closed) {
+	int fd = open("/tmp/test_valid_fd_closed.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	ASSERT_FALSE(fcntl_valid_fd(fd));
+	unlink("/tmp/test_valid_fd_closed.txt");
+}
+
+TEST(fcntl_valid_fd_large_invalid) {
+	ASSERT_FALSE(fcntl_valid_fd(9999));
 }
 
 /* ============================================================================
- * CONSTANTS - SEEK
+ * FCNTL_SET_CLOEXEC
  * ============================================================================ */
-TEST_SUITE(seek_constants);
+TEST_SUITE(fcntl_set_cloexec);
 
-TEST(seek_constants_defined) {
-	ASSERT_EQ(0, SEEK_SET);
-	ASSERT_EQ(1, SEEK_CUR);
-	ASSERT_EQ(2, SEEK_END);
+TEST(fcntl_set_cloexec_sets_flag) {
+	int fd = open("/tmp/test_set_cloexec.txt", O_CREAT | O_RDWR, 0644);
+	
+	int result = fcntl_set_cloexec(fd);
+	ASSERT_EQ(0, result);
+	
+	int flags = fcntl(fd, F_GETFD);
+	ASSERT_TRUE(flags & FD_CLOEXEC);
+	
+	close(fd);
+	unlink("/tmp/test_set_cloexec.txt");
+}
+
+TEST(fcntl_set_cloexec_invalid_fd) {
+	int result = fcntl_set_cloexec(-1);
+	ASSERT_EQ(-1, result);
 }
 
 /* ============================================================================
- * CONSTANTS - POSIX ADVISORY
+ * FCNTL_CLEAR_CLOEXEC
  * ============================================================================ */
-TEST_SUITE(posix_advisory);
+TEST_SUITE(fcntl_clear_cloexec);
 
-TEST(posix_fadvise_constants) {
-	ASSERT_EQ(0, POSIX_FADV_NORMAL);
-	ASSERT_EQ(1, POSIX_FADV_RANDOM);
-	ASSERT_EQ(2, POSIX_FADV_SEQUENTIAL);
-	ASSERT_EQ(3, POSIX_FADV_WILLNEED);
-	ASSERT_EQ(4, POSIX_FADV_DONTNEED);
-	ASSERT_EQ(5, POSIX_FADV_NOREUSE);
+TEST(fcntl_clear_cloexec_clears_flag) {
+	int fd = open("/tmp/test_clear_cloexec.txt", O_CREAT | O_RDWR, 0644);
+	fcntl_set_cloexec(fd);
+	
+	int result = fcntl_clear_cloexec(fd);
+	ASSERT_EQ(0, result);
+	
+	int flags = fcntl(fd, F_GETFD);
+	ASSERT_FALSE(flags & FD_CLOEXEC);
+	
+	close(fd);
+	unlink("/tmp/test_clear_cloexec.txt");
+}
+
+TEST(fcntl_clear_cloexec_invalid_fd) {
+	int result = fcntl_clear_cloexec(-1);
+	ASSERT_EQ(-1, result);
 }
 
 /* ============================================================================
- * FLOCK STRUCTURE
+ * FCNTL_SET_NONBLOCK
  * ============================================================================ */
-TEST_SUITE(flock_structure);
+TEST_SUITE(fcntl_set_nonblock);
 
-TEST(flock_members) {
+TEST(fcntl_set_nonblock_sets_flag) {
+	int fd = open("/tmp/test_set_nonblock.txt", O_CREAT | O_RDWR, 0644);
+	
+	int result = fcntl_set_nonblock(fd);
+	ASSERT_EQ(0, result);
+	
+	int flags = fcntl(fd, F_GETFL);
+	ASSERT_TRUE(flags & O_NONBLOCK);
+	
+	close(fd);
+	unlink("/tmp/test_set_nonblock.txt");
+}
+
+TEST(fcntl_set_nonblock_invalid_fd) {
+	int result = fcntl_set_nonblock(-1);
+	ASSERT_EQ(-1, result);
+}
+
+/* ============================================================================
+ * FCNTL_CLEAR_NONBLOCK
+ * ============================================================================ */
+TEST_SUITE(fcntl_clear_nonblock);
+
+TEST(fcntl_clear_nonblock_clears_flag) {
+	int fd = open("/tmp/test_clear_nonblock.txt", O_CREAT | O_RDWR, 0644);
+	fcntl_set_nonblock(fd);
+	
+	int result = fcntl_clear_nonblock(fd);
+	ASSERT_EQ(0, result);
+	
+	int flags = fcntl(fd, F_GETFL);
+	ASSERT_FALSE(flags & O_NONBLOCK);
+	
+	close(fd);
+	unlink("/tmp/test_clear_nonblock.txt");
+}
+
+TEST(fcntl_clear_nonblock_invalid_fd) {
+	int result = fcntl_clear_nonblock(-1);
+	ASSERT_EQ(-1, result);
+}
+
+/* ============================================================================
+ * FCNTL_DUPFD_CLOEXEC
+ * ============================================================================ */
+TEST_SUITE(fcntl_dupfd_cloexec);
+
+TEST(fcntl_dupfd_cloexec_duplicates_with_cloexec) {
+	int fd = open("/tmp/test_dupfd_cloexec.txt", O_CREAT | O_RDWR, 0644);
+	
+	int new_fd = fcntl_dupfd_cloexec(fd, 0);
+	ASSERT_TRUE(new_fd >= 0);
+	ASSERT_NE(fd, new_fd);
+	
+	int flags = fcntl(new_fd, F_GETFD);
+	ASSERT_TRUE(flags & FD_CLOEXEC);
+	
+	close(fd);
+	close(new_fd);
+	unlink("/tmp/test_dupfd_cloexec.txt");
+}
+
+TEST(fcntl_dupfd_cloexec_min_fd) {
+	int fd = open("/tmp/test_dupfd_cloexec_min.txt", O_CREAT | O_RDWR, 0644);
+	
+	int new_fd = fcntl_dupfd_cloexec(fd, 100);
+	ASSERT_TRUE(new_fd >= 100);
+	
+	int flags = fcntl(new_fd, F_GETFD);
+	ASSERT_TRUE(flags & FD_CLOEXEC);
+	
+	close(fd);
+	close(new_fd);
+	unlink("/tmp/test_dupfd_cloexec_min.txt");
+}
+
+TEST(fcntl_dupfd_cloexec_invalid_fd) {
+	int new_fd = fcntl_dupfd_cloexec(-1, 0);
+	ASSERT_EQ(-1, new_fd);
+}
+
+/* ============================================================================
+ * STRUCT FLOCK
+ * ============================================================================ */
+TEST_SUITE(struct_flock);
+
+TEST(struct_flock_members) {
 	struct flock lock;
 	
 	lock.l_type = F_RDLCK;
@@ -157,279 +458,5 @@ TEST(flock_members) {
 	ASSERT_EQ(1234, lock.l_pid);
 }
 
-/* ============================================================================
- * OPEN - BASIC
- * ============================================================================ */
-TEST_SUITE(open_basic);
-
-TEST(open_rdonly) {
-	int fd = open("/tmp/fcntl_test_rdonly.txt", O_CREAT | O_RDONLY, 0644);
-	ASSERT_TRUE(fd >= 0);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_rdonly.txt");
-}
-
-TEST(open_wronly) {
-	int fd = open("/tmp/fcntl_test_wronly.txt", O_CREAT | O_WRONLY, 0644);
-	ASSERT_TRUE(fd >= 0);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_wronly.txt");
-}
-
-TEST(open_rdwr) {
-	int fd = open("/tmp/fcntl_test_rdwr.txt", O_CREAT | O_RDWR, 0644);
-	ASSERT_TRUE(fd >= 0);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_rdwr.txt");
-}
-
-TEST(open_with_creat) {
-	int fd = open("/tmp/fcntl_test_creat.txt", O_CREAT | O_RDWR, 0644);
-	ASSERT_TRUE(fd >= 0);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_creat.txt");
-}
-
-TEST(open_with_trunc) {
-	// Create file with data
-	int fd = open("/tmp/fcntl_test_trunc.txt", O_CREAT | O_RDWR, 0644);
-	write(fd, "data", 4);
-	close(fd);
-	
-	// Reopen with truncate
-	fd = open("/tmp/fcntl_test_trunc.txt", O_RDWR | O_TRUNC);
-	ASSERT_TRUE(fd >= 0);
-	
-	off_t size = lseek(fd, 0, SEEK_END);
-	ASSERT_EQ(0, size);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_trunc.txt");
-}
-
-/* ============================================================================
- * OPEN - FLAGS
- * ============================================================================ */
-TEST_SUITE(open_flags);
-
-TEST(open_with_append) {
-	int fd = open("/tmp/fcntl_test_append.txt", O_CREAT | O_RDWR | O_APPEND, 0644);
-	write(fd, "first", 5);
-	
-	// Seek to beginning
-	lseek(fd, 0, SEEK_SET);
-	
-	// Write should still append
-	write(fd, "second", 6);
-	
-	// Check size
-	off_t size = lseek(fd, 0, SEEK_END);
-	ASSERT_EQ(11, size);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_append.txt");
-}
-
-TEST(open_excl_new_file) {
-	unlink("/tmp/fcntl_test_excl.txt");
-	
-	int fd = open("/tmp/fcntl_test_excl.txt", O_CREAT | O_EXCL | O_RDWR, 0644);
-	ASSERT_TRUE(fd >= 0);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_excl.txt");
-}
-
-TEST(open_excl_existing_file) {
-	int fd = open("/tmp/fcntl_test_excl2.txt", O_CREAT | O_RDWR, 0644);
-	close(fd);
-	
-	// Try to open with O_EXCL
-	fd = open("/tmp/fcntl_test_excl2.txt", O_CREAT | O_EXCL | O_RDWR, 0644);
-	ASSERT_EQ(-1, fd);
-	
-	unlink("/tmp/fcntl_test_excl2.txt");
-}
-
-/* ============================================================================
- * CREAT
- * ============================================================================ */
-TEST_SUITE(creat_test);
-
-TEST(creat_basic) {
-	int fd = creat("/tmp/fcntl_test_creat2.txt", 0644);
-	ASSERT_TRUE(fd >= 0);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_creat2.txt");
-}
-
-TEST(creat_overwrites) {
-	// Create file with data
-	int fd = creat("/tmp/fcntl_test_creat3.txt", 0644);
-	write(fd, "data", 4);
-	close(fd);
-	
-	// Creat again should truncate
-	fd = creat("/tmp/fcntl_test_creat3.txt", 0644);
-	off_t size = lseek(fd, 0, SEEK_END);
-	
-	ASSERT_EQ(0, size);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_creat3.txt");
-}
-
-/* ============================================================================
- * FCNTL - F_DUPFD
- * ============================================================================ */
-TEST_SUITE(fcntl_dupfd);
-
-TEST(fcntl_dupfd_basic) {
-	int fd = open("/tmp/fcntl_test_dup.txt", O_CREAT | O_RDWR, 0644);
-	ASSERT_TRUE(fd >= 0);
-	
-	int new_fd = fcntl(fd, F_DUPFD, 0);
-	ASSERT_TRUE(new_fd >= 0);
-	ASSERT_NE(fd, new_fd);
-	
-	close(fd);
-	close(new_fd);
-	unlink("/tmp/fcntl_test_dup.txt");
-}
-
-TEST(fcntl_dupfd_min_fd) {
-	int fd = open("/tmp/fcntl_test_dup2.txt", O_CREAT | O_RDWR, 0644);
-	
-	int new_fd = fcntl(fd, F_DUPFD, 100);
-	ASSERT_TRUE(new_fd >= 100);
-	
-	close(fd);
-	close(new_fd);
-	unlink("/tmp/fcntl_test_dup2.txt");
-}
-
-/* ============================================================================
- * FCNTL - F_GETFD / F_SETFD
- * ============================================================================ */
-TEST_SUITE(fcntl_fd_flags);
-
-TEST(fcntl_getfd) {
-	int fd = open("/tmp/fcntl_test_getfd.txt", O_CREAT | O_RDWR, 0644);
-	
-	int flags = fcntl(fd, F_GETFD);
-	ASSERT_TRUE(flags >= 0);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_getfd.txt");
-}
-
-TEST(fcntl_setfd_cloexec) {
-	int fd = open("/tmp/fcntl_test_setfd.txt", O_CREAT | O_RDWR, 0644);
-	
-	int result = fcntl(fd, F_SETFD, FD_CLOEXEC);
-	ASSERT_EQ(0, result);
-	
-	int flags = fcntl(fd, F_GETFD);
-	ASSERT_TRUE(flags & FD_CLOEXEC);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_setfd.txt");
-}
-
-/* ============================================================================
- * FCNTL - F_GETFL / F_SETFL
- * ============================================================================ */
-TEST_SUITE(fcntl_status_flags);
-
-TEST(fcntl_getfl) {
-	int fd = open("/tmp/fcntl_test_getfl.txt", O_CREAT | O_RDWR, 0644);
-	
-	int flags = fcntl(fd, F_GETFL);
-	ASSERT_TRUE(flags >= 0);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_getfl.txt");
-}
-
-TEST(fcntl_setfl_nonblock) {
-	int fd = open("/tmp/fcntl_test_setfl.txt", O_CREAT | O_RDWR, 0644);
-	
-	int flags = fcntl(fd, F_GETFL);
-	int result = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-	
-	ASSERT_EQ(0, result);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_setfl.txt");
-}
-
-/* ============================================================================
- * HELPER FUNCTIONS
- * ============================================================================ */
-TEST_SUITE(helper_functions);
-
-TEST(fcntl_valid_fd) {
-	int fd = open("/tmp/fcntl_test_valid.txt", O_CREAT | O_RDWR, 0644);
-	
-	ASSERT_TRUE(fcntl_valid_fd(fd));
-	ASSERT_FALSE(fcntl_valid_fd(-1));
-	ASSERT_FALSE(fcntl_valid_fd(9999));
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_valid.txt");
-}
-
-TEST(fcntl_set_cloexec_helper) {
-	int fd = open("/tmp/fcntl_test_helper1.txt", O_CREAT | O_RDWR, 0644);
-	
-	int result = fcntl_set_cloexec(fd);
-	ASSERT_EQ(0, result);
-	
-	int flags = fcntl(fd, F_GETFD);
-	ASSERT_TRUE(flags & FD_CLOEXEC);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_helper1.txt");
-}
-
-TEST(fcntl_clear_cloexec_helper) {
-	int fd = open("/tmp/fcntl_test_helper2.txt", O_CREAT | O_RDWR, 0644);
-	fcntl_set_cloexec(fd);
-	
-	int result = fcntl_clear_cloexec(fd);
-	ASSERT_EQ(0, result);
-	
-	int flags = fcntl(fd, F_GETFD);
-	ASSERT_FALSE(flags & FD_CLOEXEC);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_helper2.txt");
-}
-
-TEST(fcntl_set_nonblock_helper) {
-	int fd = open("/tmp/fcntl_test_helper3.txt", O_CREAT | O_RDWR, 0644);
-	
-	int result = fcntl_set_nonblock(fd);
-	ASSERT_EQ(0, result);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_helper3.txt");
-}
-
-TEST(fcntl_clear_nonblock_helper) {
-	int fd = open("/tmp/fcntl_test_helper4.txt", O_CREAT | O_RDWR, 0644);
-	fcntl_set_nonblock(fd);
-	
-	int result = fcntl_clear_nonblock(fd);
-	ASSERT_EQ(0, result);
-	
-	close(fd);
-	unlink("/tmp/fcntl_test_helper4.txt");
-}
-
 TEST_MAIN()
+

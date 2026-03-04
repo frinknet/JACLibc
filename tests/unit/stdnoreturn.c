@@ -83,7 +83,7 @@ TEST_SUITE(noreturn_pointers);
 TEST(noreturn_function_pointer) {
 	// Pointer to noreturn function (noreturn applies to the function, not the pointer)
 	void (*exit_ptr)(void) = exit_immediately;
-	
+
 	// Don't actually call it
 	(void)exit_ptr;
 	ASSERT_TRUE(1);
@@ -91,7 +91,7 @@ TEST(noreturn_function_pointer) {
 
 TEST(noreturn_function_pointer_with_args) {
 	void (*exit_code_ptr)(int) = exit_with_code;
-	
+
 	(void)exit_code_ptr;
 	ASSERT_TRUE(1);
 }
@@ -164,6 +164,7 @@ TEST(noreturn_macro_defined) {
 #if JACL_HAS_C11
 TEST(c11_noreturn_available) {
 	// In C11+, noreturn should map to _Noreturn or [[noreturn]]
+	// tthis is alway true in JACL
 	ASSERT_TRUE(1);
 }
 #endif

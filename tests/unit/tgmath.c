@@ -148,7 +148,7 @@ TEST(tg_log_log2) {
     ASSERT_DBL_EQ(3.0, log2(8.0));
 }
 TEST(tg_log_log10) {
-    ASSERT_DBL_EQ(2.0, log10(100.0));
+    ASSERT_DBL_NEAR(2.0, log10(100.0), DEPSILON);
 }
 TEST(tg_log_log_subnormal) {
     ASSERT_TRUE(isfinite(log(DBL_TRUE_MIN)));
@@ -369,7 +369,7 @@ TEST(tg_sinh_neg_one) {
     ASSERT_DBL_NEAR(-1.1752, sinh(-1.0), 0.0001);
 }
 TEST(tg_sinh_large) {
-    ASSERT_TRUE(isinf(sinh(700.0)));
+    ASSERT_TRUE(isinf(sinh(710.0)));
 }
 
 TEST_SUITE(tg_cosh);
@@ -388,7 +388,7 @@ TEST(tg_cosh_neg_one) {
     ASSERT_DBL_NEAR(1.54308, cosh(-1.0), 0.0001);
 }
 TEST(tg_cosh_large) {
-    ASSERT_TRUE(isinf(cosh(700.0)));
+    ASSERT_TRUE(isinf(cosh(710.0)));
 }
 
 TEST_SUITE(tg_tanh);

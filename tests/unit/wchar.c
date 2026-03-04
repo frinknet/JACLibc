@@ -14,7 +14,7 @@ TEST_UNIT(wchar.h);
 TEST_SUITE(constants_types);
 
 TEST(weof_defined) {
-	ASSERT_EQ(-1, WEOF);
+	ASSERT_EQ((wint_t)-1, WEOF);
 }
 
 TEST(mb_cur_max_defined) {
@@ -54,7 +54,7 @@ TEST(wcslen_empty) {
 TEST(wcscpy_basic) {
 	wchar_t src[] = L"Test";
 	wchar_t dst[10];
-	
+
 	wcscpy(dst, src);
 	ASSERT_EQ(0, wcscmp(dst, L"Test"));
 }
@@ -62,7 +62,7 @@ TEST(wcscpy_basic) {
 TEST(wcsncpy_basic) {
 	wchar_t src[] = L"Hello";
 	wchar_t dst[10] = {0};
-	
+
 	wcsncpy(dst, src, 3);
 	ASSERT_EQ(0, wcsncmp(dst, L"Hel", 3));
 }
@@ -70,7 +70,7 @@ TEST(wcsncpy_basic) {
 TEST(wcsncpy_pads_nulls) {
 	wchar_t dst[10];
 	wcsncpy(dst, L"Hi", 10);
-	
+
 	ASSERT_EQ(L'\0', dst[9]);
 }
 
@@ -147,7 +147,7 @@ TEST_SUITE(wmem_operations);
 TEST(wmemcpy_basic) {
 	wchar_t src[] = L"Test";
 	wchar_t dst[10];
-	
+
 	wmemcpy(dst, src, 4);
 	ASSERT_EQ(0, wmemcmp(dst, L"Test", 4));
 }
@@ -155,21 +155,21 @@ TEST(wmemcpy_basic) {
 TEST(wmemmove_forward) {
 	wchar_t buf[] = L"Hello";
 	wmemmove(buf + 1, buf, 4);
-	
+
 	ASSERT_EQ(L'H', buf[1]);
 }
 
 TEST(wmemmove_backward) {
 	wchar_t buf[] = L"Hello";
 	wmemmove(buf, buf + 1, 4);
-	
+
 	ASSERT_EQ(L'e', buf[0]);
 }
 
 TEST(wmemchr_found) {
 	wchar_t str[] = L"Hello";
 	wchar_t *result = wmemchr(str, L'l', 5);
-	
+
 	ASSERT_NOT_NULL(result);
 	ASSERT_EQ(L'l', *result);
 }
@@ -177,7 +177,7 @@ TEST(wmemchr_found) {
 TEST(wmemchr_not_found) {
 	wchar_t str[] = L"Hello";
 	wchar_t *result = wmemchr(str, L'x', 5);
-	
+
 	ASSERT_NULL(result);
 }
 
@@ -192,7 +192,7 @@ TEST(wmemcmp_different) {
 TEST(wmemset_basic) {
 	wchar_t buf[5];
 	wmemset(buf, L'A', 5);
-	
+
 	ASSERT_EQ(L'A', buf[0]);
 	ASSERT_EQ(L'A', buf[4]);
 }
@@ -205,7 +205,7 @@ TEST_SUITE(mbrtowc);
 TEST(mbrtowc_ascii) {
 	wchar_t wc;
 	int result = mbrtowc(&wc, "A", 1, NULL);
-	
+
 	ASSERT_EQ(1, result);
 	ASSERT_EQ(L'A', wc);
 }
@@ -214,7 +214,7 @@ TEST(mbrtowc_two_byte) {
 	wchar_t wc;
 	const char *utf8 = "\xC3\xA9";  // é
 	int result = mbrtowc(&wc, utf8, 2, NULL);
-	
+
 	ASSERT_EQ(2, result);
 	ASSERT_EQ(0xE9, wc);
 }
@@ -223,7 +223,7 @@ TEST(mbrtowc_three_byte) {
 	wchar_t wc;
 	const char *utf8 = "\xE2\x82\xAC";  // €
 	int result = mbrtowc(&wc, utf8, 3, NULL);
-	
+
 	ASSERT_EQ(3, result);
 	ASSERT_EQ(0x20AC, wc);
 }
@@ -232,7 +232,7 @@ TEST(mbrtowc_four_byte) {
 	wchar_t wc;
 	const char *utf8 = "\xF0\x9F\x98\x80";  // 😀
 	int result = mbrtowc(&wc, utf8, 4, NULL);
-	
+
 	ASSERT_EQ(4, result);
 	ASSERT_EQ(0x1F600, wc);
 }
@@ -240,7 +240,7 @@ TEST(mbrtowc_four_byte) {
 TEST(mbrtowc_null_input) {
 	wchar_t wc;
 	int result = mbrtowc(&wc, NULL, 0, NULL);
-	
+
 	ASSERT_EQ(0, result);
 }
 
@@ -252,7 +252,7 @@ TEST_SUITE(wcrtomb);
 TEST(wcrtomb_ascii) {
 	char buf[MB_CUR_MAX];
 	int result = wcrtomb(buf, L'A', NULL);
-	
+
 	ASSERT_EQ(1, result);
 	ASSERT_EQ('A', buf[0]);
 }
@@ -260,7 +260,7 @@ TEST(wcrtomb_ascii) {
 TEST(wcrtomb_two_byte) {
 	char buf[MB_CUR_MAX];
 	int result = wcrtomb(buf, 0xE9, NULL);  // é
-	
+
 	ASSERT_EQ(2, result);
 	ASSERT_EQ((char)0xC3, buf[0]);
 	ASSERT_EQ((char)0xA9, buf[1]);
@@ -269,7 +269,7 @@ TEST(wcrtomb_two_byte) {
 TEST(wcrtomb_three_byte) {
 	char buf[MB_CUR_MAX];
 	int result = wcrtomb(buf, 0x20AC, NULL);  // €
-	
+
 	ASSERT_EQ(3, result);
 	ASSERT_EQ((char)0xE2, buf[0]);
 	ASSERT_EQ((char)0x82, buf[1]);
@@ -279,7 +279,7 @@ TEST(wcrtomb_three_byte) {
 TEST(wcrtomb_four_byte) {
 	char buf[MB_CUR_MAX];
 	int result = wcrtomb(buf, 0x1F600, NULL);  // 😀
-	
+
 	ASSERT_EQ(4, result);
 	ASSERT_EQ((char)0xF0, buf[0]);
 	ASSERT_EQ((char)0x9F, buf[1]);
@@ -300,7 +300,7 @@ TEST_SUITE(multibyte_strings);
 TEST(mbstowcs_ascii) {
 	wchar_t wcs[10];
 	size_t result = mbstowcs(wcs, "Hello", 10);
-	
+
 	ASSERT_EQ(5, result);
 	ASSERT_EQ(0, wcscmp(wcs, L"Hello"));
 }
@@ -308,7 +308,7 @@ TEST(mbstowcs_ascii) {
 TEST(wcstombs_ascii) {
 	char mbs[20];
 	size_t result = wcstombs(mbs, L"Hello", 20);
-	
+
 	ASSERT_EQ(5, result);
 	ASSERT_STR_EQ("Hello", mbs);
 }
@@ -317,7 +317,7 @@ TEST(mbstowcs_utf8) {
 	wchar_t wcs[10];
 	const char *utf8 = "Café";
 	size_t result = mbstowcs(wcs, utf8, 10);
-	
+
 	ASSERT_TRUE(result >= 4);
 }
 
@@ -364,7 +364,7 @@ TEST(wcscoll_basic) {
 TEST(wcsxfrm_basic) {
 	wchar_t dst[20];
 	size_t len = wcsxfrm(dst, L"Hello", 20);
-	
+
 	ASSERT_EQ(5, len);
 	ASSERT_EQ(0, wcscmp(dst, L"Hello"));
 }
