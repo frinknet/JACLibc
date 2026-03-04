@@ -212,7 +212,6 @@ typedef struct {
 
 /* TLS internals */
 #define JACL_TCB_SIZE 128
-#define JACL_ALIGN_UP(x,a) (((x) + ((a) - 1)) &~ ((a) - 1))
 
 extern char **environ;
 

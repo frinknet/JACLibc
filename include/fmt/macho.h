@@ -40,7 +40,7 @@ typedef struct {
 
 /* Get TLS functions from arch */
 #define __ARCH_TLS
-#include JACL_HEADER(arch, JACL_ARCH)
+#include JACL_ARCH_FILE
 
 static inline void __jacl_init_fmt(void)
 {

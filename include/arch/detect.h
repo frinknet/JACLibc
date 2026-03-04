@@ -1,7 +1,7 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 
 #if defined(JACL_ARCH)
-	#include JACL_HEADER(arch,JACL_ARCH)
+	#include JACL_HEADER(arch, JACL_ARCH)
 #elif defined(__x86_64__) || defined(__amd64__)
 	#include <arch/x64.h>
 #elif defined(__i386__)
