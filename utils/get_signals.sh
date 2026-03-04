@@ -21,7 +21,7 @@ linux_url="https://raw.githubusercontent.com/torvalds/linux/${linux_ver}"
 darwin_url="https://raw.githubusercontent.com/apple-oss-distributions/xnu/${darwin_ver}"
 freebsd_url="https://cgit.freebsd.org/src/plain"
 netbsd_url="http://cvsweb.netbsd.org/bsdweb.cgi/src"
-openbsd_url="https://cvsweb.openbsd.org/cgi-bin/cvsweb/~checkout~/src"
+openbsd_url="https://cvsweb.openbsd.org/checkout/src"
 dragonfly_url="https://gitweb.dragonflybsd.org/dragonfly.git/blob_plain/${dragonfly_ver}:"
 
 xfiles() {
@@ -40,7 +40,7 @@ xfiles() {
   # Fetch and concat all given relative paths
   for rel in "$@"; do
     url="${base}${rel}"
-    if ! curl -fsSL "$url" >> "$tmp" 2>/dev/null; then
+    if ! curl -kfsSL "$url" >> "$tmp" 2>/dev/null; then
       echo "ERROR: Failed to fetch $url" >&2
       rm -f "$tmp"
       exit 1

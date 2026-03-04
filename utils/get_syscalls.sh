@@ -26,7 +26,7 @@ linux_url="https://raw.githubusercontent.com/torvalds/linux/${linux_ver}"
 darwin_url="https://raw.githubusercontent.com/apple-oss-distributions/xnu/${darwin_ver}"
 freebsd_url="https://cgit.freebsd.org/src/plain"
 netbsd_url="http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/kern"
-openbsd_url="https://cvsweb.openbsd.org/cgi-bin/cvsweb/~checkout~/src"
+openbsd_url="https://cvsweb.openbsd.org/checkout/src"
 dragonfly_url="https://gitweb.dragonflybsd.org/dragonfly.git/blob_plain/${dragonfly_ver}:"
 
 # get X Files
@@ -49,7 +49,7 @@ xfiles() {
   # Fetch and concatenate all source files
   for rel in "$@"; do
     url="${base_url}${rel}"
-    if ! curl -fsSL "$url" >> "$tmp" 2>/dev/null; then
+    if ! curl -fksSL "$url" >> "$tmp" 2>/dev/null; then
       echo "ERROR: Failed to fetch $url" >&2
       rm -f "$tmp"
       exit 1
@@ -75,7 +75,7 @@ xfiles() {
   fi
 
   rm "$tmp"
-  sleep 1 && true
+  sleep 2 && true
 }
 
 # gen X Stubs
@@ -111,6 +111,8 @@ xfinds() {
   # Search all generated headers for this syscall
   for header in "$ROOT/include/x/"*_*.h; do
     os_arch=$(basename "$header" .h)
+
+    ( eval ": \${${os_arch%%_*}_ver?}" 2>/dev/null ) || continue
 
     if grep -q "SYS_${name}," "$header" 2>/dev/null; then
       printf "#define %-20s %s\n" __${os_arch}_has_${name} 1 >> "$config"
