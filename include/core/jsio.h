@@ -10,13 +10,13 @@ extern "C" {
 #endif
 
 #define JS_PUBLIC_ROOT __jacl_public_root()
-static js_t *__jacl_public_root(void) {
-	static js_t* root = NULL;
+static jsio_t *__jacl_public_root(void) {
+	static jsio_t* root = NULL;
 	return root;
 }
 
 // Node Lifecycle
-void js_attach(js_t* c, js_t* p) {
+void js_attach(jsio_t* c, jsio_t* p) {
 	if (!c || !p) return;
 
 	c->parent = p;
@@ -24,7 +24,7 @@ void js_attach(js_t* c, js_t* p) {
 	if (!p->first) {
 		p->first = c;
 	} else {
-		js_t* q = p->first;
+		jsio_t* q = p->first;
 
 		while (q->next) q = q->next;
 
@@ -35,11 +35,11 @@ void js_attach(js_t* c, js_t* p) {
 
 	js_notify(c);
 }
-void js_detach(js_t* c) {
+void js_detach(jsio_t* c) {
 	if (!c || !c->parent) return;
 
-	js_t* prev = NULL;
-	js_t* curr = c->parent->first;
+	jsio_t* prev = NULL;
+	jsio_t* curr = c->parent->first;
 
 	while (curr && curr != c) {
 		prev = curr;
@@ -56,7 +56,7 @@ void js_detach(js_t* c) {
 
 	js_notify(curr ? (prev? prev : c->parent) : c->parent);
 }
-void js_replace(js_t* o, js_t* n) {
+void js_replace(jsio_t* o, jsio_t* n) {
 	if (!o || !n) return;
 
 	// Transfer linkage
@@ -67,7 +67,7 @@ void js_replace(js_t* o, js_t* n) {
 	if (n->parent && n->parent->first == o) {
 			n->parent->first = n;
 	} else if (n->parent) {
-			js_t *p = n->parent->first;
+			jsio_t *p = n->parent->first;
 
 			while (p && p->next != o) p = p->next;
 
@@ -81,21 +81,21 @@ void js_replace(js_t* o, js_t* n) {
 	js_notify(n);
 	js_delete(o);
 }
-js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen) {
-	size_t len = sizeof(js_t) + klen + (type == JS_TYPE_STRING ? vlen + 1 : 0);
-	js_t* x	= (js_t*)malloc(len);
+jsio_t* js_create(jsio_type_t type, uint32_t klen, uint32_t vlen) {
+	size_t len = sizeof(jsio_t) + klen + (type == JS_TYPE_STRING ? vlen + 1 : 0);
+	jsio_t* x	= (jsio_t*)malloc(len);
 
-	memset(x, 0, sizeof(js_t));
+	memset(x, 0, sizeof(jsio_t));
 	x->type	 = type;
 
 	return x;
 }
-void js_delete(js_t* x) {
+void js_delete(jsio_t* x) {
 	if (!x || x == JS_PUBLIC_ROOT) return;
 
 	js_detach(x);
 
-	for (js_t* c = x->first, *t; c; c = t) {
+	for (jsio_t* c = x->first, *t; c; c = t) {
 		t = c->next;
 
 		js_delete(c);
@@ -107,31 +107,31 @@ void js_delete(js_t* x) {
 
 	free(x);
 }
-void js_publish(js_t* n) {
+void js_publish(jsio_t* n) {
 	if(js_includes(JS_PUBLIC_ROOT, n)) return;
 
 	js_attach(n, JS_PUBLIC_ROOT);
 }
-void js_unpublish(js_t* n) {
+void js_unpublish(jsio_t* n) {
 	if(!js_includes(JS_PUBLIC_ROOT, n)) return;
 
 	js_detach(n);
 }
 
 // Indexing
-js_t* js_index(js_t* a, int i) {
+jsio_t* js_index(jsio_t* a, int i) {
 	if (!a || a->type != JS_TYPE_ARRAY || i < 0) return NULL;
 
-	js_t* c = a->first;
+	jsio_t* c = a->first;
 
 	for (int j = 0; j < i && c; j++) c = c->next;
 
 	return c;
 }
-int js_indexof(js_t* a, js_t* v) {
+int js_indexof(jsio_t* a, jsio_t* v) {
 	if (!a || a->type != JS_TYPE_ARRAY || !v) return -1;
 
-	js_t* c = a->first;
+	jsio_t* c = a->first;
 	int i = 0;
 
 	while (c) {
@@ -145,19 +145,19 @@ int js_indexof(js_t* a, js_t* v) {
 }
 
 // Node
-js_t* js_root(js_t* v) {
-	js_t* cur = v;
+jsio_t* js_root(jsio_t* v) {
+	jsio_t* cur = v;
 
 	while (cur->parent) cur = cur->parent;
 
 	return cur;
 }
-char* js_path(js_t* v) {
+char* js_path(jsio_t* v) {
 		if (!v) return NULL;
 
 		char* segments[JS_MAX_DEPTH]; int n=0;
 
-		for (js_t* cur=v; cur&&n<JS_MAX_DEPTH; cur=cur->parent) {
+		for (jsio_t* cur=v; cur&&n<JS_MAX_DEPTH; cur=cur->parent) {
 				char buf[64] = {0};
 
 				if (cur->parent && cur->parent->type==JS_TYPE_ARRAY) snprintf(buf,sizeof(buf),"[%d]", js_indexof(cur->parent,cur));
@@ -176,18 +176,18 @@ char* js_path(js_t* v) {
 
 		return path;
 }
-bool js_includes(js_t* r, js_t* v) {
-	for (js_t* cur = v; cur; cur = cur->parent)
+bool js_includes(jsio_t* r, jsio_t* v) {
+	for (jsio_t* cur = v; cur; cur = cur->parent)
 		if (cur == r) return true;
 
 	return false;
 }
-bool js_ispublic(js_t* v) {
+bool js_ispublic(jsio_t* v) {
 	return js_includes(JS_PUBLIC_ROOT, v);
 }
 
 // Setters for key and value
-char* js_setkey(js_t* x, const char* key) {
+char* js_setkey(jsio_t* x, const char* key) {
 	if (!x || !key) return x->key;
 
 	size_t klen = strlen(key);
@@ -201,7 +201,7 @@ char* js_setkey(js_t* x, const char* key) {
 
 	return x->key;
 }
-js_t* js_string(js_t* x, const char* s) {
+jsio_t* js_string(jsio_t* x, const char* s) {
 	if (!x || x->type != JS_TYPE_STRING || !s) return x;
 
 	size_t slen = strlen(s);
@@ -218,7 +218,7 @@ js_t* js_string(js_t* x, const char* s) {
 
 	return x;
 }
-js_t* js_number(js_t* x, double n) {
+jsio_t* js_number(jsio_t* x, double n) {
 	if (!x || (x->type != JS_TYPE_NUMBER && x->type != JS_TYPE_BOOLEAN)) return x;
 
 	x->value.num = n;
@@ -228,16 +228,16 @@ js_t* js_number(js_t* x, double n) {
 
 	return x;
 }
-js_t* js_boolean(js_t* x, bool b) {
+jsio_t* js_boolean(jsio_t* x, bool b) {
 	return js_number(x, (double)b);
 }
 
 // Array operations
-void	js_push(js_t* a, js_t* v) { if (a && a->type == JS_TYPE_ARRAY) js_attach(v, a); }
-js_t* js_pop(js_t* a) {
+void	js_push(jsio_t* a, jsio_t* v) { if (a && a->type == JS_TYPE_ARRAY) js_attach(v, a); }
+jsio_t* js_pop(jsio_t* a) {
 	if (!a || a->type != JS_TYPE_ARRAY || !a->first) return NULL;
 
-	js_t* p = NULL, *c = a->first;
+	jsio_t* p = NULL, *c = a->first;
 
 	while (c->next) { p = c; c = c->next; }
 
@@ -250,7 +250,7 @@ js_t* js_pop(js_t* a) {
 
 	return c;
 }
-void js_unshift(js_t* a, js_t* v) {
+void js_unshift(jsio_t* a, jsio_t* v) {
 		if (a && a->type == JS_TYPE_ARRAY) {
 				v->next		= a->first;
 				v->parent = a;
@@ -260,9 +260,9 @@ void js_unshift(js_t* a, js_t* v) {
 				js_notify(v);
 		}
 }
-js_t* js_shift(js_t* a) {
+jsio_t* js_shift(jsio_t* a) {
 		if (!a || a->type != JS_TYPE_ARRAY || !a->first) return NULL;
-		js_t* c			= a->first;
+		jsio_t* c			= a->first;
 		a->first		= c->next;
 		c->parent		= c->next = NULL;
 		a->length--;
@@ -273,10 +273,10 @@ js_t* js_shift(js_t* a) {
 }
 
 // Object Property
-js_t* js_property(js_t* o, const char* key) {
+jsio_t* js_property(jsio_t* o, const char* key) {
 	if (!o || !key || o->type != JS_TYPE_OBJECT) return NULL;
 
-	for (js_t* c = o->first; c; c = c->next)
+	for (jsio_t* c = o->first; c; c = c->next)
 		if (c->key && strcmp(c->key, key) == 0) return c;
 
 	return NULL;
@@ -285,8 +285,8 @@ js_t* js_property(js_t* o, const char* key) {
 #if JACL_ARCH_WASM
 
 #if JACL_OS_JSRUN
-static js_t *__jacl_js_async(js_t* set) {
-	static js_t* init = NULL;
+static jsio_t *__jacl_js_async(jsio_t* set) {
+	static jsio_t* init = NULL;
 
 	if (set) init = set;
 
@@ -303,7 +303,7 @@ extern int main(int argc, char *argv[]) __attribute__((weak));
 
 void js_start(){
 	#ifndef NO_JS_IO
-	js_t* __jacl_js_init = JS_CODE(
+	jsio_t* __jacl_js_init = JS_CODE(
 		const
 		//accessor
 		A={
@@ -414,7 +414,7 @@ void js_start(){
 	#endif
 
 	#ifndef NO_JS_ASYNCIFY
-	__jacl_js_async((js_t*)JS_CODE(
+	__jacl_js_async((jsio_t*)JS_CODE(
 		let SP = 0,SM;
 		const SH = 64*1024,SO = {
 			pause:sp=>{SP=sp;SM=new Uint8Array(this.exports.memory.buffer,SP,SH);throw 'PAUSE'},
@@ -452,7 +452,7 @@ static ssize_t js_read(int fd, void *buf, size_t count) {
 
 	if (count == 0) return 0;
 
-  js_t* result = js_code("this.import(this.pipe(arguments[0])[0](arguments[1]))", 53, fd, count);
+  jsio_t* result = js_code("this.import(this.pipe(arguments[0])[0](arguments[1]))", 53, fd, count);
 
   if (!result || result->type != JS_TYPE_STRING) return 0;
 
@@ -517,9 +517,9 @@ JS_EXPORT(resume) void js_resume(void) {  }
 #endif /* !NO_JS_ASYNCIFY */
 
 // JS Parser
-static js_t* js_parse_value(const char* s, size_t* i);
-static js_t* js_parse_object(const char* s, size_t* i) {
-	js_t* o = js_create(JS_TYPE_OBJECT,0,0); (*i)++; // skip '{'
+static jsio_t* js_parse_value(const char* s, size_t* i);
+static jsio_t* js_parse_object(const char* s, size_t* i) {
+	jsio_t* o = js_create(JS_TYPE_OBJECT,0,0); (*i)++; // skip '{'
 
 	while (s[*i] && s[*i] != '}') {
 		while (isspace((unsigned char)s[*i]) || s[*i]=='"') (*i)++;
@@ -532,7 +532,7 @@ static js_t* js_parse_object(const char* s, size_t* i) {
 
 		while (s[*i] != ':') (*i)++; (*i)++;
 
-		js_t* v = js_parse_value(s, i);
+		jsio_t* v = js_parse_value(s, i);
 		v->key = key; js_attach(v, o);
 
 		if (s[*i] == ',') (*i)++;
@@ -542,11 +542,11 @@ static js_t* js_parse_object(const char* s, size_t* i) {
 
 	return o;
 }
-static js_t* js_parse_array(const char* s, size_t* i) {
-	js_t* a = js_create(JS_TYPE_ARRAY,0,0); (*i)++; // skip '['
+static jsio_t* js_parse_array(const char* s, size_t* i) {
+	jsio_t* a = js_create(JS_TYPE_ARRAY,0,0); (*i)++; // skip '['
 
 	while (s[*i] && s[*i] != ']') {
-		js_t* v = js_parse_value(s, i);
+		jsio_t* v = js_parse_value(s, i);
 		js_attach(v, a);
 
 		if (s[*i] == ',') (*i)++;
@@ -556,24 +556,24 @@ static js_t* js_parse_array(const char* s, size_t* i) {
 
 	return a;
 }
-static js_t* js_parse_string(const char* s, size_t* i) {
+static jsio_t* js_parse_string(const char* s, size_t* i) {
 	(*i)++; size_t start = *i;
 
 	while (s[*i] && s[*i] != '"') (*i)++;
 
-	js_t* str = JS_STRING(strndup(s + start, (*i)++ - start));
+	jsio_t* str = JS_STRING(strndup(s + start, (*i)++ - start));
 
 	return str;
 }
-static js_t* js_parse_number(const char* s, size_t* i) {
+static jsio_t* js_parse_number(const char* s, size_t* i) {
 	char* end;
 	double n = strtod(s + *i, &end);
-	js_t* num = JS_NUMBER(n);
+	jsio_t* num = JS_NUMBER(n);
 	*i = end - s;
 
 	return num;
 }
-static js_t* js_parse_value(const char* s, size_t* i) {
+static jsio_t* js_parse_value(const char* s, size_t* i) {
 	while (isspace((unsigned char)s[*i])) (*i)++;
 	if (s[*i] == '{')	return js_parse_object(s, i);
 	if (s[*i] == '[')	return js_parse_array(s, i);
@@ -585,12 +585,12 @@ static js_t* js_parse_value(const char* s, size_t* i) {
 
 	return JS_NULL;
 }
-js_t* js_parse(const char* s) {
+jsio_t* js_parse(const char* s) {
 	size_t i = 0;
 
 	return js_parse_value(s, &i);
 }
-char* js_stringify(js_t* v) {
+char* js_stringify(jsio_t* v) {
 	if (!v) return strdup("null");
 
 	switch (v->type) {
@@ -634,7 +634,7 @@ char* js_stringify(js_t* v) {
 		char* buf = (char*)malloc(cap);
 		buf[pos++] = '[';
 
-		for (js_t* c = v->first; c; c = c->next) {
+		for (jsio_t* c = v->first; c; c = c->next) {
 			if (c != v->first) {
 				if (pos >= cap - 1) { cap *= 2; buf = (char*)realloc(buf, cap); }
 				buf[pos++] = ',';
@@ -663,7 +663,7 @@ char* js_stringify(js_t* v) {
 		char* buf = (char*)malloc(cap);
 		buf[pos++] = '{';
 
-		for (js_t* c = v->first; c; c = c->next) {
+		for (jsio_t* c = v->first; c; c = c->next) {
 			if (c != v->first) {
 				if (pos >= cap - 1) { cap *= 2; buf = (char*)realloc(buf, cap); }
 				buf[pos++] = ',';
