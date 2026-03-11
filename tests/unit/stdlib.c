@@ -1567,6 +1567,23 @@ TEST(malloc_alignment)
 	free(ptr);
 }
 
+TEST(malloc_arena_prev_size_safe)
+{
+	void *ptrs[64];
+
+	for (int i = 0; i < 64; i++) {
+		ptrs[i] = malloc(24 + (i % 8));  /* 24-31 bytes: arena range */
+		ASSERT_NOT_NULL(ptrs[i]);
+		memset(ptrs[i], 0xAB, 24 + (i % 8));
+	}
+
+	for (int i = 63; i >= 0; i--) free(ptrs[i]);
+
+	void *again = malloc(32);
+
+	ASSERT_NOT_NULL(again);
+	free(again);
+}
 
 /* ============================================================= */
 /* calloc - stdlib.h: unit tests                                */

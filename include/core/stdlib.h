@@ -376,7 +376,7 @@ void* malloc(size_t n) {
 		__jacl_hdr_t* h = (__jacl_hdr_t*)(__jacl_static_heap + __jacl_tls_off);
 
 		h->size = need;
-		h->prev_size = (__jacl_tls_off > 0) ? ((__jacl_hdr_t*)(__jacl_static_heap + __jacl_tls_off - h->size))->size : 0;
+		h->prev_size = 0;//(__jacl_tls_off > 0) ? ((__jacl_hdr_t*)(__jacl_static_heap + __jacl_tls_off - h->size))->size : 0;
 		h->flags = JACL_HDR_ALLOC | JACL_HDR_ARENA;
 
 		__jacl_tls_off += need;
@@ -465,6 +465,15 @@ void free(void* p) {
 
 	__jacl_hdr_t* h = (__jacl_hdr_t*)p - 1;
 
+	// Early Arena Check
+	if (h->flags & JACL_HDR_ARENA) {
+		if (!(h->flags & JACL_HDR_ALLOC)) return;
+
+		h->flags = 0;
+
+		return;
+	}
+
 	// Find which segment this belongs to
 	__jacl_segment_t* seg = __jacl_find_segment((void*)h);
 
@@ -502,13 +511,6 @@ void free(void* p) {
 		}
 	}
 
-	/* Arena blocks leak */
-	if (h->flags & JACL_HDR_ARENA) {
-		h->flags = 0;
-
-		return;
-	}
-
 	h->flags = 0;
 
 	size_t off = (size_t)((uint8_t*)h - seg->base);
@@ -535,12 +537,13 @@ void free(void* p) {
 		}
 
 		/* Coalesce prev */
-		if (off > 0 && h->prev_size > 0) {
+		if (off > 0 && h->prev_size > 0 && h->prev_size <= off) {
 			size_t prev_off = off - h->prev_size;
 
 			__jacl_hdr_t* prev = (__jacl_hdr_t*)(seg->base + prev_off);
 
-			if (!(prev->flags & JACL_HDR_ALLOC)) {
+			/* Validate prev is within segment bounds */
+			if ((uint8_t*)prev >= seg->base && (uint8_t*)prev + sizeof(__jacl_hdr_t) <= seg->base + seg->size && !(prev->flags & JACL_HDR_ALLOC)) {
 				__jacl_bin_remove(seg, prev_off);
 
 				prev->size += h->size;
