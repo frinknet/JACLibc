@@ -590,6 +590,37 @@ jsio_t* js_parse(const char* s) {
 
 	return js_parse_value(s, &i);
 }
+jsio_t* js_resolve(jsio_t* root, const char* path) {
+	if (!root || !path) return NULL;
+	if (*path == '.') path++;
+
+	jsio_t* cur = root;
+
+	while (*path && cur) {
+		if (*path == '[') {
+			int idx = atoi(path + 1);
+
+			cur = js_index(cur, idx);
+			path = strchr(path, ']');
+
+			if (path) path++;
+		} else {
+			char key[64];
+			const char* end = strpbrk(path, ".[");
+			size_t len = end ? (size_t)(end - path) : strlen(path);
+
+			if (len >= sizeof(key)) len = sizeof(key) - 1;
+
+			strncpy(key, path, len);
+
+			key[len] = 0;
+			cur = js_property(cur, key);
+			path = end;
+		}
+	}
+
+	return cur;
+}
 char* js_stringify(jsio_t* v) {
 	if (!v) return strdup("null");
 

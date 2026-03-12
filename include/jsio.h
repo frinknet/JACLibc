@@ -158,6 +158,7 @@ jsio_t* js_property(jsio_t* o, const char* key);
 
 // JS Parser
 jsio_t* js_parse(const char* s);
+jsio_t* js_resolve(jsio_t* root, const char* path);
 char* js_stringify(jsio_t* v);
 
 // JS Start if wasm
