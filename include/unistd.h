@@ -6,7 +6,7 @@
 #include <config.h>
 #include <errno.h>        // errno, ENOSYS
 #include <stddef.h>       // size_t
-#include <stdarg.h>   // va_list, va_start(), va_end(), va_arg()
+#include <stdarg.h>       // va_list, va_start(), va_end(), va_arg()
 #include <stdnoreturn.h>  // noreturn
 #include <string.h>
 #include <sys/types.h>    // pid_t, uid_t, gid_t, ssize_t, off_t
