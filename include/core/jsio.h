@@ -605,6 +605,10 @@ jsio_t* js_resolve(jsio_t* root, const char* path) {
 
 			if (path) path++;
 		} else {
+			while (*path == '.') path++;
+
+			if (!*path) break;
+
 			char key[64];
 			const char* end = strpbrk(path, ".[");
 			size_t len = end ? (size_t)(end - path) : strlen(path);
@@ -614,7 +618,11 @@ jsio_t* js_resolve(jsio_t* root, const char* path) {
 			strncpy(key, path, len);
 
 			key[len] = 0;
+
 			cur = js_property(cur, key);
+
+			if (!end) break;
+
 			path = end;
 		}
 	}
