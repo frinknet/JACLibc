@@ -26,6 +26,9 @@
 extern "C" {
 #endif
 
+/* Forward declaration for snprintf (defined in stdio.h) */
+int snprintf(char *restrict str, size_t size, const char *restrict format, ...);
+
 /* Standard exit codes */
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
@@ -235,7 +238,9 @@ static inline int setenv(const char *name, const char *value, int overwrite) {
 
 	if (!str) { errno = ENOMEM; return -1; }
 
-	snprintf(str, len, "%s=%s", name, value);
+	strcpy(str, name);
+	strcat(str, "=");
+	strcat(str, value);
 
 	return putenv(str);
 }
