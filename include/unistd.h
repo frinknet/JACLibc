@@ -38,8 +38,8 @@ typedef unsigned int useconds_t;
 noreturn static inline void _exit(int status) { syscall(SYS_exit, status); while(1); }
 static inline pid_t getpid(void) { return (pid_t)syscall(SYS_getpid); }
 static inline pid_t getppid(void) { return (pid_t)syscall(SYS_getppid); }
-static inline pid_t fork(void) { return (pid_t)syscall(SYS_fork); }
-static inline pid_t vfork(void) { return fork(); }
+pid_t fork(void);
+pid_t vfork(void);
 
 /* File I/O */
 static inline ssize_t read(int fd, void *buf, size_t count) { return syscall(SYS_read, fd, buf, count); }
