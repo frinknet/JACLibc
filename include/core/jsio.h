@@ -519,26 +519,38 @@ JS_EXPORT(resume) void js_resume(void) {  }
 // JS Parser
 static jsio_t* js_parse_value(const char* s, size_t* i);
 static jsio_t* js_parse_object(const char* s, size_t* i) {
-	jsio_t* o = js_create(JS_TYPE_OBJECT,0,0); (*i)++; // skip '{'
+	jsio_t* o = js_create(JS_TYPE_OBJECT,0,0);
 
-	while (s[*i] && s[*i] != '}') {
-		while (isspace((unsigned char)s[*i]) || s[*i]=='"') (*i)++;
+	if (!s || !i || *i >= strlen(s) || s[*i] != '{') return JS_NULL;
+
+	(*i)++; // skip '{'
+
+	while (*i < strlen(s) && s[*i] && s[*i] != '}') {
+		while (*i < strlen(s) && (isspace(s[*i]) || s[*i]=='"')) (*i)++;
+
+		if (*i >= strlen(s) || s[*i] == '}') break;  // BOUNDS CHECK!
 
 		size_t start = *i;
+		while (*i < strlen(s) && s[*i] != '"') (*i)++;  // BOUNDS CHECK!
 
-		while (s[*i] && s[*i] != '"') (*i)++;
+		if (*i >= strlen(s)) return o;  // EARLY EXIT
 
 		char* key = strndup(s + start, (*i)++ - start);
 
-		while (s[*i] != ':') (*i)++; (*i)++;
+		while (*i < strlen(s) && s[*i] != ':') (*i)++;  // ✅ FIXED
 
+		if (*i >= strlen(s) || s[*i] != ':') { free(key); return o; }
+
+		(*i)++;  // skip ':'
 		jsio_t* v = js_parse_value(s, i);
-		v->key = key; js_attach(v, o);
+		v->key = key;
 
-		if (s[*i] == ',') (*i)++;
+		js_attach(v, o);
+
+		if (*i < strlen(s) && s[*i] == ',') (*i)++;
 	}
 
-	(*i)++; // skip '}'
+	if (*i < strlen(s)) (*i)++; // skip '}'
 
 	return o;
 }
