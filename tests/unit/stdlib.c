@@ -1585,6 +1585,32 @@ TEST(malloc_arena_prev_size_safe)
 	free(again);
 }
 
+TEST(malloc_after_fork_reset)
+{
+	pid_t pid = fork();
+
+	if (pid == 0) {
+		// Child: test malloc works after reset
+		void* ptr = malloc(100);
+
+		if (!ptr) exit(1);
+
+		void* ptr2 = realloc(ptr, 200);
+
+		if (!ptr2) exit(2);
+
+		free(ptr2);
+		exit(0);
+	} else if (pid > 0) {
+		int status;
+
+		waitpid(pid, &status, 0);
+		ASSERT_INT_EQ(WEXITSTATUS(status), 0);
+	} else {
+		ASSERT_INT_NE(pid, -1);  // fork failed
+	}
+}
+
 /* ============================================================= */
 /* calloc - stdlib.h: unit tests                                */
 /* ============================================================= */
