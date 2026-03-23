@@ -103,7 +103,7 @@ thread_local _Alignas(64) struct {
 } __jacl_quicklist[4];
 
 /* Internal Functions */
-static inline void __jacl_lock_acquire(__jacl_lock_t* l) {
+void __jacl_lock_acquire(__jacl_lock_t* l) {
 	uint32_t ticket = atomic_fetch_add_explicit(&l->next, 1, memory_order_relaxed);
 
 	while (atomic_load_explicit(&l->owner, memory_order_acquire) != ticket) {
@@ -117,7 +117,7 @@ static inline void __jacl_lock_acquire(__jacl_lock_t* l) {
 	}
 }
 
-static inline void __jacl_lock_release(__jacl_lock_t* l) {
+void __jacl_lock_release(__jacl_lock_t* l) {
 	atomic_fetch_add_explicit(&l->owner, 1, memory_order_release);
 }
 
@@ -344,6 +344,15 @@ static inline __jacl_segment_t* __jacl_grow_heap(size_t min_needed) {
 	__jacl_heap_current += seg_size;
 
 	return seg;
+}
+
+void __jacl_fork_reset(void) {
+	__jacl_tls_off = 0;
+	__jacl_tls_end = 0;
+	__jacl_segment_head = &__jacl_initial_segment;
+	__jacl_once = 1;  // Force malloc re-init
+
+	memset(__jacl_static_heap, 0, JACL_HEAP_INIT);  // Wipe parent allocations
 }
 
 /* Public API */

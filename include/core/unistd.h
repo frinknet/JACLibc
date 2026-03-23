@@ -11,6 +11,7 @@ extern "C" {
 
 extern void __jacl_lock_acquire(__jacl_lock_t* l);
 extern void __jacl_lock_release(__jacl_lock_t* l);
+extern void __jacl_fork_reset(void);
 
 pid_t fork(void) {
 	__jacl_lock_acquire(&__jacl_lock);
@@ -18,8 +19,7 @@ pid_t fork(void) {
 	pid_t pid = (pid_t)syscall(SYS_fork);
 
 	if (pid == 0) {
-		__jacl_tls_off = 0;
-		__jacl_tls_end = 0;
+		__jacl_fork_reset();
 		__jacl_lock_release(&__jacl_lock);
 	} else if (pid > 0) {
 		__jacl_lock_release(&__jacl_lock);
