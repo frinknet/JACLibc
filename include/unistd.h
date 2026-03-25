@@ -258,28 +258,18 @@ static inline int fdatasync(int fd) {
 
 /* Sleep/alarm */
 static inline unsigned int sleep(unsigned int seconds) {
-	#if JACL_HASSYS(nanosleep)
-		struct timespec req = {seconds, 0}, rem = {0, 0};
+	struct timespec req = {seconds, 0}, rem = {0, 0};
 
-		if (syscall(SYS_nanosleep, &req, &rem) == -1) {
-			return (unsigned int)rem.tv_sec + (rem.tv_nsec > 0 ? 1 : 0);
-		}
+	if (nanosleep(&req, &rem) == -1) {
+		return (unsigned int)rem.tv_sec + (rem.tv_nsec > 0 ? 1 : 0);
+	}
 
-		return 0;
-	#else
-		errno = ENOSYS;
-		return seconds;
-	#endif
+	return 0;
 }
 static inline int usleep(useconds_t usec) {
-	#if JACL_HASSYS(nanosleep)
-		struct timespec req = {usec / 1000000, (usec % 1000000) * 1000};
+	struct timespec req = {usec / 1000000, (usec % 1000000) * 1000};
 
-		return (int)syscall(SYS_nanosleep, &req, NULL);
-	#else
-		errno = ENOSYS;
-		return -1;
-	#endif
+	return (int)nanosleep(&req, NULL);
 }
 static inline unsigned int alarm(unsigned int seconds) {
 	#if JACL_HASSYS(alarm)

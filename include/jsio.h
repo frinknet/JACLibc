@@ -70,6 +70,7 @@ bool js_includes(jsio_t* r, jsio_t* v);
 bool js_ispublic(jsio_t* v);
 
 // Setters for key and value
+jsio_t* js_setkey(jsio_t* x, const char* s);
 jsio_t* js_string(jsio_t* x, const char* s);
 jsio_t* js_number(jsio_t* x, double n);
 jsio_t* js_boolean(jsio_t* x, bool n);

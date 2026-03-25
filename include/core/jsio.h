@@ -83,10 +83,17 @@ void js_replace(jsio_t* o, jsio_t* n) {
 }
 jsio_t* js_create(jsio_type_t type, uint32_t klen, uint32_t vlen) {
 	size_t len = sizeof(jsio_t) + klen + (type == JS_TYPE_STRING ? vlen + 1 : 0);
-	jsio_t* x	= (jsio_t*)malloc(len);
+	jsio_t* x = (jsio_t*)malloc(len);
+
+	if (!x) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
 
 	memset(x, 0, sizeof(jsio_t));
-	x->type	 = type;
+
+	x->type = type;
 
 	return x;
 }
@@ -153,28 +160,54 @@ jsio_t* js_root(jsio_t* v) {
 	return cur;
 }
 char* js_path(jsio_t* v) {
-		if (!v) return NULL;
+	if (!v) return NULL;
 
-		char* segments[JS_MAX_DEPTH]; int n=0;
+	char* segments[JS_MAX_DEPTH];
+	int n = 0;
 
-		for (jsio_t* cur=v; cur&&n<JS_MAX_DEPTH; cur=cur->parent) {
-				char buf[64] = {0};
+	for (jsio_t* cur = v; cur && n < JS_MAX_DEPTH; cur = cur->parent) {
+		char buf[64] = {0};
 
-				if (cur->parent && cur->parent->type==JS_TYPE_ARRAY) snprintf(buf,sizeof(buf),"[%d]", js_indexof(cur->parent,cur));
-				else if (cur->key) snprintf(buf,sizeof(buf),".%s",cur->key);
+		if (cur->parent && cur->parent->type == JS_TYPE_ARRAY) snprintf(buf, sizeof(buf), "[%d]", js_indexof(cur->parent, cur));
+		else if (cur->key) snprintf(buf, sizeof(buf), ".%s", cur->key);
 
-				segments[n++] = strdup(buf);
+		segments[n] = strdup(buf);
+
+		if (!segments[n]) {
+			for (int j = 0; j < n; j++) free(segments[j]);
+
+			errno = ENOMEM;
+
+			return NULL;
 		}
 
-		size_t total=1; for(int i=n-1;i>=0;--i) total+=strlen(segments[i]);
-		char* path = (char*)malloc(total);
+		n++;
+	}
 
-		path[0]=0;
+	size_t total = 1;
 
-		for(int i=n-1;i>=0;--i){ strcat(path,segments[i]); free(segments[i]); }
-		if (path[0]=='.') memmove(path,path+1,strlen(path));
+	for (int i = n-1; i >= 0; --i) total += strlen(segments[i]);
 
-		return path;
+	char* path = (char*)malloc(total);
+
+	if (!path) {
+		for (int i = 0; i < n; i++) free(segments[i]);
+
+		errno = ENOMEM;
+
+		return NULL;
+	}
+
+	path[0] = 0;
+
+	for (int i = n-1; i >= 0; --i) {
+		strcat(path, segments[i]);
+		free(segments[i]);
+	}
+
+	if (path[0] == '.') memmove(path, path+1, strlen(path)+1);
+
+	return path;
 }
 bool js_includes(jsio_t* r, jsio_t* v) {
 	for (jsio_t* cur = v; cur; cur = cur->parent)
@@ -187,11 +220,17 @@ bool js_ispublic(jsio_t* v) {
 }
 
 // Setters for key and value
-char* js_setkey(jsio_t* x, const char* key) {
+jsio_t* js_setkey(jsio_t* x, const char* key) {
 	if (!x || !key) return x->key;
 
 	size_t klen = strlen(key);
 	char* nk = (char*)realloc(x->key, klen + 1);
+
+	if (!nk) {
+		errno = ENOMEM;
+
+		return NULL;  // or return x->key to leave unchanged
+	}
 
 	memcpy(nk, key, klen + 1);
 
@@ -199,7 +238,7 @@ char* js_setkey(jsio_t* x, const char* key) {
 
 	js_notify(x);
 
-	return x->key;
+	return x;
 }
 jsio_t* js_string(jsio_t* x, const char* s) {
 	if (!x || x->type != JS_TYPE_STRING || !s) return x;
@@ -444,63 +483,62 @@ static fd_buf_t fd_bufs[JS_MAX_FDS] = {0};
 static bool fd_inits[JS_MAX_FDS] = {0};
 
 static ssize_t js_read(int fd, void *buf, size_t count) {
-  if (fd < 0 || fd >= JS_MAX_FDS || !buf) {
-    errno = EBADF;
+	if (fd < 0 || fd >= JS_MAX_FDS || !buf) {
+		errno = EBADF;
 
-    return -1;
-  }
+		return -1;
+	}
 
 	if (count == 0) return 0;
 
-  jsio_t* result = js_code("this.import(this.pipe(arguments[0])[0](arguments[1]))", 53, fd, count);
+	jsio_t* result = js_code("this.import(this.pipe(arguments[0])[0](arguments[1]))", 53, fd, count);
 
-  if (!result || result->type != JS_TYPE_STRING) return 0;
+	if (!result || result->type != JS_TYPE_STRING) return 0;
 
-  size_t copy_len = (result->length < count) ? result->length : count;
+	size_t copy_len = (result->length < count) ? result->length : count;
 
-  memcpy(buf, result->value.str, copy_len);
+	memcpy(buf, result->value.str, copy_len);
 
-  return copy_len;
+	return copy_len;
 }
 
 static ssize_t js_write(int fd, const void *buf, size_t count) {
-  if (fd < 0 || fd >= JS_MAX_FDS || !buf) {
-    errno = EBADF;
-    return -1;
-  }
+	if (fd < 0 || fd >= JS_MAX_FDS || !buf) {
+		errno = EBADF;
 
-  if (count == 0) return 0;
+		return -1;
+	}
 
-  // Initialize on first use
-  if (!fd_inits[fd]) {
-    fd_bufs[fd].mode = (fd == STDERR_FILENO)
-      ? _IONBF
-      : (fd <= STDERR_FILENO)
-        ? _IOLBF
-        : _IOFBF;
-    fd_inits[fd] = true;
-  }
+	if (count == 0) return 0;
 
-  fd_buf_t* fdb = &fd_bufs[fd];
-  const char* data = (const char*)buf;
+	// Initialize on first use
+	if (!fd_inits[fd]) {
+		fd_bufs[fd].mode = (fd == STDERR_FILENO)
+			? _IONBF
+			: (fd <= STDERR_FILENO)
+				? _IOLBF
+				: _IOFBF;
+		fd_inits[fd] = true;
+	}
 
-  for (size_t i = 0; i < count; i++) {
-    char c = data[i];
+	fd_buf_t* fdb = &fd_bufs[fd];
+	const char* data = (const char*)buf;
 
-    // Append first
-    fdb->buffer[fdb->pos++] = c;
+	for (size_t i = 0; i < count; i++) {
+		char c = data[i];
 
-    // Then decide to flush
-    if ((fdb->mode == _IONBF) || (fdb->mode == _IOLBF && c == '\n') || (fdb->pos >= BUFSIZ - 1)) {
-      fdb->buffer[fdb->pos] = '\0';
+		fdb->buffer[fdb->pos++] = c;
 
-      js_code("this.pipe(arguments[0])[1](this.export(arguments[1]))", 58, fd, JS_STRING(fdb->buffer));
+		if ((fdb->mode == _IONBF) || (fdb->mode == _IOLBF && c == '\n') || (fdb->pos >= BUFSIZ - 1)) {
+		  fdb->buffer[fdb->pos] = '\0';
 
-      fdb->pos = 0;
-    }
-  }
+		  js_code("this.pipe(arguments[0])[1](this.export(arguments[1]))", 58, fd, JS_STRING(fdb->buffer));
 
-  return count;
+		  fdb->pos = 0;
+		}
+	}
+
+	return count;
 }
 #endif /* JACL_ARCH_WASM */
 
@@ -516,44 +554,79 @@ JS_EXPORT(resume) void js_resume(void) {  }
 #undef JS_PAUSE
 #endif /* !NO_JS_ASYNCIFY */
 
+
 // JS Parser
 static jsio_t* js_parse_value(const char* s, size_t* i);
-static jsio_t* js_parse_object(const char* s, size_t* i) {
-	jsio_t* o = js_create(JS_TYPE_OBJECT,0,0);
-	size_t l = strlen(s);
+static jsio_t* js_parse_number(const char* s, size_t* i) {
+	char* end;
+	double n = strtod(s + *i, &end);
+	jsio_t* num = JS_NUMBER(n);
+	*i = end - s;
 
-	if (!s || !i || *i >= l || s[*i] != '{') return JS_NULL;
+	return num;
+}
+static jsio_t* js_parse_string(const char* s, size_t* i) {
+	(*i)++;
 
-	(*i)++; // skip '{'
+	size_t start = *i;
+	size_t escaped_count = 0;
 
-	while (*i < l && s[*i] && s[*i] != '}') {
-		while (*i < l && (isspace(s[*i]) || s[*i]=='"')) (*i)++;
-
-		if (*i >= l || s[*i] == '}') break;  // BOUNDS CHECK!
-
-		size_t start = *i;
-		while (*i < l && s[*i] != '"') (*i)++;  // BOUNDS CHECK!
-
-		if (*i >= l) return o;  // EARLY EXIT
-
-		char* key = strndup(s + start, (*i)++ - start);
-
-		while (*i < l && s[*i] != ':') (*i)++;
-
-		if (*i >= l || s[*i] != ':') { free(key); return o; }
-
-		(*i)++;  // skip ':'
-		jsio_t* v = js_parse_value(s, i);
-		v->key = key;
-
-		js_attach(v, o);
-
-		if (*i < l && s[*i] == ',') (*i)++;
+	while (s[*i] && s[*i] != '"') {
+		if (s[*i] == '\\') {
+			(*i)++;
+			if (s[*i]) {
+				escaped_count++;
+				(*i)++;
+			}
+		} else {
+			(*i)++;
+		}
 	}
 
-	if (*i < l) (*i)++; // skip '}'
+	if (s[*i] != '"') return JS_NULL;
 
-	return o;
+	size_t raw_len = *i - start;
+	size_t unescaped_len = raw_len - escaped_count;
+	char* substr = (char*)malloc(unescaped_len + 1);
+
+	if (!substr) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
+
+	size_t src = start;
+	size_t dst = 0;
+
+	while (src < *i) {
+		if (s[src] == '\\') {
+			src++;  // Skip backslash
+
+			if (src < *i) {
+				switch (s[src]) {
+					case '"':  substr[dst++] = '"';    break;
+					case '\\': substr[dst++] = '\\';   break;
+					case '/':  substr[dst++] = '/';    break;
+					case 'b':  substr[dst++] = '\b';   break;
+					case 'f':  substr[dst++] = '\f';   break;
+					case 'n':  substr[dst++] = '\n';   break;
+					case 'r':  substr[dst++] = '\r';   break;
+					case 't':  substr[dst++] = '\t';   break;
+					case 'u':  substr[dst++] = s[src]; break;
+					default:   substr[dst++] = s[src]; break;
+				}
+
+				src++;
+			}
+		} else {
+			substr[dst++] = s[src++];
+		}
+	}
+
+	substr[dst] = '\0';
+	(*i)++;  // Skip closing quote
+
+	return JS_STRING(substr);
 }
 static jsio_t* js_parse_array(const char* s, size_t* i) {
 	jsio_t* a = js_create(JS_TYPE_ARRAY,0,0); (*i)++; // skip '['
@@ -569,22 +642,64 @@ static jsio_t* js_parse_array(const char* s, size_t* i) {
 
 	return a;
 }
-static jsio_t* js_parse_string(const char* s, size_t* i) {
-	(*i)++; size_t start = *i;
+static jsio_t* js_parse_object(const char* s, size_t* i) {
+	jsio_t* o = js_create(JS_TYPE_OBJECT,0,0);
+	size_t l = strlen(s);
 
-	while (s[*i] && s[*i] != '"') (*i)++;
+	if (!s || !i || *i >= l || s[*i] != '{') return JS_NULL;
 
-	jsio_t* str = JS_STRING(strndup(s + start, (*i)++ - start));
+	(*i)++; // skip '{'
 
-	return str;
-}
-static jsio_t* js_parse_number(const char* s, size_t* i) {
-	char* end;
-	double n = strtod(s + *i, &end);
-	jsio_t* num = JS_NUMBER(n);
-	*i = end - s;
+	while (*i < l && s[*i] && s[*i] != '}') {
+		while (*i < l && (isspace(s[*i]) || s[*i]=='"')) (*i)++;
 
-	return num;
+		if (*i >= l || s[*i] == '}') break;
+
+		size_t start = *i;
+
+		while (*i < l && s[*i] != '"') (*i)++;
+
+		if (*i >= l) return o;
+
+		char* key = strndup(s + start, (*i)++ - start);
+
+		if (!key) {
+			js_delete(o);
+
+			errno = ENOMEM;
+
+			return NULL;
+		}
+
+		while (*i < l && s[*i] != ':') (*i)++;
+
+		if (*i >= l || s[*i] != ':') {
+			free(key);
+			js_delete(o);
+
+			return NULL;
+		}
+
+		(*i)++;
+		jsio_t* v = js_parse_value(s, i);
+
+		if (!v) {
+			free(key);
+			js_delete(o);
+
+			return NULL;
+		}
+
+		v->key = key;
+
+		js_attach(v, o);
+
+		if (*i < l && s[*i] == ',') (*i)++;
+	}
+
+	if (*i < l) (*i)++; // skip '}'
+
+	return o;
 }
 static jsio_t* js_parse_value(const char* s, size_t* i) {
 	while (isspace((unsigned char)s[*i])) (*i)++;
@@ -602,6 +717,247 @@ jsio_t* js_parse(const char* s) {
 	size_t i = 0;
 
 	return js_parse_value(s, &i);
+}
+static char* js_stringify_value(jsio_t* v);
+static char* js_stringify_null(jsio_t* v) {
+	char* result = strdup("null");
+
+	if (!result) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
+
+	return result;
+}
+static char* js_stringify_boolean(jsio_t* v) {
+	char* result = strdup(v->value.num ? "true" : "false");
+
+	if (!result) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
+
+	return result;
+}
+static char* js_stringify_number(jsio_t* v) {
+	char* buf = (char*)malloc(32);
+
+	if (!buf) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
+
+	snprintf(buf, 32, "%.17g", v->value.num);
+
+	return buf;
+}
+static char* js_stringify_string(jsio_t* v) {
+	const char* cstr = v->value.str;
+	size_t len = v->length;
+	size_t need = 2;  // ""
+
+	for (size_t i = 0; i < len; i++) {
+		unsigned char c = cstr[i];
+
+		need += (c == '"' || c == '\\' || c < 0x20 || c >= 0x7F) ? 6 : 1;
+	}
+
+	char* buf = malloc(need);
+
+	if (!buf) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
+
+	char* p = buf + 1;
+
+	for (size_t i = 0; i < len; i++) {
+		unsigned char c = cstr[i];
+
+		switch (c) {
+			case '"':  *p++ = '\\'; *p++ = '"';  break;
+			case '\\': *p++ = '\\'; *p++ = '\\'; break;
+			case '\b': *p++ = '\\'; *p++ = 'b';  break;
+			case '\f': *p++ = '\\'; *p++ = 'f';  break;
+			case '\n': *p++ = '\\'; *p++ = 'n';  break;
+			case '\r': *p++ = '\\'; *p++ = 'r';  break;
+			case '\t': *p++ = '\\'; *p++ = 't';  break;
+			default:
+				if (c < 0x20 || c >= 0x7F) {
+					sprintf(p, "\\u%04x", c);
+
+					p += 6;
+				} else {
+					*p++ = c;
+				}
+		}
+	}
+
+	*p++ = '"'; *p = '\0';
+
+	return buf;
+}
+static char* js_stringify_array(jsio_t* v) {
+	size_t cap = 64, pos = 0;
+	char* buf = (char*)malloc(cap);
+
+	if (!buf) return NULL;
+
+	buf[pos++] = '[';
+
+	for (jsio_t* c = v->first; c; c = c->next) {
+		if (c != v->first) {
+			if (pos >= cap - 1) {
+				cap *= 2;
+
+				char* tmp = (char*)realloc(buf, cap);
+
+				if (!tmp) { free(buf); return NULL; }
+
+				buf = tmp;
+			}
+
+			buf[pos++] = ',';
+		}
+
+		char* child = js_stringify_value(c);
+
+		if (!child) { free(buf); return NULL; }
+
+		size_t child_len = strlen(child);
+
+		while (pos + child_len >= cap) {
+			cap *= 2;
+
+			char* tmp = (char*)realloc(buf, cap);
+
+			if (!tmp) { free(buf); free(child); return NULL; }
+
+			buf = tmp;
+		}
+
+		strcpy(buf + pos, child);
+
+		pos += child_len;
+
+		free(child);
+	}
+
+	if (pos >= cap - 1) {
+		cap *= 2;
+
+		char* tmp = (char*)realloc(buf, cap);
+
+		if (!tmp) { free(buf); return NULL; }
+
+		buf = tmp;
+	}
+
+	buf[pos++] = ']';
+	buf[pos] = '\0';
+
+	return buf;
+}
+static char* js_stringify_object(jsio_t* v) {
+	size_t cap = 64, pos = 0;
+	char* buf = (char*)malloc(cap);
+
+	if (!buf) return NULL;
+
+	buf[pos++] = '{';
+
+	for (jsio_t* c = v->first; c; c = c->next) {
+		if (c != v->first) {
+			if (pos >= cap - 1) {
+				cap *= 2;
+
+				char* tmp = (char*)realloc(buf, cap);
+
+				if (!tmp) { free(buf); return NULL; }
+
+				buf = tmp;
+			}
+
+			buf[pos++] = ',';
+		}
+
+		size_t key_len = strlen(c->key);
+
+		while (pos + key_len + 3 >= cap) {
+			cap *= 2;
+
+			char* tmp = (char*)realloc(buf, cap);
+
+			if (!tmp) { free(buf); return NULL; }
+
+			buf = tmp;
+		}
+
+		buf[pos++] = '"';
+
+		strcpy(buf + pos, c->key);
+
+		pos += key_len;
+		buf[pos++] = '"';
+		buf[pos++] = ':';
+
+		char* child = js_stringify_value(c);
+
+		if (!child) { free(buf); return NULL; }
+
+		size_t child_len = strlen(child);
+
+		while (pos + child_len >= cap) {
+			cap *= 2;
+
+			char* tmp = (char*)realloc(buf, cap);
+
+			if (!tmp) { free(buf); free(child); return NULL; }
+
+			buf = tmp;
+		}
+
+		strcpy(buf + pos, child);
+
+		pos += child_len;
+
+		free(child);
+	}
+
+	if (pos >= cap - 1) {
+		cap *= 2;
+
+		char* tmp = (char*)realloc(buf, cap);
+
+		if (!tmp) { free(buf); return NULL; }
+
+		buf = tmp;
+	}
+
+	buf[pos++] = '}';
+	buf[pos] = '\0';
+
+	return buf;
+}
+static char* js_stringify_value(jsio_t* v) {
+	if (!v) return js_stringify_null(v);
+
+	switch (v->type) {
+		case JS_TYPE_NULL:     return js_stringify_null(v);
+		case JS_TYPE_BOOLEAN:  return js_stringify_boolean(v);
+		case JS_TYPE_NUMBER:   return js_stringify_number(v);
+		case JS_TYPE_STRING:   return js_stringify_string(v);
+		case JS_TYPE_ARRAY:    return js_stringify_array(v);
+		case JS_TYPE_OBJECT:   return js_stringify_object(v);
+		default:               return js_stringify_null(v);
+	}
+}
+char* js_stringify(jsio_t* v) {
+	return js_stringify_value(v);
 }
 jsio_t* js_resolve(jsio_t* root, const char* path) {
 	if (!root || !path) return NULL;
@@ -641,132 +997,6 @@ jsio_t* js_resolve(jsio_t* root, const char* path) {
 	}
 
 	return cur;
-}
-char* js_stringify(jsio_t* v) {
-	if (!v) return strdup("null");
-
-	switch (v->type) {
-		case JS_TYPE_NULL: return strdup("null");
-		case JS_TYPE_BOOLEAN: return strdup(v->value.num ? "true" : "false");
-		case JS_TYPE_NUMBER: {
-			char* buf = (char*)malloc(32);
-
-			snprintf(buf, 32, "%.17g", v->value.num);
-
-			return buf;
-		}
-		case JS_TYPE_STRING: {
-			size_t len = strlen(v->value.str);
-			char* buf = (char*)malloc(len * 2 + 3); // worst case: all chars escaped + quotes + null
-			char* p = buf;
-
-			*p++ = '"';
-
-			for (char* s = v->value.str; *s; s++) {
-				if (*s == '"' || *s == '\\') {
-					*p++ = '\\';
-					*p++ = *s;
-				} else if (*s == '\n') {
-					*p++ = '\\';
-					*p++ = 'n';
-				} else {
-					*p++ = *s;
-				}
-			}
-
-			*p++ = '"';
-			*p = '\0';
-
-			return buf;
-		}
-		case JS_TYPE_ARRAY: {
-			size_t cap = 64, pos = 0;
-			char* buf = (char*)malloc(cap);
-
-			buf[pos++] = '[';
-
-			for (jsio_t* c = v->first; c; c = c->next) {
-				if (c != v->first) {
-					if (pos >= cap - 1) { cap *= 2; buf = (char*)realloc(buf, cap); }
-
-					buf[pos++] = ',';
-				}
-
-				char* child = js_stringify(c);
-				size_t child_len = strlen(child);
-
-				while (pos + child_len >= cap) {
-					cap *= 2;
-					buf = (char*)realloc(buf, cap);
-				}
-
-				strcpy(buf + pos, child);
-
-				pos += child_len;
-
-				free(child);
-			}
-
-			if (pos >= cap - 1) { cap *= 2; buf = (char*)realloc(buf, cap); }
-
-			buf[pos++] = ']';
-			buf[pos] = '\0';
-
-			return buf;
-		}
-		case JS_TYPE_OBJECT: {
-			size_t cap = 64, pos = 0;
-			char* buf = (char*)malloc(cap);
-
-			buf[pos++] = '{';
-
-			for (jsio_t* c = v->first; c; c = c->next) {
-				if (c != v->first) {
-					if (pos >= cap - 1) { cap *= 2; buf = (char*)realloc(buf, cap); }
-
-					buf[pos++] = ',';
-				}
-
-				// Add key
-				size_t key_len = strlen(c->key);
-
-				while (pos + key_len + 3 >= cap) {
-					cap *= 2;
-					buf = (char*)realloc(buf, cap);
-				}
-
-				buf[pos++] = '"';
-				strcpy(buf + pos, c->key);
-				pos += key_len;
-				buf[pos++] = '"';
-				buf[pos++] = ':';
-
-				// Add value
-				char* child = js_stringify(c);
-				size_t child_len = strlen(child);
-
-				while (pos + child_len >= cap) {
-					cap *= 2;
-					buf = (char*)realloc(buf, cap);
-				}
-
-				strcpy(buf + pos, child);
-				pos += child_len;
-				free(child);
-			}
-
-			if (pos >= cap - 1) {
-				cap *= 2;
-				buf = (char*)realloc(buf, cap);
-			}
-
-			buf[pos++] = '}';
-			buf[pos] = '\0';
-
-			return buf;
-		}
-		default: return strdup("null");
-	}
 }
 #ifdef __cplusplus
 }
