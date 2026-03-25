@@ -840,6 +840,38 @@ TEST(printf_s_precision) {
 	ASSERT_STR_EQ("hel", buf);
 }
 
+TEST(printf_s_precision_null) {
+	char buf[256] = {0};
+	const char *nullish = NULL;
+	snprintf(buf, sizeof(buf), "%.3s", nullish);
+	ASSERT_STR_EQ("(nu", buf);
+}
+
+
+TEST(printf_s_precision_and_width) {
+	char buf[256] = {0};
+	snprintf(buf, sizeof(buf), "%10.3s", "hello");
+	ASSERT_STR_EQ("       hel", buf);
+}
+
+TEST(printf_s_precision_left_align) {
+	char buf[256] = {0};
+	snprintf(buf, sizeof(buf), "%-10.3s", "hello");
+	ASSERT_STR_EQ("hel       ", buf);
+}
+
+TEST(printf_s_precision_star) {
+	char buf[256] = {0};
+	snprintf(buf, sizeof(buf), "%.*s", 3, "hello");
+	ASSERT_STR_EQ("hel", buf);
+}
+
+TEST(printf_s_precision_negative_width) {
+	char buf[256] = {0};
+	snprintf(buf, sizeof(buf), "%-3.5s", "hello");
+	ASSERT_STR_EQ("hello", buf);  // left-align, prec dominates
+}
+
 TEST(printf_s_empty) {
 	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "%s", "");
