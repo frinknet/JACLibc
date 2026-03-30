@@ -602,16 +602,19 @@ static inline int __jacl_input_str(FILE *stream, const char **in, size_t *read, 
 	return (pad && i == 0) ? 0 : 1;
 }
 static inline int __jacl_input_scan(FILE *stream, const char **in, size_t *read, const char **fmt, int width, char *buf) {
-	char charset[256] = {0};
-	int i = 0, invert = 0, ch, match;
+	int cset[256];
+	int i = 256, invert = 0, ch, match;
 	unsigned char start, end, c;
+
+	// Guarantee zeros
+	while (--i) cset[i] = 0;
 
 	// Skip opening '['
 	(*fmt)++;
 
 	// Check special chars
 	if (**fmt == '^') { invert = 1; (*fmt)++; }
-	if (**fmt == ']') { charset[(unsigned char)']'] = 1; (*fmt)++; }
+	if (**fmt == ']') { cset[(unsigned char)']'] = 1; (*fmt)++; }
 
 	// Build charset
 	while (**fmt && **fmt != ']') {
@@ -620,11 +623,12 @@ static inline int __jacl_input_scan(FILE *stream, const char **in, size_t *read,
 			start = (unsigned char)**fmt;
 			end = (unsigned char)(*fmt)[2];
 
-			for (c = start; c <= end; c++) charset[c] = 1;
+			if (start <= end) for (c = start; c <= end; c++) cset[c] = 1;
 
 			(*fmt) += 3;
 		} else {
-			charset[(unsigned char)**fmt] = 1;
+			cset[(unsigned char)**fmt] = 1;
+
 			(*fmt)++;
 		}
 	}
@@ -639,7 +643,7 @@ static inline int __jacl_input_scan(FILE *stream, const char **in, size_t *read,
 
 		if (ch == EOF) break;
 
-		match = charset[(unsigned char)ch];
+		match = cset[(unsigned char)ch];
 
 		if (invert) match = !match;
 		if (!match) { __jacl_read_back(ch, stream, in, read); break; }
@@ -649,7 +653,6 @@ static inline int __jacl_input_scan(FILE *stream, const char **in, size_t *read,
 	}
 	if (buf) buf[i] = '\0';
 
-	// Null-terminate and return success
 	return (i > 0);
 }
 #define CASE(len, PRE, UPRE) case JACL_FMT_VAL(LENGTH, len): \
