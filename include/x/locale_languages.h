@@ -650,7 +650,7 @@
 /* Min Dong Chinese - 10M */
 #if 10000000 >= LOCALE_MINIMUM
 #define X_LANG_CDO(...) X(LANG_CDO, __VA_ARGS__)
-#Else
+#else
 #define X_LANG_CDO(...)
 #endif
 

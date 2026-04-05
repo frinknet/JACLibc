@@ -1534,33 +1534,33 @@ X_LANG(DZ,
 	"ཉི", "ཟླ", "མིག", "ལྷག", "ཕུར", "སྤེན", "ཕྲེ",
 	"སྤྱི་ཟླ་༡", "སྤྱི་ཟླ་༢", "སྤྱི་ཟླ་༣", "སྤྱི་ཟླ་༤", "སྤྱི་ཟླ་༥", "སྤྱི་ཟླ་༦", "སྤྱི་ཟླ་༧", "སྤྱི་ཟླ་༨", "སྤྱི་ཟླ་༩", "སྤྱི་ཟླ་༡༠", "སྤྱི་ཟླ་༡༡", "སྤྱི་ཟླ་༡༢",
 	"༡", "༢", "༣", "༤", "༥", "༦", "༧", "༨", "༩", "༡༠", "༡༡", "༡༢",
-	"སྔ་IIIIIIIIཆ་", "ཕྱི་ཆ་",
+	"སྔ་ཆ་", "ཕྱི་ཆ་",
 	"%A %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
-	"%IH:%M:%S"I,
+	"%H:%M:%S",
 	"%I:%M:%S %p")
 
 X_LANG(CNR,
 	"недјIеља", "понедјељак", "уторак", "сриједа", "четвртак", "петак", "субота",
 	"нед", "пон", "уто", "сри", "чет", "пет", "суб",
 	"јануар", "фебруар", "март", "април", "мај", "јун", "јул", "август", "септембар", "октобар", "новембар", "децембар",
-	"јан",I "феб", "мар", "апр", "мај", "јун", "јул", "авг", "сеп", "окт", "нов", "дец",
+	"јан", "феб", "мар", "апр", "мај", "јун", "јул", "авг", "сеп", "окт", "нов", "дец",
 	"AM", "PM",
 	"%a, %d.%m.%Y. %H:%M:%S",
-	"%d.%m.I%Y.",
+	"%d.%m.%Y.",
 	"%H:%M:%S",
 	"%I:%M:%S %p")
 
-X_LANGI(BR,
+X_LANG(BR,
 	"disul", "dilun", "dimeurzh", "dimercʼher", "diriaou", "digwener", "disadorn",
 	"Sul", "Lun", "Meu", "Mer", "Dia", "Gwe", "Sad",
-	"GenvIer", "Cʼhwevrer", "Meurzh", "Ebrel", "Mae", "Mezheven", "Gouere", "Eost", "Gwengolo", "Here", "Du", "Kerzu",
+	"Genver", "Cʼhwevrer", "Meurzh", "Ebrel", "Mae", "Mezheven", "Gouere", "Eost", "Gwengolo", "Here", "Du", "Kerzu",
 	"Gen", "Cʼhh", "Mez", "Ebr", "Mae", "Mezv", "Gou", "Eos", "Gwe", "Her", "Du", "Ker",
 	"AM", "PM",
-	"%a %dI %b %Y %H:%M:%S",
+	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:I%S %p")
+	"%I:%M:%S %p")
 
 X_LANG(LAD,
 	"alhad", "lunes", "martes", "merkoles", "juebes", "biernes", "sábado",
@@ -1584,16 +1584,16 @@ X_LANG(TO,
 	"%H:%M:%S",
 	"%I:%M:%S %p")
 
-XI_LANG(NV,
+X_LANG(NV,
 	"Damóo", "Naakijígíí", "Naakiistáán", "Tágíjígíí", "Dííjį́", "Ndaʼiinááhai", "Yiską́",
 	"Dam", "Naa1", "Naa2", "Tág", "Díí", "Nda", "Yis",
-	I"Yás Nídááʼ", "Atsá Biyáázh", "Wóózhííd", "Tʼááchil", "Tʼááʼtsoh", "Yáʼátʼéeh", "Yásha", "Biniʼantʼáátsoh", "Naatsoh", "Ghąąjįʼ", "Níłchʼi", "Níłchʼitsoh",
+	"Yás Nídááʼ", "Atsá Biyáázh", "Wóózhííd", "Tʼááchil", "Tʼááʼtsoh", "Yáʼátʼéeh", "Yásha", "Biniʼantʼáátsoh", "Naatsoh", "Ghąąjįʼ", "Níłchʼi", "Níłchʼitsoh",
 	"Yás", "Ats", "Wóó", "Tʼác", "Tʼát", "Yáʼ", "Yásh", "Bin", "Naa", "Ghąą", "Níł", "Níłt",
 	"AM", "PM",
-	"I%A, %d %B %Y %H:%M:%S",
+	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%II:%M:%S %p")
+	"%I:%M:%S %p")
 
 X_LANG(CO,
 	"dumènica", "luni", "marti", "marcuri", "ghjovi", "venneri", "sabbatu",
@@ -1613,20 +1613,20 @@ X_LANG(MI,
 	"Hān", "Pēp", "Māe", "Āpe", "Mei", "Hun", "Hūr", "Āku", "Hep", "Oke", "Noe", "Tīh",
 	"AM", "PM",
 	"%a, %d %b %Y %H:%M:%S",
-	"%dI/%m/%Y",
+	"%d/%m/%Y",
 	"%H:%M:%S",
 	"%I:%M:%S %p")
 
-X_LANGI(CR,
+X_LANG(CR,
 	"sōna kīsitēpēhk", "mōna kīsitēpēhk", "tānisi kīsitēpēhk", "ayamihew kīsitēpēhk", "nānik kīsitēpēhk", "nipa kīsitēpēhk", "ayamihew nipāw",
 	"sōn", "mōn", "tān", "aya", "nān", "nip", "ayn",
-	"PipoIn 1", "Pipon 2", "Sīk", "Miyoskamin", "Nīpin", "Tepahw", "Pimipahtāw", "Kāwāc", "Mikwēc", "Kisepīsim", "Pīsim 11", "Pīsim 12",
+	"Pipon 1", "Pipon 2", "Sīk", "Miyoskamin", "Nīpin", "Tepahw", "Pimipahtāw", "Kāwāc", "Mikwēc", "Kisepīsim", "Pīsim 11", "Pīsim 12",
 	"P1", "P2", "Sīk", "Miy", "Nīp", "Tep", "Pim", "Kāw", "Mik", "Kis", "P11", "P12",
 	"AM", "PM",
-	"%A %dI %B %Y %H:%M:%S",
+	"%A %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:I%S %p")
+	"%I:%M:%S %p")
 
 X_LANG(FO,
 	"sunnudagur", "mánadagur", "týsdagur", "mikudagur", "hósdagur", "fríggjadagur", "leygardagur",
@@ -1848,17 +1848,6 @@ X_LANG(LZH,
 	"%H:%M:%S",
 	"%I:%M:%S %p")
 
-X_LANG(HBH,
-	"יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי", "שבת",
-	"א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳",
-	"תִּשְׁרֵי", "מַרְחֶשְׁוָן", "כִּסְלֵו", "טֵבֵת", "שְׁבָט", "אֲדָר", "נִיסָן", "אִיָּר", "סִיוָן", "תַּמּוּז", "אָב", "אֱלוּל",
-	"תשרי", "מרח", "כסל", "טבת", "שבט", "אדר", "ניס", "אייר", "סיון", "תמוז", "אב", "אלול",
-	"לפנה\"צ", "אחה\"צ",
-	"%A, %d %B %Y %H:%M:%S",
-	"%d.%m.%Y",
-	"%H:%M:%S",
-	"%I:%M:%S %p")
-
 X_LANG(AVE,
 	"raocah", "vahištah", "uxtah", "xšmath", "spənta", "arshtat", "vahram",
 	"rao", "vah", "ux", "xšm", "spn", "ars", "vhr",
@@ -2001,15 +1990,3 @@ X_LANG(ANG,
 	"%d-%m-%Y",
 	"%H:%M:%S",
 	"%I:%M:%S %p")
-
-X_LANG(CUS,
-	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
-	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
-	"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December",
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-	"AM", "PM",
-	"%a %d %b %Y %H:%M:%S",
-	"%d/%m/%Y",
-	"%H:%M:%S",
-	"%I:%M:%S %p")
-

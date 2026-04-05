@@ -38,24 +38,22 @@ thread_local struct lconv __jacl_lconv = {
 	CHAR_MAX,      // int_n_sign_posn
 };
 
-typedef struct {
-	LC_LANG_C;
-			__jacl_locale_lang_t  time;
-				__jacl_locale_lang_t  collate;
-					__jacl_locale_lang_t  message;
-						__jacl_locale_cc_t    numeric;
-							__jacl_locale_cc_t    monetary;
-} __jacl_locale_t;
-
-
-
-thread_local __jacl_wctype_t __jacl_wctype = {
-	L'0123456789',
-	L'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-	L'abcdefghijklmnopqrstuvwxyz'
+thread_local __jacl_locale_t __jacl_locale = {
+	LANG_C,
+	LANG_C,
+	LANG_C,
+	LANG_C,
+	CC_NONE,
+	CC_NONE
 };
 
-thread_local __jacl_calendar_t __jacl_calendar = {
+thread_local __jacl_wctype_t __jacl_wctype = {
+	L"0123456789",
+	L"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+	L"abcdefghijklmnopqrstuvwxyz"
+};
+
+thread_local __jacl_time_t __jacl_time = {
 	"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday",
 	"Sun","Mon","Tue","Wed","Thu","Fri","Sat",
 	"January","February","March","April","May","June","July","August",

@@ -11,13 +11,13 @@
 #include <x/locale_languages.h>
 #include <x/locale_countries.h>
 
-#define LC_CTYPE	0
+#define LC_CTYPE  	0
 #define LC_NUMERIC  1
-#define LC_TIME	 2
+#define LC_TIME	    2
 #define LC_COLLATE  3
 #define LC_MONETARY 4
 #define LC_MESSAGES 5
-#define LC_ALL	  6
+#define LC_ALL	    6
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,7 +51,7 @@ typedef struct {
 	__jacl_locale_cc_t    monetary;
 } __jacl_locale_t;
 
-typdef struct {
+typedef struct {
 	const char *days_full[7];
 	const char *days_abbr[7];
 	const char *months_full[12];
@@ -62,12 +62,7 @@ typdef struct {
 	const char *fmt_date;
 	const char *fmt_time_24;
 	const char *fmt_time_12;
-	const char *extra1;
-	const char *extra2;
-	const char *extra3;
-	const char *extra4;
-	const char *extra5;
-} __jacl_calendar_t;
+} __jacl_time_t;
 
 /* C99 localization */
 struct lconv {
@@ -103,6 +98,8 @@ struct lconv {
 };
 
 extern thread_local __jacl_locale_t __jacl_locale;
+extern thread_local __jacl_wctype_t __jacl_wctype;
+extern thread_local __jacl_time_t   __jacl_time;
 extern thread_local struct lconv	__jacl_lconv;
 
 // Parse language code
@@ -163,7 +160,7 @@ static void __jacl_locale_split(const char *s, __jacl_locale_lang_t *out_lang, _
 static void __jacl_locale_wctype(__jacl_locale_lang_t lang) {
 	__jacl_locale.wctype = lang;
 
-	#define X(LANG, ...) case LANG: __jacl_wctype = { __VA_ARGS__ }; break;
+	#define X(LANG, ...) case LANG: __jacl_wctype = (__jacl_wctype_t){ __VA_ARGS__ }; break;
 	switch(lang) {
 	#include <x/locale_wctype.h>
 	}
@@ -175,7 +172,7 @@ static void __jacl_locale_numeric(__jacl_locale_cc_t cc) {
 
 	// Update numeric formatting
 	#define X(CC, dec, group, sep) \
-		case CC_##CC: \
+		case CC: \
 			__jacl_lconv.decimal_point = dec; \
 			__jacl_lconv.thousands_sep = group; \
 			__jacl_lconv.grouping = sep; \
@@ -189,7 +186,7 @@ static void __jacl_locale_numeric(__jacl_locale_cc_t cc) {
 static void __jacl_locale_time(__jacl_locale_lang_t lang) {
 	__jacl_locale.time = lang;
 
-	#define X(LANG, ...) case LANG: __jacl_time = { __VA_ARGS__ }; break;
+	#define X(LANG, ...) case LANG: __jacl_time = (__jacl_time_t){ __VA_ARGS__ }; break;
 	switch(lang) {
 	#include <x/locale_time.h>
 	}
