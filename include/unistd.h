@@ -6,8 +6,9 @@
 #include <config.h>
 #include <errno.h>        // errno, ENOSYS
 #include <stddef.h>       // size_t
-#include <stdarg.h>   // va_list, va_start(), va_end(), va_arg()
+#include <stdarg.h>       // va_list, va_start(), va_end(), va_arg()
 #include <stdnoreturn.h>  // noreturn
+#include <string.h>
 #include <sys/types.h>    // pid_t, uid_t, gid_t, ssize_t, off_t
 #include <sys/syscall.h>  // syscall()
 #include <sys/ioctl.h>    // winsize, TIOCGWINSZ
@@ -37,8 +38,8 @@ typedef unsigned int useconds_t;
 noreturn static inline void _exit(int status) { syscall(SYS_exit, status); while(1); }
 static inline pid_t getpid(void) { return (pid_t)syscall(SYS_getpid); }
 static inline pid_t getppid(void) { return (pid_t)syscall(SYS_getppid); }
-static inline pid_t fork(void) { return (pid_t)syscall(SYS_fork); }
-static inline pid_t vfork(void) { return fork(); }
+pid_t fork(void);
+pid_t vfork(void);
 
 /* File I/O */
 static inline ssize_t read(int fd, void *buf, size_t count) { return syscall(SYS_read, fd, buf, count); }
@@ -75,8 +76,74 @@ static inline char *getcwd(char *buf, size_t size) { return (char*)syscall(SYS_g
 
 /* Process execution */
 static inline int execve(const char *pathname, char *const argv[], char *const envp[]) { return (int)syscall(SYS_execve, pathname, argv, envp); }
-static inline int execv(const char *pathname, char *const argv[]) { return (int)syscall(SYS_execve, pathname, argv, environ); }
-static inline int execvp(const char *file, char *const argv[]) { return (int)syscall(SYS_execve, file, argv, environ); }
+static inline int execv(const char *pathname, char *const argv[]) { return execve(pathname, argv, environ); }
+static inline int execvp(const char *file, char *const argv[]) {
+	const char* p = file;
+	const char* env_path = NULL;
+	size_t path_len = 4; // strlen("PATH")
+
+	while (*p && *p != '/') p++;
+
+	if (*p) return (int)syscall(SYS_execve, file, argv, environ);
+
+	for (char **env = environ; *env; ++env) {
+		if (!strncmp(*env, "PATH=", path_len + 1)) {
+			env_path = &((*env)[path_len + 1]);
+
+			break;
+		}
+	}
+
+	if (!env_path) env_path = "/bin:/usr/bin";
+
+	char path_copy[4096];
+	size_t env_len = 0;
+
+	while (env_path[env_len] && env_len < sizeof(path_copy) - 1) {
+		path_copy[env_len] = env_path[env_len];
+		env_len++;
+	}
+
+	path_copy[env_len] = '\0';
+
+	const char* start = path_copy;
+
+	while (1) {
+		const char* end = start;
+
+		while (*end && *end != ':') end++;
+
+		if (end > start) {
+			size_t dir_len = end - start;
+			size_t file_len = 0;
+			size_t i = 0;
+			const char* temp = file;
+			char full_path[4096];
+
+			while (temp[file_len]) file_len++;
+
+			for (size_t j = 0; j < dir_len; j++) full_path[i++] = start[j];
+
+			full_path[i++] = '/';
+
+			for (size_t j = 0; j < file_len; j++) full_path[i++] = file[j];
+
+			full_path[i] = '\0';
+
+			int res = (int)syscall(SYS_execve, full_path, argv, environ);
+
+			if (res == 0 || errno != ENOENT) return res;
+		}
+
+		if (!*end) break;
+
+		start = end + 1;
+	}
+
+	errno = ENOENT;
+
+	return -1;
+}
 static inline int execl(const char *pathname, const char *arg, ...) {
 	const char *argv[256];
 	va_list ap;
@@ -191,28 +258,18 @@ static inline int fdatasync(int fd) {
 
 /* Sleep/alarm */
 static inline unsigned int sleep(unsigned int seconds) {
-	#if JACL_HASSYS(nanosleep)
-		struct timespec req = {seconds, 0}, rem = {0, 0};
+	struct timespec req = {seconds, 0}, rem = {0, 0};
 
-		if (syscall(SYS_nanosleep, &req, &rem) == -1) {
-			return (unsigned int)rem.tv_sec + (rem.tv_nsec > 0 ? 1 : 0);
-		}
+	if (nanosleep(&req, &rem) == -1) {
+		return (unsigned int)rem.tv_sec + (rem.tv_nsec > 0 ? 1 : 0);
+	}
 
-		return 0;
-	#else
-		errno = ENOSYS;
-		return seconds;
-	#endif
+	return 0;
 }
 static inline int usleep(useconds_t usec) {
-	#if JACL_HASSYS(nanosleep)
-		struct timespec req = {usec / 1000000, (usec % 1000000) * 1000};
+	struct timespec req = {usec / 1000000, (usec % 1000000) * 1000};
 
-		return (int)syscall(SYS_nanosleep, &req, NULL);
-	#else
-		errno = ENOSYS;
-		return -1;
-	#endif
+	return (int)nanosleep(&req, NULL);
 }
 static inline unsigned int alarm(unsigned int seconds) {
 	#if JACL_HASSYS(alarm)

@@ -35,44 +35,45 @@ typedef enum {
 	JS_TYPE_NUMBER	= 'd',
 	JS_TYPE_OBJECT	= 'e',
 	JS_TYPE_FUNCTION	= 'f'
-} js_type_t;
+} jsio_type_t;
 
-typedef struct js_t {
-		js_type_t		 type;		// tag
+typedef struct jsio_t {
+		jsio_type_t		 type;		// tag
 		union {
 				char*		 str;
 				double	 num;				// numbers & bools
 		} value;
 		size_t				length;  // containers; strings via strlen
 		char*					key;		 // property name if child of object
-		struct js_t*	next;		 // next sibling
-		struct js_t*	first;	 // first child
-		struct js_t*	parent;  // parent
-} js_t;
+		struct jsio_t*	next;		 // next sibling
+		struct jsio_t*	first;	 // first child
+		struct jsio_t*	parent;  // parent
+} jsio_t;
 
 // Node Lifecycle
-void js_attach(js_t* c, js_t* p);
-void js_detach(js_t* c);
-void js_replace(js_t* o, js_t* n);
-js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen);
-void js_delete(js_t* v);
-void js_publish(js_t* n);
-void js_unpublish(js_t* n);
+void js_attach(jsio_t* c, jsio_t* p);
+void js_detach(jsio_t* c);
+void js_replace(jsio_t* o, jsio_t* n);
+jsio_t* js_create(jsio_type_t type, uint32_t klen, uint32_t vlen);
+void js_delete(jsio_t* v);
+void js_publish(jsio_t* n);
+void js_unpublish(jsio_t* n);
 
 // Indexing
-js_t* js_index(js_t* a, int i);
-int js_indexof(js_t* a, js_t* v);
+jsio_t* js_index(jsio_t* a, int i);
+int js_indexof(jsio_t* a, jsio_t* v);
 
 // Node path
-JS_EXPORT(_root) js_t* js_root(js_t* v);
-char* js_path(js_t* v);
-bool js_includes(js_t* r, js_t* v);
-bool js_ispublic(js_t* v);
+JS_EXPORT(_root) jsio_t* js_root(jsio_t* v);
+char* js_path(jsio_t* v);
+bool js_includes(jsio_t* r, jsio_t* v);
+bool js_ispublic(jsio_t* v);
 
 // Setters for key and value
-js_t* js_string(js_t* x, const char* s);
-js_t* js_number(js_t* x, double n);
-js_t* js_boolean(js_t* x, bool n);
+jsio_t* js_setkey(jsio_t* x, const char* s);
+jsio_t* js_string(jsio_t* x, const char* s);
+jsio_t* js_number(jsio_t* x, double n);
+jsio_t* js_boolean(jsio_t* x, bool n);
 
 #define JS_NULL js_create(JS_TYPE_NULL,0,0)
 #define JS_ARRAY js_create(JS_TYPE_ARRAY,0,0)
@@ -101,9 +102,9 @@ uintptr_t	js_code(const char *code, int len, ...);
 
 // Notify
 #ifdef NO_JS_NOTIFY
-static inline void js_notify(js_t* v) { (void*)v; }
+static inline void js_notify(jsio_t* v) { (void*)v; }
 #else
-static inline void js_notify(js_t* v) {
+static inline void js_notify(jsio_t* v) {
 	if (!js_ispublic(v)) return;
 
 	js_code("this.trigger(this.export(arguments[0]))", 39, JS_STRING(js_path(v)));
@@ -118,19 +119,19 @@ void js_resume(void);
 #endif
 
 // Accessors
-static inline char* js_key(js_t* v) {
+static inline char* js_key(jsio_t* v) {
 	if (!v) return NULL;
 
 	return v->key;
 }
-static inline size_t js_length(js_t* v) {
+static inline size_t js_length(jsio_t* v) {
 	if (!v) return 0;
 
 	if (v->type == 'c') return strlen(v->value.str);
 
 	return v->length;
 }
-static inline void* js_value(js_t* v) {
+static inline void* js_value(jsio_t* v) {
 	if (!v) return NULL;
 
 	switch (v->type) {
@@ -148,17 +149,18 @@ static inline void* js_value(js_t* v) {
 }
 
 // Array Operations
-void	js_push(js_t* a, js_t* v);
-js_t* js_pop(js_t* a);
-void js_unshift(js_t* a, js_t* v);
-js_t* js_shift(js_t* a);
+void	js_push(jsio_t* a, jsio_t* v);
+jsio_t* js_pop(jsio_t* a);
+void js_unshift(jsio_t* a, jsio_t* v);
+jsio_t* js_shift(jsio_t* a);
 
 // Object Property
-js_t* js_property(js_t* o, const char* key);
+jsio_t* js_property(jsio_t* o, const char* key);
 
 // JS Parser
-js_t* js_parse(const char* s);
-char* js_stringify(js_t* v);
+jsio_t* js_parse(const char* s);
+jsio_t* js_resolve(jsio_t* root, const char* path);
+char* js_stringify(jsio_t* v);
 
 // JS Start if wasm
 #if JACL_OS_JSRUN
@@ -167,11 +169,11 @@ ssize_t js_write(int fd, const void* buf, size_t cnt);
 #endif
 
 // JS lifecycle
-JS_EXPORT(_attach) void js_attach(js_t* c, js_t* p);
-JS_EXPORT(_detach) void js_detach(js_t* c);
-JS_EXPORT(_replace) void js_replace(js_t* o, js_t* n);
-JS_EXPORT(_create) js_t* js_create(js_type_t type, uint32_t klen, uint32_t vlen);
-JS_EXPORT(_delete) void js_delete(js_t* x);
+JS_EXPORT(_attach) void js_attach(jsio_t* c, jsio_t* p);
+JS_EXPORT(_detach) void js_detach(jsio_t* c);
+JS_EXPORT(_replace) void js_replace(jsio_t* o, jsio_t* n);
+JS_EXPORT(_create) jsio_t* js_create(jsio_type_t type, uint32_t klen, uint32_t vlen);
+JS_EXPORT(_delete) void js_delete(jsio_t* x);
 
 #ifdef __cplusplus
 }

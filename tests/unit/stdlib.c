@@ -1567,6 +1567,49 @@ TEST(malloc_alignment)
 	free(ptr);
 }
 
+TEST(malloc_arena_prev_size_safe)
+{
+	void *ptrs[64];
+
+	for (int i = 0; i < 64; i++) {
+		ptrs[i] = malloc(24 + (i % 8));  /* 24-31 bytes: arena range */
+		ASSERT_NOT_NULL(ptrs[i]);
+		memset(ptrs[i], 0xAB, 24 + (i % 8));
+	}
+
+	for (int i = 63; i >= 0; i--) free(ptrs[i]);
+
+	void *again = malloc(32);
+
+	ASSERT_NOT_NULL(again);
+	free(again);
+}
+
+TEST(malloc_after_fork_reset)
+{
+	pid_t pid = fork();
+
+	if (pid == 0) {
+		// Child: test malloc works after reset
+		void* ptr = malloc(100);
+
+		if (!ptr) exit(1);
+
+		void* ptr2 = realloc(ptr, 200);
+
+		if (!ptr2) exit(2);
+
+		free(ptr2);
+		exit(0);
+	} else if (pid > 0) {
+		int status;
+
+		waitpid(pid, &status, 0);
+		ASSERT_INT_EQ(WEXITSTATUS(status), 0);
+	} else {
+		ASSERT_INT_NE(pid, -1);  // fork failed
+	}
+}
 
 /* ============================================================= */
 /* calloc - stdlib.h: unit tests                                */

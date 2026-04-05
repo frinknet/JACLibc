@@ -5,17 +5,17 @@
 
 #include <config.h>
 
-/* Require C11 for proper thread-local errno support */
-#if !JACL_HAS_C11
-  #error "This errno.h requires C11 or newer for thread-local storage"
-#endif
-
 /* ================================================================ */
 /* ERRNO ACCESSOR FUNCTIONS                                         */
 /* ================================================================ */
 
+/* Require C11 for proper thread-local errno support */
+#if JACL_HAS_C11
+
 extern thread_local int __jacl_errno;
 #define errno __jacl_errno
+
+#endif
 
 /* ================================================================ */
 /* ERRNO VALUE DEFINITIONS                                          */

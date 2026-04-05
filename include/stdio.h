@@ -195,10 +195,15 @@ static inline int __jacl_buffer_flags(const char *mode) {
 static inline int __jacl_buffer_reload(FILE *f) {
 	if (JACL_UNLIKELY(!f || !(f->_flags & __SRD))) return EOF;
 
-	off_t cur_pos = lseek(f->_fd, 0, SEEK_CUR);
+	off_t cur_pos = 0;
+	struct stat st;
 
-	if (JACL_UNLIKELY(cur_pos < 0)) { f->_flags |= __SERR; return EOF; }
-	if (f->_cnt > 0) cur_pos -= f->_cnt;
+	if (fstat(f->_fd, &st) == 0 && !S_ISFIFO(st.st_mode)) {
+		cur_pos = lseek(f->_fd, 0, SEEK_CUR);
+
+		if (JACL_UNLIKELY(cur_pos < 0)) { f->_flags |= __SERR; return EOF; }
+		if (f->_cnt > 0) cur_pos -= f->_cnt;
+	}
 
 	f->_ptr = f->_base + OVRSIZ;
 	f->_cnt = 0;
@@ -224,12 +229,22 @@ static inline int __jacl_buffer_flush(FILE *f) {
 	ssize_t written = write(f->_fd, f->_base + OVRSIZ, to_write);
 
 	if (JACL_UNLIKELY(written < 0)) { f->_flags |= __SERR; return EOF; }
+
 	if ((size_t)written < to_write) {
 		memmove(f->_base + OVRSIZ, f->_base + OVRSIZ + written, to_write - written);
-		f->_ptr = f->_base + OVRSIZ + (to_write - written);
-	} else f->_ptr = f->_base + OVRSIZ;
 
-	f->_write_pos = lseek(f->_fd, 0, SEEK_CUR);
+		f->_ptr = f->_base + OVRSIZ + (to_write - written);
+	} else {
+		f->_ptr = f->_base + OVRSIZ;
+	}
+
+	struct stat st;
+
+	if (fstat(f->_fd, &st) == 0 && S_ISFIFO(st.st_mode)) {
+		f->_write_pos += written;
+	} else {
+		f->_write_pos = lseek(f->_fd, 0, SEEK_CUR);
+	}
 	f->_last_op = 2;
 
 	return 0;
@@ -723,6 +738,10 @@ static inline int setlinebuf(FILE *stream) { return setvbuf(stream, NULL, _IOLBF
 static inline FILE *fdopen(int fd, const char *mode) {
 	if (fd < 0 || !mode) { errno = EINVAL; return NULL; }
 
+	struct stat st;
+
+	if (fstat(fd, &st) < 0) return NULL;
+
 	int stdio_flags = (mode[0] == 'r') ? __SRD : __SWR;
 
 	if (strchr(mode, '+')) stdio_flags = __SRD | __SWR;
@@ -841,6 +860,7 @@ static inline ssize_t getdelim(char **lineptr, size_t *n, int delim, FILE *strea
 
 		if (c == delim) break;
 	}
+
 	if (pos == 0 && c == EOF) return -1;
 	if (pos >= *n) {
 		char *new_ptr = (char *)realloc(*lineptr, pos + 1);

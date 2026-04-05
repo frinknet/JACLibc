@@ -3,6 +3,7 @@
 #define CORE_STDLIB_H
 
 #include <stdlib.h>
+#include <errno.h>
 #include <assert.h>
 #include <core/format.h>
 
@@ -103,7 +104,7 @@ thread_local _Alignas(64) struct {
 } __jacl_quicklist[4];
 
 /* Internal Functions */
-static inline void __jacl_lock_acquire(__jacl_lock_t* l) {
+void __jacl_lock_acquire(__jacl_lock_t* l) {
 	uint32_t ticket = atomic_fetch_add_explicit(&l->next, 1, memory_order_relaxed);
 
 	while (atomic_load_explicit(&l->owner, memory_order_acquire) != ticket) {
@@ -117,7 +118,7 @@ static inline void __jacl_lock_acquire(__jacl_lock_t* l) {
 	}
 }
 
-static inline void __jacl_lock_release(__jacl_lock_t* l) {
+void __jacl_lock_release(__jacl_lock_t* l) {
 	atomic_fetch_add_explicit(&l->owner, 1, memory_order_release);
 }
 
@@ -346,10 +347,23 @@ static inline __jacl_segment_t* __jacl_grow_heap(size_t min_needed) {
 	return seg;
 }
 
+void __jacl_fork_reset(void) {
+	__jacl_tls_off = 0;
+	__jacl_tls_end = 0;
+	__jacl_segment_head = &__jacl_initial_segment;
+	__jacl_once = 1;  // Force malloc re-init
+
+	memset(__jacl_static_heap, 0, JACL_HEAP_INIT);  // Wipe parent allocations
+}
+
 /* Public API */
 void* malloc(size_t n) {
 	if (n == 0) n = 1;
-	if (n > SIZE_MAX - sizeof(__jacl_hdr_t)) return NULL;
+	if (n > SIZE_MAX - sizeof(__jacl_hdr_t)) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
 
 	__jacl_init_once();
 
@@ -361,8 +375,8 @@ void* malloc(size_t n) {
 
 		if (qidx >= 0 && qidx < 4 && __jacl_quicklist[qidx].count > 0) {
 			void* p = __jacl_quicklist[qidx].slots[--__jacl_quicklist[qidx].count];
-			__jacl_hdr_t* h = (__jacl_hdr_t*)p - 1;
 
+			__jacl_hdr_t* h = (__jacl_hdr_t*)p - 1;
 			h->flags = JACL_HDR_ALLOC;
 
 			return p;
@@ -376,7 +390,7 @@ void* malloc(size_t n) {
 		__jacl_hdr_t* h = (__jacl_hdr_t*)(__jacl_static_heap + __jacl_tls_off);
 
 		h->size = need;
-		h->prev_size = (__jacl_tls_off > 0) ? ((__jacl_hdr_t*)(__jacl_static_heap + __jacl_tls_off - h->size))->size : 0;
+		h->prev_size = 0;//(__jacl_tls_off > 0) ? ((__jacl_hdr_t*)(__jacl_static_heap + __jacl_tls_off - h->size))->size : 0;
 		h->flags = JACL_HDR_ALLOC | JACL_HDR_ARENA;
 
 		__jacl_tls_off += need;
@@ -385,12 +399,10 @@ void* malloc(size_t n) {
 	}
 
 large_path:
-assert(__jacl_tls_off <= JACL_HEAP_INIT / 4);
-assert(__jacl_tls_end <= JACL_HEAP_INIT / 4);
-assert(__jacl_tls_off <= __jacl_tls_end);
-
+	assert(__jacl_tls_off <= JACL_HEAP_INIT / 4);
+	assert(__jacl_tls_end <= JACL_HEAP_INIT / 4);
+	assert(__jacl_tls_off <= __jacl_tls_end);
 	__jacl_lock_acquire(&__jacl_lock);
-
 	__jacl_segment_t* seg = __jacl_segment_head;
 
 	while (seg) {
@@ -401,8 +413,8 @@ assert(__jacl_tls_off <= __jacl_tls_end);
 
 			if (h->size >= need + sizeof(__jacl_hdr_t) + 8) {
 				size_t rem_off = off + need;
-				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 
+				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 				rem->size = h->size - need;
 				rem->prev_size = need;
 				rem->flags = 0;
@@ -436,8 +448,8 @@ assert(__jacl_tls_off <= __jacl_tls_end);
 
 			if (h->size >= need + sizeof(__jacl_hdr_t) + 8) {
 				size_t rem_off = off + need;
-				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 
+				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 				rem->size = h->size - need;
 				rem->prev_size = need;
 				rem->flags = 0;
@@ -457,6 +469,8 @@ assert(__jacl_tls_off <= __jacl_tls_end);
 
 	__jacl_lock_release(&__jacl_lock);
 
+	errno = ENOMEM;
+
 	return NULL;
 }
 
@@ -464,6 +478,15 @@ void free(void* p) {
 	if (JACL_UNLIKELY(!p)) return;
 
 	__jacl_hdr_t* h = (__jacl_hdr_t*)p - 1;
+
+	// Early Arena Check
+	if (h->flags & JACL_HDR_ARENA) {
+		if (!(h->flags & JACL_HDR_ALLOC)) return;
+
+		h->flags = 0;
+
+		return;
+	}
 
 	// Find which segment this belongs to
 	__jacl_segment_t* seg = __jacl_find_segment((void*)h);
@@ -502,13 +525,6 @@ void free(void* p) {
 		}
 	}
 
-	/* Arena blocks leak */
-	if (h->flags & JACL_HDR_ARENA) {
-		h->flags = 0;
-
-		return;
-	}
-
 	h->flags = 0;
 
 	size_t off = (size_t)((uint8_t*)h - seg->base);
@@ -535,12 +551,13 @@ void free(void* p) {
 		}
 
 		/* Coalesce prev */
-		if (off > 0 && h->prev_size > 0) {
+		if (off > 0 && h->prev_size > 0 && h->prev_size <= off) {
 			size_t prev_off = off - h->prev_size;
 
 			__jacl_hdr_t* prev = (__jacl_hdr_t*)(seg->base + prev_off);
 
-			if (!(prev->flags & JACL_HDR_ALLOC)) {
+			/* Validate prev is within segment bounds */
+			if ((uint8_t*)prev >= seg->base && (uint8_t*)prev + sizeof(__jacl_hdr_t) <= seg->base + seg->size && !(prev->flags & JACL_HDR_ALLOC)) {
 				__jacl_bin_remove(seg, prev_off);
 
 				prev->size += h->size;
@@ -563,7 +580,11 @@ void free(void* p) {
 }
 
 void* calloc(size_t nmemb, size_t size) {
-	if (nmemb && size > SIZE_MAX / nmemb) return NULL;
+	if (nmemb && size > SIZE_MAX / nmemb) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
 
 	size_t total = nmemb * size;
 	void* p = malloc(total);
@@ -575,7 +596,11 @@ void* calloc(size_t nmemb, size_t size) {
 
 void* realloc(void* ptr, size_t size) {
 	if (!ptr) return malloc(size);
-	if (size == 0) { free(ptr); return NULL; }
+	if (size == 0) {
+		free(ptr);
+
+		return NULL;
+	}
 
 	__jacl_hdr_t* h = (__jacl_hdr_t*)ptr - 1;
 	size_t old_size = h->size - sizeof(__jacl_hdr_t);
@@ -596,8 +621,11 @@ void* realloc(void* ptr, size_t size) {
 }
 
 void* aligned_alloc(size_t alignment, size_t size) {
-	if (alignment == 0 || (alignment & (alignment-1)) != 0) return NULL;
-	if (size % alignment != 0) return NULL;
+	if (alignment == 0 || (alignment & (alignment-1)) != 0 || size % alignment != 0) {
+		errno = EINVAL;
+
+		return NULL;
+	}
 	if (alignment <= JACL_ALIGNMENT) return malloc(size);
 
 	size_t extra = alignment + sizeof(void*);
