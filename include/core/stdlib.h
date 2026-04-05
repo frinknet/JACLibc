@@ -3,6 +3,7 @@
 #define CORE_STDLIB_H
 
 #include <stdlib.h>
+#include <errno.h>
 #include <assert.h>
 #include <core/format.h>
 
@@ -358,7 +359,11 @@ void __jacl_fork_reset(void) {
 /* Public API */
 void* malloc(size_t n) {
 	if (n == 0) n = 1;
-	if (n > SIZE_MAX - sizeof(__jacl_hdr_t)) return NULL;
+	if (n > SIZE_MAX - sizeof(__jacl_hdr_t)) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
 
 	__jacl_init_once();
 
@@ -370,8 +375,8 @@ void* malloc(size_t n) {
 
 		if (qidx >= 0 && qidx < 4 && __jacl_quicklist[qidx].count > 0) {
 			void* p = __jacl_quicklist[qidx].slots[--__jacl_quicklist[qidx].count];
-			__jacl_hdr_t* h = (__jacl_hdr_t*)p - 1;
 
+			__jacl_hdr_t* h = (__jacl_hdr_t*)p - 1;
 			h->flags = JACL_HDR_ALLOC;
 
 			return p;
@@ -394,12 +399,10 @@ void* malloc(size_t n) {
 	}
 
 large_path:
-assert(__jacl_tls_off <= JACL_HEAP_INIT / 4);
-assert(__jacl_tls_end <= JACL_HEAP_INIT / 4);
-assert(__jacl_tls_off <= __jacl_tls_end);
-
+	assert(__jacl_tls_off <= JACL_HEAP_INIT / 4);
+	assert(__jacl_tls_end <= JACL_HEAP_INIT / 4);
+	assert(__jacl_tls_off <= __jacl_tls_end);
 	__jacl_lock_acquire(&__jacl_lock);
-
 	__jacl_segment_t* seg = __jacl_segment_head;
 
 	while (seg) {
@@ -410,8 +413,8 @@ assert(__jacl_tls_off <= __jacl_tls_end);
 
 			if (h->size >= need + sizeof(__jacl_hdr_t) + 8) {
 				size_t rem_off = off + need;
-				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 
+				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 				rem->size = h->size - need;
 				rem->prev_size = need;
 				rem->flags = 0;
@@ -445,8 +448,8 @@ assert(__jacl_tls_off <= __jacl_tls_end);
 
 			if (h->size >= need + sizeof(__jacl_hdr_t) + 8) {
 				size_t rem_off = off + need;
-				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 
+				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
 				rem->size = h->size - need;
 				rem->prev_size = need;
 				rem->flags = 0;
@@ -465,6 +468,8 @@ assert(__jacl_tls_off <= __jacl_tls_end);
 	}
 
 	__jacl_lock_release(&__jacl_lock);
+
+	errno = ENOMEM;
 
 	return NULL;
 }
@@ -575,7 +580,11 @@ void free(void* p) {
 }
 
 void* calloc(size_t nmemb, size_t size) {
-	if (nmemb && size > SIZE_MAX / nmemb) return NULL;
+	if (nmemb && size > SIZE_MAX / nmemb) {
+		errno = ENOMEM;
+
+		return NULL;
+	}
 
 	size_t total = nmemb * size;
 	void* p = malloc(total);
@@ -587,7 +596,11 @@ void* calloc(size_t nmemb, size_t size) {
 
 void* realloc(void* ptr, size_t size) {
 	if (!ptr) return malloc(size);
-	if (size == 0) { free(ptr); return NULL; }
+	if (size == 0) {
+		free(ptr);
+
+		return NULL;
+	}
 
 	__jacl_hdr_t* h = (__jacl_hdr_t*)ptr - 1;
 	size_t old_size = h->size - sizeof(__jacl_hdr_t);
@@ -608,8 +621,11 @@ void* realloc(void* ptr, size_t size) {
 }
 
 void* aligned_alloc(size_t alignment, size_t size) {
-	if (alignment == 0 || (alignment & (alignment-1)) != 0) return NULL;
-	if (size % alignment != 0) return NULL;
+	if (alignment == 0 || (alignment & (alignment-1)) != 0 || size % alignment != 0) {
+		errno = EINVAL;
+
+		return NULL;
+	}
 	if (alignment <= JACL_ALIGNMENT) return malloc(size);
 
 	size_t extra = alignment + sizeof(void*);
