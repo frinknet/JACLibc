@@ -1,7 +1,5 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 
-#include <x/locale_languages.h>
-
 X_LANG(C,
 	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
 	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
@@ -11,12 +9,7 @@ X_LANG(C,
 	"%a %b %e %H:%M:%S %Y",
 	"%m/%d/%y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(EN,
 	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
@@ -27,12 +20,7 @@ X_LANG(EN,
 	"%a %d %b %Y %H:%M:%S",
 	"%m/%d/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(ZH,
 	"星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六",
@@ -43,12 +31,7 @@ X_LANG(ZH,
 	"%Y年%m月%d日 %A %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%p%I:%M:%S",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%p%I:%M:%S")
 
 X_LANG(HI,
 	"रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार",
@@ -59,12 +42,7 @@ X_LANG(HI,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(ES,
 	"domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado",
@@ -75,12 +53,7 @@ X_LANG(ES,
 	"%a, %d de %B de %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MS,
 	"Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu",
@@ -91,12 +64,7 @@ X_LANG(MS,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(FR,
 	"dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi",
@@ -107,12 +75,7 @@ X_LANG(FR,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(AR,
 	"الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت",
@@ -123,12 +86,7 @@ X_LANG(AR,
 	"%A، %d %B، %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(BN,
 	"রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার",
@@ -139,12 +97,7 @@ X_LANG(BN,
 	"%A, %d %B, %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(PT,
 	"domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado",
@@ -155,12 +108,7 @@ X_LANG(PT,
 	"%A, %d de %B de %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(RU,
 	"воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота",
@@ -171,12 +119,7 @@ X_LANG(RU,
 	"%a, %d %b %Y г. %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(UR,
 	"اتوار", "پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ",
@@ -187,12 +130,7 @@ X_LANG(UR,
 	"%A، %d %B، %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(ID,
 	"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu",
@@ -203,12 +141,7 @@ X_LANG(ID,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(DE,
 	"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag",
@@ -219,12 +152,7 @@ X_LANG(DE,
 	"%a, %d. %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(PA,
 	"ਐਤਵਾਰ", "ਸੋਮਵਾਰ", "ਮੰਗਲਵਾਰ", "ਬੁੱਧਵਾਰ", "ਵੀਰਵਾਰ", "ਸ਼ੁੱਕਰਵਾਰ", "ਸ਼ਨਿੱਚਰਵਾਰ",
@@ -235,12 +163,7 @@ X_LANG(PA,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(JA,
 	"日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日",
@@ -251,12 +174,7 @@ X_LANG(JA,
 	"%Y年%m月%d日 %A %H:%M:%S",
 	"%Y/%m/%d",
 	"%H:%M:%S",
-	"%p%I:%M:%S",
-	"+:2:1868/09/08:1868/01/01:明治:%EC%Ey年;+:2:1912/07/30:1912/01/01:大正:%EC%Ey年;+:2:1926/12/25:1926/01/01:昭和:%EC%Ey年;+:2:1989/01/08:1989/01/01:平成:%EC%Ey年;+:1:2019/05/01:2019/01/01:令和:%EC%Ey年",
-	"%EY%m月%d日",
-	"%EY%m月%d日 %H:%M:%S",
-	"%H:%M:%S",
-	"")
+	"%p%I:%M:%S")
 
 X_LANG(SW,
 	"Jumapili", "Jumatatu", "Jumanne", "Jumatano", "Alhamisi", "Ijumaa", "Jumamosi",
@@ -267,12 +185,7 @@ X_LANG(SW,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MR,
 	"रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार",
@@ -283,12 +196,7 @@ X_LANG(MR,
 	"%A, %d %B, %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TE,
 	"ఆదివారం", "సోమవారం", "మంగళవారం", "బుధవారం", "గురువారం", "శుక్రవారం", "శనివారం",
@@ -299,12 +207,7 @@ X_LANG(TE,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TR,
 	"Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi",
@@ -315,12 +218,7 @@ X_LANG(TR,
 	"%d %B %Y %A %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(YUE,
 	"星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六",
@@ -331,12 +229,7 @@ X_LANG(YUE,
 	"%Y年%m月%d日 %A %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%p%I:%M:%S",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%p%I:%M:%S")
 
 X_LANG(TA,
 	"ஞாயிறு", "திங்கள்", "செவ்வாய்", "புதன்", "வியாழன்", "வெள்ளி", "சனி",
@@ -347,12 +240,7 @@ X_LANG(TA,
 	"%A, %d %B, %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(VI,
 	"Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy",
@@ -363,12 +251,7 @@ X_LANG(VI,
 	"%A, %d %B năm %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KO,
 	"일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일",
@@ -379,12 +262,7 @@ X_LANG(KO,
 	"%Y년 %m월 %d일 %A %H:%M:%S",
 	"%Y. %m. %d.",
 	"%H:%M:%S",
-	"%p %I:%M:%S",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%p %I:%M:%S")
 
 X_LANG(HA,
 	"Lahadi", "Litinin", "Talata", "Laraba", "Alhamis", "Jumma'a", "Asabar",
@@ -395,12 +273,7 @@ X_LANG(HA,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(FA,
 	"یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه",
@@ -411,12 +284,7 @@ X_LANG(FA,
 	"%A، %d %B %Y، ساعت %H:%M:%S",
 	"%Y/%m/%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(JV,
 	"Minggu", "Senèn", "Selasa", "Rebo", "Kemis", "Jemuwah", "Setu",
@@ -427,12 +295,7 @@ X_LANG(JV,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(IT,
 	"domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato",
@@ -443,12 +306,7 @@ X_LANG(IT,
 	"%a %d %b %Y, %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(BER,
 	"Acer", "Arim", "Aram", "Ahad", "Amhad", "Sem", "Sed",
@@ -459,12 +317,7 @@ X_LANG(BER,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TH,
 	"วันอาทิตย์", "วันจันทร์", "วันอังคาร", "วันพุธ", "วันพฤหัสบดี", "วันศุกร์", "วันเสาร์",
@@ -475,12 +328,7 @@ X_LANG(TH,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(GU,
 	"રવિવાર", "સોમવાર", "મંગળવાર", "બુધવાર", "ગુરુવાર", "શુક્રવાર", "શનિવાર",
@@ -491,12 +339,7 @@ X_LANG(GU,
 	"%A, %d %B, %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KN,
 	"ಭಾನುವಾರ", "ಸೋಮವಾರ", "ಮಂಗಳವಾರ", "ಬುಧವಾರ", "ಗುರುವಾರ", "ಶುಕ್ರವಾರ", "ಶನಿವಾರ",
@@ -507,12 +350,7 @@ X_LANG(KN,
 	"%A, %B %d, %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(BHO,
 	"रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार",
@@ -523,12 +361,7 @@ X_LANG(BHO,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(PS,
 	"یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه",
@@ -539,12 +372,7 @@ X_LANG(PS,
 	"%A د %Y د %B %d %H:%M:%S",
 	"%Y/%m/%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(NAN,
 	"禮拜日", "禮拜一", "禮拜二", "禮拜三", "禮拜四", "禮拜五", "禮拜六",
@@ -555,12 +383,7 @@ X_LANG(NAN,
 	"%Y年%m月%d日 %A %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%p%I:%M:%S",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%p%I:%M:%S")
 
 X_LANG(HAK,
 	"禮拜日", "禮拜一", "禮拜二", "禮拜三", "禮拜四", "禮拜五", "禮拜六",
@@ -571,12 +394,7 @@ X_LANG(HAK,
 	"%Y年%m月%d日 %A %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%p%I:%M:%S",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%p%I:%M:%S")
 
 X_LANG(CEB,
 	"Dominggo", "Lunes", "Martes", "Miyerkules", "Huwebes", "Biyernes", "Sabado",
@@ -587,12 +405,7 @@ X_LANG(CEB,
 	"%a, %b %d, %Y %H:%M:%S",
 	"%m/%d/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(FIL,
 	"Linggo", "Lunes", "Martes", "Miyerkules", "Huwebes", "Biyernes", "Sabado",
@@ -603,12 +416,7 @@ X_LANG(FIL,
 	"%a, %B %d, %Y %H:%M:%S",
 	"%m/%d/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TL,
 	"Linggo", "Lunes", "Martes", "Miyerkules", "Huwebes", "Biyernes", "Sabado",
@@ -619,12 +427,7 @@ X_LANG(TL,
 	"%a, %B %d, %Y %H:%M:%S",
 	"%m/%d/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(YO,
 	"Ọjọ́ Àìkú", "Ọjọ́ Ajé", "Ọjọ́ Ìsẹ́gun", "Ọjọ́rú", "Ọjọ́bọ", "Ọjọ́ Ẹtì", "Ọjọ́ Àbámẹ́ta",
@@ -635,12 +438,7 @@ X_LANG(YO,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(PL,
 	"niedziela", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota",
@@ -651,12 +449,7 @@ X_LANG(PL,
 	"%a, %-d %b %Y, %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SU,
 	"Minggu", "Senén", "Salasa", "Rebo", "Kemis", "Jumaah", "Saptu",
@@ -667,12 +460,7 @@ X_LANG(SU,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(UK,
 	"неділя", "понеділок", "вівторок", "середа", "четвер", "пʼятниця", "субота",
@@ -683,12 +471,7 @@ X_LANG(UK,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MY,
 	"တနင်္ဂနွေ", "တနင်္လာ", "အင်္ဂါ", "ဗုဒ္ဓဟူး", "ကြာသပတေး", "သောကြာ", "စနေ",
@@ -699,12 +482,7 @@ X_LANG(MY,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(ML,
 	"ഞായറാഴ്‌ച", "തിങ്കളാഴ്‌ച", "ചൊവ്വാഴ്ച", "ബുധനാഴ്‌ച", "വ്യാഴാഴ്‌ച", "വെള്ളിയാഴ്‌ച", "ശനിയാഴ്‌ച",
@@ -715,12 +493,7 @@ X_LANG(ML,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(AWA,
 	"रविवार", "सोमवार", "मंगलवार", "बुधवार", "बृहस्पतिवार", "शुक्रवार", "शनिवार",
@@ -731,12 +504,7 @@ X_LANG(AWA,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(OR,
 	"ରବିବାର", "ସୋମବାର", "ମଙ୍ଗଳବାର", "ବୁଧବାର", "ଗୁରୁବାର", "ଶୁକ୍ରବାର", "ଶନିବାର",
@@ -747,12 +515,7 @@ X_LANG(OR,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(OM,
 	"Sanbata", "Wiixata", "Qibxata", "Roobii", "Kamiisa", "Jimaata", "Sanbata Guddaa",
@@ -763,12 +526,7 @@ X_LANG(OM,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(FF,
 	"Dewo", "Aaɓnde", "Mawbaare", "Njeslaare", "Naasaande", "Máccede", "Hoore-Biir",
@@ -779,12 +537,7 @@ X_LANG(FF,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(AM,
 	"እሑድ", "ሰኞ", "ማክሰኞ", "ረቡዕ", "ሐሙስ", "ዓርብ", "ቅዳሜ",
@@ -795,12 +548,7 @@ X_LANG(AM,
 	"%A ፣ %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(UZ,
 	"yakshanba", "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba",
@@ -811,12 +559,7 @@ X_LANG(UZ,
 	"%A, %d-%B %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MAI,
 	"रविदिन", "सोमदिन", "मंगलदिन", "बुधदिन", "बृहस्पतिदिन", "शुक्रदिन", "शनिदिन",
@@ -827,12 +570,7 @@ X_LANG(MAI,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SD,
 	"آچر", "سومر", "اڱارو", "اربع", "خميس", "جمعو", "ڇنڇر",
@@ -843,12 +581,7 @@ X_LANG(SD,
 	"%A، %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(IG,
 	"Ụbọchị Ụka", "Mọnde", "Tiuzdee", "Wenezdee", "Tọọzdee", "Fraịdee", "Satọdee",
@@ -859,12 +592,7 @@ X_LANG(IG,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KU,
 	"یەکشەممە", "دووشەممە", "سێشەممە", "چوارشەممە", "پێنجشەممە", "هەینی", "شەممە",
@@ -875,12 +603,7 @@ X_LANG(KU,
 	"%A، %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(RO,
 	"duminică", "luni", "marți", "miercuri", "joi", "vineri", "sâmbătă",
@@ -891,12 +614,7 @@ X_LANG(RO,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SKR,
 	"اتوار", "پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ",
@@ -907,12 +625,7 @@ X_LANG(SKR,
 	"%A، %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MG,
 	"Alahady", "Alatsinainy", "Talata", "Alarobia", "Alakamisy", "Zoma", "Asabotsy",
@@ -923,12 +636,7 @@ X_LANG(MG,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(NL,
 	"zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag",
@@ -939,12 +647,7 @@ X_LANG(NL,
 	"%a %d %b %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(AZ,
 	"bazar", "bazar ertəsi", "çərşənbə axşamı", "çərşənbə", "cümə axşamı", "cümə", "şənbə",
@@ -955,12 +658,7 @@ X_LANG(AZ,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SO,
 	"Axad", "Isniin", "Talaado", "Arbaco", "Khamiis", "Jimco", "Sabti",
@@ -971,12 +669,7 @@ X_LANG(SO,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(ZA,
 	"Swndag", "Mondag", "Dinstag", "Mitwoch", "Dunnerschdag", "Frejdach", "Schabbes",
@@ -987,12 +680,7 @@ X_LANG(ZA,
 	"%a, %d. %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(HNE,
 	"रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार",
@@ -1003,12 +691,7 @@ X_LANG(HNE,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SI,
 	"ඉරිදා", "සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා", "සෙනසුරාදා",
@@ -1019,12 +702,7 @@ X_LANG(SI,
 	"%A %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(NE,
 	"आइतबार", "सोमबार", "मङ्गलबार", "बुधबार", "बिहीबार", "शुक्रबार", "शनिबार",
@@ -1035,12 +713,7 @@ X_LANG(NE,
 	"%A, %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KM,
 	"អាទិត្យ", "ចន្ទ", "អង្គារ", "ពុធ", "ព្រហស្បតិ៍", "សុក្រ", "សៅរ៍",
@@ -1051,12 +724,7 @@ X_LANG(KM,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(AS,
 	"দেওবাৰ", "সোমবাৰ", "মঙ্গলবাৰ", "বুধবাৰ", "বৃহষ্পতিবাৰ", "শুক্ৰবাৰ", "শনিবাৰ",
@@ -1067,12 +735,7 @@ X_LANG(AS,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(LN,
 	"sɛmɛdi", "mɔndi", "mɔsɔmɔ", "mɔlɔndi", "mɔnyi", "mɔlɔmwɔlɔ", "eyenga",
@@ -1083,12 +746,7 @@ X_LANG(LN,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(LG,
 	"Sabbiiti", "Balaza", "Lwakubiri", "Lwakusatu", "Lwakuna", "Lwakutaano", "Lwamukaaga",
@@ -1099,12 +757,7 @@ X_LANG(LG,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(MAD,
 	"Minggu", "Senèn", "Slasa", "Rebo", "Kemis", "Jemâ", "Sâbtu",
@@ -1115,12 +768,7 @@ X_LANG(MAD,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(EL,
 	"Κυριακή", "Δευτέρα", "Τρίτη", "Τετάρτη", "Πέμπτη", "Παρασκευή", "Σάββατο",
@@ -1131,12 +779,7 @@ X_LANG(EL,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(DCC,
 	"اتوار", "پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ",
@@ -1147,12 +790,7 @@ X_LANG(DCC,
 	"%A، %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(CTG,
 	"রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার",
@@ -1163,12 +801,7 @@ X_LANG(CTG,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(MWR,
 	"रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार",
@@ -1179,12 +812,7 @@ X_LANG(MWR,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(MAG,
 	"रविवार", "सोमवार", "मंगलवार", "बुधवार", "बृहस्पतिवार", "शुक्रवार", "शनिवार",
@@ -1195,12 +823,7 @@ X_LANG(MAG,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(BGC,
 	"रविवार", "सोमवार", "मंगलवार", "बुधवार", "वीरवार", "शुक्रवार", "शनिवार",
@@ -1211,12 +834,7 @@ X_LANG(BGC,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(HU,
 	"vasárnap", "hétfő", "kedd", "szerda", "csütörtök", "péntek", "szombat",
@@ -1227,12 +845,7 @@ X_LANG(HU,
 	"%Y. %B %e. %A %H:%M:%S",
 	"%Y.%m.%d.",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KK,
 	"жексенбі", "дүйсенбі", "сейсенбі", "сәрсенбі", "бейсенбі", "жұма", "сенбі",
@@ -1243,12 +856,7 @@ X_LANG(KK,
 	"%d %B %Y, %A %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(ZU,
 	"Sonto", "Msombuluko", "Lwesibili", "Lwesithathu", "Lwesine", "Lwesihlanu", "Mgqibelo",
@@ -1259,12 +867,7 @@ X_LANG(ZU,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
- 	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+ 	"%I:%M:%S %p")
 
 X_LANG(SR,
 	"недеља", "понедељак", "уторак", "среда", "четвртак", "петак", "субота",
@@ -1275,12 +878,7 @@ X_LANG(SR,
 	"%A, %d. %B %Y. %H:%M:%S",
 	"%d.%m.%Y.",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(RW,
 	"Ku cyumweru", "Kuwa mbere", "Kuwa kabiri", "Kuwa gatatu", "Kuwa kane", "Kuwa gatanu", "Kuwa gatandatu",
@@ -1291,12 +889,7 @@ X_LANG(RW,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(HT,
 	"dimanch", "lendi", "madi", "mèkredi", "jedi", "vandredi", "samdi",
@@ -1307,12 +900,7 @@ X_LANG(HT,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(NY,
 	"Lamulungu", "Lolemba", "Lachiwiri", "Lachitatu", "Lachinayi", "Lachisanu", "Loweruka",
@@ -1323,12 +911,7 @@ X_LANG(NY,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(WO,
 	"Dibéer", "Altine", "Talaata", "Àlarba", "Alxames", "Àjjuma", "Gaawu",
@@ -1339,12 +922,7 @@ X_LANG(WO,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TK,
 	"ýekşenbe", "duşenbe", "sişenbe", "çarşenbe", "penşenbe", "anna", "şenbe",
@@ -1355,12 +933,7 @@ X_LANG(TK,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SYL,
 	"হفتাবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার",
@@ -1371,12 +944,7 @@ X_LANG(SYL,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(DHD,
 	"रविवार", "सोमवार", "मंगलवार", "बुधवार", "वीरवार", "शुक्रवार", "शनिवार",
@@ -1387,12 +955,7 @@ X_LANG(DHD,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SN,
 	"Svondo", "Muvhuro", "Chipiri", "Chitatu", "China", "Chishanu", "Mugovera",
@@ -1403,12 +966,7 @@ X_LANG(SN,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(AK,
 	"Kwesida", "Dwowda", "Benada", "Wukuada", "Yawda", "Fida", "Memeneda",
@@ -1419,12 +977,7 @@ X_LANG(AK,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(CA,
 	"diumenge", "dilluns", "dimarts", "dimecres", "dijous", "divendres", "dissabte",
@@ -1435,12 +988,7 @@ X_LANG(CA,
 	"%a, %-d %b %Y, %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(CS,
 	"neděle", "pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota",
@@ -1451,12 +999,7 @@ X_LANG(CS,
 	"%a %-d. %b %Y, %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MNP,
 	"禮拜日", "禮拜一", "禮拜二", "禮拜三", "禮拜四", "禮拜五", "禮拜六",
@@ -1467,12 +1010,7 @@ X_LANG(MNP,
 	"%Y年%m月%d日 %A %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%p%I:%M:%S",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%p%I:%M:%S")
 
 X_LANG(CDO,
 	"禮拜日", "禮拜一", "禮拜二", "禮拜三", "禮拜四", "禮拜五", "禮拜六",
@@ -1483,12 +1021,7 @@ X_LANG(CDO,
 	"%Y年%m月%d日 %A %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%p%I:%M:%S",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%p%I:%M:%S")
 
 X_LANG(UG,
 	"يەكشەنبە", "دۈشەنبە", "سېيشەنبە", "چارشەنبە", "پەيشەنبە", "جۈمە", "شەنبە",
@@ -1499,28 +1032,18 @@ X_LANG(UG,
 	"%Y-يىلى %B %d-كۈنى، %A %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
-X_LANG(KI,
-	"Kiumia", "Njumatatu", "Njumaine", "Njumatano", "Aramithi", "Njumaa", "Njumamothi",
-	"Kiu", "Tat", "Ine", "Tan", "Ara", "Maa", "Moth",
-	"Njenuarĩ", "Feburuarĩ", "Machi", "Ĩpurũ", "Mĩĩ", "Njuni", "Njuraĩ", "Agasti", "Septemba", "Oktũba", "Novemba", "Dicemba",
-	"Nje", "Feb", "Mac", "Ĩpu", "Mĩĩ", "Nju", "Nju2", "Aga", "Sep", "Okt", "Nov", "Dic",
-	"AM", "PM",
-	"%a, %d %b %Y %H:%M:%S",
+X_LANG(HE,
+	"יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי", "יום שבת",
+	"ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת",
+	"ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר",
+	"ינו", "פבר", "מרץ", "אפר", "מאי", "יונ", "יול", "אוג", "ספט", "אוק", "נוב", "דצ",
+	"לפנה\"צ", "אחה\"צ",
+	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(HIL,
 	"Domingo", "Lunes", "Martes", "Miyerkoles", "Huwebes", "Byernes", "Sabado",
@@ -1531,12 +1054,7 @@ X_LANG(HIL,
 	"%a, %b %d, %Y %H:%M:%S",
 	"%m/%d/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MOS,
 	"Wɛnd Pùùsga", "Tɛnɛ Pùùsga", "Talata", "Alarba", "Alamisi", "Zuum", "Sibiri",
@@ -1547,12 +1065,7 @@ X_LANG(MOS,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(BAL,
 	"اتوار", "پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ",
@@ -1563,12 +1076,7 @@ X_LANG(BAL,
 	"%A، %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TI,
 	"እሑድ", "ሰኑይ", "ሰሉስ", "ረቡዕ", "ሓሙስ", "ዓርቢ", "ቀዳም",
@@ -1579,12 +1087,7 @@ X_LANG(TI,
 	"%A፣ %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(QU,
 	"Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado",
@@ -1595,12 +1098,18 @@ X_LANG(QU,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
+
+X_LANG(KI,
+	"Kiumia", "Njumatatu", "Njumaine", "Njumatano", "Aramithi", "Njumaa", "Njumamothi",
+	"Kiu", "Tat", "Ine", "Tan", "Ara", "Maa", "Moth",
+	"Njenuarĩ", "Feburuarĩ", "Machi", "Ĩpurũ", "Mĩĩ", "Njuni", "Njuraĩ", "Agasti", "Septemba", "Oktũba", "Novemba", "Dicemba",
+	"Nje", "Feb", "Mac", "Ĩpu", "Mĩĩ", "Nju", "Nju2", "Aga", "Sep", "Okt", "Nov", "Dic",
+	"AM", "PM",
+	"%a, %d %b %Y %H:%M:%S",
+	"%d/%m/%Y",
+	"%H:%M:%S",
+	"%I:%M:%S %p")
 
 X_LANG(XH,
 	"ISunday", "UMvulo", "ULwesibini", "ULwesithathu", "ULwesine", "ULwesihlanu", "UMgqibelo",
@@ -1611,12 +1120,7 @@ X_LANG(XH,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KOK,
 	"आयतार", "सोमार", "मंगळार", "बुधवार", "बिरेस्तार", "शुक्रार", "शेनवार",
@@ -1627,12 +1131,7 @@ X_LANG(KOK,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KON,
 	"Nsúku ya lumingu", "Nsúku ya mosálá mɔ̌kɔ́", "Nsúku ya misálá mibalé", "Nsúku ya misálá misátu", "Nsúku ya mitáno", "Nsúku ya mítánó", "Nsúku ya mpɔ́sɔ́",
@@ -1643,12 +1142,7 @@ X_LANG(KON,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SAT,
 	"रवि", "सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि",
@@ -1659,12 +1153,7 @@ X_LANG(SAT,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(AF,
 	"Sondag", "Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrydag", "Saterdag",
@@ -1675,12 +1164,7 @@ X_LANG(AF,
 	"%a %d %b %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KS,
 	"اَتھوار", "پَتھوار", "ژندرٕروار", "بودوار", "جمعرات", "جمعہ", "بٹوار",
@@ -1691,12 +1175,7 @@ X_LANG(KS,
 	"%A، %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(GN,
 	"arateĩ", "arasapaha", "araapy", "ararundy", "arapo", "arapoteĩ", "arakõi",
@@ -1707,12 +1186,7 @@ X_LANG(GN,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(BO,
 	"གཟའ་ཉི་མ་", "གཟའ་ཟླ་བ་", "གཟའ་མིག་དམར་", "གཟའ་ལྷག་པ་", "གཟའ་ཕུར་བུ་", "གཟའ་སངས་", "གཟའ་སྤེན་པ་",
@@ -1723,12 +1197,7 @@ X_LANG(BO,
 	"%A %Y ལོའི་ %B %d %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KAB,
 	"Yanass", "Sanass", "Kraḍass", "Kuẓass", "Samass", "Sḍisass", "Sayass",
@@ -1739,12 +1208,7 @@ X_LANG(KAB,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TT,
 	"якшәмбе", "дүшәмбе", "сишәмбе", "чәршәмбе", "пәнҗешәмбе", "җомга", "шимбә",
@@ -1755,12 +1219,7 @@ X_LANG(TT,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(BE,
 	"нядзеля", "панядзелак", "аўторак", "серада", "чацвер", "пятніца", "субота",
@@ -1771,12 +1230,7 @@ X_LANG(BE,
 	"%A, %d %B %Y г. %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(LUO,
 	"Jumapil", "Wuok Tich", "Tich Ariyo", "Tich Adek", "Tich Ang’wen", "Tich Abich", "Ngeso",
@@ -1787,12 +1241,7 @@ X_LANG(LUO,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(CE,
 	"кӏира", "оршот", "шинара", "кхаара", "еара", "пӏераска", "шуот",
@@ -1803,12 +1252,7 @@ X_LANG(CE,
 	"%A, %d-%B %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(DTX,
 	"ꓟꓽꓷ ꓠꓬꓱ", "ꓠꓬꓱ-ꓡꓱꓧ", "ꓠꓬꓱ-ꓔꓳꓢ", "ꓠꓬꓱ-ꓝꓳꓡ", "ꓠꓬꓱ-ꓟꓳꓠ", "ꓠꓬꓱ-ꓢꓳꓟ", "ꓠꓬꓱ-ꓪꓳꓟ",
@@ -1819,12 +1263,7 @@ X_LANG(DTX,
 	"%Y-%m-%d %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(NB,
 	"søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag",
@@ -1835,12 +1274,7 @@ X_LANG(NB,
 	"%a %d. %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TPI,
 	"Sande", "Mande", "Tunde", "Trinde", "Fonde", "Fraide", "Sarere",
@@ -1851,12 +1285,7 @@ X_LANG(TPI,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(BEM,
 	"Paakati", "Palichimo", "Palichibuli", "Palichitatu", "Palichine", "Palichisano", "Pachibelushi",
@@ -1867,12 +1296,7 @@ X_LANG(BEM,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(DOI,
 	"ऐतबार", "सोमबार", "मंगलबार", "बुधबार", "वीरबार", "शुक्रबार", "शनिबार",
@@ -1883,12 +1307,7 @@ X_LANG(DOI,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(BS,
 	"nedjelja", "ponedjeljak", "utorak", "srijeda", "četvrtak", "petak", "subota",
@@ -1899,12 +1318,7 @@ X_LANG(BS,
 	"%a, %d. %b %Y. %H:%M:%S",
 	"%d.%m.%Y.",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(GL,
 	"domingo", "luns", "martes", "mércores", "xoves", "venres", "sábado",
@@ -1915,12 +1329,7 @@ X_LANG(GL,
 	"%a, %d de %b de %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MK,
 	"недела", "понеделник", "вторник", "среда", "четврток", "петок", "сабота",
@@ -1931,12 +1340,7 @@ X_LANG(MK,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(AY,
 	"domingu", "lunis", "martis", "miyerkulis", "juybis", "birnis", "sábadu",
@@ -1947,12 +1351,7 @@ X_LANG(AY,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(EO,
 	"dimanĉo", "lundo", "mardo", "merkredo", "ĵaŭdo", "vendredo", "sabato",
@@ -1963,12 +1362,7 @@ X_LANG(EO,
 	"%a, %-d-%b-%Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MNI,
 	"নোমিং", "শোমবী", "ইংগি", "মারী", "ইবী", "থাঙ্গা", "চৌবা",
@@ -1979,12 +1373,7 @@ X_LANG(MNI,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(GA,
 	"Dé Domhnaigh", "Dé Luain", "Dé Máirt", "Dé Céadaoin", "Déardaoin", "Dé hAoine", "Dé Sathairn",
@@ -1995,12 +1384,7 @@ X_LANG(GA,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(NAH,
 	"tōnalli 1", "tōnalli 2", "tōnalli 3", "tōnalli 4", "tōnalli 5", "tōnalli 6", "tōnalli 7",
@@ -2011,12 +1395,7 @@ X_LANG(NAH,
 	"%A %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(BRX,
 	"रबिबार", "समबार", "मंगलबार", "बुदबार", "बिस्थिबार", "सुक्रमबार", "सनिबार",
@@ -2027,12 +1406,7 @@ X_LANG(BRX,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(EU,
 	"igandea", "astelehena", "asteartea", "asteazkena", "osteguna", "ostirala", "larunbata",
@@ -2043,12 +1417,7 @@ X_LANG(EU,
 	"%a, %Y.eko %bren %d, %H:%M:%S",
 	"%Y/%m/%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SC,
 	"domìniga", "lunis", "martis", "mèrcuris", "giòbia", "chenàbura", "sàbadu",
@@ -2059,12 +1428,7 @@ X_LANG(SC,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(ARC,
 	"ḥad b-šabbā", "treyn b-šabbā", "tlāṯā b-šabbā", "arbʿā b-šabbā", "ḥamšā b-šabbā", "ʿarūbtā", "šabbātā",
@@ -2075,12 +1439,7 @@ X_LANG(ARC,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(CY,
 	"dydd Sul", "dydd Llun", "dydd Mawrth", "dydd Mercher", "dydd Iau", "dydd Gwener", "dydd Sadwrn",
@@ -2091,12 +1450,7 @@ X_LANG(CY,
 	"%a, %-d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(YI,
 	"זונטיק", "מאָנטיק", "דינסטיק", "מיטווֹך", "דאנערשטיק", "פרייטיק", "שבת",
@@ -2107,12 +1461,7 @@ X_LANG(YI,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SM,
 	"ASO SĀBA", "ASO GAFUA", "ASO LUA", "ASO LULU", "ASO TOFI", "ASO FARAILE", "ASO TOʻONAʻi",
@@ -2123,12 +1472,7 @@ X_LANG(SM,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(OC,
 	"dimenge", "diluns", "dimarç", "dimècres", "dijòus", "divendres", "dissabte",
@@ -2139,12 +1483,7 @@ X_LANG(OC,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(NN,
 	"søndag", "måndag", "tysdag", "onsdag", "torsdag", "fredag", "laurdag",
@@ -2155,12 +1494,7 @@ X_LANG(NN,
 	"%a %d. %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(LB,
 	"Sonndeg", "Méindeg", "Dënschdeg", "Mëttwoch", "Donneschdeg", "Freideg", "Samschdeg",
@@ -2171,12 +1505,7 @@ X_LANG(LB,
 	"%a %d. %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(FJ,
 	"Sigatabu", "Moniti", "Tusiti", "Wenesiti", "Turaside", "Vakaraubuka", "Vakarauwai",
@@ -2187,12 +1516,7 @@ X_LANG(FJ,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(PAP,
 	"domingo", "djaluna", "djamars", "djawebs", "djarason", "djabièrnè", "djasabra",
@@ -2203,12 +1527,7 @@ X_LANG(PAP,
 	"%a %d %b %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(DZ,
 	"གཟའ་ཉི་མ་", "གཟའ་ཟླ་པ་", "གཟའ་མིག་དམར་", "གཟའ་ལྷག་པ་", "གཟའ་ཕུར་བུ་", "གཟའ་སྤེན་པ་", "གཟའ་སྤེན་ཕྲེད་",
@@ -2219,12 +1538,7 @@ X_LANG(DZ,
 	"%A %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%IH:%M:%S"I,
-	"%I:%M:%S %p",
-	"",
-	"I",I
-	"",
-	"",
-	I"")I
+	"%I:%M:%S %p")
 
 X_LANG(CNR,
 	"недјIеља", "понедјељак", "уторак", "сриједа", "четвртак", "петак", "субота",
@@ -2235,12 +1549,7 @@ X_LANG(CNR,
 	"%a, %d.%m.%Y. %H:%M:%S",
 	"%d.%m.I%Y.",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",I
-	"",
-	"",
-	"",I
-	"")
+	"%I:%M:%S %p")
 
 X_LANGI(BR,
 	"disul", "dilun", "dimeurzh", "dimercʼher", "diriaou", "digwener", "disadorn",
@@ -2251,12 +1560,7 @@ X_LANGI(BR,
 	"%a %dI %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:I%S %p",
-	"",
-	"",
-	"",I
-	"",
-	"")
+	"%I:%M:I%S %p")
 
 X_LANG(LAD,
 	"alhad", "lunes", "martes", "merkoles", "juebes", "biernes", "sábado",
@@ -2267,12 +1571,7 @@ X_LANG(LAD,
 	"%a, %d de %b de %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TO,
 	"ʻSāpate", "Mōnite", "Tūsite", "Pulelulu", "Tuʻapulelulu", "Falaite", "Tokonaki",
@@ -2283,12 +1582,7 @@ X_LANG(TO,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 XI_LANG(NV,
 	"Damóo", "Naakijígíí", "Naakiistáán", "Tágíjígíí", "Dííjį́", "Ndaʼiinááhai", "Yiską́",
@@ -2299,12 +1593,7 @@ XI_LANG(NV,
 	"I%A, %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%II:%M:%S %p",
-	"",
-	"",
-	"",I
-	"",
-	"")
+	"%II:%M:%S %p")
 
 X_LANG(CO,
 	"dumènica", "luni", "marti", "marcuri", "ghjovi", "venneri", "sabbatu",
@@ -2315,12 +1604,7 @@ X_LANG(CO,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MI,
 	"Rātapu", "Mane", "Tūrei", "Wenerei", "Tāite", "Paraire", "Hātarei",
@@ -2331,12 +1615,7 @@ X_LANG(MI,
 	"%a, %d %b %Y %H:%M:%S",
 	"%dI/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",I
-	"",
-	"",
-	"",I
-	"")
+	"%I:%M:%S %p")
 
 X_LANGI(CR,
 	"sōna kīsitēpēhk", "mōna kīsitēpēhk", "tānisi kīsitēpēhk", "ayamihew kīsitēpēhk", "nānik kīsitēpēhk", "nipa kīsitēpēhk", "ayamihew nipāw",
@@ -2347,12 +1626,7 @@ X_LANGI(CR,
 	"%A %dI %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:I%S %p",
-	"",
-	"",
-	"",I
-	"",
-	"")
+	"%I:%M:I%S %p")
 
 X_LANG(FO,
 	"sunnudagur", "mánadagur", "týsdagur", "mikudagur", "hósdagur", "fríggjadagur", "leygardagur",
@@ -2363,12 +1637,7 @@ X_LANG(FO,
 	"%a %e. %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TY,
 	"Taʼuʻa", "Moni", "Tū", "Weʼa", "Teʼa", "Fara", "Mahana",
@@ -2379,12 +1648,7 @@ X_LANG(TY,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(GD,
 	"DiDòmhnaich", "DiLuain", "DiMàirt", "DiCiadain", "DiarDaoin", "DihAoine", "DiSathairne",
@@ -2395,12 +1659,7 @@ X_LANG(GD,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(RM,
 	"dumengia", "glindesdi", "mardi", "mesemna", "gievgia", "venderdi", "sonda",
@@ -2411,12 +1670,7 @@ X_LANG(RM,
 	"%a, %d. %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KL,
 	"sapaati", "ataasinngorneq", "marlunngorneq", "pingasunngorneq", "sisamanngorneq", "tallimanngorneq", "arfininngorneq",
@@ -2427,12 +1681,7 @@ X_LANG(KL,
 	"%a, %d. %b %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TLH,
 	"lojmItjaj", "DaSjaj", "povjaj", "ghItlhjaj", "loghjaj", "buqjaj", "ghInjaj",
@@ -2443,12 +1692,7 @@ X_LANG(TLH,
 	"%A, %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(IU,
 	"ᐊᓗᓇᐃ", "ᓇᓗᓇᐃ", "ᐱᓇᓱᐃ", "ᐱᓯᓇᐃ", "ᐃᓄᐊᐃ", "ᐱᔾᔪᐊᐃ", "ᐃᓯᐊᐃ",
@@ -2459,12 +1703,7 @@ X_LANG(IU,
 	"%A, %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(TOK,
 	"suno", "mun", "tue", "wen", "to", "sike", "suno-pona",
@@ -2475,12 +1714,7 @@ X_LANG(TOK,
 	"%A, %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SE,
 	"sotnabeaivi", "vuossárga", "maŋŋebárga", "gaskavahkku", "duorastat", "bearjadat", "lávvardat",
@@ -2491,12 +1725,7 @@ X_LANG(SE,
 	"%a, %d. %b %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SEYL,
 	"dimans", "lendi", "mardi", "merkredi", "zedi", "vandredi", "samdi",
@@ -2507,12 +1736,7 @@ X_LANG(SEYL,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(CPV,
 	"dõmingu", "sigunda-fera", "tersa-fera", "kuarta-fera", "kinta-fera", "sesta-fera", "sábadu",
@@ -2523,12 +1747,7 @@ X_LANG(CPV,
 	"%a, %d di %b di %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(MRU,
 	"dimans", "lindi", "mardi", "merkredi", "zedi", "vandredi", "samdi",
@@ -2539,12 +1758,7 @@ X_LANG(MRU,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SA,
 	"रविवासरः", "सोमवासरः", "मङ्गलवासरः", "बुधवासरः", "गुरुवासरः", "शुक्रवासरः", "शनिवासरः",
@@ -2555,12 +1769,7 @@ X_LANG(SA,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(HAW,
 	"Lāpule", "Poʻakahi", "Poʻalua", "Poʻakolu", "Poʻahā", "Poʻalima", "Poʻaono",
@@ -2571,12 +1780,7 @@ X_LANG(HAW,
 	"%a, %d %b %Y %H:%M:%S",
 	"%m/%d/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(GEZ,
 	"እሑድ", "ሰኑይ", "ሰሉስ", "ረቡዕ", "ሓሙስ", "ዓርቢ", "ቅዳሜ",
@@ -2587,12 +1791,7 @@ X_LANG(GEZ,
 	"%A፣ %d %B %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(PI,
 	"रविवासर", "सोमवासर", "मंगलवासर", "बुधवासर", "गुरुवासर", "सुक्रवासर", "शनिवासर",
@@ -2603,12 +1802,7 @@ X_LANG(PI,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(CHR,
 	"ᎤᎾᏙᏓᏆ", "ᏉᏅᎯ", "ᏔᎵᏁᎢ", "ᏦᎢᏁᎢ", "ᏅᎩᏁᎢ", "ᏧᎾᎩᎶᏍᏗ", "ᎤᎾᏙᏓᏆᎾᎿ",
@@ -2619,12 +1813,7 @@ X_LANG(CHR,
 	"%A, %B %d, %Y %H:%M:%S",
 	"%m/%d/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(GV,
 	"Jedoonee", "Jelune", "Jemayrt", "Jercean", "Jerdein", "Jeheiney", "Jesarn",
@@ -2635,12 +1824,7 @@ X_LANG(GV,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(LA,
 	"dies Solis", "dies Lunae", "dies Martis", "dies Mercurii", "dies Iovis", "dies Veneris", "dies Saturni",
@@ -2651,12 +1835,7 @@ X_LANG(LA,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(LZH,
 	"日", "一", "二", "三", "四", "五", "六",
@@ -2667,28 +1846,7 @@ X_LANG(LZH,
 	"%Y年%m月%d日 %A %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
-
-X_LANG(ARA,
-	"الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت",
-	"أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت",
-	"المحرّم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة", "رجب", "شعبان", "رمضان", "شوّال", "ذو القعدة", "ذو الحجة",
-	"مح", "صف", "رب1", "رب2", "جم1", "جم2", "رجب", "شعب", "رم", "شو", "ذو ق", "ذو ح",
-	"ص", "م",
-	"%A، %d %B %Y %H:%M:%S",
-	"%Y-%m-%d",
-	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(HBH,
 	"יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי", "שבת",
@@ -2699,12 +1857,7 @@ X_LANG(HBH,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(AVE,
 	"raocah", "vahištah", "uxtah", "xšmath", "spənta", "arshtat", "vahram",
@@ -2715,12 +1868,7 @@ X_LANG(AVE,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(JBO,
 	"nondei", "pandei", "tornei", "cibdei", "vurdei", "xavdei", "mundei",
@@ -2731,12 +1879,7 @@ X_LANG(JBO,
 	"%A, %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(QYA,
 	"Eärenya", "Anarya", "Isilya", "Alduya", "Menelya", "Valarya", "Tárië",
@@ -2747,12 +1890,7 @@ X_LANG(QYA,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(SJN,
 	"Oranor", "Orithil", "Orneth", "Orgaladh", "Ormenel", "Orbelain", "Orbelath",
@@ -2763,12 +1901,7 @@ X_LANG(SJN,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(IA,
 	"dominica", "lunedi", "martedi", "mercuridi", "jovedi", "venerdi", "sabbato",
@@ -2779,12 +1912,7 @@ X_LANG(IA,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(IO,
 	"sundag", "lundag", "mardag", "merkredag", "jovedag", "vendredag", "saturdag",
@@ -2795,12 +1923,7 @@ X_LANG(IO,
 	"%a, %d %b %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(VO,
 	"Sunday", "Muday", "Tuday", "Vedday", "Deday", "Frid", "Satday",
@@ -2811,12 +1934,7 @@ X_LANG(VO,
 	"%A, %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(LFN,
 	"domi", "lune", "marde", "mercrede", "jueve", "vendrede", "sabre",
@@ -2827,12 +1945,7 @@ X_LANG(LFN,
 	"%a %d %b %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(KW,
 	"dy Sul", "dy Lun", "dy Meurth", "dy Mergher", "dy Yow", "dy Gwener", "dy Sadorn",
@@ -2843,28 +1956,7 @@ X_LANG(KW,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
-
-X_LANG(GRC,
-	"ἡμέρα ἡλίου", "ἡμέρα σελήνης", "ἡμέρα Ἄρεως", "ἡμέρα Ἑρμοῦ", "ἡμέρα Διός", "ἡμέρα Ἀφροδίτης", "ἡμέρα Κρόνου",
-	"Ἥλ", "Σελ", "Ἄρ", "Ἑρ", "Δι", "Ἀφ", "Κρ",
-	"Γανδαϊών", "Πεταγανός", "Τρίτος", "Τετράς", "Πέμπτος", "Ἕκτος", "Ἕβδομος", "Ὄγδοος", "Ἔνατος", "Δέκατος", "Ἕνδεκατος", "Δωδέκατος",
-	"Μ1", "Μ2", "Μ3", "Μ4", "Μ5", "Μ6", "Μ7", "Μ8", "Μ9", "Μ10", "Μ11", "Μ12",
-	"πρ.μ.", "μ.μ.",
-	"%A %d %B %Y %H:%M:%S",
-	"%d-%m-%Y",
-	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(COP,
 	"ⲡϣⲁⲣⲓⲟⲙ", "ⲡⲉⲕϩⲟⲙⲧ", "ⲡⲉϥϩⲟⲙⲧ", "ⲡⲉϫⲱⲣⲙ", "ⲡⲉϩⲟⲟⲩ", "ⲡⲉⲥϫⲱⲙ", "ⲡⲉϫⲉⲙϣⲟⲙ",
@@ -2875,12 +1967,7 @@ X_LANG(COP,
 	"%A, %d %B %Y %H:%M:%S",
 	"%Y-%m-%d",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(CU,
 	"недѣля", "понедѣльникъ", "втори́къ", "среда", "четвертъкъ", "пѧ́тъкъ", "събота",
@@ -2891,12 +1978,7 @@ X_LANG(CU,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d.%m.%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(NON,
 	"sunnudagr", "mánadagr", "tysdagr", "óðinsdagr", "þorsdagr", "frjādagr", "laugardagr",
@@ -2907,12 +1989,7 @@ X_LANG(NON,
 	"%A, %d. %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(ANG,
 	"Sunnandæg", "Monandæg", "Tīwesdæg", "Wōdnesdæg", "Þunresdæg", "Frīgedæg", "Sæternesdæg",
@@ -2923,60 +2000,7 @@ X_LANG(ANG,
 	"%A, %d %B %Y %H:%M:%S",
 	"%d-%m-%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
-
-X_LANG(ASL,
-	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
-	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
-	"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December",
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-	"AM", "PM",
-	"%a %d %b %Y %H:%M:%S",
-	"%Y-%m-%d",
-	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
-
-X_LANG(LSF,
-	"dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi",
-	"dim", "lun", "mar", "mer", "jeu", "ven", "sam",
-	"janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre",
-	"jan", "fév", "mar", "avr", "mai", "jun", "jul", "aoû", "sep", "oct", "nov", "déc",
-	"AM", "PM",
-	"%a %d %b %Y %H:%M:%S",
-	"%d/%m/%Y",
-	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
-
-X_LANG(BSL,
-	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
-	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
-	"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December",
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-	"AM", "PM",
-	"%a %d %b %Y %H:%M:%S",
-	"%d/%m/%Y",
-	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 
 X_LANG(CUS,
 	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
@@ -2987,10 +2011,5 @@ X_LANG(CUS,
 	"%a %d %b %Y %H:%M:%S",
 	"%d/%m/%Y",
 	"%H:%M:%S",
-	"%I:%M:%S %p",
-	"",
-	"",
-	"",
-	"",
-	"")
+	"%I:%M:%S %p")
 

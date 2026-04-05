@@ -1,7 +1,5 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 
-#include <x/locale_cc_def.h>
-
 /*
 X_CC(name, curr,   mdec, mthou, mgrp,      pos, neg, ifd, fd,  pcp, psb, ncp, nsb, psp, nsp)
 */

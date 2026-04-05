@@ -6,7 +6,7 @@
 #include <config.h>
 #include <locale.h>
 
-thread_local struct lconv __jacl_lconv_default = {
+thread_local struct lconv __jacl_lconv = {
 	/* numeric */
 	".",           // decimal_point
 	"",            // thousands_sep
@@ -38,20 +38,34 @@ thread_local struct lconv __jacl_lconv_default = {
 	CHAR_MAX,      // int_n_sign_posn
 };
 
-thread_local const char *__jacle_day_names[7] = {
-	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+typedef struct {
+	LC_LANG_C;
+			__jacl_locale_lang_t  time;
+				__jacl_locale_lang_t  collate;
+					__jacl_locale_lang_t  message;
+						__jacl_locale_cc_t    numeric;
+							__jacl_locale_cc_t    monetary;
+} __jacl_locale_t;
+
+
+
+thread_local __jacl_wctype_t __jacl_wctype = {
+	L'0123456789',
+	L'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+	L'abcdefghijklmnopqrstuvwxyz'
 };
 
-thread_local const char *__jacle_day_abbrs[7] = {
-	"Sun", "Mon", "Tues", "Wed", "Thur", "Fri", "Sat"
-};
-
-thread_local const char *__jacle_month_names[12] = {
-	"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"
-};
-
-thread_local const char *__jacle_month_abbrs[12] = {
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"
+thread_local __jacl_calendar_t __jacl_calendar = {
+	"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday",
+	"Sun","Mon","Tue","Wed","Thu","Fri","Sat",
+	"January","February","March","April","May","June","July","August",
+	"September","October","November","December",
+	"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec",
+	"AM","PM",
+	"%a %b %e %H:%M:%S %Y",
+	"%m/%d/%y",
+	"%H:%M:%S",
+	"%I:%M:%S %p"
 };
 
 #endif // CORE_LOCALE_H
