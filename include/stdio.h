@@ -860,6 +860,7 @@ static inline ssize_t getdelim(char **lineptr, size_t *n, int delim, FILE *strea
 
 		if (c == delim) break;
 	}
+
 	if (pos == 0 && c == EOF) return -1;
 	if (pos >= *n) {
 		char *new_ptr = (char *)realloc(*lineptr, pos + 1);

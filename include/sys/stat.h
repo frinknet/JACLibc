@@ -102,28 +102,29 @@
 
 #ifndef STAT_WIN32
 
-	/* Public POSIX stat structure unified for all platforms */
-	struct stat {
-		dev_t     st_dev;
-		ino_t     st_ino;
-		mode_t    st_mode;
-		nlink_t   st_nlink;
-		uid_t     st_uid;
-		gid_t     st_gid;
-		dev_t     st_rdev;
-		off_t     st_size;
-		blksize_t st_blksize;
-		blkcnt_t  st_blocks;
+/* Public POSIX stat structure unified for all platforms */
+struct stat {
+	dev_t     st_dev;
+	ino_t     st_ino;
+	mode_t    st_mode;
+	nlink_t   st_nlink;
+	uid_t     st_uid;
+	gid_t     st_gid;
+	dev_t     st_rdev;
+	off_t     st_size;
+	blksize_t st_blksize;
+	blkcnt_t  st_blocks;
 
-		struct timespec st_atim;  /* POSIX.1-2008 standard */
-		struct timespec st_mtim;
-		struct timespec st_ctim;
-	};
+	struct timespec st_atim;  /* POSIX.1-2008 standard */
+	struct timespec st_mtim;
+	struct timespec st_ctim;
+};
 
 #endif /* !STAT_WIN32 */
 
 /* Large file support */
 #if JACL_HAS_LFS
+
 struct stat64 {
 	dev_t     st_dev;
 	ino_t     st_ino;
@@ -141,6 +142,7 @@ struct stat64 {
 	blksize_t st_blksize;
 	blkcnt64_t st_blocks; /* 64-bit block count */
 };
+
 #endif
 
 // need OS first
