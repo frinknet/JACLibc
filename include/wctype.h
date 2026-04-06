@@ -15,6 +15,8 @@ extern "C" {
 typedef int wctype_t;
 typedef int wctrans_t;
 
+extern thread_local __jacl_wctype_t __jacl_wctype;
+
 /* Conversions */
 static inline int iswdigit(wint_t c) {
 	for (int i = 0; i < 10; i++) {
@@ -25,11 +27,15 @@ static inline int iswdigit(wint_t c) {
 }
 
 static inline int iswcntrl(wint_t c) {
-	return (c >= 0 && c <= 0x1F) || c == 0x7F;
+	return (c >= 0x0000 && c <= 0x001F)
+		|| (c >= 0x007F && c <= 0x009F)
+		|| c == 0x0085   // NEL
+		|| c == 0x2028   // LS
+		|| c == 0x2029;  // PS
 }
 
 static inline int iswspace(wint_t c) {
-	return c == L' ' || (c >= L'\t' && c <= L'\r');
+	return c == L' ' || c == L'\t' || c == L'\n' || c == L'\v' || c == L'\f' || c == L'\r';
 }
 
 /* Optimized iswlower/iswupper */
@@ -58,17 +64,11 @@ static inline int iswblank(wint_t c) {
 }
 
 static inline int iswprint(wint_t c) {
-	return !iswcntrl(c) && !iswspace(c);
+	return !iswcntrl(c);
 }
 
 static inline int iswgraph(wint_t c) {
 	return iswprint(c) && !iswspace(c);
-}
-
-static inline int iswemoji(wint_t c) {
-}
-
-static inline int iswextra(wint_t c) {
 }
 
 static inline int iswpunct(wint_t c) {
@@ -79,7 +79,7 @@ static inline int iswpunct(wint_t c) {
 	}
 
 	for (uint8_t i = 0; i < __jacl_wctype.e_count; i++) {
-		if (__jacl_wctype.e`[i] == c) return 1;
+		if (__jacl_wctype.e[i] == c) return 1;
 	}
 
 	return 0;

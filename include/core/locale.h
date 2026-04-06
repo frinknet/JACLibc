@@ -50,7 +50,11 @@ thread_local __jacl_locale_t __jacl_locale = {
 thread_local __jacl_wctype_t __jacl_wctype = {
 	L"0123456789",
 	L"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-	L"abcdefghijklmnopqrstuvwxyz"
+	L"abcdefghijklmnopqrstuvwxyz",
+	L"",
+	26,
+	26,
+	0
 };
 
 thread_local __jacl_time_t __jacl_time = {
