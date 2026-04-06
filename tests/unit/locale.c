@@ -12,12 +12,13 @@ TEST_UNIT(locale.h);
 TEST_SUITE(constants);
 
 TEST(locale_categories) {
-	ASSERT_EQ(0, LC_ALL);
-	ASSERT_EQ(1, LC_COLLATE);
-	ASSERT_EQ(2, LC_CTYPE);
-	ASSERT_EQ(3, LC_MONETARY);
-	ASSERT_EQ(4, LC_NUMERIC);
-	ASSERT_EQ(5, LC_TIME);
+	ASSERT_EQ(0, LC_CTYPE);
+	ASSERT_EQ(1, LC_NUMERIC);
+	ASSERT_EQ(2, LC_TIME);
+	ASSERT_EQ(3, LC_COLLATE);
+	ASSERT_EQ(4, LC_MONETARY);
+	ASSERT_EQ(5, LC_MESSAGES);
+	ASSERT_EQ(6, LC_ALL);
 }
 
 TEST(categories_unique) {
@@ -63,21 +64,21 @@ TEST(setlocale_query) {
 	char *result = setlocale(LC_ALL, NULL);
 
 	ASSERT_NOT_NULL(result);
-	ASSERT_STR_EQ("C", result);
+	ASSERT_STR_EQ("C.UTF-8", result);
 }
 
 TEST(setlocale_c_locale) {
 	char *result = setlocale(LC_ALL, "C");
 
 	ASSERT_NOT_NULL(result);
-	ASSERT_STR_EQ("C", result);
+	ASSERT_STR_EQ("C.UTF-8", result);
 }
 
 TEST(setlocale_empty_string) {
 	char *result = setlocale(LC_ALL, "");
 
 	ASSERT_NOT_NULL(result);
-	ASSERT_STR_EQ("C", result);
+	ASSERT_STR_EQ("C.UTF-8", result);
 }
 
 TEST(setlocale_invalid_locale) {

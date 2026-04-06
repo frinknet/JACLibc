@@ -1,7 +1,7 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 
 /* Numeric formats by country (CC owns numerics) */
-X_CC(NONE,  ".",  ",",  "\x03"     )
+X_CC(NONE,  ".",  "",   ""         )
 X_CC(IN,    ".",  ",",  "\x03\x02" ) // India
 X_CC(CN,    ".",  ",",  "\x03"     ) // China
 X_CC(US,    ".",  ",",  "\x03"     ) // United State

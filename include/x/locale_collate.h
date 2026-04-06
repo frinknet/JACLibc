@@ -162,7 +162,7 @@ X_LANG(TLH,  L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 
 X_LANG(IU,   L"", L"", L"", 0, 0) // Inuktitut
 X_LANG(TOK,  L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Toki Pona
 X_LANG(SE,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Northern Sami
-X_LANG(SEYL, L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Seychellois Creole
+X_LANG(SEY,  L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Seychellois Creole
 X_LANG(CPV,  L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Cape Verdean Creole
 X_LANG(MRU,  L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Mauritian Creole
 X_LANG(SA,   L"", L"", L"", 0, 0) // Sanskrit

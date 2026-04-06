@@ -160,7 +160,7 @@ X_LANG(TLH,  L"0123456789", L"ABCDEFGHIJKLMNOPQRSTUVWXYZ", L"abcdefghijklmnopqrs
 X_LANG(IU,   L"0123456789", L"ᐊᐁᐃᐅᐆᐋᐌᐎᐑᐕᐖᐗᐘᐙᐚᐛᐜᐝᐞᐟᐠᐡᐢᐣᐤᐥᐦᐧᐨᐩᐪᐫᐬᐭᐮᐯᐰᐱᐲᐳᐴᐵᐶᐷᐸᐹᐺᐻᐼᐽᐾᐿ", L"", L"", 55, 0, 0) // Inuktitut
 X_LANG(TOK,  L"0123456789", L"ABCDEFGHIJKLMNOPQRSTUVWXYZ", L"abcdefghijklmnopqrstuvwxyz", L"", 26, 26, 0) // Toki Pona
 X_LANG(SE,   L"0123456789", L"ABCDEFGHIJKLMNOPQRSTUVWXYZČĐŊŠŽÁ", L"abcdefghijklmnopqrstuvwxyzčđŋšžá", L"", 34, 34, 0) // Northern Sami
-X_LANG(SEYL, L"߀߁߂߃߄߅߆߇߈߉", L"ߊߋߌߍߎߏߐߑߒߓߔߕߖߗߘߙߚߛߜߝߞߟߠߡߢߣߤߥߦߧߨߩߪ", L"߲߫߬߭߮߯߰߱߳", L"߸߹", 27, 9, 2) // Koyra Chiini
+X_LANG(SEY,  L"߀߁߂߃߄߅߆߇߈߉", L"ߊߋߌߍߎߏߐߑߒߓߔߕߖߗߘߙߚߛߜߝߞߟߠߡߢߣߤߥߦߧߨߩߪ", L"߲߫߬߭߮߯߰߱߳", L"߸߹", 27, 9, 2) // Koyra Chiini
 X_LANG(CPV,  L"0123456789", L"ABCDEFGHIJKLMNOPQRSTUVWXYZ", L"abcdefghijklmnopqrstuvwxyz", L"", 26, 26, 0) // Kriol
 X_LANG(MRU,  L"𖩠𖩡𖩢𖩣𖩤𖩥𖩦𖩧𖩨𖩩", L"𖩀𖩁𖩂𖩃𖩄𖩅𖩆𖩇𖩈𖩉𖩊𖩋𖩌𖩍𖩎𖩏𖩐𖩑𖩒𖩓𖩔𖩕𖩖𖩗𖩘𖩙𖩚𖩛𖩜𖩝𖩞", L"", L"𖩮𖩯", 31, 0, 2) // Moruru
 X_LANG(SA,   L"0123456789", L"अआइईउऊऋॠऌॡएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह", L"ािीुूृॄॢॣेैोौंँःँ़्", L"।॥", 48, 14, 2) // Sanskrit

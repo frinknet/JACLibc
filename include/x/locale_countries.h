@@ -1439,208 +1439,208 @@
 
 /* Include Countries */
 #define X_COUNTRIES \
-	X_CC(NONE, 0x0000) /* NONE */ \
-	X_CC(IN, 0x494E) /* India */ \
-	X_CC(CN, 0x434E) /* China */ \
-	X_CC(US, 0x5553) /* United States */ \
-	X_CC(ID, 0x4944) /* Indonesia */ \
-	X_CC(PK, 0x504B) /* Pakistan */ \
-	X_CC(NG, 0x4E47) /* Nigeria */ \
-	X_CC(BR, 0x4252) /* Brazil */ \
-	X_CC(BD, 0x4244) /* Bangladesh */ \
-	X_CC(RU, 0x5255) /* Russia */ \
-	X_CC(MX, 0x4D58) /* Mexico */ \
-	X_CC(ET, 0x4554) /* Ethiopia */ \
-	X_CC(JP, 0x4A50) /* Japan */ \
-	X_CC(PH, 0x5048) /* Philippines */ \
-	X_CC(EG, 0x4547) /* Egypt */ \
-	X_CC(CD, 0x4344) /* Congo, Democratic Republic of */ \
-	X_CC(VN, 0x564E) /* Vietnam */ \
-	X_CC(IR, 0x4952) /* Iran */ \
-	X_CC(TR, 0x5452) /* Turkey */ \
-	X_CC(DE, 0x4445) /* Germany */ \
-	X_CC(TH, 0x5448) /* Thailand */ \
-	X_CC(TZ, 0x545A) /* Tanzania */ \
-	X_CC(GB, 0x4742) /* Great Britain */ \
-	X_CC(FR, 0x4652) /* France */ \
-	X_CC(ZA, 0x5A41) /* South Africa */ \
-	X_CC(IT, 0x4954) /* Italy */ \
-	X_CC(KE, 0x4B45) /* Kenya */ \
-	X_CC(MM, 0x4D4D) /* Myanmar */ \
-	X_CC(CO, 0x434F) /* Colombia */ \
-	X_CC(KR, 0x4B52) /* South Korea */ \
-	X_CC(SD, 0x5344) /* Sudan */ \
-	X_CC(UG, 0x5547) /* Uganda */ \
-	X_CC(ES, 0x4553) /* Spain */ \
-	X_CC(DZ, 0x445A) /* Algeria */ \
-	X_CC(AR, 0x4152) /* Argentina */ \
-	X_CC(IQ, 0x4951) /* Iraq */ \
-	X_CC(AF, 0x4146) /* Afghanistan */ \
-	X_CC(CA, 0x4341) /* Canada */ \
-	X_CC(PL, 0x504C) /* Poland */ \
-	X_CC(MA, 0x4D41) /* Morocco */ \
-	X_CC(AO, 0x414F) /* Angola */ \
-	X_CC(SA, 0x5341) /* Saudi Arabia */ \
-	X_CC(UA, 0x5541) /* Ukraine */ \
-	X_CC(UZ, 0x555A) /* Uzbekistan */ \
-	X_CC(YE, 0x5945) /* Yemen */ \
-	X_CC(PE, 0x5045) /* Peru */ \
-	X_CC(GH, 0x4748) /* Ghana */ \
-	X_CC(MZ, 0x4D5A) /* Mozambique */ \
-	X_CC(MY, 0x4D59) /* Malaysia */ \
-	X_CC(MG, 0x4D47) /* Madagascar */ \
-	X_CC(NP, 0x4E50) /* Nepal */ \
-	X_CC(CI, 0x4349) /* Côte d'Ivoire */ \
-	X_CC(CM, 0x434D) /* Cameroon */ \
-	X_CC(VE, 0x5645) /* Venezuela */ \
-	X_CC(NE, 0x4E45) /* Niger */ \
-	X_CC(AU, 0x4155) /* Australia */ \
-	X_CC(KP, 0x4B50) /* North Korea */ \
-	X_CC(SY, 0x5359) /* Syria */ \
-	X_CC(ML, 0x4D4C) /* Mali */ \
-	X_CC(BF, 0x4246) /* Burkina Faso */ \
-	X_CC(TW, 0x5457) /* Taiwan */ \
-	X_CC(LK, 0x4C4B) /* Sri Lanka */ \
-	X_CC(MW, 0x4D57) /* Malawi */ \
-	X_CC(ZM, 0x5A4D) /* Zambia */ \
-	X_CC(RO, 0x524F) /* Romania */ \
-	X_CC(KZ, 0x4B5A) /* Kazakhstan */ \
-	X_CC(CL, 0x434C) /* Chile */ \
-	X_CC(TD, 0x5444) /* Chad */ \
-	X_CC(SO, 0x534F) /* Somalia */ \
-	X_CC(SN, 0x534E) /* Senegal */ \
-	X_CC(EC, 0x4543) /* Ecuador */ \
-	X_CC(NL, 0x4E4C) /* Netherlands */ \
-	X_CC(KH, 0x4B48) /* Cambodia */ \
-	X_CC(ZW, 0x5A57) /* Zimbabwe */ \
-	X_CC(GN, 0x474E) /* Guinea */ \
-	X_CC(BJ, 0x424A) /* Benin */ \
-	X_CC(RW, 0x5257) /* Rwanda */ \
-	X_CC(BI, 0x4249) /* Burundi */ \
-	X_CC(BO, 0x424F) /* Bolivia */ \
-	X_CC(TN, 0x544E) /* Tunisia */ \
-	X_CC(SS, 0x5353) /* South Sudan */ \
-	X_CC(BE, 0x4245) /* Belgium */ \
-	X_CC(HT, 0x4854) /* Haiti */ \
-	X_CC(JO, 0x4A4F) /* Jordan */ \
-	X_CC(DO, 0x444F) /* Dominican Republic */ \
-	X_CC(CU, 0x4355) /* Cuba */ \
-	X_CC(CZ, 0x435A) /* Czechia */ \
-	X_CC(HN, 0x484E) /* Honduras */ \
-	X_CC(SE, 0x5345) /* Sweden */ \
-	X_CC(TJ, 0x544A) /* Tajikistan */ \
-	X_CC(PT, 0x5054) /* Portugal */ \
-	X_CC(AZ, 0x415A) /* Azerbaijan */ \
-	X_CC(PG, 0x5047) /* Papua New Guinea */ \
-	X_CC(HU, 0x4855) /* Hungary */ \
-	X_CC(AE, 0x4145) /* United Arab Emirates */ \
-	X_CC(GR, 0x4752) /* Greece */ \
-	X_CC(TG, 0x5447) /* Togo */ \
-	X_CC(BY, 0x4259) /* Belarus */ \
-	X_CC(IL, 0x494C) /* Israel */ \
-	X_CC(AT, 0x4154) /* Austria */ \
-	X_CC(CH, 0x4348) /* Switzerland */ \
-	X_CC(SL, 0x534C) /* Sierra Leone */ \
-	X_CC(LA, 0x4C41) /* Laos */ \
-	X_CC(HK, 0x484B) /* Hong Kong */ \
-	X_CC(NI, 0x4E49) /* Nicaragua */ \
-	X_CC(KG, 0x4B47) /* Kyrgyzstan */ \
-	X_CC(PY, 0x5059) /* Paraguay */ \
-	X_CC(LY, 0x4C59) /* Libya */ \
-	X_CC(BG, 0x4247) /* Bulgaria */ \
-	X_CC(RS, 0x5253) /* Serbia */ \
-	X_CC(TM, 0x544D) /* Turkmenistan */ \
-	X_CC(CG, 0x4347) /* Congo */ \
-	X_CC(SV, 0x5356) /* El Salvador */ \
-	X_CC(SG, 0x5347) /* Singapore */ \
-	X_CC(DK, 0x444B) /* Denmark */ \
-	X_CC(CF, 0x4346) /* Central African Republic */ \
-	X_CC(FI, 0x4649) /* Finland */ \
-	X_CC(NO, 0x4E4F) /* Norway */ \
-	X_CC(SK, 0x534B) /* Slovakia */ \
-	X_CC(PS, 0x5053) /* Palestine */ \
-	X_CC(LR, 0x4C52) /* Liberia */ \
-	X_CC(LB, 0x4C42) /* Lebanon */ \
-	X_CC(CR, 0x4352) /* Costa Rica */ \
-	X_CC(IE, 0x4945) /* Ireland */ \
-	X_CC(NZ, 0x4E5A) /* New Zealand */ \
-	X_CC(MR, 0x4D52) /* Mauritania */ \
-	X_CC(KW, 0x4B57) /* Kuwait */ \
-	X_CC(OM, 0x4F4D) /* Oman */ \
-	X_CC(PA, 0x5041) /* Panama */ \
-	X_CC(HR, 0x4852) /* Croatia */ \
-	X_CC(GE, 0x4745) /* Georgia */ \
-	X_CC(ER, 0x4552) /* Eritrea */ \
-	X_CC(MN, 0x4D4E) /* Mongolia */ \
-	X_CC(UY, 0x5559) /* Uruguay */ \
-	X_CC(PR, 0x5052) /* Puerto Rico */ \
-	X_CC(BA, 0x4241) /* Bosnia and Herzegovina */ \
-	X_CC(QA, 0x5141) /* Qatar */ \
-	X_CC(MD, 0x4D44) /* Moldova */ \
-	X_CC(AM, 0x414D) /* Armenia */ \
-	X_CC(LT, 0x4C54) /* Lithuania */ \
-	X_CC(JM, 0x4A4D) /* Jamaica */ \
-	X_CC(NA, 0x4E41) /* Namibia */ \
-	X_CC(GM, 0x474D) /* Gambia */ \
-	X_CC(AL, 0x414C) /* Albania */ \
-	X_CC(BW, 0x4257) /* Botswana */ \
-	X_CC(GA, 0x4741) /* Gabon */ \
-	X_CC(LS, 0x4C53) /* Lesotho */ \
-	X_CC(GW, 0x4757) /* Guinea-Bissau */ \
-	X_CC(SI, 0x5349) /* Slovenia */ \
-	X_CC(MK, 0x4D4B) /* North Macedonia */ \
-	X_CC(GQ, 0x4751) /* Equatorial Guinea */ \
-	X_CC(LV, 0x4C56) /* Latvia */ \
-	X_CC(BH, 0x4248) /* Bahrain */ \
-	X_CC(TT, 0x5454) /* Trinidad and Tobago */ \
-	X_CC(TL, 0x544C) /* Timor-Leste */ \
-	X_CC(EE, 0x4545) /* Estonia */ \
-	X_CC(MU, 0x4D55) /* Mauritius */ \
-	X_CC(CY, 0x4359) /* Cyprus */ \
-	X_CC(SZ, 0x535A) /* Eswatini */ \
-	X_CC(DJ, 0x444A) /* Djibouti */ \
-	X_CC(RE, 0x5245) /* Réunion */ \
-	X_CC(FJ, 0x464A) /* Fiji */ \
-	X_CC(KM, 0x4B4D) /* Comoros */ \
-	X_CC(GY, 0x4759) /* Guyana */ \
-	X_CC(BT, 0x4254) /* Bhutan */ \
-	X_CC(SB, 0x5342) /* Solomon Islands */ \
-	X_CC(MO, 0x4D4F) /* Macao */ \
-	X_CC(LU, 0x4C55) /* Luxembourg */ \
-	X_CC(SR, 0x5352) /* Suriname */ \
-	X_CC(ME, 0x4D45) /* Montenegro */ \
-	X_CC(CV, 0x4356) /* Cape Verde */ \
-	X_CC(MT, 0x4D54) /* Malta */ \
-	X_CC(MV, 0x4D56) /* Maldives */ \
-	X_CC(BN, 0x424E) /* Brunei */ \
-	X_CC(BZ, 0x425A) /* Belize */ \
-	X_CC(IS, 0x4953) /* Iceland */ \
-	X_CC(VU, 0x5655) /* Vanuatu */ \
-	X_CC(PF, 0x5046) /* French Polynesia */ \
-	X_CC(BB, 0x4242) /* Barbados */ \
-	X_CC(ST, 0x5354) /* São Tomé and Príncipe */ \
-	X_CC(WS, 0x5753) /* Samoa */ \
-	X_CC(LC, 0x4C43) /* Saint Lucia */ \
-	X_CC(KI, 0x4B49) /* Kiribati */ \
-	X_CC(GD, 0x4744) /* Grenada */ \
-	X_CC(FM, 0x464D) /* Micronesia */ \
-	X_CC(TO, 0x544F) /* Tonga */ \
-	X_CC(SC, 0x5343) /* Seychelles */ \
-	X_CC(VC, 0x5643) /* Saint Vincent and the Grenadines */ \
-	X_CC(JE, 0x4A45) /* Jersey */ \
-	X_CC(AG, 0x4147) /* Antigua and Barbuda */ \
-	X_CC(IM, 0x494D) /* Isle of Man */ \
-	X_CC(AD, 0x4144) /* Andorra */ \
-	X_CC(DM, 0x444D) /* Dominica */ \
-	X_CC(GG, 0x4747) /* Guernsey */ \
-	X_CC(GL, 0x474C) /* Greenland */ \
-	X_CC(FO, 0x464F) /* Faroe Islands */ \
-	X_CC(KN, 0x4B4E) /* Saint Kitts and Nevis */ \
-	X_CC(MH, 0x4D48) /* Marshall Islands */ \
-	X_CC(LI, 0x4C49) /* Liechtenstein */ \
-	X_CC(MC, 0x4D43) /* Monaco */ \
-	X_CC(SM, 0x534D) /* San Marino */ \
-	X_CC(PW, 0x5057) /* Palau */ \
-	X_CC(NR, 0x4E52) /* Nauru */ \
-	X_CC(TV, 0x5456) /* Tuvalu */ \
-	X_CC(VA, 0x5641) /* Vatican City */
+	X_CC(NONE, "", 0x0000) /* NONE */ \
+	X_CC(IN, "IN", 0x494E) /* India */ \
+	X_CC(CN, "CN", 0x434E) /* China */ \
+	X_CC(US, "US", 0x5553) /* United States */ \
+	X_CC(ID, "ID", 0x4944) /* Indonesia */ \
+	X_CC(PK, "PK", 0x504B) /* Pakistan */ \
+	X_CC(NG, "NG", 0x4E47) /* Nigeria */ \
+	X_CC(BR, "BR", 0x4252) /* Brazil */ \
+	X_CC(BD, "BD", 0x4244) /* Bangladesh */ \
+	X_CC(RU, "RU", 0x5255) /* Russia */ \
+	X_CC(MX, "MX", 0x4D58) /* Mexico */ \
+	X_CC(ET, "ET", 0x4554) /* Ethiopia */ \
+	X_CC(JP, "JP", 0x4A50) /* Japan */ \
+	X_CC(PH, "PH", 0x5048) /* Philippines */ \
+	X_CC(EG, "EG", 0x4547) /* Egypt */ \
+	X_CC(CD, "CD", 0x4344) /* Congo, Democratic Republic of */ \
+	X_CC(VN, "VN", 0x564E) /* Vietnam */ \
+	X_CC(IR, "IR", 0x4952) /* Iran */ \
+	X_CC(TR, "TR", 0x5452) /* Turkey */ \
+	X_CC(DE, "DE", 0x4445) /* Germany */ \
+	X_CC(TH, "TH", 0x5448) /* Thailand */ \
+	X_CC(TZ, "TZ", 0x545A) /* Tanzania */ \
+	X_CC(GB, "GB", 0x4742) /* Great Britain */ \
+	X_CC(FR, "FR", 0x4652) /* France */ \
+	X_CC(ZA, "ZA", 0x5A41) /* South Africa */ \
+	X_CC(IT, "IT", 0x4954) /* Italy */ \
+	X_CC(KE, "KE", 0x4B45) /* Kenya */ \
+	X_CC(MM, "MM", 0x4D4D) /* Myanmar */ \
+	X_CC(CO, "CO", 0x434F) /* Colombia */ \
+	X_CC(KR, "KR", 0x4B52) /* South Korea */ \
+	X_CC(SD, "SD", 0x5344) /* Sudan */ \
+	X_CC(UG, "UG", 0x5547) /* Uganda */ \
+	X_CC(ES, "ES", 0x4553) /* Spain */ \
+	X_CC(DZ, "DZ", 0x445A) /* Algeria */ \
+	X_CC(AR, "AR", 0x4152) /* Argentina */ \
+	X_CC(IQ, "IQ", 0x4951) /* Iraq */ \
+	X_CC(AF, "AF", 0x4146) /* Afghanistan */ \
+	X_CC(CA, "CA", 0x4341) /* Canada */ \
+	X_CC(PL, "PL", 0x504C) /* Poland */ \
+	X_CC(MA, "MA", 0x4D41) /* Morocco */ \
+	X_CC(AO, "AO", 0x414F) /* Angola */ \
+	X_CC(SA, "SA", 0x5341) /* Saudi Arabia */ \
+	X_CC(UA, "UA", 0x5541) /* Ukraine */ \
+	X_CC(UZ, "UZ", 0x555A) /* Uzbekistan */ \
+	X_CC(YE, "YE", 0x5945) /* Yemen */ \
+	X_CC(PE, "PE", 0x5045) /* Peru */ \
+	X_CC(GH, "GH", 0x4748) /* Ghana */ \
+	X_CC(MZ, "MZ", 0x4D5A) /* Mozambique */ \
+	X_CC(MY, "MY", 0x4D59) /* Malaysia */ \
+	X_CC(MG, "MG", 0x4D47) /* Madagascar */ \
+	X_CC(NP, "NP", 0x4E50) /* Nepal */ \
+	X_CC(CI, "CI", 0x4349) /* Côte d'Ivoire */ \
+	X_CC(CM, "CM", 0x434D) /* Cameroon */ \
+	X_CC(VE, "VE", 0x5645) /* Venezuela */ \
+	X_CC(NE, "NE", 0x4E45) /* Niger */ \
+	X_CC(AU, "AU", 0x4155) /* Australia */ \
+	X_CC(KP, "KP", 0x4B50) /* North Korea */ \
+	X_CC(SY, "SY", 0x5359) /* Syria */ \
+	X_CC(ML, "ML", 0x4D4C) /* Mali */ \
+	X_CC(BF, "BF", 0x4246) /* Burkina Faso */ \
+	X_CC(TW, "TW", 0x5457) /* Taiwan */ \
+	X_CC(LK, "LK", 0x4C4B) /* Sri Lanka */ \
+	X_CC(MW, "MW", 0x4D57) /* Malawi */ \
+	X_CC(ZM, "ZM", 0x5A4D) /* Zambia */ \
+	X_CC(RO, "RO", 0x524F) /* Romania */ \
+	X_CC(KZ, "KZ", 0x4B5A) /* Kazakhstan */ \
+	X_CC(CL, "CL", 0x434C) /* Chile */ \
+	X_CC(TD, "TD", 0x5444) /* Chad */ \
+	X_CC(SO, "SO", 0x534F) /* Somalia */ \
+	X_CC(SN, "SN", 0x534E) /* Senegal */ \
+	X_CC(EC, "EC", 0x4543) /* Ecuador */ \
+	X_CC(NL, "NL", 0x4E4C) /* Netherlands */ \
+	X_CC(KH, "KH", 0x4B48) /* Cambodia */ \
+	X_CC(ZW, "ZW", 0x5A57) /* Zimbabwe */ \
+	X_CC(GN, "GN", 0x474E) /* Guinea */ \
+	X_CC(BJ, "BJ", 0x424A) /* Benin */ \
+	X_CC(RW, "RW", 0x5257) /* Rwanda */ \
+	X_CC(BI, "BI", 0x4249) /* Burundi */ \
+	X_CC(BO, "BO", 0x424F) /* Bolivia */ \
+	X_CC(TN, "TN", 0x544E) /* Tunisia */ \
+	X_CC(SS, "SS", 0x5353) /* South Sudan */ \
+	X_CC(BE, "BE", 0x4245) /* Belgium */ \
+	X_CC(HT, "HT", 0x4854) /* Haiti */ \
+	X_CC(JO, "JO", 0x4A4F) /* Jordan */ \
+	X_CC(DO, "DO", 0x444F) /* Dominican Republic */ \
+	X_CC(CU, "CU", 0x4355) /* Cuba */ \
+	X_CC(CZ, "CZ", 0x435A) /* Czechia */ \
+	X_CC(HN, "HN", 0x484E) /* Honduras */ \
+	X_CC(SE, "SE", 0x5345) /* Sweden */ \
+	X_CC(TJ, "TJ", 0x544A) /* Tajikistan */ \
+	X_CC(PT, "PT", 0x5054) /* Portugal */ \
+	X_CC(AZ, "AZ", 0x415A) /* Azerbaijan */ \
+	X_CC(PG, "PG", 0x5047) /* Papua New Guinea */ \
+	X_CC(HU, "HU", 0x4855) /* Hungary */ \
+	X_CC(AE, "AE", 0x4145) /* United Arab Emirates */ \
+	X_CC(GR, "GR", 0x4752) /* Greece */ \
+	X_CC(TG, "TG", 0x5447) /* Togo */ \
+	X_CC(BY, "BY", 0x4259) /* Belarus */ \
+	X_CC(IL, "IL", 0x494C) /* Israel */ \
+	X_CC(AT, "AT", 0x4154) /* Austria */ \
+	X_CC(CH, "CH", 0x4348) /* Switzerland */ \
+	X_CC(SL, "SL", 0x534C) /* Sierra Leone */ \
+	X_CC(LA, "LA", 0x4C41) /* Laos */ \
+	X_CC(HK, "HK", 0x484B) /* Hong Kong */ \
+	X_CC(NI, "NI", 0x4E49) /* Nicaragua */ \
+	X_CC(KG, "KG", 0x4B47) /* Kyrgyzstan */ \
+	X_CC(PY, "PY", 0x5059) /* Paraguay */ \
+	X_CC(LY, "LY", 0x4C59) /* Libya */ \
+	X_CC(BG, "BG", 0x4247) /* Bulgaria */ \
+	X_CC(RS, "RS", 0x5253) /* Serbia */ \
+	X_CC(TM, "TM", 0x544D) /* Turkmenistan */ \
+	X_CC(CG, "CG", 0x4347) /* Congo */ \
+	X_CC(SV, "SV", 0x5356) /* El Salvador */ \
+	X_CC(SG, "SG", 0x5347) /* Singapore */ \
+	X_CC(DK, "DK", 0x444B) /* Denmark */ \
+	X_CC(CF, "CF", 0x4346) /* Central African Republic */ \
+	X_CC(FI, "FI", 0x4649) /* Finland */ \
+	X_CC(NO, "NO", 0x4E4F) /* Norway */ \
+	X_CC(SK, "SK", 0x534B) /* Slovakia */ \
+	X_CC(PS, "PS", 0x5053) /* Palestine */ \
+	X_CC(LR, "LR", 0x4C52) /* Liberia */ \
+	X_CC(LB, "LB", 0x4C42) /* Lebanon */ \
+	X_CC(CR, "CR", 0x4352) /* Costa Rica */ \
+	X_CC(IE, "IE", 0x4945) /* Ireland */ \
+	X_CC(NZ, "NZ", 0x4E5A) /* New Zealand */ \
+	X_CC(MR, "MR", 0x4D52) /* Mauritania */ \
+	X_CC(KW, "KW", 0x4B57) /* Kuwait */ \
+	X_CC(OM, "OM", 0x4F4D) /* Oman */ \
+	X_CC(PA, "PA", 0x5041) /* Panama */ \
+	X_CC(HR, "HR", 0x4852) /* Croatia */ \
+	X_CC(GE, "GE", 0x4745) /* Georgia */ \
+	X_CC(ER, "ER", 0x4552) /* Eritrea */ \
+	X_CC(MN, "MN", 0x4D4E) /* Mongolia */ \
+	X_CC(UY, "UY", 0x5559) /* Uruguay */ \
+	X_CC(PR, "PR", 0x5052) /* Puerto Rico */ \
+	X_CC(BA, "BA", 0x4241) /* Bosnia and Herzegovina */ \
+	X_CC(QA, "QA", 0x5141) /* Qatar */ \
+	X_CC(MD, "MD", 0x4D44) /* Moldova */ \
+	X_CC(AM, "AM", 0x414D) /* Armenia */ \
+	X_CC(LT, "LT", 0x4C54) /* Lithuania */ \
+	X_CC(JM, "JM", 0x4A4D) /* Jamaica */ \
+	X_CC(NA, "NA", 0x4E41) /* Namibia */ \
+	X_CC(GM, "GM", 0x474D) /* Gambia */ \
+	X_CC(AL, "AL", 0x414C) /* Albania */ \
+	X_CC(BW, "BW", 0x4257) /* Botswana */ \
+	X_CC(GA, "GA", 0x4741) /* Gabon */ \
+	X_CC(LS, "LS", 0x4C53) /* Lesotho */ \
+	X_CC(GW, "GW", 0x4757) /* Guinea-Bissau */ \
+	X_CC(SI, "SI", 0x5349) /* Slovenia */ \
+	X_CC(MK, "MK", 0x4D4B) /* North Macedonia */ \
+	X_CC(GQ, "GQ", 0x4751) /* Equatorial Guinea */ \
+	X_CC(LV, "LV", 0x4C56) /* Latvia */ \
+	X_CC(BH, "BH", 0x4248) /* Bahrain */ \
+	X_CC(TT, "TT", 0x5454) /* Trinidad and Tobago */ \
+	X_CC(TL, "TL", 0x544C) /* Timor-Leste */ \
+	X_CC(EE, "EE", 0x4545) /* Estonia */ \
+	X_CC(MU, "MU", 0x4D55) /* Mauritius */ \
+	X_CC(CY, "CY", 0x4359) /* Cyprus */ \
+	X_CC(SZ, "SZ", 0x535A) /* Eswatini */ \
+	X_CC(DJ, "DJ", 0x444A) /* Djibouti */ \
+	X_CC(RE, "RE", 0x5245) /* Réunion */ \
+	X_CC(FJ, "FJ", 0x464A) /* Fiji */ \
+	X_CC(KM, "KM", 0x4B4D) /* Comoros */ \
+	X_CC(GY, "GY", 0x4759) /* Guyana */ \
+	X_CC(BT, "BT", 0x4254) /* Bhutan */ \
+	X_CC(SB, "SB", 0x5342) /* Solomon Islands */ \
+	X_CC(MO, "MO", 0x4D4F) /* Macao */ \
+	X_CC(LU, "LU", 0x4C55) /* Luxembourg */ \
+	X_CC(SR, "SR", 0x5352) /* Suriname */ \
+	X_CC(ME, "ME", 0x4D45) /* Montenegro */ \
+	X_CC(CV, "CV", 0x4356) /* Cape Verde */ \
+	X_CC(MT, "MT", 0x4D54) /* Malta */ \
+	X_CC(MV, "MV", 0x4D56) /* Maldives */ \
+	X_CC(BN, "BN", 0x424E) /* Brunei */ \
+	X_CC(BZ, "BZ", 0x425A) /* Belize */ \
+	X_CC(IS, "IS", 0x4953) /* Iceland */ \
+	X_CC(VU, "VU", 0x5655) /* Vanuatu */ \
+	X_CC(PF, "PF", 0x5046) /* French Polynesia */ \
+	X_CC(BB, "BB", 0x4242) /* Barbados */ \
+	X_CC(ST, "ST", 0x5354) /* São Tomé and Príncipe */ \
+	X_CC(WS, "WS", 0x5753) /* Samoa */ \
+	X_CC(LC, "LC", 0x4C43) /* Saint Lucia */ \
+	X_CC(KI, "KI", 0x4B49) /* Kiribati */ \
+	X_CC(GD, "GD", 0x4744) /* Grenada */ \
+	X_CC(FM, "FM", 0x464D) /* Micronesia */ \
+	X_CC(TO, "TO", 0x544F) /* Tonga */ \
+	X_CC(SC, "SC", 0x5343) /* Seychelles */ \
+	X_CC(VC, "VC", 0x5643) /* Saint Vincent and the Grenadines */ \
+	X_CC(JE, "JE", 0x4A45) /* Jersey */ \
+	X_CC(AG, "AG", 0x4147) /* Antigua and Barbuda */ \
+	X_CC(IM, "IM", 0x494D) /* Isle of Man */ \
+	X_CC(AD, "AD", 0x4144) /* Andorra */ \
+	X_CC(DM, "DM", 0x444D) /* Dominica */ \
+	X_CC(GG, "GG", 0x4747) /* Guernsey */ \
+	X_CC(GL, "GL", 0x474C) /* Greenland */ \
+	X_CC(FO, "FO", 0x464F) /* Faroe Islands */ \
+	X_CC(KN, "KN", 0x4B4E) /* Saint Kitts and Nevis */ \
+	X_CC(MH, "MH", 0x4D48) /* Marshall Islands */ \
+	X_CC(LI, "LI", 0x4C49) /* Liechtenstein */ \
+	X_CC(MC, "MC", 0x4D43) /* Monaco */ \
+	X_CC(SM, "SM", 0x534D) /* San Marino */ \
+	X_CC(PW, "PW", 0x5057) /* Palau */ \
+	X_CC(NR, "NR", 0x4E52) /* Nauru */ \
+	X_CC(TV, "TV", 0x5456) /* Tuvalu */ \
+	X_CC(VA, "VA", 0x5641) /* Vatican City */

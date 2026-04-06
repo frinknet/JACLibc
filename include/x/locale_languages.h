@@ -1104,9 +1104,9 @@
 
 /* Seychellois Creole - 100K */
 #if 100000 >= LOCALE_MINIMUM
-#define X_LANG_SEYL(...) X(LANG_SEYL, __VA_ARGS__)
+#define X_LANG_SEY(...) X(LANG_SEY, __VA_ARGS__)
 #else
-#define X_LANG_SEYL(...)
+#define X_LANG_SEY(...)
 #endif
 
 /* Cape Verdean Creole - 1M */
@@ -1272,184 +1272,184 @@
 
 /* Include Languages */
 #define X_LANGUAGES \
-	X_LANG(C,    0x43,       0x000043  ) /* C */ \
-	X_LANG(EN,   0x454E,     0x454E47  ) /* English */ \
-	X_LANG(ZH,   0x5A48,     0x5A484F  ) /* Mandarin Chinese */ \
-	X_LANG(HI,   0x4849,     0x48494E  ) /* Hindi */ \
-	X_LANG(ES,   0x4553,     0x535041  ) /* Spanish */ \
-	X_LANG(MS,   0x4D53,     0x4D5341  ) /* Malay */ \
-	X_LANG(FR,   0x4652,     0x465241  ) /* French */ \
-	X_LANG(AR,   0x4152,     0x415241  ) /* Arabic */ \
-	X_LANG(BN,   0x424E,     0x42454E  ) /* Bengali */ \
-	X_LANG(PT,   0x5054,     0x504F52  ) /* Portuguese */ \
-	X_LANG(RU,   0x5255,     0x525553  ) /* Russian */ \
-	X_LANG(UR,   0x5552,     0x555244  ) /* Urdu */ \
-	X_LANG(ID,   0x4944,     0x494E44  ) /* Indonesian */ \
-	X_LANG(DE,   0x4445,     0x444555  ) /* German */ \
-	X_LANG(PA,   0x5041,     0x50414E  ) /* Punjabi */ \
-	X_LANG(JA,   0x4A41,     0x4A504E  ) /* Japanese */ \
-	X_LANG(SW,   0x5357,     0x535741  ) /* Swahili */ \
-	X_LANG(MR,   0x4D52,     0x4D4152  ) /* Marathi */ \
-	X_LANG(TE,   0x5445,     0x54454C  ) /* Telugu */ \
-	X_LANG(TR,   0x5452,     0x545552  ) /* Turkish */ \
-	X_LANG(YUE,  0x595545,   0x595545  ) /* Yue / Cantonese */ \
-	X_LANG(TA,   0x5441,     0x54414D  ) /* Tamil */ \
-	X_LANG(VI,   0x5649,     0x564945  ) /* Vietnamese */ \
-	X_LANG(KO,   0x4B4F,     0x4B4F52  ) /* Korean */ \
-	X_LANG(HA,   0x4841,     0x484155  ) /* Hausa */ \
-	X_LANG(FA,   0x4641,     0x464153  ) /* Persian (Farsi) */ \
-	X_LANG(JV,   0x4A56,     0x4A4156  ) /* Javanese */ \
-	X_LANG(IT,   0x4954,     0x495441  ) /* Italian */ \
-	X_LANG(BER,  0x424552,   0x424552  ) /* Berber / Tamazight */ \
-	X_LANG(TH,   0x5448,     0x544841  ) /* Thai */ \
-	X_LANG(GU,   0x4755,     0x47554A  ) /* Gujarati */ \
-	X_LANG(KN,   0x4B4E,     0x4B414E  ) /* Kannada */ \
-	X_LANG(BHO,  0x42484F,   0x42484F  ) /* Bhojpuri */ \
-	X_LANG(PS,   0x5053,     0x505553  ) /* Pashto */ \
-	X_LANG(NAN,  0x4E414E,   0x4E414E  ) /* Min Nan Chinese */ \
-	X_LANG(HAK,  0x48414B,   0x48414B  ) /* Hakka Chinese */ \
-	X_LANG(CEB,  0x434542,   0x434542  ) /* Cebuano */ \
-	X_LANG(FIL,  0x46494C,   0x46494C  ) /* Filipino */ \
-	X_LANG(TL,   0x544C,     0x54474C  ) /* Tagalog */ \
-	X_LANG(YO,   0x594F,     0x594F52  ) /* Yoruba */ \
-	X_LANG(PL,   0x504C,     0x504F4C  ) /* Polish */ \
-	X_LANG(SU,   0x5355,     0x53554E  ) /* Sundanese */ \
-	X_LANG(UK,   0x554B,     0x554B52  ) /* Ukrainian */ \
-	X_LANG(MY,   0x4D59,     0x4D5941  ) /* Burmese / Myanmar */ \
-	X_LANG(ML,   0x4D4C,     0x4D414C  ) /* Malayalam */ \
-	X_LANG(AWA,  0x415741,   0x415741  ) /* Awadhi */ \
-	X_LANG(OR,   0x4F52,     0x4F5249  ) /* Oriya*/ \
-	X_LANG(OM,   0x4F4D,     0x4F524D  ) /* Oromo */ \
-	X_LANG(FF,   0x4646,     0x46554C  ) /* Fulah */ \
-	X_LANG(AM,   0x414D,     0x414D48  ) /* Amharic */ \
-	X_LANG(UZ,   0x555A,     0x555A42  ) /* Uzbek */ \
-	X_LANG(MAI,  0x4D4149,   0x4D4149  ) /* Maithili */ \
-	X_LANG(SD,   0x5344,     0x534E44  ) /* Sindhi */ \
-	X_LANG(IG,   0x4947,     0x49424F  ) /* Igbo */ \
-	X_LANG(KU,   0x4B55,     0x4B5552  ) /* Kurdish */ \
-	X_LANG(RO,   0x524F,     0x524F4E  ) /* Romanian */ \
-	X_LANG(SKR,  0x534B52,   0x534B52  ) /* Saraiki */ \
-	X_LANG(MG,   0x4D47,     0x4D4C47  ) /* Malagasy */ \
-	X_LANG(NL,   0x4E4C,     0x4E4C44  ) /* Dutch */ \
-	X_LANG(AZ,   0x415A,     0x415A45  ) /* Azerbaijani */ \
-	X_LANG(SO,   0x534F,     0x534F4D  ) /* Somali */ \
-	X_LANG(ZA,   0x5A41,     0x5A4841  ) /* Zhuang */ \
-	X_LANG(HNE,  0x484E45,   0x484E45  ) /* Chhattisgarhi */ \
-	X_LANG(SI,   0x5349,     0x53494E  ) /* Sinhala */ \
-	X_LANG(NE,   0x4E45,     0x4E4550  ) /* Nepali */ \
-	X_LANG(KM,   0x4B4D,     0x4B484D  ) /* Khmer */ \
-	X_LANG(AS,   0x4153,     0x41534D  ) /* Assamese */ \
-	X_LANG(LN,   0x4C4E,     0x4C494E  ) /* Lingala */ \
-	X_LANG(LG,   0x4C47,     0x4C5547  ) /* Luganda */ \
-	X_LANG(MAD,  0x4D4144,   0x4D4144  ) /* Madurese */ \
-	X_LANG(EL,   0x454C,     0x454C4C  ) /* Greek */ \
-	X_LANG(DCC,  0x444343,   0x444343  ) /* Deccan */ \
-	X_LANG(CTG,  0x435447,   0x435447  ) /* Chittagonian */ \
-	X_LANG(MWR,  0x4D5752,   0x4D5752  ) /* Marwari */ \
-	X_LANG(MAG,  0x4D4147,   0x4D4147  ) /* Magahi */ \
-	X_LANG(BGC,  0x424743,   0x424743  ) /* Haryanvi */ \
-	X_LANG(HU,   0x4855,     0x48554E  ) /* Hungarian */ \
-	X_LANG(KK,   0x4B4B,     0x4B415A  ) /* Kazakh */ \
-	X_LANG(ZU,   0x5A55,     0x5A554C  ) /* Zulu */ \
-	X_LANG(SR,   0x5352,     0x535250  ) /* Serbian */ \
-	X_LANG(RW,   0x5257,     0x4B494E  ) /* Kinyarwanda */ \
-	X_LANG(HT,   0x4854,     0x484154  ) /* Haitian Creole */ \
-	X_LANG(NY,   0x4E59,     0x4E5941  ) /* Nyanja Chewa */ \
-	X_LANG(WO,   0x574F,     0x574F4C  ) /* Wolof */ \
-	X_LANG(TK,   0x544B,     0x54554B  ) /* Turkmen */ \
-	X_LANG(SYL,  0x53594C,   0x53594C  ) /* Sylheti */ \
-	X_LANG(DHD,  0x444844,   0x444844  ) /* Dhundhari */ \
-	X_LANG(SN,   0x534E,     0x534E41  ) /* Shona */ \
-	X_LANG(AK,   0x414B,     0x414B41  ) /* Akan / Twi */ \
-	X_LANG(CA,   0x4341,     0x434154  ) /* Catalan */ \
-	X_LANG(CS,   0x4353,     0x434553  ) /* Czech */ \
-	X_LANG(MNP,  0x4D4E50,   0x4D4E50  ) /* Min Bei Chinese */ \
-	X_LANG(CDO,  0x43444F,   0x43444F  ) /* Min Dong Chinese */ \
-	X_LANG(UG,   0x5547,     0x554947  ) /* Uyghur */ \
-	X_LANG(HE,   0x4845,     0x484542  ) /* Hebrew */ \
-	X_LANG(HIL,  0x48494C,   0x48494C  ) /* Hiligaynon */ \
-	X_LANG(MOS,  0x4D4F53,   0x4D4F53  ) /* Mossi */ \
-	X_LANG(BAL,  0x42414C,   0x42414C  ) /* Balochi */ \
-	X_LANG(TI,   0x5449,     0x544952  ) /* Tigrinya */ \
-	X_LANG(QU,   0x5155,     0x515545  ) /* Quechua */ \
-	X_LANG(KI,   0x4B49,     0x4B494B  ) /* Kikuyu */ \
-	X_LANG(XH,   0x5848,     0x58484F  ) /* Xhosa */ \
-	X_LANG(KOK,  0x4B4F4B,   0x4B4F4B  ) /* Konkani */ \
-	X_LANG(KON,  0x4B4F4E,   0x4B4F4E  ) /* Kongo */ \
-	X_LANG(SAT,  0x534154,   0x534154  ) /* Santali */ \
-	X_LANG(AF,   0x4146,     0x414652  ) /* Afrikaans */ \
-	X_LANG(KS,   0x4B53,     0x4B4153  ) /* Kashmiri */ \
-	X_LANG(GN,   0x474E,     0x47524E  ) /* Guarani */ \
-	X_LANG(BO,   0x424F,     0x424F44  ) /* Tibetan */ \
-	X_LANG(KAB,  0x4B4142,   0x4B4142  ) /* Kabyle */ \
-	X_LANG(TT,   0x5454,     0x544154  ) /* Tatar */ \
-	X_LANG(BE,   0x4245,     0x42454C  ) /* Belarusian */ \
-	X_LANG(LUO,  0x4C554F,   0x4C554F  ) /* Luo */ \
-	X_LANG(CE,   0x4345,     0x434845  ) /* Chechen */ \
-	X_LANG(DTX,  0x445458,   0x445458  ) /* Naxi */ \
-	X_LANG(NB,   0x4E42,     0x4E4F42  ) /* Norwegian Bokmål */ \
-	X_LANG(TPI,  0x545049,   0x545049  ) /* Tok Pisin */ \
-	X_LANG(BEM,  0x42454D,   0x42454D  ) /* Bemba */ \
-	X_LANG(DOI,  0x444F49,   0x444F49  ) /* Dogri */ \
-	X_LANG(BS,   0x4253,     0x424F53  ) /* Bosnian */ \
-	X_LANG(GL,   0x474C,     0x474C47  ) /* Galician */ \
-	X_LANG(MK,   0x4D4B,     0x4D4B44  ) /* Macedonian */ \
-	X_LANG(AY,   0x4159,     0x41594D  ) /* Aymara */ \
-	X_LANG(EO,   0x454F,     0x45504F  ) /* Esperanto */ \
-	X_LANG(MNI,  0x4D4E49,   0x4D4E49  ) /* Manipuri */ \
-	X_LANG(GA,   0x4741,     0x474C45  ) /* Irish Gaelic */ \
-	X_LANG(NAH,  0x4E4148,   0x4E4148  ) /* Nahuatl */ \
-	X_LANG(BRX,  0x425258,   0x425258  ) /* Bodo */ \
-	X_LANG(EU,   0x4555,     0x455553  ) /* Basque */ \
-	X_LANG(SC,   0x5343,     0x53434E  ) /* Sardinian */ \
-	X_LANG(ARC,  0x415243,   0x415243  ) /* Aramaic */ \
-	X_LANG(CY,   0x4359,     0x43594D  ) /* Welsh */ \
-	X_LANG(YI,   0x5949,     0x494949  ) /* Yiddish */ \
-	X_LANG(SM,   0x534D,     0x534D4F  ) /* Samoan */ \
-	X_LANG(OC,   0x4F43,     0x4F4349  ) /* Occitan */ \
-	X_LANG(NN,   0x4E4E,     0x4E4E4F  ) /* Norwegian Nynorsk */ \
-	X_LANG(LB,   0x4C42,     0x4C545A  ) /* Luxembourgish */ \
-	X_LANG(FJ,   0x464A,     0x46494A  ) /* Fijian */ \
-	X_LANG(PAP,  0x504150,   0x504150  ) /* Papiamento */ \
-	X_LANG(DZ,   0x445A,     0x445A4F  ) /* Dzongkha */ \
-	X_LANG(CNR,  0x434E52,   0x434E52  ) /* Montenegrin */ \
-	X_LANG(BR,   0x4252,     0x425245  ) /* Breton */ \
-	X_LANG(LAD,  0x4C4144,   0x4C4144  ) /* Ladino */ \
-	X_LANG(TO,   0x544F,     0x544F4E  ) /* Tongan */ \
-	X_LANG(NV,   0x4E56,     0x4E4156  ) /* Navajo */ \
-	X_LANG(CO,   0x434F,     0x434F53  ) /* Corsican */ \
-	X_LANG(MI,   0x4D49,     0x4D5249  ) /* Māori */ \
-	X_LANG(CR,   0x4352,     0x435245  ) /* Cree */ \
-	X_LANG(FO,   0x464F,     0x46414F  ) /* Faroese */ \
-	X_LANG(TY,   0x5459,     0x544148  ) /* Tahitian */ \
-	X_LANG(GD,   0x4744,     0x474C41  ) /* Scottish Gaelic */ \
-	X_LANG(RM,   0x524D,     0x524F48  ) /* Romansh */ \
-	X_LANG(KL,   0x4B4C,     0x4B414C  ) /* Kalaallisut */ \
-	X_LANG(TLH,  0x544C48,   0x544C48  ) /* Klingon */ \
-	X_LANG(IU,   0x4955,     0x494B55  ) /* Inuktitut */ \
-	X_LANG(TOK,  0x544F4B,   0x544F4B  ) /* Toki Pona */ \
-	X_LANG(SE,   0x5345,     0x534D45  ) /* Northern Sami */ \
-	X_LANG(SEYL, 0x5345594C, 0x5345594C) /* Seychellois Creole */ \
-	X_LANG(CPV,  0x435056,   0x435056  ) /* Cape Verdean Creole */ \
-	X_LANG(MRU,  0x4D5255,   0x4D5255  ) /* Mauritian Creole */ \
-	X_LANG(SA,   0x5341,     0x53414E  ) /* Sanskrit */ \
-	X_LANG(HAW,  0x484157,   0x484157  ) /* Hawaiian */ \
-	X_LANG(GEZ,  0x47455A,   0x47455A  ) /* Ge'ez */ \
-	X_LANG(PI,   0x5049,     0x504C49  ) /* Pali */ \
-	X_LANG(CHR,  0x434852,   0x434852  ) /* Cherokee */ \
-	X_LANG(GV,   0x4756,     0x474C56  ) /* Manx */ \
-	X_LANG(LA,   0x4C41,     0x4C4154  ) /* Latin */ \
-	X_LANG(LZH,  0x4C5A48,   0x4C5A48  ) /* Literary Chinese */ \
-	X_LANG(AVE,  0x415645,   0x415645  ) /* Avestan */ \
-	X_LANG(JBO,  0x4A424F,   0x4A424F  ) /* Lojban */ \
-	X_LANG(QYA,  0x515941,   0x515941  ) /* Quenya */ \
-	X_LANG(SJN,  0x534A4E,   0x534A4E  ) /* Sindarin */ \
-	X_LANG(IA,   0x4941,     0x494141  ) /* Interlingua */ \
-	X_LANG(IO,   0x494F,     0x49444F  ) /* Ido */ \
-	X_LANG(VO,   0x564F,     0x564F4C  ) /* Volapük */ \
-	X_LANG(LFN,  0x4C464E,   0x4C464E  ) /* Lingua Franca Nova */ \
-	X_LANG(KW,   0x4B57,     0x434F52  ) /* Cornish */ \
-	X_LANG(COP,  0x434F50,   0x434F50  ) /* Coptic */ \
-	X_LANG(CU,   0x4355,     0x434855  ) /* Old Church Slavonic */ \
-	X_LANG(NON,  0x4E4F4E,   0x4E4F4E  ) /* Old Norse */ \
-	X_LANG(ANG,  0x414E47,   0x414E47  ) /* Old English */
+	X_LANG(C,    "C",    0x43,       0x000043  ) /* C */ \
+	X_LANG(EN,   "en",   0x454E,     0x454E47  ) /* English */ \
+	X_LANG(ZH,   "zh",   0x5A48,     0x5A484F  ) /* Mandarin Chinese */ \
+	X_LANG(HI,   "hi",   0x4849,     0x48494E  ) /* Hindi */ \
+	X_LANG(ES,   "es",   0x4553,     0x535041  ) /* Spanish */ \
+	X_LANG(MS,   "ms",   0x4D53,     0x4D5341  ) /* Malay */ \
+	X_LANG(FR,   "fr",   0x4652,     0x465241  ) /* French */ \
+	X_LANG(AR,   "ar",   0x4152,     0x415241  ) /* Arabic */ \
+	X_LANG(BN,   "bn",   0x424E,     0x42454E  ) /* Bengali */ \
+	X_LANG(PT,   "pt",   0x5054,     0x504F52  ) /* Portuguese */ \
+	X_LANG(RU,   "ru",   0x5255,     0x525553  ) /* Russian */ \
+	X_LANG(UR,   "ur",   0x5552,     0x555244  ) /* Urdu */ \
+	X_LANG(ID,   "id",   0x4944,     0x494E44  ) /* Indonesian */ \
+	X_LANG(DE,   "de",   0x4445,     0x444555  ) /* German */ \
+	X_LANG(PA,   "pa",   0x5041,     0x50414E  ) /* Punjabi */ \
+	X_LANG(JA,   "ja",   0x4A41,     0x4A504E  ) /* Japanese */ \
+	X_LANG(SW,   "sw",   0x5357,     0x535741  ) /* Swahili */ \
+	X_LANG(MR,   "mr",   0x4D52,     0x4D4152  ) /* Marathi */ \
+	X_LANG(TE,   "te",   0x5445,     0x54454C  ) /* Telugu */ \
+	X_LANG(TR,   "tr",   0x5452,     0x545552  ) /* Turkish */ \
+	X_LANG(YUE,  "yue",  0x595545,   0x595545  ) /* Yue / Cantonese */ \
+	X_LANG(TA,   "ta",   0x5441,     0x54414D  ) /* Tamil */ \
+	X_LANG(VI,   "vi",   0x5649,     0x564945  ) /* Vietnamese */ \
+	X_LANG(KO,   "ko",   0x4B4F,     0x4B4F52  ) /* Korean */ \
+	X_LANG(HA,   "ha",   0x4841,     0x484155  ) /* Hausa */ \
+	X_LANG(FA,   "fa",   0x4641,     0x464153  ) /* Persian (Farsi) */ \
+	X_LANG(JV,   "jv",   0x4A56,     0x4A4156  ) /* Javanese */ \
+	X_LANG(IT,   "it",   0x4954,     0x495441  ) /* Italian */ \
+	X_LANG(BER,  "ber",  0x424552,   0x424552  ) /* Berber / Tamazight */ \
+	X_LANG(TH,   "th",   0x5448,     0x544841  ) /* Thai */ \
+	X_LANG(GU,   "gu",   0x4755,     0x47554A  ) /* Gujarati */ \
+	X_LANG(KN,   "kn",   0x4B4E,     0x4B414E  ) /* Kannada */ \
+	X_LANG(BHO,  "bho",  0x42484F,   0x42484F  ) /* Bhojpuri */ \
+	X_LANG(PS,   "ps",   0x5053,     0x505553  ) /* Pashto */ \
+	X_LANG(NAN,  "nan",  0x4E414E,   0x4E414E  ) /* Min Nan Chinese */ \
+	X_LANG(HAK,  "hak",  0x48414B,   0x48414B  ) /* Hakka Chinese */ \
+	X_LANG(CEB,  "ceb",  0x434542,   0x434542  ) /* Cebuano */ \
+	X_LANG(FIL,  "fil",  0x46494C,   0x46494C  ) /* Filipino */ \
+	X_LANG(TL,   "tl",   0x544C,     0x54474C  ) /* Tagalog */ \
+	X_LANG(YO,   "yo",   0x594F,     0x594F52  ) /* Yoruba */ \
+	X_LANG(PL,   "pl",   0x504C,     0x504F4C  ) /* Polish */ \
+	X_LANG(SU,   "su",   0x5355,     0x53554E  ) /* Sundanese */ \
+	X_LANG(UK,   "uk",   0x554B,     0x554B52  ) /* Ukrainian */ \
+	X_LANG(MY,   "my",   0x4D59,     0x4D5941  ) /* Burmese / Myanmar */ \
+	X_LANG(ML,   "ml",   0x4D4C,     0x4D414C  ) /* Malayalam */ \
+	X_LANG(AWA,  "awa",  0x415741,   0x415741  ) /* Awadhi */ \
+	X_LANG(OR,   "or",   0x4F52,     0x4F5249  ) /* Oriya*/ \
+	X_LANG(OM,   "om",   0x4F4D,     0x4F524D  ) /* Oromo */ \
+	X_LANG(FF,   "ff",   0x4646,     0x46554C  ) /* Fulah */ \
+	X_LANG(AM,   "am",   0x414D,     0x414D48  ) /* Amharic */ \
+	X_LANG(UZ,   "uz",   0x555A,     0x555A42  ) /* Uzbek */ \
+	X_LANG(MAI,  "mai",  0x4D4149,   0x4D4149  ) /* Maithili */ \
+	X_LANG(SD,   "sd",   0x5344,     0x534E44  ) /* Sindhi */ \
+	X_LANG(IG,   "ig",   0x4947,     0x49424F  ) /* Igbo */ \
+	X_LANG(KU,   "ku",   0x4B55,     0x4B5552  ) /* Kurdish */ \
+	X_LANG(RO,   "ro",   0x524F,     0x524F4E  ) /* Romanian */ \
+	X_LANG(SKR,  "skr",  0x534B52,   0x534B52  ) /* Saraiki */ \
+	X_LANG(MG,   "mg",   0x4D47,     0x4D4C47  ) /* Malagasy */ \
+	X_LANG(NL,   "nl",   0x4E4C,     0x4E4C44  ) /* Dutch */ \
+	X_LANG(AZ,   "az",   0x415A,     0x415A45  ) /* Azerbaijani */ \
+	X_LANG(SO,   "so",   0x534F,     0x534F4D  ) /* Somali */ \
+	X_LANG(ZA,   "za",   0x5A41,     0x5A4841  ) /* Zhuang */ \
+	X_LANG(HNE,  "hne",  0x484E45,   0x484E45  ) /* Chhattisgarhi */ \
+	X_LANG(SI,   "si",   0x5349,     0x53494E  ) /* Sinhala */ \
+	X_LANG(NE,   "ne",   0x4E45,     0x4E4550  ) /* Nepali */ \
+	X_LANG(KM,   "km",   0x4B4D,     0x4B484D  ) /* Khmer */ \
+	X_LANG(AS,   "as",   0x4153,     0x41534D  ) /* Assamese */ \
+	X_LANG(LN,   "ln",   0x4C4E,     0x4C494E  ) /* Lingala */ \
+	X_LANG(LG,   "lg",   0x4C47,     0x4C5547  ) /* Luganda */ \
+	X_LANG(MAD,  "mad",  0x4D4144,   0x4D4144  ) /* Madurese */ \
+	X_LANG(EL,   "el",   0x454C,     0x454C4C  ) /* Greek */ \
+	X_LANG(DCC,  "dcc",  0x444343,   0x444343  ) /* Deccan */ \
+	X_LANG(CTG,  "ctg",  0x435447,   0x435447  ) /* Chittagonian */ \
+	X_LANG(MWR,  "mwr",  0x4D5752,   0x4D5752  ) /* Marwari */ \
+	X_LANG(MAG,  "mag",  0x4D4147,   0x4D4147  ) /* Magahi */ \
+	X_LANG(BGC,  "bgc",  0x424743,   0x424743  ) /* Haryanvi */ \
+	X_LANG(HU,   "hu",   0x4855,     0x48554E  ) /* Hungarian */ \
+	X_LANG(KK,   "kk",   0x4B4B,     0x4B415A  ) /* Kazakh */ \
+	X_LANG(ZU,   "zu",   0x5A55,     0x5A554C  ) /* Zulu */ \
+	X_LANG(SR,   "sr",   0x5352,     0x535250  ) /* Serbian */ \
+	X_LANG(RW,   "rw",   0x5257,     0x4B494E  ) /* Kinyarwanda */ \
+	X_LANG(HT,   "ht",   0x4854,     0x484154  ) /* Haitian Creole */ \
+	X_LANG(NY,   "ny",   0x4E59,     0x4E5941  ) /* Nyanja Chewa */ \
+	X_LANG(WO,   "wo",   0x574F,     0x574F4C  ) /* Wolof */ \
+	X_LANG(TK,   "tk",   0x544B,     0x54554B  ) /* Turkmen */ \
+	X_LANG(SYL,  "syl",  0x53594C,   0x53594C  ) /* Sylheti */ \
+	X_LANG(DHD,  "dhd",  0x444844,   0x444844  ) /* Dhundhari */ \
+	X_LANG(SN,   "sn",   0x534E,     0x534E41  ) /* Shona */ \
+	X_LANG(AK,   "ak",   0x414B,     0x414B41  ) /* Akan / Twi */ \
+	X_LANG(CA,   "ca",   0x4341,     0x434154  ) /* Catalan */ \
+	X_LANG(CS,   "cs",   0x4353,     0x434553  ) /* Czech */ \
+	X_LANG(MNP,  "mnp",  0x4D4E50,   0x4D4E50  ) /* Min Bei Chinese */ \
+	X_LANG(CDO,  "cdo",  0x43444F,   0x43444F  ) /* Min Dong Chinese */ \
+	X_LANG(UG,   "ug",   0x5547,     0x554947  ) /* Uyghur */ \
+	X_LANG(HE,   "he",   0x4845,     0x484542  ) /* Hebrew */ \
+	X_LANG(HIL,  "hil",  0x48494C,   0x48494C  ) /* Hiligaynon */ \
+	X_LANG(MOS,  "mos",  0x4D4F53,   0x4D4F53  ) /* Mossi */ \
+	X_LANG(BAL,  "bal",  0x42414C,   0x42414C  ) /* Balochi */ \
+	X_LANG(TI,   "ti",   0x5449,     0x544952  ) /* Tigrinya */ \
+	X_LANG(QU,   "qu",   0x5155,     0x515545  ) /* Quechua */ \
+	X_LANG(KI,   "ki",   0x4B49,     0x4B494B  ) /* Kikuyu */ \
+	X_LANG(XH,   "xh",   0x5848,     0x58484F  ) /* Xhosa */ \
+	X_LANG(KOK,  "kok",  0x4B4F4B,   0x4B4F4B  ) /* Konkani */ \
+	X_LANG(KON,  "kon",  0x4B4F4E,   0x4B4F4E  ) /* Kongo */ \
+	X_LANG(SAT,  "sat",  0x534154,   0x534154  ) /* Santali */ \
+	X_LANG(AF,   "af",   0x4146,     0x414652  ) /* Afrikaans */ \
+	X_LANG(KS,   "ks",   0x4B53,     0x4B4153  ) /* Kashmiri */ \
+	X_LANG(GN,   "gn",   0x474E,     0x47524E  ) /* Guarani */ \
+	X_LANG(BO,   "bo",   0x424F,     0x424F44  ) /* Tibetan */ \
+	X_LANG(KAB,  "kab",  0x4B4142,   0x4B4142  ) /* Kabyle */ \
+	X_LANG(TT,   "tt",   0x5454,     0x544154  ) /* Tatar */ \
+	X_LANG(BE,   "be",   0x4245,     0x42454C  ) /* Belarusian */ \
+	X_LANG(LUO,  "luo",  0x4C554F,   0x4C554F  ) /* Luo */ \
+	X_LANG(CE,   "ce",   0x4345,     0x434845  ) /* Chechen */ \
+	X_LANG(DTX,  "dtx",  0x445458,   0x445458  ) /* Naxi */ \
+	X_LANG(NB,   "nb",   0x4E42,     0x4E4F42  ) /* Norwegian Bokmål */ \
+	X_LANG(TPI,  "tpi",  0x545049,   0x545049  ) /* Tok Pisin */ \
+	X_LANG(BEM,  "bem",  0x42454D,   0x42454D  ) /* Bemba */ \
+	X_LANG(DOI,  "doi",  0x444F49,   0x444F49  ) /* Dogri */ \
+	X_LANG(BS,   "bs",   0x4253,     0x424F53  ) /* Bosnian */ \
+	X_LANG(GL,   "gl",   0x474C,     0x474C47  ) /* Galician */ \
+	X_LANG(MK,   "mk",   0x4D4B,     0x4D4B44  ) /* Macedonian */ \
+	X_LANG(AY,   "ay",   0x4159,     0x41594D  ) /* Aymara */ \
+	X_LANG(EO,   "eo",   0x454F,     0x45504F  ) /* Esperanto */ \
+	X_LANG(MNI,  "mni",  0x4D4E49,   0x4D4E49  ) /* Manipuri */ \
+	X_LANG(GA,   "ga",   0x4741,     0x474C45  ) /* Irish Gaelic */ \
+	X_LANG(NAH,  "nah",  0x4E4148,   0x4E4148  ) /* Nahuatl */ \
+	X_LANG(BRX,  "brx",  0x425258,   0x425258  ) /* Bodo */ \
+	X_LANG(EU,   "eu",   0x4555,     0x455553  ) /* Basque */ \
+	X_LANG(SC,   "sc",   0x5343,     0x53434E  ) /* Sardinian */ \
+	X_LANG(ARC,  "arc",  0x415243,   0x415243  ) /* Aramaic */ \
+	X_LANG(CY,   "cy",   0x4359,     0x43594D  ) /* Welsh */ \
+	X_LANG(YI,   "yi",   0x5949,     0x494949  ) /* Yiddish */ \
+	X_LANG(SM,   "sm",   0x534D,     0x534D4F  ) /* Samoan */ \
+	X_LANG(OC,   "oc",   0x4F43,     0x4F4349  ) /* Occitan */ \
+	X_LANG(NN,   "nn",   0x4E4E,     0x4E4E4F  ) /* Norwegian Nynorsk */ \
+	X_LANG(LB,   "lb",   0x4C42,     0x4C545A  ) /* Luxembourgish */ \
+	X_LANG(FJ,   "fj",   0x464A,     0x46494A  ) /* Fijian */ \
+	X_LANG(PAP,  "pap",  0x504150,   0x504150  ) /* Papiamento */ \
+	X_LANG(DZ,   "dz",   0x445A,     0x445A4F  ) /* Dzongkha */ \
+	X_LANG(CNR,  "cnr",  0x434E52,   0x434E52  ) /* Montenegrin */ \
+	X_LANG(BR,   "br",   0x4252,     0x425245  ) /* Breton */ \
+	X_LANG(LAD,  "lad",  0x4C4144,   0x4C4144  ) /* Ladino */ \
+	X_LANG(TO,   "to",   0x544F,     0x544F4E  ) /* Tongan */ \
+	X_LANG(NV,   "nv",   0x4E56,     0x4E4156  ) /* Navajo */ \
+	X_LANG(CO,   "co",   0x434F,     0x434F53  ) /* Corsican */ \
+	X_LANG(MI,   "mi",   0x4D49,     0x4D5249  ) /* Māori */ \
+	X_LANG(CR,   "cr",   0x4352,     0x435245  ) /* Cree */ \
+	X_LANG(FO,   "fo",   0x464F,     0x46414F  ) /* Faroese */ \
+	X_LANG(TY,   "ty",   0x5459,     0x544148  ) /* Tahitian */ \
+	X_LANG(GD,   "gd",   0x4744,     0x474C41  ) /* Scottish Gaelic */ \
+	X_LANG(RM,   "rm",   0x524D,     0x524F48  ) /* Romansh */ \
+	X_LANG(KL,   "kl",   0x4B4C,     0x4B414C  ) /* Kalaallisut */ \
+	X_LANG(TLH,  "tlh",  0x544C48,   0x544C48  ) /* Klingon */ \
+	X_LANG(IU,   "iu",   0x4955,     0x494B55  ) /* Inuktitut */ \
+	X_LANG(TOK,  "tok",  0x544F4B,   0x544F4B  ) /* Toki Pona */ \
+	X_LANG(SE,   "se",   0x5345,     0x534D45  ) /* Northern Sami */ \
+	X_LANG(SEY,  "sey",  0x534559,   0x534559  ) /* Seychellois Creole */ \
+	X_LANG(CPV,  "cpv",  0x435056,   0x435056  ) /* Cape Verdean Creole */ \
+	X_LANG(MRU,  "mru",  0x4D5255,   0x4D5255  ) /* Mauritian Creole */ \
+	X_LANG(SA,   "sa",   0x5341,     0x53414E  ) /* Sanskrit */ \
+	X_LANG(HAW,  "haw",  0x484157,   0x484157  ) /* Hawaiian */ \
+	X_LANG(GEZ,  "gez",  0x47455A,   0x47455A  ) /* Ge'ez */ \
+	X_LANG(PI,   "pi",   0x5049,     0x504C49  ) /* Pali */ \
+	X_LANG(CHR,  "chr",  0x434852,   0x434852  ) /* Cherokee */ \
+	X_LANG(GV,   "gv",   0x4756,     0x474C56  ) /* Manx */ \
+	X_LANG(LA,   "la",   0x4C41,     0x4C4154  ) /* Latin */ \
+	X_LANG(LZH,  "lzh",  0x4C5A48,   0x4C5A48  ) /* Literary Chinese */ \
+	X_LANG(AVE,  "ave",  0x415645,   0x415645  ) /* Avestan */ \
+	X_LANG(JBO,  "jbo",  0x4A424F,   0x4A424F  ) /* Lojban */ \
+	X_LANG(QYA,  "qya",  0x515941,   0x515941  ) /* Quenya */ \
+	X_LANG(SJN,  "sjn",  0x534A4E,   0x534A4E  ) /* Sindarin */ \
+	X_LANG(IA,   "ia",   0x4941,     0x494141  ) /* Interlingua */ \
+	X_LANG(IO,   "io",   0x494F,     0x49444F  ) /* Ido */ \
+	X_LANG(VO,   "vo",   0x564F,     0x564F4C  ) /* Volapük */ \
+	X_LANG(LFN,  "lfn",  0x4C464E,   0x4C464E  ) /* Lingua Franca Nova */ \
+	X_LANG(KW,   "kw",   0x4B57,     0x434F52  ) /* Cornish */ \
+	X_LANG(COP,  "cop",  0x434F50,   0x434F50  ) /* Coptic */ \
+	X_LANG(CU,   "cu",   0x4355,     0x434855  ) /* Old Church Slavonic */ \
+	X_LANG(NON,  "non",  0x4E4F4E,   0x4E4F4E  ) /* Old Norse */ \
+	X_LANG(ANG,  "ang",  0x414E47,   0x414E47  ) /* Old English */

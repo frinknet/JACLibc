@@ -7,6 +7,8 @@
 #include <limits.h>
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
 
 #include <x/locale_languages.h>
 #include <x/locale_countries.h>
@@ -27,9 +29,9 @@ extern "C" {
 #define LOCALE_MINIMUM UINT_MAX
 #endif
 
-#define X(name, ...) name,
-typedef enum locale_lang { X_LANGUAGES } __jacl_locale_lang_t;
-typedef enum locale_cc { X_COUNTRIES } __jacl_locale_cc_t;
+#define X(code, ...) code,
+typedef enum locale_lang { LANG_ERR, X_LANGUAGES } __jacl_locale_lang_t;
+typedef enum locale_cc { CC_ERR, X_COUNTRIES } __jacl_locale_cc_t;
 #undef X
 
 typedef struct {
@@ -106,32 +108,36 @@ extern thread_local struct lconv	__jacl_lconv;
 static __jacl_locale_lang_t __jacl_locale_lang(const char *lang) {
 	size_t len = strlen(lang);
 
-	if (len == 2) {
-		uint16_t code = (lang[0] << 8) | lang[1];
+	if (len == 1) {
+		return (*lang == 'C') ? LANG_C : LANG_ERR;
+	} else if (len == 2) {
+		uint16_t code = (toupper(lang[0]) << 8) | toupper(lang[1]);
 
-		#define X(LANG, code2, code3) case code2: return LANG;
+		#define X(LANG, name, code2, code3) case code2: return LANG;
 		switch (code) { X_LANGUAGES }
 		#undef X
 	} else if (len == 3) {
-		uint32_t code = (lang[0] << 16) | (lang[1] << 8) | lang[2];
+		uint32_t code = (toupper(lang[0]) << 16) | (toupper(lang[1]) << 8) | toupper(lang[2]);
 
-		#define X(LANG, code2, code3) case code3: return LANG;
+		#define X(LANG, name, code2, code3) case code3: return LANG;
 		switch (code) { X_LANGUAGES }
 		#undef X
 	}
 
-	return LANG_C;
+	return LANG_ERR;
 }
 
 // Parse country code
 static __jacl_locale_cc_t __jacl_locale_cc(const char *cc) {
-	uint16_t code = (cc[0] << 8) | cc[1];
+	if (*cc == '\0') return CC_NONE;
 
-	#define X(CC, code) case code: return CC;
+	uint16_t code = (toupper(cc[0]) << 8) | toupper(cc[1]);
+
+	#define X(CC, name, code) case code: return CC;
 	switch (code) { X_COUNTRIES }
 	#undef X
 
-	return CC_NONE;
+	return CC_ERR;
 }
 
 // Parse locale
@@ -142,17 +148,18 @@ static void __jacl_locale_split(const char *s, __jacl_locale_lang_t *out_lang, _
 	unsigned i = 0, j = 0;
 
 	/* lang: up to '_' or end, max 3 */
-	while (p[i] && p[i] != '_' && i < 3)
-		lang[i] = p[i], i++;
+	while (p[i] && p[i] != '_' && i < 3) lang[i] = p[i], i++;
+
 	lang[i] = '\0';
 
 	/* CC: if '_' present, copy next up-to-2 chars */
 	if (p[i] == '_') {
 		const char *q = p + i + 1;
+
 		while (q[j] && j < 2) cc[j] = q[j], j++;
 	}
-	cc[j] = '\0';
 
+	cc[j] = '\0';
 	*out_lang = __jacl_locale_lang(lang);
 	*out_cc   = __jacl_locale_cc(cc);
 }
@@ -171,11 +178,11 @@ static void __jacl_locale_numeric(__jacl_locale_cc_t cc) {
 	__jacl_locale.numeric = cc;
 
 	// Update numeric formatting
-	#define X(CC, dec, group, sep) \
+	#define X(CC, dec, sep, group) \
 		case CC: \
 			__jacl_lconv.decimal_point = dec; \
-			__jacl_lconv.thousands_sep = group; \
-			__jacl_lconv.grouping = sep; \
+			__jacl_lconv.thousands_sep = sep; \
+			__jacl_lconv.grouping = group; \
 			break;
 	switch(cc) {
 	#include <x/locale_numeric.h>
@@ -206,8 +213,8 @@ static void __jacl_locale_message(__jacl_locale_lang_t lang) {
 static void __jacl_locale_monetary(__jacl_locale_cc_t cc) {
 	__jacl_locale.monetary = cc;
 
-	#define X_CC(name, curr, mdec, mthou, mgrp, pos, neg, ifd, fd, pcp, psb, ncp, nsb, psp, nsp) \
-		case CC_##name: \
+	#define X(name, curr, mdec, mthou, mgrp, pos, neg, ifd, fd, pcp, psb, ncp, nsb, psp, nsp) \
+		case name: \
 			__jacl_lconv.int_curr_symbol = curr; \
 			__jacl_lconv.currency_symbol = curr; \
 			__jacl_lconv.mon_decimal_point = mdec; \
@@ -233,7 +240,61 @@ static void __jacl_locale_monetary(__jacl_locale_cc_t cc) {
 	switch (cc) {
 	#include <x/locale_monetary.h>
 	}
-	#undef X_CC
+	#undef X
+}
+
+static char *__jacl_locale_get(int category) {
+	static thread_local char buf[32];
+	__jacl_locale_lang_t lang = __jacl_locale.wctype;
+	__jacl_locale_cc_t cc = __jacl_locale.numeric;
+	char *lstr;
+	char *cstr;
+
+	switch (category) {
+		case LC_CTYPE:	  lang = __jacl_locale.wctype; break;
+		case LC_TIME:	    lang = __jacl_locale.time; break;
+		case LC_COLLATE:  lang = __jacl_locale.collate; break;
+		case LC_MESSAGES: lang = __jacl_locale.message; break;
+		case LC_NUMERIC:  cc = __jacl_locale.numeric; break;
+		case LC_MONETARY: cc = __jacl_locale.monetary; break;
+	}
+
+	#define X(LANG, name, ...) case LANG: lstr = name; break;
+	switch(lang) {
+		X_LANGUAGES
+		default: lstr = "C";
+	}
+	#undef X
+
+	#define X(CC, name, ...) case CC: cstr = name; break;
+	switch(cc) {
+		X_COUNTRIES
+		default: cstr = "";
+	}
+	#undef X
+
+	snprintf(buf, sizeof(buf), "%s%s%s.UTF-8", lstr, (*cstr) ? "_" : "", cstr);
+
+	return buf;
+}
+
+static const char *__jacl_locale_env(int category) {  /* Return const char* */
+	const char *env = getenv("LC_ALL");
+
+	if (!env || !env[0]) {
+		switch (category) {
+			case LC_CTYPE:	  env = getenv("LC_CTYPE"); break;
+			case LC_NUMERIC:  env = getenv("LC_NUMERIC"); break;
+			case LC_TIME:	    env = getenv("LC_TIME"); break;
+			case LC_COLLATE:  env = getenv("LC_COLLATE"); break;
+			case LC_MONETARY: env = getenv("LC_MONETARY"); break;
+			case LC_MESSAGES: env = getenv("LC_MESSAGES"); break;
+		}
+	}
+	if (!env || !env[0]) env = getenv("LANG");
+	if (!env || !env[0]) env = "C";
+
+	return env;
 }
 
 static void __jacl_locale_update(int category, __jacl_locale_lang_t lang, __jacl_locale_cc_t cc) {
@@ -257,15 +318,19 @@ static void __jacl_locale_update(int category, __jacl_locale_lang_t lang, __jacl
 }
 
 static inline char *setlocale(int category, const char *locale) {
-	if (locale == NULL) return (char *)"C";
+	if (locale == NULL)  return __jacl_locale_get(category);
+	if (locale[0] == '\0') locale = __jacl_locale_env(category);
 
 	__jacl_locale_lang_t L;
 	__jacl_locale_cc_t   C;
 
 	__jacl_locale_split(locale, &L, &C);
+
+	if (L == LANG_ERR || C == CC_ERR) return NULL;
+
 	__jacl_locale_update(category, L, C);
 
-	return (char *)locale;
+	return __jacl_locale_get(category);
 }
 
 static inline struct lconv *localeconv(void) { return &__jacl_lconv; }

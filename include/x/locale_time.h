@@ -1727,7 +1727,7 @@ X_LANG(SE,
 	"%H:%M:%S",
 	"%I:%M:%S %p")
 
-X_LANG(SEYL,
+X_LANG(SEY,
 	"dimans", "lendi", "mardi", "merkredi", "zedi", "vandredi", "samdi",
 	"dim", "len", "mar", "mer", "zed", "van", "sam",
 	"zanvye", "fevriye", "mars", "avril", "me", "zin", "zilye", "out", "septanm", "oktob", "novanm", "desanm",
