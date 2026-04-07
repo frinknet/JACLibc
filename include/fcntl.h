@@ -324,7 +324,7 @@ static inline int creat(const char *pathname, mode_t mode) {
 	return open(pathname, O_CREAT | O_WRONLY | O_TRUNC, mode);
 }
 
-int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath) {
+static inline int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath) {
 	#if JACL_HASSYS(renameat2)
 		return syscall(SYS_renameat2, olddirfd, oldpath, newdirfd, newpath, 0);
 	#elif JACL_HASSYS(SYS_renameat)
