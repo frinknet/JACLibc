@@ -324,6 +324,22 @@ static inline int creat(const char *pathname, mode_t mode) {
 	return open(pathname, O_CREAT | O_WRONLY | O_TRUNC, mode);
 }
 
+int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath) {
+	#if JACL_HASSYS(renameat2)
+		return syscall(SYS_renameat2, olddirfd, oldpath, newdirfd, newpath, 0);
+	#elif JACL_HASSYS(SYS_renameat)
+		return syscall(SYS_renameat, olddirfd, oldpath, newdirfd, newpath);
+	#else
+		if (olddirfd != AT_FDCWD || newdirfd != AT_FDCWD) {
+			errno = ENOSYS;
+
+			return -1;
+		}
+
+		return syscall(SYS_rename, oldpath, newpath);
+	#endif
+}
+
 static inline int fcntl(int fd, int cmd, ...) {
 	va_list args;
 	long arg = 0;

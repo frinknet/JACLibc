@@ -1,5 +1,5 @@
 /**
- * JACLIBC SYSCALLS MATRIX  //  last updated: 2026-03-04 00:35:48 UTC
+ * JACLIBC SYSCALLS MATRIX  //  last updated: 2026-04-07 14:39:20 UTC
  */
 
 /* check SYS_alarm */
@@ -1267,61 +1267,6 @@
 #define __openbsd_x64_has_mkdirat 0
 #define __openbsd_x86_has_mkdirat 0
 
-/* check SYS_nanosleep */
-#define __darwin_arm64_has_nanosleep 0
-#define __darwin_generic_has_nanosleep 0
-#define __darwin_x64_has_nanosleep 0
-#define __dragonfly_generic_has_nanosleep 1
-#define __dragonfly_x64_has_nanosleep 1
-#define __dragonfly_x86_has_nanosleep 1
-#define __freebsd_generic_has_nanosleep 1
-#define __freebsd_x64_has_nanosleep 1
-#define __freebsd_x86_has_nanosleep 1
-#define __linux_alpha_has_nanosleep 1
-#define __linux_arc_has_nanosleep 1
-#define __linux_arm32_has_nanosleep 1
-#define __linux_arm64_has_nanosleep 1
-#define __linux_csky_has_nanosleep 1
-#define __linux_generic_has_nanosleep 1
-#define __linux_hexagon_has_nanosleep 1
-#define __linux_hppa_has_nanosleep 1
-#define __linux_loongarch64_has_nanosleep 1
-#define __linux_m68k_has_nanosleep 1
-#define __linux_microblaze_has_nanosleep 1
-#define __linux_mips32_has_nanosleep 1
-#define __linux_mips64_has_nanosleep 1
-#define __linux_nios2_has_nanosleep 1
-#define __linux_or1k_has_nanosleep 1
-#define __linux_powerpc32_has_nanosleep 1
-#define __linux_powerpc64_has_nanosleep 1
-#define __linux_riscv32_has_nanosleep 1
-#define __linux_riscv64_has_nanosleep 1
-#define __linux_s390x_has_nanosleep 1
-#define __linux_sh4_has_nanosleep 1
-#define __linux_sparc32_has_nanosleep 1
-#define __linux_sparc64_has_nanosleep 1
-#define __linux_x64_has_nanosleep 1
-#define __linux_x86_has_nanosleep 1
-#define __linux_xtensa_has_nanosleep 1
-#define __netbsd_alpha_has_nanosleep 1
-#define __netbsd_arm32_has_nanosleep 1
-#define __netbsd_arm64_has_nanosleep 1
-#define __netbsd_generic_has_nanosleep 1
-#define __netbsd_hppa_has_nanosleep 1
-#define __netbsd_ia64_has_nanosleep 1
-#define __netbsd_powerpc32_has_nanosleep 1
-#define __netbsd_powerpc64_has_nanosleep 1
-#define __netbsd_riscv32_has_nanosleep 1
-#define __netbsd_riscv64_has_nanosleep 1
-#define __netbsd_sparc32_has_nanosleep 1
-#define __netbsd_sparc64_has_nanosleep 1
-#define __netbsd_vax_has_nanosleep 1
-#define __netbsd_x64_has_nanosleep 1
-#define __netbsd_x86_has_nanosleep 1
-#define __openbsd_generic_has_nanosleep 0
-#define __openbsd_x64_has_nanosleep 0
-#define __openbsd_x86_has_nanosleep 0
-
 /* check SYS_newfstatat */
 #define __darwin_arm64_has_newfstatat 0
 #define __darwin_generic_has_newfstatat 0
@@ -1652,6 +1597,61 @@
 #define __openbsd_x64_has_pipe2 1
 #define __openbsd_x86_has_pipe2 1
 
+/* check SYS_renameat2 */
+#define __darwin_arm64_has_renameat2 0
+#define __darwin_generic_has_renameat2 0
+#define __darwin_x64_has_renameat2 0
+#define __dragonfly_generic_has_renameat2 0
+#define __dragonfly_x64_has_renameat2 0
+#define __dragonfly_x86_has_renameat2 0
+#define __freebsd_generic_has_renameat2 1
+#define __freebsd_x64_has_renameat2 1
+#define __freebsd_x86_has_renameat2 1
+#define __linux_alpha_has_renameat2 1
+#define __linux_arc_has_renameat2 1
+#define __linux_arm32_has_renameat2 1
+#define __linux_arm64_has_renameat2 1
+#define __linux_csky_has_renameat2 1
+#define __linux_generic_has_renameat2 1
+#define __linux_hexagon_has_renameat2 1
+#define __linux_hppa_has_renameat2 1
+#define __linux_loongarch64_has_renameat2 1
+#define __linux_m68k_has_renameat2 1
+#define __linux_microblaze_has_renameat2 1
+#define __linux_mips32_has_renameat2 1
+#define __linux_mips64_has_renameat2 1
+#define __linux_nios2_has_renameat2 1
+#define __linux_or1k_has_renameat2 1
+#define __linux_powerpc32_has_renameat2 1
+#define __linux_powerpc64_has_renameat2 1
+#define __linux_riscv32_has_renameat2 1
+#define __linux_riscv64_has_renameat2 1
+#define __linux_s390x_has_renameat2 1
+#define __linux_sh4_has_renameat2 1
+#define __linux_sparc32_has_renameat2 1
+#define __linux_sparc64_has_renameat2 1
+#define __linux_x64_has_renameat2 1
+#define __linux_x86_has_renameat2 1
+#define __linux_xtensa_has_renameat2 1
+#define __netbsd_alpha_has_renameat2 0
+#define __netbsd_arm32_has_renameat2 0
+#define __netbsd_arm64_has_renameat2 0
+#define __netbsd_generic_has_renameat2 0
+#define __netbsd_hppa_has_renameat2 0
+#define __netbsd_ia64_has_renameat2 0
+#define __netbsd_powerpc32_has_renameat2 0
+#define __netbsd_powerpc64_has_renameat2 0
+#define __netbsd_riscv32_has_renameat2 0
+#define __netbsd_riscv64_has_renameat2 0
+#define __netbsd_sparc32_has_renameat2 0
+#define __netbsd_sparc64_has_renameat2 0
+#define __netbsd_vax_has_renameat2 0
+#define __netbsd_x64_has_renameat2 0
+#define __netbsd_x86_has_renameat2 0
+#define __openbsd_generic_has_renameat2 0
+#define __openbsd_x64_has_renameat2 0
+#define __openbsd_x86_has_renameat2 0
+
 /* check SYS_sethostname */
 #define __darwin_arm64_has_sethostname 0
 #define __darwin_generic_has_sethostname 0
@@ -1926,6 +1926,61 @@
 #define __openbsd_generic_has_stat64 0
 #define __openbsd_x64_has_stat64 0
 #define __openbsd_x86_has_stat64 0
+
+/* check SYS_SYS_renameat */
+#define __darwin_arm64_has_SYS_renameat 0
+#define __darwin_generic_has_SYS_renameat 0
+#define __darwin_x64_has_SYS_renameat 0
+#define __dragonfly_generic_has_SYS_renameat 0
+#define __dragonfly_x64_has_SYS_renameat 0
+#define __dragonfly_x86_has_SYS_renameat 0
+#define __freebsd_generic_has_SYS_renameat 0
+#define __freebsd_x64_has_SYS_renameat 0
+#define __freebsd_x86_has_SYS_renameat 0
+#define __linux_alpha_has_SYS_renameat 0
+#define __linux_arc_has_SYS_renameat 0
+#define __linux_arm32_has_SYS_renameat 0
+#define __linux_arm64_has_SYS_renameat 0
+#define __linux_csky_has_SYS_renameat 0
+#define __linux_generic_has_SYS_renameat 0
+#define __linux_hexagon_has_SYS_renameat 0
+#define __linux_hppa_has_SYS_renameat 0
+#define __linux_loongarch64_has_SYS_renameat 0
+#define __linux_m68k_has_SYS_renameat 0
+#define __linux_microblaze_has_SYS_renameat 0
+#define __linux_mips32_has_SYS_renameat 0
+#define __linux_mips64_has_SYS_renameat 0
+#define __linux_nios2_has_SYS_renameat 0
+#define __linux_or1k_has_SYS_renameat 0
+#define __linux_powerpc32_has_SYS_renameat 0
+#define __linux_powerpc64_has_SYS_renameat 0
+#define __linux_riscv32_has_SYS_renameat 0
+#define __linux_riscv64_has_SYS_renameat 0
+#define __linux_s390x_has_SYS_renameat 0
+#define __linux_sh4_has_SYS_renameat 0
+#define __linux_sparc32_has_SYS_renameat 0
+#define __linux_sparc64_has_SYS_renameat 0
+#define __linux_x64_has_SYS_renameat 0
+#define __linux_x86_has_SYS_renameat 0
+#define __linux_xtensa_has_SYS_renameat 0
+#define __netbsd_alpha_has_SYS_renameat 0
+#define __netbsd_arm32_has_SYS_renameat 0
+#define __netbsd_arm64_has_SYS_renameat 0
+#define __netbsd_generic_has_SYS_renameat 0
+#define __netbsd_hppa_has_SYS_renameat 0
+#define __netbsd_ia64_has_SYS_renameat 0
+#define __netbsd_powerpc32_has_SYS_renameat 0
+#define __netbsd_powerpc64_has_SYS_renameat 0
+#define __netbsd_riscv32_has_SYS_renameat 0
+#define __netbsd_riscv64_has_SYS_renameat 0
+#define __netbsd_sparc32_has_SYS_renameat 0
+#define __netbsd_sparc64_has_SYS_renameat 0
+#define __netbsd_vax_has_SYS_renameat 0
+#define __netbsd_x64_has_SYS_renameat 0
+#define __netbsd_x86_has_SYS_renameat 0
+#define __openbsd_generic_has_SYS_renameat 0
+#define __openbsd_x64_has_SYS_renameat 0
+#define __openbsd_x86_has_SYS_renameat 0
 
 /* check SYS_utimensat */
 #define __darwin_arm64_has_utimensat 0

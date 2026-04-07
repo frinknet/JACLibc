@@ -1,5 +1,5 @@
 /**
- * LINUX SYSCALLS IMPORTED  //  last updated: 2026-03-04 00:35:14 UTC
+ * LINUX SYSCALLS IMPORTED  //  last updated: 2026-04-07 14:37:51 UTC
  * https://raw.githubusercontent.com/torvalds/linux/v6.17/arch/parisc/kernel/syscalls/syscall.tbl
  */
 
