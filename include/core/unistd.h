@@ -9,21 +9,17 @@
 extern "C" {
 #endif
 
-extern void __jacl_lock_acquire(__jacl_lock_t* l);
-extern void __jacl_lock_release(__jacl_lock_t* l);
-extern void __jacl_fork_reset(void);
+extern void __jacl_memlock_block(void);
+extern void __jacl_memlock_clear(void);
+extern void __jacl_memlock_reset(void);
 
 pid_t fork(void) {
-	__jacl_lock_acquire(&__jacl_lock);
+	__jacl_memlock_block();
 
 	pid_t pid = (pid_t)syscall(SYS_fork);
 
-	if (pid == 0) {
-		__jacl_fork_reset();
-		__jacl_lock_release(&__jacl_lock);
-	} else if (pid > 0) {
-		__jacl_lock_release(&__jacl_lock);
-	}
+	if (pid == 0) __jacl_memlock_reset();
+	else if (pid > 0) __jacl_memlock_clear();
 
 	return pid;
 }
@@ -34,21 +30,11 @@ pid_t vfork(void) {
 }
 #else
 pid_t vfork(void) {
-	__jacl_lock_acquire(&__jacl_lock);
-
-	pid_t pid = (pid_t)syscall(SYS_vfork);
-
-	if (pid == 0) {
-		// Child: minimal reset ONLY, then exec ASAP
-		__jacl_tls_off = 0;
-		__jacl_tls_end = 0;
-		// Do NOT release lock - child will exec or _exit
-	} else if (pid > 0) {
-		// Parent: resume after child execs/exits
-		__jacl_lock_release(&__jacl_lock);
-	}
-
-	return pid;
+	// NO LOCKS. NO TLS RESET.
+	// Parent is suspended; child shares all memory.
+	// Caller MUST exec() or _exit() immediately.
+	// Any allocation corrupts parent heap—by design.
+	return (pid_t)syscall(SYS_vfork);
 }
 #endif
 

@@ -3,6 +3,7 @@
 #define CORE_STDLIB_H
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 #include <assert.h>
 #include <core/format.h>
@@ -20,8 +21,8 @@
 #define JACL_HEAP_MAX (1u<<30)
 #endif
 
-#ifndef JACL_HEAP_SEGMENT
-#define JACL_HEAP_SEGMENT (1u<<20)
+#ifndef JACL_HEAP_SEG
+#define JACL_HEAP_SEG (1u<<20)
 #endif
 
 /* Configuration */
@@ -33,12 +34,34 @@
 #define JACL_TLS_CHUNK 4096u
 #endif
 
+#ifndef JACL_HDR_ALLOC
+#define JACL_HDR_ALLOC 1u
+#endif
+
+#ifndef JACL_HDR_ARENA
+#define JACL_HDR_ARENA 2u
+#endif
+
 #ifndef JACL_ALIGNMENT
 #define JACL_ALIGNMENT 8u
 #endif
 
-#define JACL_HDR_ALLOC 1u
-#define JACL_HDR_ARENA 2u
+#ifndef JACL_CONCURENCY
+#define JACL_CONCURENCY 32
+#endif
+
+#ifndef JACL_RECYCLING
+#define JACL_RECYCLING 12
+#endif
+
+#ifndef JACL_COALESCING
+#define JACL_COALESCING 1024u
+#endif
+
+#if JACL_CONCURENCY > 32
+#undef JACL_CONCURENCY
+#define JACL_CONCURENCY 32
+#endif
 
 #if JACL_HAS_C11
 	#include <stdatomic.h>
@@ -54,6 +77,10 @@
 	#define atomic_store_explicit(ptr, val, order) (*(ptr) = (val))
 	#define atomic_fetch_add(ptr, val) ((*(ptr))++)
 	#define atomic_fetch_add_explicit(ptr, val, order) ((*(ptr)) += (val), (*(ptr)) - (val))
+	#define atomic_fetch_and(ptr, val) ((*(ptr)) &= (val))
+	#define atomic_fetch_and_explicit(ptr, val, order) ((*(ptr)) &= (val))
+	#define atomic_fetch_or(ptr, val) ((*(ptr)) |= (val))
+	#define atomic_fetch_or_explicit(ptr, val, order) ((*(ptr)) |= (val))
 	#define atomic_compare_exchange_strong(ptr, expected, desired) \
 		((*(ptr) == *(expected)) ? (*(ptr) = (desired), 1) : (*(expected) = *(ptr), 0))
 
@@ -67,44 +94,44 @@ extern "C" {
 /* Internal State */
 typedef struct {
 	size_t size, prev_size, flags;
-} __jacl_hdr_t;
+} __jacl_memhdr_t;
+
+typedef struct __jacl_memseg {
+	uint8_t *base;
+	size_t size, bins[JACL_CONCURENCY];
+	uint_least32_t bitmap;
+	struct __jacl_memseg *next;
+} __jacl_memseg_t;
 
 typedef struct {
 	_Atomic uint_fast32_t next, owner;
-} __jacl_lock_t;
-
-typedef struct __jacl_segment {
-	uint8_t* base;
-	size_t size, bins[32];
-	uint_least32_t bitmap;
-	struct __jacl_segment* next;
-} __jacl_segment_t;
+} __jacl_memlock_t;
 
 // Initial static heap
 static _Alignas(16) uint8_t __jacl_static_heap[JACL_HEAP_INIT];
 
 // Segment tracking
-static __jacl_segment_t __jacl_initial_segment;
-static __jacl_segment_t* __jacl_segment_head = NULL;
+static __jacl_memseg_t __jacl_memseg_init;
+static __jacl_memseg_t* __jacl_memseg_head = NULL;
 static size_t __jacl_heap_current = JACL_HEAP_INIT;
 static size_t __jacl_heap_max = JACL_HEAP_MAX;
 static _Atomic uint32_t __jacl_once = 0;
-static __jacl_lock_t __jacl_lock = {0,0};
+static __jacl_memlock_t __jacl_locks[JACL_CONCURENCY];
+static __jacl_memlock_t __jacl_growth;
 
 // TLS state
 _Atomic uint32_t __jacl_tls_cursor = 0;
 thread_local uint32_t __jacl_tls_off = 0;
 thread_local uint32_t __jacl_tls_end = 0;
 
-// Quicklist
-#define QUICKLIST_MAX 7
+/* Recycling */
 thread_local _Alignas(64) struct {
-	void* slots[QUICKLIST_MAX];
+	void* slots[JACL_RECYCLING];
 	int count;
-} __jacl_quicklist[4];
+} __jacl_recycling[4];
 
 /* Internal Functions */
-void __jacl_lock_acquire(__jacl_lock_t* l) {
+void __jacl_memlock_acquire(__jacl_memlock_t* l) {
 	uint32_t ticket = atomic_fetch_add_explicit(&l->next, 1, memory_order_relaxed);
 
 	while (atomic_load_explicit(&l->owner, memory_order_acquire) != ticket) {
@@ -118,29 +145,60 @@ void __jacl_lock_acquire(__jacl_lock_t* l) {
 	}
 }
 
-void __jacl_lock_release(__jacl_lock_t* l) {
+void __jacl_memlock_release(__jacl_memlock_t* l) {
 	atomic_fetch_add_explicit(&l->owner, 1, memory_order_release);
 }
 
-#define __jacl_bin_safety(seg, off, where) do { \
-	if ((off) >= (seg)->size || (off) + sizeof(__jacl_hdr_t) > (seg)->size) { \
+void __jacl_memlock_blank(__jacl_memlock_t* l) {
+	l->next = 0;
+	l->owner = 0;
+}
+
+void __jacl_memlock_block(void) {
+	for (int i = JACL_CONCURENCY; i--;) __jacl_memlock_acquire(&__jacl_locks[i]);
+
+	__jacl_memlock_acquire(&__jacl_growth);
+}
+
+void __jacl_memlock_clear(void) {
+	for (int i = JACL_CONCURENCY; i--;) __jacl_memlock_release(&__jacl_locks[i]);
+
+	__jacl_memlock_release(&__jacl_growth);
+}
+
+void __jacl_memlock_reset(void) {
+	__jacl_tls_off = JACL_HEAP_INIT / 4;
+	__jacl_tls_end = JACL_HEAP_INIT / 4;  // Force refill or skip TLS
+	__jacl_memseg_head = &__jacl_memseg_init;
+	__jacl_once = 1;
+
+	__jacl_memlock_clear();
+}
+
+#define __jacl_membin_safety(seg, off, where) do { \
+	if ((off) >= (seg)->size || (off) + sizeof(__jacl_memhdr_t) > (seg)->size) { \
 		return 0; \
 	} \
 } while (0)
 
-static inline int __jacl_bin_idx(size_t sz) {
-	if (sz <= 128) return (sz + 7) >> 3;
+static inline int __jacl_membin_get(size_t sz) {
+	int i;
 
-	int i = 16;
-	size_t q = sz >> 7;
+	if (sz <= 128) i = (sz + 7) >> 3;
+	else {
+		i = 16;
 
-	while (q > 1 && i < 31) { q >>= 1; i++; }
+		size_t q = sz >> 7;
 
-	return i;
+		while (q > 1 && i < 31) { q >>= 1; i++; }
+	}
+
+	/* Clamp to JACL_CONCURENCY - 1 */
+	return (i >= JACL_CONCURENCY) ? JACL_CONCURENCY - 1 : i;
 }
 
-static inline size_t __jacl_bin_pop(__jacl_segment_t* seg, size_t need) {
-	int i = __jacl_bin_idx(need);
+static inline size_t __jacl_membin_pop(__jacl_memseg_t* seg, size_t need) {
+	int i = __jacl_membin_get(need);
 	uint32_t mask = (~0u) << i;
 	uint32_t m = seg->bitmap & mask;
 
@@ -150,66 +208,117 @@ static inline size_t __jacl_bin_pop(__jacl_segment_t* seg, size_t need) {
 
 	size_t off = seg->bins[i];
 
-	if (!off) { seg->bitmap &= ~(1u << i); return 0; }
+	if (!off) {
+		atomic_fetch_and_explicit((_Atomic uint_least32_t*)&seg->bitmap, ~(1u << i), memory_order_relaxed);
 
-	__jacl_bin_safety(seg, off, "pop");
+		return 0;
+	}
 
-	uint8_t *ptr = seg->base + off + sizeof(__jacl_hdr_t);
+	__jacl_membin_safety(seg, off, "pop");
 
-	if (ptr < seg->base + sizeof(__jacl_hdr_t) ||
-		ptr > seg->base + seg->size - sizeof(size_t)) {
+	uint8_t *ptr = seg->base + off + sizeof(__jacl_memhdr_t);
+
+	if (ptr < seg->base + sizeof(__jacl_memhdr_t) || ptr > seg->base + seg->size - sizeof(size_t)) {
 			seg->bins[i] = 0;
-			seg->bitmap &= ~(1u << i);
+
+			atomic_fetch_and_explicit((_Atomic uint_least32_t*)&seg->bitmap, ~(1u << i), memory_order_relaxed);
 
 			return 0;
 		}
 
 	seg->bins[i] = *(size_t*)ptr;
 
-	if (!seg->bins[i]) seg->bitmap &= ~(1u << i);
+	if (!seg->bins[i]) {
+		atomic_fetch_and_explicit((_Atomic uint_least32_t*)&seg->bitmap, ~(1u << i), memory_order_relaxed);
+	}
 
 	return off;
 }
 
-static inline void __jacl_bin_push(__jacl_segment_t* seg, size_t off) {
-	int i = __jacl_bin_idx(((__jacl_hdr_t*)(seg->base + off))->size);
-	__jacl_bin_safety(seg, off, "push");
+static inline void __jacl_membin_push(__jacl_memseg_t* seg, size_t off) {
+	int i = __jacl_membin_get(((__jacl_memhdr_t*)(seg->base + off))->size);
+	__jacl_membin_safety(seg, off, "push");
 
-	*(size_t*)(seg->base + off + sizeof(__jacl_hdr_t)) = seg->bins[i];
+	*(size_t*)(seg->base + off + sizeof(__jacl_memhdr_t)) = seg->bins[i];
 	seg->bins[i] = off;
-	seg->bitmap |= 1u << i;
+
+	atomic_fetch_or_explicit((_Atomic uint_least32_t*)&seg->bitmap, 1u << i, memory_order_relaxed);
 }
 
-static inline void __jacl_bin_remove(__jacl_segment_t* seg, size_t off) {
-	int i = __jacl_bin_idx(((__jacl_hdr_t*)(seg->base + off))->size);
+static inline void __jacl_membin_remove(__jacl_memseg_t* seg, size_t off) {
+	int i = __jacl_membin_get(((__jacl_memhdr_t*)(seg->base + off))->size);
 	size_t cur = seg->bins[i];
 
-	__jacl_bin_safety(seg, off, "remove");
+	__jacl_membin_safety(seg, off, "remove");
 
 	if (cur == off) {
-		seg->bins[i] = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
+		seg->bins[i] = *(size_t*)(seg->base + off + sizeof(__jacl_memhdr_t));
 	} else {
 		while (cur) {
-			size_t next = *(size_t*)(seg->base + cur + sizeof(__jacl_hdr_t));
+			size_t next = *(size_t*)(seg->base + cur + sizeof(__jacl_memhdr_t));
 
 			if (next) __builtin_prefetch(seg->base + next, 0, 1);
 
 			if (next == off) {
-				*(size_t*)(seg->base + cur + sizeof(__jacl_hdr_t)) = *(size_t*)(seg->base + off + sizeof(__jacl_hdr_t));
+				*(size_t*)(seg->base + cur + sizeof(__jacl_memhdr_t)) = *(size_t*)(seg->base + off + sizeof(__jacl_memhdr_t));
 				break;
 			}
 			cur = next;
 		}
 	}
 
-	if (!seg->bins[i])
-		seg->bitmap &= ~(1u << i);
+	if (!seg->bins[i]) {
+		atomic_fetch_and_explicit((_Atomic uint_least32_t*)&seg->bitmap, ~(1u << i), memory_order_relaxed);
+	}
 }
 
-static inline __jacl_segment_t* __jacl_find_segment(void* ptr) {
+static inline void __jacl_membin_init(void) {
+	static int canary = 0;
+	canary++;
+
+	if (atomic_load_explicit(&__jacl_once, memory_order_acquire)) return;
+
+	for (int i = JACL_CONCURENCY; i--;) __jacl_memlock_blank(&__jacl_locks[i]);
+
+	uint32_t expect = 0;
+
+	if (!atomic_compare_exchange_strong(&__jacl_once, &expect, 1)) return;
+
+	/* Init Recycling */
+	for (int i = 0; i < 4; i++) {
+		__jacl_recycling[i].count = 0;
+
+		for (int j = 0; j < JACL_RECYCLING; j++) __jacl_recycling[i].slots[j] = NULL;
+	}
+
+	__jacl_memseg_init.base = __jacl_static_heap;
+	__jacl_memseg_init.size = JACL_HEAP_INIT;
+	__jacl_memseg_init.next = NULL;
+
+	memset(__jacl_memseg_init.bins, 0, sizeof(__jacl_memseg_init.bins));
+
+	__jacl_memseg_init.bitmap = 0;
+	__jacl_memseg_head = &__jacl_memseg_init;
+
+	atomic_store_explicit(&__jacl_tls_cursor, 0, memory_order_relaxed);
+
+	size_t base = JACL_ALIGN_UP(JACL_HEAP_INIT/4, JACL_ALIGNMENT);
+
+	if (base + sizeof(__jacl_memhdr_t) < JACL_HEAP_INIT) {
+		__jacl_memhdr_t* h = (__jacl_memhdr_t*)(__jacl_static_heap + base);
+
+		h->size = JACL_HEAP_INIT - base;
+		h->prev_size = 0;
+		h->flags = 0;
+
+		__jacl_membin_push(&__jacl_memseg_init, base);
+	}
+}
+
+static inline __jacl_memseg_t* __jacl_memseg_find(void* ptr) {
 	if (!ptr) return NULL;
 
-	__jacl_segment_t* seg = __jacl_segment_head;
+	__jacl_memseg_t* seg = __jacl_memseg_head;
 
 	while (seg) {
 		if (ptr >= (void*)seg->base && ptr < (void*)(seg->base + seg->size)) return seg;
@@ -218,40 +327,6 @@ static inline __jacl_segment_t* __jacl_find_segment(void* ptr) {
 	}
 
 	return NULL;
-}
-
-static inline void __jacl_init_once(void) {
-	static int canary = 0;
-	canary++;
-
-	if (atomic_load_explicit(&__jacl_once, memory_order_acquire)) return;
-
-	uint32_t expect = 0;
-
-	if (!atomic_compare_exchange_strong(&__jacl_once, &expect, 1)) return;
-
-	__jacl_initial_segment.base = __jacl_static_heap;
-	__jacl_initial_segment.size = JACL_HEAP_INIT;
-	__jacl_initial_segment.next = NULL;
-
-	memset(__jacl_initial_segment.bins, 0, sizeof(__jacl_initial_segment.bins));
-
-	__jacl_initial_segment.bitmap = 0;
-	__jacl_segment_head = &__jacl_initial_segment;
-
-	atomic_store_explicit(&__jacl_tls_cursor, 0, memory_order_relaxed);
-
-	size_t base = JACL_ALIGN_UP(JACL_HEAP_INIT/4, JACL_ALIGNMENT);
-
-	if (base + sizeof(__jacl_hdr_t) < JACL_HEAP_INIT) {
-		__jacl_hdr_t* h = (__jacl_hdr_t*)(__jacl_static_heap + base);
-
-		h->size = JACL_HEAP_INIT - base;
-		h->prev_size = 0;
-		h->flags = 0;
-
-		__jacl_bin_push(&__jacl_initial_segment, base);
-	}
 }
 
 static inline int __jacl_tls_refill(void) {
@@ -281,13 +356,13 @@ static inline int __jacl_can_grow(void) {
 	return (__jacl_heap_max != JACL_HEAP_INIT && __jacl_heap_current < __jacl_heap_max);
 }
 
-static inline __jacl_segment_t* __jacl_grow_heap(size_t min_needed) {
+static inline __jacl_memseg_t* __jacl_grow_heap(size_t min_needed) {
 	if (!__jacl_can_grow()) return NULL;
 
 	// Calculate segment size
-	size_t seg_size = (min_needed > JACL_HEAP_SEGMENT)
+	size_t seg_size = (min_needed > JACL_HEAP_SEG)
 		? JACL_ALIGN_UP(min_needed, 4096)
-		: JACL_HEAP_SEGMENT;
+		: JACL_HEAP_SEG;
 
 	// Check against max
 	if (__jacl_heap_current + seg_size > __jacl_heap_max) {
@@ -319,118 +394,127 @@ static inline __jacl_segment_t* __jacl_grow_heap(size_t min_needed) {
 	return NULL;
 #endif
 
-	__jacl_segment_t* seg = (__jacl_segment_t*)mem;
-	seg->base = (uint8_t*)mem + sizeof(__jacl_segment_t);
-	seg->size = seg_size - sizeof(__jacl_segment_t);
+	__jacl_memseg_t* seg = (__jacl_memseg_t*)mem;
+	seg->base = (uint8_t*)mem + sizeof(__jacl_memseg_t);
+	seg->size = seg_size - sizeof(__jacl_memseg_t);
 	seg->next = NULL;
 	memset(seg->bins, 0, sizeof(seg->bins));
 	seg->bitmap = 0;
 
 	// Place initial free block at a non-zero offset to avoid sentinel confusion
-	size_t initial_off = sizeof(__jacl_hdr_t);
+	size_t initial_off = sizeof(__jacl_memhdr_t);
 
-	__jacl_hdr_t* h = (__jacl_hdr_t*)(seg->base + initial_off);
+	__jacl_memhdr_t* h = (__jacl_memhdr_t*)(seg->base + initial_off);
 	h->size = seg->size - initial_off;
 	h->prev_size = 0;
 	h->flags = 0;
 
-	__jacl_bin_push(seg, initial_off);
+	__jacl_membin_push(seg, initial_off);
 
-	__jacl_segment_t* tail = __jacl_segment_head;
+	__jacl_memseg_t* tail = __jacl_memseg_head;
+
+	__jacl_memlock_acquire(&__jacl_growth);
 
 	while (tail->next) tail = tail->next;
 
 	tail->next = seg;
+
+	__jacl_memlock_release(&__jacl_growth);
 
 	__jacl_heap_current += seg_size;
 
 	return seg;
 }
 
-void __jacl_fork_reset(void) {
-	__jacl_tls_off = 0;
-	__jacl_tls_end = 0;
-	__jacl_segment_head = &__jacl_initial_segment;
-	__jacl_once = 1;  // Force malloc re-init
-
-	memset(__jacl_static_heap, 0, JACL_HEAP_INIT);  // Wipe parent allocations
-}
-
 /* Public API */
 void* malloc(size_t n) {
 	if (n == 0) n = 1;
-	if (n > SIZE_MAX - sizeof(__jacl_hdr_t)) {
+	if (n > SIZE_MAX - sizeof(__jacl_memhdr_t)) {
 		errno = ENOMEM;
 
 		return NULL;
 	}
 
-	__jacl_init_once();
+	__jacl_membin_init();
 
-	size_t need = __jacl_round_size(n + sizeof(__jacl_hdr_t));
+	size_t need = __jacl_round_size(n + sizeof(__jacl_memhdr_t));
+	int tls_ok = 0;
 
-	/* Quicklist */
-	if (n <= 40 && n >= 16) {
-		int qidx = (n >> 3) - 2;
+	/* Recycling */
+	if (n <= 48 && n >= 16) {
+		int rbin = (n >> 3) - 2;
 
-		if (qidx >= 0 && qidx < 4 && __jacl_quicklist[qidx].count > 0) {
-			void* p = __jacl_quicklist[qidx].slots[--__jacl_quicklist[qidx].count];
+		if (rbin >= 0 && rbin < 4 && __jacl_recycling[rbin].count > 0) {
+			void* p = __jacl_recycling[rbin].slots[--__jacl_recycling[rbin].count];
 
-			__jacl_hdr_t* h = (__jacl_hdr_t*)p - 1;
+			__jacl_memhdr_t* h = (__jacl_memhdr_t*)p - 1;
 			h->flags = JACL_HDR_ALLOC;
 
 			return p;
 		}
 	}
 
-	/* TLS arena */
+	/* TLS Test */
 	if (JACL_LIKELY(n <= JACL_SMALL_MAX)) {
-		if (JACL_UNLIKELY(__jacl_tls_off == 0 || __jacl_tls_off + need > __jacl_tls_end) && JACL_UNLIKELY(!__jacl_tls_refill())) goto large_path;
+		if (__jacl_tls_off + need <= __jacl_tls_end || __jacl_tls_refill()) tls_ok = 1;
+		if (__jacl_tls_off + need > (JACL_HEAP_INIT / 4)) tls_ok = 0;
+	}
 
-		__jacl_hdr_t* h = (__jacl_hdr_t*)(__jacl_static_heap + __jacl_tls_off);
+	/* TLS Arena */
+	if (tls_ok) {
+		__jacl_memhdr_t* h = (__jacl_memhdr_t*)(__jacl_static_heap + __jacl_tls_off);
 
 		h->size = need;
-		h->prev_size = 0;//(__jacl_tls_off > 0) ? ((__jacl_hdr_t*)(__jacl_static_heap + __jacl_tls_off - h->size))->size : 0;
+		h->prev_size = 0;
 		h->flags = JACL_HDR_ALLOC | JACL_HDR_ARENA;
-
 		__jacl_tls_off += need;
 
 		return (void*)(h + 1);
 	}
 
-large_path:
+	/* Bin Shards */
 	assert(__jacl_tls_off <= JACL_HEAP_INIT / 4);
 	assert(__jacl_tls_end <= JACL_HEAP_INIT / 4);
 	assert(__jacl_tls_off <= __jacl_tls_end);
-	__jacl_lock_acquire(&__jacl_lock);
-	__jacl_segment_t* seg = __jacl_segment_head;
+
+	int bin = __jacl_membin_get(need);
+	__jacl_memseg_t* seg = __jacl_memseg_head;
+
+	__jacl_memlock_acquire(&__jacl_locks[bin]);
 
 	while (seg) {
-		size_t off = __jacl_bin_pop(seg, need);
+		size_t off = __jacl_membin_pop(seg, need);
 
 		if (off) {
-			__jacl_hdr_t* h = (__jacl_hdr_t*)(seg->base + off);
+			__jacl_memhdr_t* h = (__jacl_memhdr_t*)(seg->base + off);
 
-			if (h->size >= need + sizeof(__jacl_hdr_t) + 8) {
+			if (h->size < need) {
+				__jacl_membin_push(seg, off);
+
+				seg = seg->next;
+
+				continue;
+			}
+
+			if (h->size >= need + sizeof(__jacl_memhdr_t) + 8) {
 				size_t rem_off = off + need;
 
-				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
+				__jacl_memhdr_t* rem = (__jacl_memhdr_t*)(seg->base + rem_off);
 				rem->size = h->size - need;
 				rem->prev_size = need;
 				rem->flags = 0;
-
-				__jacl_bin_push(seg, rem_off);
-
 				h->size = need;
+
+				__jacl_membin_push(seg, rem_off);
 			}
 
 			size_t next_off = off + h->size;
 
-			if (next_off < seg->size) ((__jacl_hdr_t*)(seg->base + next_off))->prev_size = h->size;
+			if (next_off < seg->size) ((__jacl_memhdr_t*)(seg->base + next_off))->prev_size = h->size;
 
 			h->flags = JACL_HDR_ALLOC;
 
-			__jacl_lock_release(&__jacl_lock);
+			__jacl_memlock_release(&__jacl_locks[bin]);
 
 			return (void*)(h + 1);
 		}
@@ -441,33 +525,42 @@ large_path:
 	seg = __jacl_grow_heap(need);
 
 	if (seg) {
-		size_t off = __jacl_bin_pop(seg, need);
+		size_t off = __jacl_membin_pop(seg, need);
 
 		if (off) {
-			__jacl_hdr_t* h = (__jacl_hdr_t*)(seg->base + off);
+			__jacl_memhdr_t* h = (__jacl_memhdr_t*)(seg->base + off);
 
-			if (h->size >= need + sizeof(__jacl_hdr_t) + 8) {
+			if (h->size < need) {
+				__jacl_membin_push(seg, off);
+				__jacl_memlock_release(&__jacl_locks[bin]);
+
+				errno = ENOMEM;
+
+				return NULL;
+			}
+
+			if (h->size >= need + sizeof(__jacl_memhdr_t) + 8) {
 				size_t rem_off = off + need;
 
-				__jacl_hdr_t* rem = (__jacl_hdr_t*)(seg->base + rem_off);
+				__jacl_memhdr_t* rem = (__jacl_memhdr_t*)(seg->base + rem_off);
 				rem->size = h->size - need;
 				rem->prev_size = need;
 				rem->flags = 0;
 
-				__jacl_bin_push(seg, rem_off);
+				__jacl_membin_push(seg, rem_off);
 
 				h->size = need;
 			}
 
 			h->flags = JACL_HDR_ALLOC;
 
-			__jacl_lock_release(&__jacl_lock);
+			__jacl_memlock_release(&__jacl_locks[bin]);
 
 			return (void*)(h + 1);
 		}
 	}
 
-	__jacl_lock_release(&__jacl_lock);
+	__jacl_memlock_release(&__jacl_locks[bin]);
 
 	errno = ENOMEM;
 
@@ -477,7 +570,7 @@ large_path:
 void free(void* p) {
 	if (JACL_UNLIKELY(!p)) return;
 
-	__jacl_hdr_t* h = (__jacl_hdr_t*)p - 1;
+	__jacl_memhdr_t* h = (__jacl_memhdr_t*)p - 1;
 
 	// Early Arena Check
 	if (h->flags & JACL_HDR_ARENA) {
@@ -488,38 +581,39 @@ void free(void* p) {
 		return;
 	}
 
-	// Find which segment this belongs to
-	__jacl_segment_t* seg = __jacl_find_segment((void*)h);
+	// Find Segment
+	__jacl_memseg_t* seg = __jacl_memseg_find((void*)h);
 
-	// If not found, might be aligned allocation
+	// Aligned Allocation
 	if (!seg) {
-		// Try to recover original pointer stored before the aligned pointer
+		// Find Stored Pointer
 		void** stored_ptr = (void**)((uint8_t*)p - sizeof(void*));
 		void* original = *stored_ptr;
 
-		// Validate original pointer looks reasonable
-		if (!original || ((uintptr_t)original & (JACL_ALIGNMENT - 1))) return;  // Invalid
+		// Validate Original Pointer
+		if (!original || ((uintptr_t)original & (JACL_ALIGNMENT - 1))) return;
 
-		h = (__jacl_hdr_t*)original - 1;
-		seg = __jacl_find_segment((void*)h);
+		h = (__jacl_memhdr_t*)original - 1;
+		seg = __jacl_memseg_find((void*)h);
 
-		if (!seg) return;  // Still invalid
+		if (!seg) return;
 
-		p = (void*)(h + 1);  // Use original pointer for the rest of free
+		// Use Original Pointer for the Rest
+		p = (void*)(h + 1);
 	}
 
 	if (JACL_UNLIKELY(!(h->flags & JACL_HDR_ALLOC))) return;
 
-	size_t size = h->size - sizeof(__jacl_hdr_t);
+	size_t size = h->size - sizeof(__jacl_memhdr_t);
 
-	/* Quicklist */
-	if (size <= 40 && size >= 16 && !(h->flags & JACL_HDR_ARENA)) {
-		int qidx = (size >> 3) - 2;
+	/* Recycling */
+	if (size <= 48 && size >= 16 && !(h->flags & JACL_HDR_ARENA)) {
+		int rbin = (size >> 3) - 2;
 
-		if (qidx >= 0 && qidx < 4 && __jacl_quicklist[qidx].count < QUICKLIST_MAX) {
+		if (rbin >= 0 && rbin < 4 && __jacl_recycling[rbin].count < JACL_RECYCLING) {
 			h->flags = 0;
 
-			__jacl_quicklist[qidx].slots[__jacl_quicklist[qidx].count++] = p;
+			__jacl_recycling[rbin].slots[__jacl_recycling[rbin].count++] = p;
 
 			return;
 		}
@@ -528,54 +622,55 @@ void free(void* p) {
 	h->flags = 0;
 
 	size_t off = (size_t)((uint8_t*)h - seg->base);
+	int bin = __jacl_membin_get(h->size);
 
 	/* Coalescing */
-	if (h->size >= 1024) {
-		__jacl_lock_acquire(&__jacl_lock);
+	if (h->size >= JACL_COALESCING) {
+		__jacl_memlock_acquire(&__jacl_locks[bin]);
 
-		/* Coalesce next */
+		/* Coalesce Next */
 		size_t next_off = off + h->size;
 
 		if (next_off < seg->size) {
-			__jacl_hdr_t* next = (__jacl_hdr_t*)(seg->base + next_off);
+			__jacl_memhdr_t* next = (__jacl_memhdr_t*)(seg->base + next_off);
 
 			if (!(next->flags & JACL_HDR_ALLOC)) {
-				__jacl_bin_remove(seg, next_off);
+				__jacl_membin_remove(seg, next_off);
 
 				h->size += next->size;
 
 				uint32_t after_off = off + h->size;
 
-				if (after_off < seg->size) ((__jacl_hdr_t*)(seg->base + after_off))->prev_size = h->size;
+				if (after_off < seg->size) ((__jacl_memhdr_t*)(seg->base + after_off))->prev_size = h->size;
 			}
 		}
 
-		/* Coalesce prev */
+		/* Coalesce Prev */
 		if (off > 0 && h->prev_size > 0 && h->prev_size <= off) {
 			size_t prev_off = off - h->prev_size;
 
-			__jacl_hdr_t* prev = (__jacl_hdr_t*)(seg->base + prev_off);
+			__jacl_memhdr_t* prev = (__jacl_memhdr_t*)(seg->base + prev_off);
 
 			/* Validate prev is within segment bounds */
-			if ((uint8_t*)prev >= seg->base && (uint8_t*)prev + sizeof(__jacl_hdr_t) <= seg->base + seg->size && !(prev->flags & JACL_HDR_ALLOC)) {
-				__jacl_bin_remove(seg, prev_off);
+			if ((uint8_t*)prev >= seg->base && (uint8_t*)prev + sizeof(__jacl_memhdr_t) <= seg->base + seg->size && !(prev->flags & JACL_HDR_ALLOC)) {
+				__jacl_membin_remove(seg, prev_off);
 
 				prev->size += h->size;
 
 				size_t after_off = prev_off + prev->size;
 
-				if (after_off < seg->size) ((__jacl_hdr_t*)(seg->base + after_off))->prev_size = prev->size;
+				if (after_off < seg->size) ((__jacl_memhdr_t*)(seg->base + after_off))->prev_size = prev->size;
 
 				off = prev_off;
 			}
 		}
 
-		__jacl_bin_push(seg, off);
-		__jacl_lock_release(&__jacl_lock);
+		__jacl_membin_push(seg, off);
+		__jacl_memlock_release(&__jacl_locks[bin]);
 	} else {
-		__jacl_lock_acquire(&__jacl_lock);
-		__jacl_bin_push(seg, off);
-		__jacl_lock_release(&__jacl_lock);
+		__jacl_memlock_acquire(&__jacl_locks[bin]);
+		__jacl_membin_push(seg, off);
+		__jacl_memlock_release(&__jacl_locks[bin]);
 	}
 }
 
@@ -602,8 +697,8 @@ void* realloc(void* ptr, size_t size) {
 		return NULL;
 	}
 
-	__jacl_hdr_t* h = (__jacl_hdr_t*)ptr - 1;
-	size_t old_size = h->size - sizeof(__jacl_hdr_t);
+	__jacl_memhdr_t* h = (__jacl_memhdr_t*)ptr - 1;
+	size_t old_size = h->size - sizeof(__jacl_memhdr_t);
 
 	if (size <= old_size) return ptr;
 
@@ -611,9 +706,7 @@ void* realloc(void* ptr, size_t size) {
 
 	if (!new_ptr) return NULL;
 
-	size_t copy_size = old_size < size ? old_size : size;
-
-	memcpy(new_ptr, ptr, copy_size);
+	memcpy(new_ptr, ptr, old_size);
 
 	if (!(h->flags & JACL_HDR_ARENA)) free(ptr);
 
@@ -636,10 +729,8 @@ void* aligned_alloc(size_t alignment, size_t size) {
 	union { void* ptr; uintptr_t addr; } raw_conv, aligned_conv;
 
 	raw_conv.ptr = raw;
-
 	aligned_conv.addr = JACL_ALIGN_UP(raw_conv.addr + sizeof(void*), alignment);
 	*(void**)((uint8_t*)aligned_conv.ptr - sizeof(void*)) = raw;
-
 
 	return aligned_conv.ptr;
 }
@@ -700,6 +791,7 @@ int at_quick_exit(void (*func)(void)) {
 			__jacl_quick_exit_handlers[i].func = func;
 			__jacl_quick_exit_handlers[i].used = 1;
 			__jacl_quick_exit_count++;
+
 			return 0;
 		}
 	}
@@ -735,7 +827,6 @@ void exit(int status) {
 		abort();
 	#endif
 }
-
 
 /* ============================================================= */
 /* Sorting & Searching                                           */
@@ -875,7 +966,6 @@ void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int 
 	} \
 	if (endptr) *endptr = (char*)str; \
 }
-
 
 __jacl_ato_int(i, int, 0, 0)
 __jacl_ato_int(l, long, l, 0)
