@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef INTTYPES_H
-#define INTTYPES_H
+#ifndef _INTTYPES_H
+#define _INTTYPES_H
 #pragma once
 
 #include <config.h>
@@ -213,4 +213,4 @@ static inline uintmax_t strtoumax(const char *nptr, char **endptr, int base) {
 }
 #endif
 
-#endif /* INTTYPES_H */
+#endif /* _INTTYPES_H */

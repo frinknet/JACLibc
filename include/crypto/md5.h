@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_MD5_H
-#define CRYPTO_MD5_H
+#ifndef _CRYPTO_MD5_H
+#define _CRYPTO_MD5_H
 #pragma once
 
 /**
@@ -135,11 +135,11 @@ static inline void md5_final(md5_ctx *ctx, uint8_t out[MD5_DIGEST_SIZE]) {
 		i = 0;
 	}
 	while (i < 56) ctx->buf[i++] = 0;
-	
+
 	ctx->bitlen += ctx->len * 8;
 	__jacl_store64_le(&ctx->buf[56], ctx->bitlen);
 	md5_transform(ctx);
-	
+
 	for (i = 0; i < 4; i++)
 		__jacl_store32_le(&out[i * 4], ctx->state[i]);
 }
@@ -163,18 +163,18 @@ static inline void md5_hmac(const uint8_t *key, size_t klen,
 {
 	uint8_t k[MD5_BLOCK_SIZE], ipad[MD5_BLOCK_SIZE], opad[MD5_BLOCK_SIZE];
 	memset(k, 0, MD5_BLOCK_SIZE);
-	
+
 	if (klen > MD5_BLOCK_SIZE) {
 		md5(key, klen, k);
 	} else {
 		memcpy(k, key, klen);
 	}
-	
+
 	for (int i = 0; i < MD5_BLOCK_SIZE; i++) {
 		ipad[i] = k[i] ^ 0x36;
 		opad[i] = k[i] ^ 0x5c;
 	}
-	
+
 	md5_ctx ctx;
 	md5_init(&ctx);
 	md5_update(&ctx, ipad, MD5_BLOCK_SIZE);
@@ -194,5 +194,5 @@ static inline void md5_hmac(const uint8_t *key, size_t klen,
 #ifdef __cplusplus
 }
 #endif
-#endif /* CRYPTO_MD5_H */
 
+#endif /* _CRYPTO_MD5_H */

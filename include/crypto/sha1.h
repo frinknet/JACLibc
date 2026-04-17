@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_SHA2_H
-#define CRYPTO_SHA2_H
+#ifndef _CRYPTO_SHA2_H
+#define _CRYPTO_SHA2_H
 #pragma once
 
 /**
@@ -581,4 +581,4 @@ static inline int sha512_hkdf_expand(const uint8_t prk[SHA512_DIGEST_SIZE],
 }
 #endif
 
-#endif /* CRYPTO_SHA2_H */
+#endif /* _CRYPTO_SHA2_H */

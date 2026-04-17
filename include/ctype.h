@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CTYPE_H
-#define CTYPE_H
+#ifndef _CTYPE_H
+#define _CTYPE_H
 #pragma once
 
 #include <stddef.h>
@@ -54,4 +54,4 @@ static inline int toupper(int c) { return (c >= 'a' && c <= 'z') ? c - 32 : c; }
 }
 #endif
 
-#endif /* CTYPE_H */
+#endif /* _CTYPE_H */

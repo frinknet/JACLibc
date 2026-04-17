@@ -1,6 +1,6 @@
 	/* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef SYS_STAT_H
-#define SYS_STAT_H
+#ifndef _SYS_STAT_H
+#define _SYS_STAT_H
 #pragma once
 
 #include <config.h>
@@ -603,4 +603,4 @@ static inline int futimens(int fd, const struct timespec times[2]) {
 }
 #endif
 
-#endif // SYS_STAT_H
+#endif /* _SYS_STAT_H */

@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef POLL_H
-#define POLL_H
+#ifndef _POLL_H
+#define _POLL_H
 #pragma once
 
 #ifdef __cplusplus
@@ -509,4 +509,4 @@ static inline const char *poll_events_to_string(short events) {
 }
 #endif
 
-#endif // POLL_H
+#endif /* _POLL_H  */

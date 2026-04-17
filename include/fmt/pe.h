@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef FMT_PE_H
-#define FMT_PE_H
+#ifndef _FMT_PE_H
+#define _FMT_PE_H
 
 #include <stdint.h>
 #include <x/format_pe.h>
@@ -189,5 +189,4 @@ extern init_func_t __stop_.CRT$XCU[] __attribute__((weak));
 }
 #endif
 
-#endif /* FMT_PE_H */
-
+#endif /* _FMT_PE_H */

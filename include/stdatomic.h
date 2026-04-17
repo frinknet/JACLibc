@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STDATOMIC_H
-#define STDATOMIC_H
+#ifndef _STDATOMIC_H
+#define _STDATOMIC_H
 #pragma once
 
 #include <config.h>
@@ -323,4 +323,4 @@ static inline void atomic_flag_clear_explicit(atomic_flag *f, memory_order mo) {
 }
 #endif
 
-#endif /* STDATOMIC_H */
+#endif /* _STDATOMIC_H */

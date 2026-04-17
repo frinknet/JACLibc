@@ -1,6 +1,6 @@
 // (c) 2025 FRINKnet & Friends – MIT licence
-#ifndef SYS_SYSCALL_H
-#define SYS_SYSCALL_H
+#ifndef _SYS_SYSCALL_H
+#define _SYS_SYSCALL_H
 #pragma once
 
 #include <config.h>
@@ -53,4 +53,4 @@ static inline long syscall(long num, ...) {
 }
 #endif
 
-#endif // SYS_SYSCALL_H
+#endif /* _SYS_SYSCALL_H */

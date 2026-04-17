@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CORE_START_H
-#define CORE_START_H
+#ifndef _CORE_START_H
+#define _CORE_START_H
 #pragma once
 
 #include <config.h>
@@ -55,4 +55,4 @@ void _start_main(long *p) {
 }
 #endif
 
-#endif /* CORE_START_H */
+#endif /* _CORE_START_H */

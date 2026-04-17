@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef SYS_MMAN_H
-#define SYS_MMAN_H
+#ifndef _SYS_MMAN_H
+#define _SYS_MMAN_H
 #pragma once
 
 #include <config.h>
@@ -300,4 +300,4 @@ static inline int mincore(void *addr, size_t length, unsigned char *vec) {
 #ifdef __cplusplus
 }
 #endif
-#endif // SYS_MMAN_H
+#endif /* _SYS_MMAN_H */

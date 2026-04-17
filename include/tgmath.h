@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef TGMATH_H
-#define TGMATH_H
+#ifndef _TGMATH_H
+#define _TGMATH_H
 #pragma once
 
 #include <config.h>
@@ -185,4 +185,5 @@
 #define fma(x, y, z) __tg_real3(fma, x, y, z)
 
 #endif // JACL_HAS_C11
-#endif // TGMATH_H
+
+#endif // _TGMATH_H

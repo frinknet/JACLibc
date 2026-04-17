@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef ERRNO_H
-#define ERRNO_H
+#ifndef _ERRNO_H
+#define _ERRNO_H
 #pragma once
 
 #include <config.h>
@@ -354,4 +354,4 @@ extern thread_local int __jacl_errno;
   #error "Platform not supported - errno values not defined"
 #endif
 
-#endif /* ERRNO_H */
+#endif /* _ERRNO_H */

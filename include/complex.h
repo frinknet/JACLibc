@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef COMPLEX_H
-#define COMPLEX_H
+#ifndef _COMPLEX_H
+#define _COMPLEX_H
 #pragma once
 
 #include <config.h>
@@ -125,4 +125,5 @@ __jacl_cmath(catanh)
 #endif
 
 #endif /* JACL_HAS_C99 */
-#endif /* COMPLEX_H */
+
+#endif /* _COMPLEX_H */

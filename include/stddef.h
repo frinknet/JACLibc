@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STDDEF_H
-#define STDDEF_H
+#ifndef _STDDEF_H
+#define _STDDEF_H
 #pragma once
 
 #include <config.h>
@@ -90,4 +90,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#endif /* STDDEF_H */
+#endif /* _STDDEF_H */

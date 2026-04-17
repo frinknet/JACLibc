@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef _CONFIG_H
+#define _CONFIG_H
 #pragma once
 
 #define JACL_VERSION 1.83
@@ -429,4 +429,4 @@ static inline void* __jacl_frame_address(int level) {
 // Syscall checks
 #include JACL_HEADER(x, config_has)
 
-#endif /* CONFIG_H */
+#endif /* _CONFIG_H */

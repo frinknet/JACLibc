@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CORE_STDIO_H
-#define CORE_STDIO_H
+#ifndef _CORE_STDIO_H
+#define _CORE_STDIO_H
 
 #include <stdio.h>
 #include <core/format.h>
@@ -157,4 +157,4 @@ int sscanf(const char * restrict s, const char * restrict fmt, ...) { va_list ap
 }
 #endif
 
-#endif /* CORE_STDIO_H */
+#endif /* _CORE_STDIO_H */

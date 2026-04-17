@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_ARGON2_H
-#define CRYPTO_ARGON2_H
+#ifndef _CRYPTO_ARGON2_H
+#define _CRYPTO_ARGON2_H
 #pragma once
 
 /**
@@ -356,4 +356,4 @@ static inline int argon2id_hash_simple(const uint8_t *password, size_t plen, con
 }
 #endif
 
-#endif /* CRYPTO_ARGON2_H */
+#endif /* _CRYPTO_ARGON2_H */

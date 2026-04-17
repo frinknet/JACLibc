@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef FLOAT_H
-#define FLOAT_H
+#ifndef _FLOAT_H
+#define _FLOAT_H
 #pragma once
 
 #include <config.h>
@@ -961,4 +961,4 @@ static inline __jacl_fdigits_t __jacl_fdigits(long double val, int prec, int sig
 }
 #endif
 
-#endif /* FLOAT_H */
+#endif /* _FLOAT_H */

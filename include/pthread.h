@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef PTHREAD_H
-#define PTHREAD_H
+#ifndef _PTHREAD_H
+#define _PTHREAD_H
 #pragma once
 
 #include <config.h>
@@ -1001,4 +1001,4 @@ static inline int pthread_condattr_destroy(pthread_condattr_t *attr) {
 }
 #endif
 
-#endif /* PTHREAD_H */
+#endif /* _PTHREAD_H */

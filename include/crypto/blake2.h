@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_BLAKE2_H
-#define CRYPTO_BLAKE2_H
+#ifndef _CRYPTO_BLAKE2_H
+#define _CRYPTO_BLAKE2_H
 #pragma once
 
 /**
@@ -424,4 +424,4 @@ static inline int blake2s(void *out, size_t outlen, const void *in, size_t inlen
 }
 #endif
 
-#endif /* CRYPTO_BLAKE2_H */
+#endif /* _CRYPTO_BLAKE2_H */

@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef SCHED_H
-#define SCHED_H
+#ifndef _SCHED_H
+#define _SCHED_H
 #pragma once
 
 #include <config.h>
@@ -367,4 +367,4 @@ static inline int sched_getaffinity(pid_t pid, size_t cpusetsize, void *mask) {
 }
 #endif
 
-#endif /* SCHED_H */
+#endif /* _SCHED_H */

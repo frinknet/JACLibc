@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_POLY1305_H
-#define CRYPTO_POLY1305_H
+#ifndef _CRYPTO_POLY1305_H
+#define _CRYPTO_POLY1305_H
 #pragma once
 
 /**
@@ -255,5 +255,5 @@ static inline void poly1305(const uint8_t key[POLY1305_KEY_SIZE],
 #ifdef __cplusplus
 }
 #endif
-#endif /* CRYPTO_POLY1305_H */
 
+#endif /* _CRYPTO_POLY1305_H */

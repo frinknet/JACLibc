@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef MATH_H
-#define MATH_H
+#ifndef _MATH_H
+#define _MATH_H
 #pragma once
 
 #include <config.h>
@@ -94,17 +94,17 @@ typedef double double_t;
 #endif
 
 // ======== CLASSIFICATION VIA MACROS =======
-#define isnan(x)              ((x) != (x))
-#define isinf(x)              (!isnan(x) && isnan((x)-(x)))
-#define isfinite(x)	          (!isnan(x) && !isinf(x))
-#define isunordered(x,y)      (isnan(x) || isnan(y))
+#define isnan(x)              (sizeof(x) == sizeof(float) ? __isnanf(x) : sizeof(x) == sizeof(double) ? __isnan(x) : __isnanl(x) )
+#define isinf(x)              (sizeof(x) == sizeof(float) ? __isinff(x) : sizeof(x) == sizeof(double) ? __isinf(x) : __isinfl(x) )
+#define isfinite(x)           (sizeof(x) == sizeof(float) ? __isfinitef(x) : sizeof(x) == sizeof(double) ? __isfinite(x) : __isfinitel(x) )
+#define iunordered(x)         (sizeof(x) == sizeof(float) ? __isunorderedf(x) : sizeof(x) == sizeof(double) ? __isunordered(x) : __isunorderedl(x) )
 #define isnormal(x)           (sizeof(x) == sizeof(float) ? __isnormalf(x) : sizeof(x) == sizeof(double) ? __isnormal(x) : __isnormall(x) )
-#define isgreater(x, y)	      (!isunordered(x, y) && (x) >  (y))
-#define isgreaterequal(x, y)  (!isunordered(x, y) && (x) >= (y))
-#define isless(x, y)          (!isunordered(x, y) && (x) <  (y))
-#define islessequal(x, y)     (!isunordered(x, y) && (x) <= (y))
-#define islessgreater(x, y)   (!isunordered(x, y) && ((x) < (y) || (x) > (y)))
-#define fpclassify(x)         ( isnan(x) ? FP_NAN : isinf(x) ? FP_INFINITE : (x) == 0.0 ? FP_ZERO : !isnormal(x) ? FP_SUBNORMAL : FP_NORMAL )
+#define isgreater(x)          (sizeof(x) == sizeof(float) ? __isgreaterf(x) : sizeof(x) == sizeof(double) ? __isgreater(x) : __isgreaterl(x) )
+#define isgreaterequal(x)     (sizeof(x) == sizeof(float) ? __isgreaterequalf(x) : sizeof(x) == sizeof(double) ? __isgreaterequal(x) : __isgreaterequall(x) )
+#define isless(x)             (sizeof(x) == sizeof(float) ? __islessf(x) : sizeof(x) == sizeof(double) ? __isless(x) : __islessl(x) )
+#define islessequal(x)        (sizeof(x) == sizeof(float) ? __islessequalf(x) : sizeof(x) == sizeof(double) ? __islessequal(x) : __islessequall(x) )
+#define islessgreater(x)      (sizeof(x) == sizeof(float) ? __islessgreaterf(x) : sizeof(x) == sizeof(double) ? __islessgreater(x) : __islessgreaterl(x) )
+#define fpclassify(x)         (sizeof(x) == sizeof(float) ? __fpclassifyf(x) : sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyl(x) )
 #define signbit(x)            ( sizeof(x) == sizeof(double) ? __signbit(x) : sizeof(x) == sizeof(float) ? __signbitf(x) : __signbitl(x) )
 #define nan(s)                __nan(s)
 
@@ -134,58 +134,70 @@ __jacl_##F(double,			, DBL)
 
 unsigned long strtoul(const char *str, char **endptr, int base);
 
-// Bit Manipulation: isnormal, nan, fabs, copysign, signbit
+// Float Checks: isnan, isinf, isfinite, isnormal, isunordered, isgreater, isless, islessequal, islessgreater, fpclassify
+#define __jacl_isnan(type,suf,PRE)            static inline int __isnan##suf(type x) { return x != x; }
+#define __jacl_isinf(type,suf,PRE)            static inline int __isinf##suf(type x) { return (!isnan(x) && isnan((x) - (x))); }
+#define __jacl_isfinite(type,suf,PRE)         static inline int __isfinite##suf(type x) { return (!isnan(x) && !isinf(x)); }
+#define __jacl_isnormal(type,suf,PRE)         static inline int __isnormal##suf(type x) { type ax = __jacl_signclr_##PRE(x); return ax >= PRE##_MIN && ax <= PRE##_MAX; }
+#define __jacl_isunordered(type,suf,PRE)      static inline int __isunordered##suf(type x, type y) { return (isnan(x) || isnan(y)); }
+#define __jacl_isgreater(type,suf,PRE)        static inline int __isgreater##suf(type x, type y) { return (!__isunordered##suf(x, y) && x > y); }
+#define __jacl_isgreaterequal(type,suf,PRE)   static inline int __isgreaterequal##suf(type x, type y) { return (!__isunordered##suf(x, y) && x >= y); }
+#define __jacl_isless(type,suf,PRE)           static inline int __isless##suf(type x, type y) { return (!__isunordered##suf(x, y) && x < y); }
+#define __jacl_islessequal(type,suf,PRE)      static inline int __islessequal##suf(type x, type y) { return (!__isunordered##suf(x, y) && x <= y); }
+#define __jacl_islessgreater(type,suf,PRE)    static inline int __islessgreater##suf(type x, type y) { return (!__isunordered##suf(x, y) && (x < y || x > y)); }
+#define __jacl_fpclassify(type,suf,PRE)       static inline int __fpclassify##suf(type x) { return ( isnan(x) ? FP_NAN : isinf(x) ? FP_INFINITE : (x) == 0.0 ? FP_ZERO : !isnormal(x) ? FP_SUBNORMAL : FP_NORMAL ); }
+
+// Bit Manipulation: fabs, copysign, signbit, nan
 #define __jacl_fabs(type,suf,PRE)             static inline type fabs##suf(type x){ return __jacl_signclr_##PRE(x); }
 #define __jacl_copysign(type,suf,PRE)         static inline type copysign##suf(type x, type y){ return __jacl_signcpy_##PRE(x, y); }
 #define __jacl_signbit(type,suf,PRE)          static inline int __signbit##suf(type x) { return __jacl_signget_##PRE(x); }
-#define __jacl_isnormal(type,suf,PRE)         static inline int __isnormal##suf(type x) { type ax = __jacl_signclr_##PRE(x); return ax >= PRE##_MIN && ax <= PRE##_MAX; }
 #define __jacl_nan(type,suf,PRE)              static inline type __nan##suf(const char *s){ \
-if (!s || !*s) return __jacl_payloadset_##PRE(0, 0); \
-char *p; \
-PRE##_UTYPE payload = (PRE##_UTYPE)strtoul(s, &p, 0); \
-if (p == s) return __jacl_payloadset_##PRE(0, 0); \
-return __jacl_payloadset_##PRE(payload, 0); \
+	if (!s || !*s) return __jacl_payloadset_##PRE(0, 0); \
+	char *p; \
+	PRE##_UTYPE payload = (PRE##_UTYPE)strtoul(s, &p, 0); \
+	if (p == s) return __jacl_payloadset_##PRE(0, 0); \
+	return __jacl_payloadset_##PRE(payload, 0); \
 }
 
-// Rounding: trunc, ceil, floor, round, rint, nearbyint, roundeven
+// Rounding: rmodes, trunc, ceil, floor, round, rint, nearbyint, roundeven
 #define __jacl_rmodes(type,suf,PRE)           static inline type __jacl_rmode##suf(type x, int mode, unsigned int width, int is_unsigned, int notify) { \
-if (!isfinite(x)) { if (width > 0) { errno = EDOM; return 0; } return x; } \
-if (width > 0 && (width > 64 || (is_unsigned && x < 0))) { errno = EDOM; return 0; } \
-type t, diff, r; \
-if (x == 0 || !(x == x)) { t = x; } \
-else { \
-	long long i = (long long)x; \
-	t = (type)i; \
-	if (t == (type)0) t = x * (type)0.0; \
-} \
-diff = x - t; \
-switch(mode) { \
-	case JACL_RND_HIGH: r = (t < x) ? t + (type)1 : t; break; \
-	case JACL_RND_DOWN: r = (t > x) ? t - (type)1 : t; break; \
-	case JACL_RND_ZERO: r = t; break; \
-	case JACL_RND_BANK: \
-		if (diff >= (type)0.5) r = t + (type)1; \
-		else if (diff <= (type)-0.5) r = t - (type)1; \
-		else r = t; break; \
-	case JACL_RND_EVEN: \
-		if (fabs##suf(diff) > (type)0.5) r = t + (diff > 0 ? 1 : -1); \
-		else if (fabs##suf(diff) == (type)0.5 && fmod##suf(t, (type)2) != 0) r = t + (diff > 0 ? 1 : -1); \
-		else r = t; break; \
-	default: \
-		if (width > 0) errno = EDOM; \
-		return x; \
-} \
-if (width > 0) { \
-	if (is_unsigned) { \
-		uintmax_t umax = (width == 64) ? UINTMAX_MAX : ((1ULL << width) - 1); \
-		if (r > (type)umax) { errno = EDOM; return 0; } \
-	} else { \
-		intmax_t smin = -(1LL << (width - 1)), smax = (1LL << (width - 1)) - 1; \
-		if (r < (type)smin || r > (type)smax) { errno = EDOM; return 0; } \
+	if (!isfinite(x)) { if (width > 0) { errno = EDOM; return 0; } return x; } \
+	if (width > 0 && (width > 64 || (is_unsigned && x < 0))) { errno = EDOM; return 0; } \
+	type t, diff, r; \
+	if (x == 0 || !(x == x)) { t = x; } \
+	else { \
+		long long i = (long long)x; \
+		t = (type)i; \
+		if (t == (type)0) t = x * (type)0.0; \
 	} \
-} \
-if (notify && r != x) feraiseexcept(FE_INEXACT); \
-return r; \
+	diff = x - t; \
+	switch(mode) { \
+		case JACL_RND_HIGH: r = (t < x) ? t + (type)1 : t; break; \
+		case JACL_RND_DOWN: r = (t > x) ? t - (type)1 : t; break; \
+		case JACL_RND_ZERO: r = t; break; \
+		case JACL_RND_BANK: \
+			if (diff >= (type)0.5) r = t + (type)1; \
+			else if (diff <= (type)-0.5) r = t - (type)1; \
+			else r = t; break; \
+		case JACL_RND_EVEN: \
+			if (fabs##suf(diff) > (type)0.5) r = t + (diff > 0 ? 1 : -1); \
+			else if (fabs##suf(diff) == (type)0.5 && fmod##suf(t, (type)2) != 0) r = t + (diff > 0 ? 1 : -1); \
+			else r = t; break; \
+		default: \
+			if (width > 0) errno = EDOM; \
+			return x; \
+	} \
+	if (width > 0) { \
+		if (is_unsigned) { \
+			uintmax_t umax = (width == 64) ? UINTMAX_MAX : ((1ULL << width) - 1); \
+			if (r > (type)umax) { errno = EDOM; return 0; } \
+		} else { \
+			intmax_t smin = -(1LL << (width - 1)), smax = (1LL << (width - 1)) - 1; \
+			if (r < (type)smin || r > (type)smax) { errno = EDOM; return 0; } \
+		} \
+	} \
+	if (notify && r != x) feraiseexcept(FE_INEXACT); \
+	return r; \
 }
 #define __jacl_trunc(type,suf,PRE)            static inline type trunc##suf(type x) { return __jacl_rmode##suf(x, JACL_RND_ZERO, 0, 0, 0); }
 #define __jacl_ceil(type,suf,PRE)             static inline type ceil##suf(type x) { return __jacl_rmode##suf(x, JACL_RND_HIGH, 0, 0, 0); }
@@ -209,17 +221,17 @@ return r; \
 
 // Relation: fdim, fmax, fmin, fma
 #define __jacl_fdim(type,suf,PRE)             static inline type fdim##suf(type x, type y){ \
-JACL_SAFETY(isnan(x) || isnan(y), (type)NAN); \
-return x > y ? x - y : (type)0; \
+	JACL_SAFETY(isnan(x) || isnan(y), (type)NAN); \
+	return x > y ? x - y : (type)0; \
 }
 #define __jacl_fmax(type,suf,PRE)             static inline type fmax##suf(type x, type y){ return (x < y || isnan(x)) ? y : x; }
 #define __jacl_fmin(type,suf,PRE)             static inline type fmin##suf(type x, type y){ return (x > y || isnan(x)) ? y : x; }
 #define __jacl_fma(type,suf,PRE)              static inline type fma##suf(type x, type y, type z){ \
-int ex, ey, ez; \
-frexp##suf(x, &ex); frexp##suf(y, &ey); frexp##suf(z, &ez); \
-if(ex > PRE##_MAX_EXP - 2 || ey > PRE##_MAX_EXP - 2) return ((x * (type)0.5) * y + (z * (type)0.5)) * (type)2.0; \
-if(ez > ex + ey) return ((x * (type)2.0) * y + (z * (type)2.0)) * (type)0.5; \
-return x * y + z; \
+	int ex, ey, ez; \
+	frexp##suf(x, &ex); frexp##suf(y, &ey); frexp##suf(z, &ez); \
+	if(ex > PRE##_MAX_EXP - 2 || ey > PRE##_MAX_EXP - 2) return ((x * (type)0.5) * y + (z * (type)0.5)) * (type)2.0; \
+	if(ez > ex + ey) return ((x * (type)2.0) * y + (z * (type)2.0)) * (type)0.5; \
+	return x * y + z; \
 }
 
 // Exponents: exp, exp2, expm1, log, log2, log10, log1p, pow
@@ -499,7 +511,6 @@ return x * y + z; \
 	return log##suf(fabs##suf(gamma_val)); \
 }
 
-
 #define signgam (*__signgam_ptr())
 static inline int* __signgam_ptr(void) { static thread_local int signgam_val = 1;  return &signgam_val; }
 
@@ -513,7 +524,7 @@ static inline int* __signgam_ptr(void) { static thread_local int signgam_val = 1
 #define __jacl_remainder(type,suf,PRE)         static inline type remainder##suf(type x,type y){ type n = round##suf(x / y); return x - y * n; }
 #define __jacl_remquo(type,suf,PRE)            static inline type remquo##suf(type x, type y, int* q){		type qq=round##suf(x / y); *q=(int)qq; return x- y * qq; }
 
-/* FP Manipulation: nextafter, nexttoward */
+// FP Manipulation: nextafter, nexttoward
 #define __jacl_nextafter(type,suf,PRE)         static inline type nextafter##suf(type x,type y){ if (x == y) return x; return __jacl_valnext_##PRE(x, (x < y) ? 1 : -1); }
 #define __jacl_nexttoward(type, suf, PRE)      static inline type nexttoward##suf(type x, long double y) { if ((long double)x == y) return (type)y; return __jacl_valnext_##PRE(x, ((long double)x < y) ? 1 : -1); }
 
@@ -584,7 +595,7 @@ static inline int* __signgam_ptr(void) { static thread_local int signgam_val = 1
 #define JACL_OP_mul *
 #define JACL_OP_div /
 
-// Narrow Arithmatic: faddf, fsubf, fmulf, faddfl, fsubf;, fmulfl, fdivfl, daddl, dsubl, dmull, ddivl
+// Narrow Arithmatic: faddf, fsubf, fmulf, faddfl, fsubf, fmulfl, fdivfl, daddl, dsubl, dmull, ddivl
 #define __jacl_narrow_fn(name, fn) \
 	__jacl_narrow_##fn(name, float, f, f, FLT, double) \
 	__jacl_narrow_##fn(name, float, f, l, FLT, long double) \
@@ -602,8 +613,7 @@ static inline int* __signgam_ptr(void) { static thread_local int signgam_val = 1
 	if (r > (arg)PRE##_MAX) return (type)INFINITY; \
 	return (type)r; \
 }
-#define __jacl_narrow_fma(name, type, pre, suf, PRE, arg) \
-static inline type pre##name##suf(arg x, arg y, arg z) { \
+#define __jacl_narrow_fma(name, type, pre, suf, PRE, arg) static inline type pre##name##suf(arg x, arg y, arg z) { \
 	arg r = fma##suf(x, y, z); \
 	if (!isfinite(r)) return (type)r; \
 	if (r > (arg)PRE##_MAX) return (type)INFINITY; \
@@ -713,7 +723,20 @@ static inline type pre##name##suf(arg x, arg y, arg z) { \
 #endif /* JACL_HAS_IMMINTRIN */
 
 // Now declare
+__jacl_math(isnan)
+__jacl_math(isinf)
+__jacl_math(isfinite)
 __jacl_math(isnormal)
+
+__jacl_math(isunordered)
+__jacl_math(isgreater)
+__jacl_math(isgreaterequal)
+
+__jacl_math(isless)
+__jacl_math(islessequal)
+__jacl_math(islessgreater)
+__jacl_math(fpclassify)
+
 __jacl_math(signbit)
 __jacl_math(fabs)
 __jacl_math(fmod)
@@ -952,4 +975,4 @@ static inline double yn(int n, double x) {
 }
 #endif
 
-#endif /* MATH_H */
+#endif /* _MATH_H */

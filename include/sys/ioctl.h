@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef SYS_IOCTL_H
-#define SYS_IOCTL_H
+#ifndef _SYS_IOCTL_H
+#define _SYS_IOCTL_H
 
 #include <config.h>
 #include <stdarg.h> // va_start(), va_arg(), va_end()
@@ -62,4 +62,4 @@ static inline int ioctl(int fd, unsigned long request, ...) {
 
 #endif /* JACL_HAS_POSIX */
 
-#endif /* SYS_IOCTL_H */
+#endif /* _SYS_IOCTL_H */

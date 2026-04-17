@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef JSIO_H
-#define JSIO_H
+#ifndef _JSIO_H
+#define _JSIO_H
 #pragma once
 
 #include <config.h>
@@ -179,4 +179,4 @@ JS_EXPORT(_delete) void js_delete(jsio_t* x);
 }
 #endif
 
-#endif // JSIO_H
+#endif // _JSIO_H

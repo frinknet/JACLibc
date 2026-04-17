@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef SETJMP_H
-#define SETJMP_H
+#ifndef _SETJMP_H
+#define _SETJMP_H
 #pragma once
 
 /**
@@ -40,4 +40,4 @@ extern void siglongjmp(sigjmp_buf env, int val);
 }
 #endif
 
-#endif /* SETJMP_H */
+#endif /* _SETJMP_H */

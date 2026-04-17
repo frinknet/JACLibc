@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef LOCALE_H
-#define LOCALE_H
+#ifndef _LOCALE_H
+#define _LOCALE_H
 #pragma once
 
 #include <config.h>
@@ -339,4 +339,4 @@ static inline struct lconv *localeconv(void) { return &__jacl_lconv; }
 }
 #endif
 
-#endif // LOCALE_H
+#endif /* _LOCALE_H */

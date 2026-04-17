@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STRING_H
-#define STRING_H
+#ifndef _STRING_H
+#define _STRING_H
 #pragma once
 
 #include <config.h>
@@ -391,4 +391,4 @@ template<typename T> T *strcat(T*, const char*) = delete;
 static_assert(std::is_same<decltype(::memcpy((int*)0, (int*)0, 0)), void*>::value, "Use C memcpy, not template");
 #endif
 
-#endif /* STRING_H */
+#endif /* _STRING_H */

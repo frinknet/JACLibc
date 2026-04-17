@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CORE_LOCALE_H
-#define CORE_LOCALE_H
+#ifndef _CORE_LOCALE_H
+#define _CORE_LOCALE_H
 #pragma once
 
 #include <config.h>
@@ -70,4 +70,4 @@ thread_local __jacl_time_t __jacl_time = {
 	"%I:%M:%S %p"
 };
 
-#endif // CORE_LOCALE_H
+#endif /* _CORE_LOCALE_H */

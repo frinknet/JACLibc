@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STDBIT_H
-#define STDBIT_H
+#ifndef _STDBIT_H
+#define _STDBIT_H
 #pragma once
 
 #include <config.h>
@@ -143,4 +143,4 @@ __jacl_bitgen(64, unsigned long long,	ull)
 #ifdef __cplusplus
 }
 #endif
-#endif /* STDBIT_H */
+#endif /* _STDBIT_H */

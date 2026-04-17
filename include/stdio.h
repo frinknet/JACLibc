@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STDIO_H
-#define STDIO_H
+#ifndef _STDIO_H
+#define _STDIO_H
 #pragma once
 
 #include <config.h>
@@ -916,4 +916,4 @@ static inline char *tmpnam(char *s) {
 
 #include <wchar.h>
 
-#endif /* STDIO_H */
+#endif /* _STDIO_H */

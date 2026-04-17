@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STRINGS_H
-#define STRINGS_H
+#ifndef _STRINGS_H
+#define _STRINGS_H
 #pragma once
 
 #ifdef __cplusplus
@@ -167,5 +167,5 @@ static inline char *rindex(const char *s, int c) {
 #ifdef __cplusplus
 }
 #endif
-#endif /* STRINGS_H */
 
+#endif /* _STRINGS_H */

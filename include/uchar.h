@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef UCHAR_H
-#define UCHAR_H
+#ifndef _UCHAR_H
+#define _UCHAR_H
 #pragma once
 
 #include <config.h>
@@ -133,4 +133,4 @@ static inline size_t c32rtomb(char *s, char32_t c32, mbstate_t *ps) {
 }
 #endif
 
-#endif /* UCHAR_H */
+#endif /* _UCHAR_H */

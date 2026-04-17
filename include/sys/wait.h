@@ -1,6 +1,6 @@
 // (c) 2025 FRINKnet & Friends - MIT licence
-#ifndef SYS_WAIT_H
-#define SYS_WAIT_H
+#ifndef _SYS_WAIT_H
+#define _SYS_WAIT_H
 #pragma once
 
 #include <config.h>
@@ -71,4 +71,4 @@ static inline pid_t waitpid(pid_t pid, int *status, int options) {
 }
 #endif
 
-#endif /* SYS_WAIT_H */
+#endif /* _SYS_WAIT_H */

@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef TESTING_H
-#define TESTING_H
+#ifndef _TESTING_H
+#define _TESTING_H
 #pragma once
 
 /**
@@ -778,4 +778,4 @@ static inline void __jacl_test_report(void) {
 }
 #endif
 
-#endif /* TESTING_H */
+#endif /* _TESTING_H */

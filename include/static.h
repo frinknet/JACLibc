@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STATIC_H
-#define STATIC_H
+#ifndef _STATIC_H
+#define _STATIC_H
 #pragma once
 
 /**
@@ -23,4 +23,4 @@
 #include <core/jsio.h>
 #include <core/start.h>
 
-#endif /* STATIC_H */
+#endif /* _STATIC_H */

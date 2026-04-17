@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_BLAKE3_H
-#define CRYPTO_BLAKE3_H
+#ifndef _CRYPTO_BLAKE3_H
+#define _CRYPTO_BLAKE3_H
 #pragma once
 
 /**
@@ -295,4 +295,4 @@ static inline void blake3(const uint8_t *input, size_t len, uint8_t out[32]) {
 }
 #endif
 
-#endif /* CRYPTO_BLAKE3_H */
+#endif /* _CRYPTO_BLAKE3_H */

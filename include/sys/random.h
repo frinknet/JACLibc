@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef SYS_RANDOM_H
-#define SYS_RANDOM_H
+#ifndef _SYS_RANDOM_H
+#define _SYS_RANDOM_H
 #pragma once
 
 #include <config.h>
@@ -21,7 +21,7 @@ static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
 	const char *dev = (flags & GRND_RANDOM) ? "/dev/random" : "/dev/urandom";
 	int fd = syscall(SYS_open, dev, O_RDONLY, 0);
 	if(fd < 0) return -1;
-	
+
 	ssize_t total = 0;
 	while(total < (ssize_t)buflen) {
 		ssize_t n = syscall(SYS_read, fd, (char*)buf + total, buflen - total);
@@ -31,7 +31,7 @@ static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
 		}
 		total += n;
 	}
-	
+
 	syscall(SYS_close, fd);
 	return total;
 }
@@ -75,5 +75,5 @@ static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
 #ifdef __cplusplus
 }
 #endif
-#endif /* SYS_RANDOM_H */
 
+#endif /* _SYS_RANDOM_H */

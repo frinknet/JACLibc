@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STDINT_H
-#define STDINT_H
+#ifndef _STDINT_H
+#define _STDINT_H
 #pragma once
 
 #include <config.h>
@@ -385,4 +385,4 @@ typedef uint8_t           uintmax_t;
 }
 #endif
 
-#endif /* STDINT_H */
+#endif /* _STDINT_H */

@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef SYS_TIME_H
-#define SYS_TIME_H
+#ifndef _SYS_TIME_H
+#define _SYS_TIME_H
 #pragma once
 
 #include <config.h>
@@ -384,4 +384,4 @@ static inline void timeval_to_timespec(const timeval *tv, timespec *ts) {
 }
 #endif
 
-#endif // SYS_TIME_H
+#endif /* _SYS_TIME_H */

@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CORE_STACK_H
-#define CORE_STACK_H
+#ifndef _CORE_STACK_H
+#define _CORE_STACK_H
 
 #include <config.h>
 #include <unistd.h>
@@ -25,4 +25,4 @@ noreturn void __stack_chk_fail(void) {
 }
 #endif
 
-#endif /* CORE_STACK_H */
+#endif /* _CORE_STACK_H */

@@ -1,6 +1,6 @@
 // (c) 2025 FRINKnet & Friends – MIT licence
-#ifndef STDARG_H
-#define STDARG_H
+#ifndef _STDARG_H
+#define _STDARG_H
 #pragma once
 
 #ifdef __cplusplus
@@ -22,4 +22,5 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#endif /* STDARG_H */
+
+#endif /* _STDARG_H */

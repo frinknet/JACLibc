@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CORE_FORMAT_H
-#define CORE_FORMAT_H
+#ifndef _CORE_FORMAT_H
+#define _CORE_FORMAT_H
 #pragma once
 
 #include <stdio.h>
@@ -956,4 +956,4 @@ static inline int __jacl_scanf(FILE *stream, const char **in, const char * restr
 }
 #endif
 
-#endif /* CORE_FORMAT_H */
+#endif /* _CORE_FORMAT_H */

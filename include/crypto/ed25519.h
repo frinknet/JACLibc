@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_ED25519_H
-#define CRYPTO_ED25519_H
+#ifndef _CRYPTO_ED25519_H
+#define _CRYPTO_ED25519_H
 #pragma once
 
 #include <crypto/curve25519.h>
@@ -515,4 +515,4 @@ static inline int ed25519_verify(const uint8_t signature[64], const uint8_t *mes
 }
 #endif
 
-#endif /* CRYPTO_ED25519_H */
+#endif /* _CRYPTO_ED25519_H */

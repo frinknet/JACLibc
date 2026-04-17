@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_CHACHA20_H
-#define CRYPTO_CHACHA20_H
+#ifndef _CRYPTO_CHACHA20_H
+#define _CRYPTO_CHACHA20_H
 #pragma once
 
 /**
@@ -324,5 +324,5 @@ static inline int chacha20poly1305_decrypt(const uint8_t key[CHACHA20_KEY_SIZE],
 #ifdef __cplusplus
 }
 #endif
-#endif /* CRYPTO_CHACHA20_H */
 
+#endif /* _CRYPTO_CHACHA20_H */

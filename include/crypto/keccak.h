@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_KECCAK_H
-#define CRYPTO_KECCAK_H
+#ifndef _CRYPTO_KECCAK_H
+#define _CRYPTO_KECCAK_H
 #pragma once
 
 /**
@@ -104,18 +104,18 @@ typedef struct {
  */
 static inline void keccak_f1600(uint64_t st[25]) {
 	uint64_t bc[5], t;
-	
+
 	for (int round = 0; round < 24; round++) {
 		// θ (Theta) step – column parity mixing
 		for (int i = 0; i < 5; i++)
 			bc[i] = st[i] ^ st[i + 5] ^ st[i + 10] ^ st[i + 15] ^ st[i + 20];
-		
+
 		for (int i = 0; i < 5; i++) {
 			t = bc[(i + 4) % 5] ^ rotl64(bc[(i + 1) % 5], 1);
 			for (int j = 0; j < 25; j += 5)
 				st[j + i] ^= t;
 		}
-		
+
 		// ρ (Rho) and π (Pi) steps – rotate and permute lanes
 		t = st[1];
 		for (int i = 0; i < 24; i++) {
@@ -124,7 +124,7 @@ static inline void keccak_f1600(uint64_t st[25]) {
 			st[j] = rotl64(t, __jacl_keccak_rotc[i]);
 			t = bc[0];
 		}
-		
+
 		// χ (Chi) step – nonlinear mixing
 		for (int j = 0; j < 25; j += 5) {
 			for (int i = 0; i < 5; i++)
@@ -132,7 +132,7 @@ static inline void keccak_f1600(uint64_t st[25]) {
 			for (int i = 0; i < 5; i++)
 				st[j + i] ^= (~bc[(i + 1) % 5]) & bc[(i + 2) % 5];
 		}
-		
+
 		// ι (Iota) step – break symmetry
 		st[0] ^= __jacl_keccak_rc[round];
 	}
@@ -166,12 +166,12 @@ static inline void keccak_init(keccak_ctx *ctx, size_t rate) {
 static inline void keccak_absorb(keccak_ctx *ctx, const uint8_t *data, size_t len) {
 	for (size_t i = 0; i < len; i++) {
 		ctx->buf[ctx->buf_len++] = data[i];
-		
+
 		if (ctx->buf_len == ctx->rate) {
 			// XOR block into state (little-endian)
 			for (size_t j = 0; j < ctx->rate / 8; j++)
 				ctx->st[j] ^= __jacl_load64_le(ctx->buf + j * 8);
-			
+
 			keccak_f1600(ctx->st);
 			ctx->buf_len = 0;
 		}
@@ -188,20 +188,20 @@ static inline void keccak_absorb(keccak_ctx *ctx, const uint8_t *data, size_t le
 static inline void keccak_pad(keccak_ctx *ctx, uint8_t delim) {
 	// Append delimiter
 	ctx->buf[ctx->buf_len++] = delim;
-	
+
 	// Pad with zeros
 	while (ctx->buf_len < ctx->rate)
 		ctx->buf[ctx->buf_len++] = 0;
-	
+
 	// Set final bit (pad10*1 rule)
 	ctx->buf[ctx->rate - 1] |= 0x80;
-	
+
 	// XOR final block into state
 	for (size_t i = 0; i < ctx->rate / 8; i++)
 		ctx->st[i] ^= __jacl_load64_le(ctx->buf + i * 8);
-	
+
 	keccak_f1600(ctx->st);
-	
+
 	// Switch to squeezing mode
 	ctx->absorbing = 0;
 	ctx->buf_len = 0;
@@ -221,14 +221,14 @@ static inline void keccak_squeeze(keccak_ctx *ctx, uint8_t *out, size_t outlen) 
 		if (ctx->buf_len == 0) {
 			if (i > 0)  // Don't permute on first squeeze (already done in pad)
 				keccak_f1600(ctx->st);
-			
+
 			// Extract one rate-sized block
 			for (size_t j = 0; j < ctx->rate / 8; j++)
 				__jacl_store64_le(ctx->buf + j * 8, ctx->st[j]);
-			
+
 			ctx->buf_len = ctx->rate;
 		}
-		
+
 		// Output one byte
 		out[i] = ctx->buf[ctx->rate - ctx->buf_len];
 		ctx->buf_len--;
@@ -238,5 +238,5 @@ static inline void keccak_squeeze(keccak_ctx *ctx, uint8_t *out, size_t outlen) 
 #ifdef __cplusplus
 }
 #endif
-#endif /* CRYPTO_KECCAK_H */
 
+#endif /* _CRYPTO_KECCAK_H */

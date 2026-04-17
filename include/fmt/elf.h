@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef FMT_ELF_H
-#define FMT_ELF_H
+#ifndef _FMT_ELF_H
+#define _FMT_ELF_H
 #pragma once
 
 #include <stdint.h>
@@ -268,4 +268,4 @@ extern init_func_t __init_array_end[] __attribute__((weak));
 }
 #endif
 
-#endif /* FMT_ELF_H */
+#endif /* _FMT_ELF_H */

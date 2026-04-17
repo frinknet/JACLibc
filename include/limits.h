@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef LIMITS_H
-#define LIMITS_H
+#ifndef _LIMITS_H
+#define _LIMITS_H
 #pragma once
 
 #include <config.h>
@@ -255,4 +255,4 @@
 	#define PIPE_BUF 4096
 #endif
 
-#endif /* LIMITS_H */
+#endif /* _LIMITS_H */

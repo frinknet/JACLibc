@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CORE_ERRNO_H
-#define CORE_ERRNO_H
+#ifndef _CORE_ERRNO_H
+#define _CORE_ERRNO_H
 #pragma once
 
 #include <config.h>
@@ -15,4 +15,4 @@ thread_local int __jacl_errno = 0;
 }
 #endif
 
-#endif /* CORE_ERRNO_H */
+#endif /* _CORE_ERRNO_H */

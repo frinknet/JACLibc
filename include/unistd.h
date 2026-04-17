@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends - MIT licence */
-#ifndef UNISTD_H
-#define UNISTD_H
+#ifndef _UNISTD_H
+#define _UNISTD_H
 #pragma once
 
 #include <config.h>
@@ -377,4 +377,4 @@ static inline size_t confstr(int name, char *buf, size_t len) { (void)name; (voi
 }
 #endif
 
-#endif /* UNISTD_H */
+#endif /* _UNISTD_H */

@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef FENV_H
-#define FENV_H
+#ifndef _FENV_H
+#define _FENV_H
 #pragma once
 
 #include <config.h>
@@ -106,4 +106,4 @@ static inline int feupdateenv(const fenv_t *envp) {
 }
 #endif
 
-#endif /* FENV_H */
+#endif /* _FENV_H */

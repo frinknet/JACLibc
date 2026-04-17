@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_PBKDF2_H
-#define CRYPTO_PBKDF2_H
+#ifndef _CRYPTO_PBKDF2_H
+#define _CRYPTO_PBKDF2_H
 #pragma once
 
 /**
@@ -128,4 +128,4 @@ static inline int pbkdf2_hmac_sha512(
 }
 #endif
 
-#endif /* CRYPTO_PBKDF2_H */
+#endif /* _CRYPTO_PBKDF2_H */

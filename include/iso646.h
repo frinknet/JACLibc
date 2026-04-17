@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef ISO646_H
-#define ISO646_H
+#ifndef _ISO646_H
+#define _ISO646_H
 #pragma once
 
 #if !JACL_HAS_C99
@@ -22,4 +22,4 @@
 #define xor_eq	 ^=
 #endif
 
-#endif /* ISO646_H */
+#endif /* _ISO646_H */

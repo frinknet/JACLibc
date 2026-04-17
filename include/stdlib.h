@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STDLIB_H
-#define STDLIB_H
+#ifndef _STDLIB_H
+#define _STDLIB_H
 #pragma once
 
 #include <config.h>
@@ -341,4 +341,4 @@ static inline int mkstemp(char *template) {
 }
 #endif
 
-#endif /* STDLIB_H */
+#endif /* _STDLIB_H */

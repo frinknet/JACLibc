@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CRYPTO_CURVE25519_H
-#define CRYPTO_CURVE25519_H
+#ifndef _CRYPTO_CURVE25519_H
+#define _CRYPTO_CURVE25519_H
 #pragma once
 
 /**
@@ -378,4 +378,5 @@ static inline void curve25519_scalarmult_base(uint8_t q[32], const uint8_t n[32]
 #ifdef __cplusplus
 }
 #endif
-#endif /* CRYPTO_CURVE25519_H */
+
+#endif /* _CRYPTO_CURVE25519_H */

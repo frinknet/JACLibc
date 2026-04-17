@@ -21,4 +21,3 @@ static inline int futex(int *uaddr, int op, int val, const struct timespec *time
 #endif /* JACL_OS_LINUX */
 
 #endif /* _SYS_FUTEX_H */
-

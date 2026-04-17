@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef IMMINTRIN_H
-#define IMMINTRIN_H
+#ifndef _IMMINTRIN_H
+#define _IMMINTRIN_H
 #pragma once
 
 /**
@@ -341,4 +341,4 @@ static inline __m128d _mm_tgamma_pd(__m128d v) { return (__m128d){ tgamma(v[0]),
 }
 #endif
 
-#endif /* IMMINTRIN_H */
+#endif /* _IMMINTRIN_H */

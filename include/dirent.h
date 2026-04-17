@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef DIRENT_H
-#define DIRENT_H
+#ifndef _DIRENT_H
+#define _DIRENT_H
 #pragma once
 
 #include <config.h>
@@ -772,4 +772,4 @@ static inline int scandir(const char *dirpath, dirent ***namelist,
 #ifdef __cplusplus
 }
 #endif
-#endif /* DIRENT_H */
+#endif /* _DIRENT_H */

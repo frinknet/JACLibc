@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef TIME_H
-#define TIME_H
+#ifndef _TIME_H
+#define _TIME_H
 #pragma once
 
 #include <config.h>
@@ -696,4 +696,4 @@ static inline int timespec_getres(struct timespec *ts, int base) {
 }
 #endif
 
-#endif /* TIME_H */
+#endif /* _TIME_H */

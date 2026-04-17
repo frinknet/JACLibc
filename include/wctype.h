@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef WCTYPE_H
-#define WCTYPE_H
+#ifndef _WCTYPE_H
+#define _WCTYPE_H
 #pragma once
 
 #include <locale.h>
@@ -200,4 +200,4 @@ static inline wint_t towctrans(wint_t c, wctrans_t desc) {
 }
 #endif
 
-#endif /* WCTYPE_H */
+#endif /* _WCTYPE_H */

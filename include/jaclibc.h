@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef JACLIBC_H
-#define JACLIBC_H
+#ifndef _JACLIBC_H
+#define _JACLIBC_H
 #pragma once
 
 /**
@@ -111,4 +111,4 @@
 #include <static.h>      // Global initialization
 #endif
 
-#endif /* JACLIBC_H */
+#endif /* _JACLIBC_H */

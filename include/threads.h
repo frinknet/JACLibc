@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef THREADS_H
-#define THREADS_H
+#ifndef _THREADS_H
+#define _THREADS_H
 #pragma once
 
 #include <config.h>
@@ -406,4 +406,5 @@ static inline void *tss_get(tss_t key) {
 #ifdef __cplusplus
 }
 #endif
-#endif /* THREADS_H */
+
+#endif /* _THREADS_H */

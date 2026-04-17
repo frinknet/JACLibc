@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef FMT_MACH_O_H
-#define FMT_MACH_O_H
+#ifndef _FMT_MACH_O_H
+#define _FMT_MACH_O_H
 
 #include <stdint.h>
 
@@ -63,4 +63,4 @@ extern init_func_t __stop___mod_init_func[] __attribute__((weak));
 }
 #endif
 
-#endif /* FMT_MACH_O_H */
+#endif /* _FMT_MACH_O_H */

@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef SYS_TYPES_H
-#define SYS_TYPES_H
+#ifndef _SYS_TYPES_H
+#define _SYS_TYPES_H
 #pragma once
 
 /* Include basic types */
@@ -71,4 +71,4 @@ typedef int            ssize_t;
 #ifdef __cplusplus
 }
 #endif
-#endif /* SYS_TYPES_H */
+#endif /* _SYS_TYPES_H */

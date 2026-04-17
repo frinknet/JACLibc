@@ -1,5 +1,5 @@
-#ifndef CRYPTO_AES_H
-#define CRYPTO_AES_H
+#ifndef _CRYPTO_AES_H
+#define _CRYPTO_AES_H
 #pragma once
 
 #include <crypto/base.h>
@@ -33,5 +33,5 @@ typedef struct {
 #ifdef __cplusplus
 }
 #endif
-#endif /* CRYPTO_AES_H */
 
+#endif /* _CRYPTO_AES_H */

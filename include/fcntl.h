@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef FCNTL_H
-#define FCNTL_H
+#ifndef _FCNTL_H
+#define _FCNTL_H
 #pragma once
 
 #ifdef __cplusplus
@@ -551,4 +551,5 @@ static inline int fcntl_dupfd_cloexec(int fd, int min_fd) {
 #ifdef __cplusplus
 }
 #endif
-#endif /* FCNTL_H */
+
+#endif /* _FCNTL_H */

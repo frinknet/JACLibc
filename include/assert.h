@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef ASSERT_H
-#define ASSERT_H
+#ifndef _ASSERT_H
+#define _ASSERT_H
 #pragma once
 
 #include <stdnoreturn.h>
@@ -27,4 +27,4 @@ noreturn static inline void __assert_fail(const char *expr, const char *file, in
 }
 #endif
 
-#endif /* ASSERT_H */
+#endif /* _ASSERT_H */

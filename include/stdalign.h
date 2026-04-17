@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STDALIGN_H
-#define STDALIGN_H
+#ifndef _STDALIGN_H
+#define _STDALIGN_H
 #pragma once
 
 #include <config.h>
@@ -18,4 +18,4 @@
 	#error "stdalign.h reqires C11 or later"
 #endif
 
-#endif /* STDALIGN_H */
+#endif /* _STDALIGN_H */

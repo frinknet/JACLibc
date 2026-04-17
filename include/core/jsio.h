@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends - MIT licence */
-#ifndef CORE_JSIO_H
-#define CORE_JSIO_H
+#ifndef _CORE_JSIO_H
+#define _CORE_JSIO_H
 
 #include <jsio.h>
 #include <unistd.h>
@@ -998,8 +998,9 @@ jsio_t* js_resolve(jsio_t* root, const char* path) {
 
 	return cur;
 }
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CORE_JSIO_H */
+#endif /* _CORE_JSIO_H */

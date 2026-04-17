@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef STDNORETURN_H
-#define STDNORETURN_H
+#ifndef _STDNORETURN_H
+#define _STDNORETURN_H
 #pragma once
 
 #include <config.h>
@@ -11,4 +11,4 @@
 
 #define __noreturn_is_defined 1
 
-#endif /* STDNORETURN_H */
+#endif /* _STDNORETURN_H */

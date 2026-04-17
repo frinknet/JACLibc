@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CORE_PTHREAD_H
-#define CORE_PTHREAD_H
+#ifndef _CORE_PTHREAD_H
+#define _CORE_PTHREAD_H
 #pragma once
 
 #include <config.h>
@@ -16,4 +16,4 @@ _Atomic int __jacl_pthread_inited = 0;
 
 #endif
 
-#endif /* CORE_PTHREAD_H */
+#endif /* _CORE_PTHREAD_H */

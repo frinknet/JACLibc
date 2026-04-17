@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef CORE_COMPLEX_H
-#define CORE_COMPLEX_H
+#ifndef _CORE_COMPLEX_H
+#define _CORE_COMPLEX_H
 #pragma once
 
 #include <config.h>
@@ -40,4 +40,4 @@ __jacl_divc(sc3, float,       f)
 __jacl_divc(dc3, double,      )
 __jacl_divc(xc3, long double, l)
 
-#endif /* CORE_COMPLEX_H */
+#endif /* _CORE_COMPLEX_H */
