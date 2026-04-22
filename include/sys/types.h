@@ -55,7 +55,8 @@ typedef unsigned int   useconds_t;   /* Microseconds (0 to 1000000) */
 typedef int            suseconds_t;  /* Signed microseconds */
 
 /* Internet types */
-typedef unsigned int    socklen_t;   /* Socket address length type */
+typedef unsigned int    socklen_t;   /* Socket address length */
+typedef unsigned short  sa_family_t; /* Socket address family */
 
 /* Large file support types */
 #if JACL_HAS_LFS
