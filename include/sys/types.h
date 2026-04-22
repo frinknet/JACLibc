@@ -51,10 +51,11 @@ typedef unsigned long  fsfilcnt_t;   /* File system file count */
 
 /* Timing types */
 typedef int            clockid_t;    /* Clock identifier */
-
-/* Microseconds types */
 typedef unsigned int   useconds_t;   /* Microseconds (0 to 1000000) */
 typedef int            suseconds_t;  /* Signed microseconds */
+
+/* Internet types */
+typedef unsigned int    socklen_t;   /* Socket address length type */
 
 /* Large file support types */
 #if JACL_HAS_LFS

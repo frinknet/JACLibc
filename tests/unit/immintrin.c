@@ -24,11 +24,11 @@ TEST(m128d_type_exists) {
 }
 
 TEST(m128_size) {
-	ASSERT_EQ(16, sizeof(__m128));
+	ASSERT_SIZE(__m128, 16);
 }
 
 TEST(m128d_size) {
-	ASSERT_EQ(16, sizeof(__m128d));
+	ASSERT_SIZE(__m128d, 16);
 }
 
 /* ============================================================================
@@ -75,7 +75,7 @@ TEST_SUITE(trig_sine);
 TEST(mm_sin_ps) {
 	__m128 v = {0.0f, 1.57f, 3.14f, 4.71f};  // 0, π/2, π, 3π/2
 	__m128 result = _mm_sin_ps(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(1.0f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(0.0f, result[2], 0.01f);
@@ -85,7 +85,7 @@ TEST(mm_sin_ps) {
 TEST(mm_sin_pd) {
 	__m128d v = {0.0, 1.5708};  // 0, π/2
 	__m128d result = _mm_sin_pd(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(1.0, result[1], 0.01);
 }
@@ -98,7 +98,7 @@ TEST_SUITE(trig_cosine);
 TEST(mm_cos_ps) {
 	__m128 v = {0.0f, 1.57f, 3.14f, 4.71f};
 	__m128 result = _mm_cos_ps(v);
-	
+
 	ASSERT_FLOAT_EQ(1.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(0.0f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(-1.0f, result[2], 0.01f);
@@ -107,7 +107,7 @@ TEST(mm_cos_ps) {
 TEST(mm_cos_pd) {
 	__m128d v = {0.0, 3.14159};
 	__m128d result = _mm_cos_pd(v);
-	
+
 	ASSERT_FLOAT_EQ(1.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(-1.0, result[1], 0.01);
 }
@@ -120,7 +120,7 @@ TEST_SUITE(trig_tangent);
 TEST(mm_tan_ps) {
 	__m128 v = {0.0f, 0.785f, -0.785f, 1.0f};
 	__m128 result = _mm_tan_ps(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(1.0f, result[1], 0.1f);
 }
@@ -128,7 +128,7 @@ TEST(mm_tan_ps) {
 TEST(mm_tan_pd) {
 	__m128d v = {0.0, 0.7854};  // 0, π/4
 	__m128d result = _mm_tan_pd(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(1.0, result[1], 0.1);
 }
@@ -141,7 +141,7 @@ TEST_SUITE(exponential);
 TEST(mm_exp_ps) {
 	__m128 v = {0.0f, 1.0f, 2.0f, 3.0f};
 	__m128 result = _mm_exp_ps(v);
-	
+
 	ASSERT_FLOAT_EQ(1.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(2.718f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(7.389f, result[2], 0.01f);
@@ -150,7 +150,7 @@ TEST(mm_exp_ps) {
 TEST(mm_exp_pd) {
 	__m128d v = {0.0, 1.0};
 	__m128d result = _mm_exp_pd(v);
-	
+
 	ASSERT_FLOAT_EQ(1.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(2.718, result[1], 0.01);
 }
@@ -163,7 +163,7 @@ TEST_SUITE(logarithm);
 TEST(mm_log_ps) {
 	__m128 v = {1.0f, 2.718f, 7.389f, 10.0f};
 	__m128 result = _mm_log_ps(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(1.0f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(2.0f, result[2], 0.01f);
@@ -172,7 +172,7 @@ TEST(mm_log_ps) {
 TEST(mm_log_pd) {
 	__m128d v = {1.0, 2.718};
 	__m128d result = _mm_log_pd(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(1.0, result[1], 0.01);
 }
@@ -185,7 +185,7 @@ TEST_SUITE(square_root);
 TEST(mm_sqrt_ps) {
 	__m128 v = {1.0f, 4.0f, 9.0f, 16.0f};
 	__m128 result = _mm_sqrt_ps(v);
-	
+
 	ASSERT_FLOAT_EQ(1.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(2.0f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(3.0f, result[2], 0.01f);
@@ -195,7 +195,7 @@ TEST(mm_sqrt_ps) {
 TEST(mm_sqrt_pd) {
 	__m128d v = {4.0, 9.0};
 	__m128d result = _mm_sqrt_pd(v);
-	
+
 	ASSERT_FLOAT_EQ(2.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(3.0, result[1], 0.01);
 }
@@ -209,7 +209,7 @@ TEST(mm_pow_ps) {
 	__m128 base = {2.0f, 3.0f, 4.0f, 5.0f};
 	__m128 exp = {2.0f, 2.0f, 2.0f, 2.0f};
 	__m128 result = _mm_pow_ps(base, exp);
-	
+
 	ASSERT_FLOAT_EQ(4.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(9.0f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(16.0f, result[2], 0.01f);
@@ -220,7 +220,7 @@ TEST(mm_pow_pd) {
 	__m128d base = {2.0, 10.0};
 	__m128d exp = {3.0, 2.0};
 	__m128d result = _mm_pow_pd(base, exp);
-	
+
 	ASSERT_FLOAT_EQ(8.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(100.0, result[1], 0.01);
 }
@@ -234,7 +234,7 @@ TEST(mm_hypot_ps) {
 	__m128 a = {3.0f, 5.0f, 8.0f, 12.0f};
 	__m128 b = {4.0f, 12.0f, 15.0f, 5.0f};
 	__m128 result = _mm_hypot_ps(a, b);
-	
+
 	ASSERT_FLOAT_EQ(5.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(13.0f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(17.0f, result[2], 0.01f);
@@ -245,7 +245,7 @@ TEST(mm_hypot_pd) {
 	__m128d a = {3.0, 5.0};
 	__m128d b = {4.0, 12.0};
 	__m128d result = _mm_hypot_pd(a, b);
-	
+
 	ASSERT_FLOAT_EQ(5.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(13.0, result[1], 0.01);
 }
@@ -258,7 +258,7 @@ TEST_SUITE(hyperbolic_sinh);
 TEST(mm_sinh_ps) {
 	__m128 v = {0.0f, 1.0f, -1.0f, 2.0f};
 	__m128 result = _mm_sinh_ps(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(1.175f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(-1.175f, result[2], 0.01f);
@@ -267,7 +267,7 @@ TEST(mm_sinh_ps) {
 TEST(mm_sinh_pd) {
 	__m128d v = {0.0, 1.0};
 	__m128d result = _mm_sinh_pd(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(1.175, result[1], 0.01);
 }
@@ -280,7 +280,7 @@ TEST_SUITE(hyperbolic_cosh);
 TEST(mm_cosh_ps) {
 	__m128 v = {0.0f, 1.0f, -1.0f, 2.0f};
 	__m128 result = _mm_cosh_ps(v);
-	
+
 	ASSERT_FLOAT_EQ(1.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(1.543f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(1.543f, result[2], 0.01f);
@@ -289,7 +289,7 @@ TEST(mm_cosh_ps) {
 TEST(mm_cosh_pd) {
 	__m128d v = {0.0, 1.0};
 	__m128d result = _mm_cosh_pd(v);
-	
+
 	ASSERT_FLOAT_EQ(1.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(1.543, result[1], 0.01);
 }
@@ -302,7 +302,7 @@ TEST_SUITE(error_function);
 TEST(mm_erf_ps) {
 	__m128 v = {0.0f, 0.5f, 1.0f, 2.0f};
 	__m128 result = _mm_erf_ps(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0f, result[0], 0.01f);
 	ASSERT_FLOAT_EQ(0.520f, result[1], 0.01f);
 	ASSERT_FLOAT_EQ(0.843f, result[2], 0.01f);
@@ -311,7 +311,7 @@ TEST(mm_erf_ps) {
 TEST(mm_erf_pd) {
 	__m128d v = {0.0, 1.0};
 	__m128d result = _mm_erf_pd(v);
-	
+
 	ASSERT_FLOAT_EQ(0.0, result[0], 0.01);
 	ASSERT_FLOAT_EQ(0.843, result[1], 0.01);
 }
@@ -326,7 +326,7 @@ TEST(mm_fmadd_ps) {
 	__m128 b = {3.0f, 4.0f, 5.0f, 6.0f};
 	__m128 c = {1.0f, 2.0f, 3.0f, 4.0f};
 	__m128 result = _mm_fmadd_ps(a, b, c);
-	
+
 	// a * b + c
 	ASSERT_FLOAT_EQ(7.0f, result[0], 0.01f);   // 2*3 + 1 = 7
 	ASSERT_FLOAT_EQ(14.0f, result[1], 0.01f);  // 3*4 + 2 = 14
@@ -339,7 +339,7 @@ TEST(mm_fmadd_pd) {
 	__m128d b = {4.0, 5.0};
 	__m128d c = {1.0, 2.0};
 	__m128d result = _mm_fmadd_pd(a, b, c);
-	
+
 	ASSERT_FLOAT_EQ(9.0, result[0], 0.01);   // 2*4 + 1 = 9
 	ASSERT_FLOAT_EQ(17.0, result[1], 0.01);  // 3*5 + 2 = 17
 }
