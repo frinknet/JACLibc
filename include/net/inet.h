@@ -9,7 +9,7 @@
  *   - <netinet/in.h>
  *   - <arpa/inet.h>
  *
- * We unify these into a single header here at <net/inet.h> for maintenance
+ * We unify these into a single header at <net/inet.h> for ease maintenance
  * and clarity with hopes that one day C Standards or POSIX may revamp layout
  * for sanity's sake so that we can remove the abstraction libraries that cause
  * so many security bugs because the coders don't see how things really work.
