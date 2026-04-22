@@ -78,6 +78,26 @@ AI gave us the map, and our deadlines gave us the momentum. Perplexity saved us 
 
 Now comes refinement—more polish, more capabilities, more adventures stacked atop the new foundation. Projects are brewing, contributions are trickling in, and the pace is just right for innovation and questionable memes. Pull up a chair, tip your hat, and enjoy the ride: JACL's story is only just beginning, and we saved you a front-row seat.
 
+# Code Documentation
+
+One of the things sadly lacking in libc is comprehensive documentation on how OUR libc operates and decisions that are made. While the current push is to get this fully vetted on 9 Operating Systems, 29 Architectures, and 7 Compilers we are beginning to build the pipeline to eventually host a self documenting system for our code that allows novice C programmers and AIs to become veterain JACLibc afficianados almost immediately. Until that documentation is uploaded we can give you general pointers on HOW to think about this libc and what is different compared to others.
+
+## #include <static.h>
+
+This is the way you include the implimentation in a Translation Unite that must be used only once. You should include this right above your `main()` function. Once you do this the static stuff will just work and you can use this just like you would use glibc or musl. For the linker you should enable LTO to avoid code bloat. This will make things fast, secure and small.
+
+## /* NOTE: comments */
+
+We do put comments anytime things are wonky. You can `grep -r NOTE` and find a list of all the places were there is something "Good to Know" or something that deviates from standard libc. (e.g. our `ctype.h` is ASCII ONLY and `wctype.h` is UTF8 ONLY so locale only affects `wctype.h`...) In general we don't provide any header notes for functions because we assume there are no caviates to standard functions and therefore require NO documentation. Therefore you will find the code self-documenting only in the "How it works..." sense and not so much as "How to use it..." beyond the obvious function declaration.
+
+We realize this is a departure from many libraries especially in the scripting space where Swagger is king or the more tradition Doxygen. We feel that these documentation comments screw with cognition of the code when using it as a dictionary reference so we have purposely avoided comments in the code by-in-large for the sake of brevity. We believe strongly that documentation of C Standard APIs should live OUTSIDE the code for clarity. "How do we use it?" is not the same question as "How does it work?" and we'd like to separate the concerns for clarity.
+
+## Online Documentation
+
+As stated above we are working on a BETTER self documentation system that uses the CODE ITSELF to document things without comments. Once we have this documentation system working we will definitely release itt to the world so that managers everywhere can stop beating developers for forgetting to write pretty comments on every function.
+
+We believe that focusing on clarity and brevity in the code itself creates better software both for performance and maintenance. Instead of decorating the code to make it "SAFER" to modify it is much better to make the code so small that modification is UNNECESSARY. This the UNIX WAY and definitely the way any seasoned system's programmer thinks. We are just being open and pedantic about it!!!
+
 # Contributions and Legalities
 
 Pull requests are welcome. However, we have a strict policy that you assign copyright to us as part of the contribution process. This creates something that is legally easier to manage than the usual list of contributors going out the wazoo. We've found in practice that list of emails is simply a SPAM trap. So there is a process in place with our GH repo that makes this more or less automatic. Your PR becomes a legally valid ESIGN of your consent to assign copyright to FRINKnet & Friends. If you have a problem with this policy feel free to fork the repo and avoid submitting the PR. If you've done something cool and you don't push it upstream we may ask you if you are interested in upstreaming later. But you have full power to say no. That's how the whole thing works with the MIT license system.
