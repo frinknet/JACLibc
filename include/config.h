@@ -90,6 +90,15 @@
 	#endif
 #endif
 
+// Alignment polyfills
+#if JACL_HAS_C23
+	#define _Alignas alignas
+	#define _Alignof alignof
+#elif JACL_HAS_C11
+	#define alignas _Alignas
+	#define alignof _Alignof
+#endif
+
 // C99 features polyfill
 #if !JACL_HAS_C99
 	#if defined(__GNUC__) || defined(__clang__)

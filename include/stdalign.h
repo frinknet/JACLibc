@@ -5,17 +5,11 @@
 
 #include <config.h>
 
-/* C23 makes alignas/alignof keywords, so this header is obsolete */
-#if JACL_HAS_C23
-	#define __alignas_is_defined 1
-	#define __alignof_is_defined 1
-#elif JACL_HAS_C11
-	#define alignas _Alignas
-	#define alignof _Alignof
-	#define __alignas_is_defined 1
-	#define __alignof_is_defined 1
-#else
-	#error "stdalign.h reqires C11 or later"
-#endif
+/**
+ * NOTE: Polyfills are provided in config.h so we can write in modern C everywhere!!!
+ */
+
+#define __alignas_is_defined 1
+#define __alignof_is_defined 1
 
 #endif /* _STDALIGN_H */
