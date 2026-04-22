@@ -3,8 +3,13 @@
 #define _FMT_MACH_O_H
 
 #include <config.h>
+#include <endian.h>
 #include <stdint.h>
 #include <x/format_macho.h>
+
+/* Magic dictates byte order */
+#define MACH_IS_LE(m) ((m) == 0xfeedface || (m) == 0xfeedfacf)
+#define MACH_RD32(h, f) ((MACH_IS_LE((h).magic)) ? le32toh((h).f) : be32toh((h).f))
 
 #ifdef __cplusplus
 extern "C" {

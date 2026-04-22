@@ -4,10 +4,16 @@
 #pragma once
 
 #include <config.h>
+#include <endian.h>
 #include <stdint.h>
 #include <x/format_elf.h>
 #include <x/format_em.h>
 #include <x/format_auxv.h>
+
+#define ELF_DATA(h) ((h).e_ident[EI_DATA])
+#define ELF_RD16(h, f) (ELF_DATA(h) == ELFDATA2LSB ? le16toh((h).f) : be16toh((h).f))
+#define ELF_RD32(h, f) (ELF_DATA(h) == ELFDATA2LSB ? le32toh((h).f) : be32toh((h).f))
+#define ELF_RD64(h, f) (ELF_DATA(h) == ELFDATA2LSB ? le64toh((h).f) : be64toh((h).f))
 
 #ifdef __cplusplus
 extern "C" {

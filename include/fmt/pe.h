@@ -3,8 +3,14 @@
 #define _FMT_PE_H
 
 #include <config.h>
+#include <endian.h>
 #include <stdint.h>
 #include <x/format_pe.h>
+
+/* PE is strictly Little-Endian. Always convert from file (LE) to host. */
+#define PE_RD16(h, f) le16toh((h).f)
+#define PE_RD32(h, f) le32toh((h).f)
+#define PE_RD64(h, f) le64toh((h).f)
 
 #ifdef __cplusplus
 extern "C" {
