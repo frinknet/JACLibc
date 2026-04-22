@@ -337,6 +337,35 @@ static inline void* __jacl_frame_address(int level) {
 #endif /* __builtin_frame_address */
 
 /* ============================================================= */
+/* Structure Memory Layout                                       */
+/* ============================================================= */
+
+// structure layout packing
+#if defined(_MSC_VER)
+  #define JACL_LAYOUT __pragma(pack(push, 1))
+  #define JACL_PACK   __pragma(pack(pop))
+#elif defined(__GNUC__) || defined(__clang__) || defined(__TINYC__)
+  #define JACL_LAYOUT
+  #define JACL_PACK   __attribute__((packed))
+#else
+  #define JACL_LAYOUT
+  #define JACL_PACK
+#endif
+
+/* ============================================================= */
+/* Pedantic Linking Hints                                        */
+/* ============================================================= */
+
+// week linking marker
+#if defined(__GNUC__) || defined(__clang__) || defined(__TINYC__)
+  #define JACL_WEAK __attribute__((weak))
+#elif defined(_MSC_VER)
+  #define JACL_WEAK __declspec(selectany)
+#else
+  #define JACL_WEAK
+#endif
+
+/* ============================================================= */
 /* Speed Optimizations                                           */
 /* ============================================================= */
 
@@ -375,6 +404,27 @@ static inline void* __jacl_frame_address(int level) {
 #else /* everything else */
 	#define JACL_HAS_POSIX 1
 #endif /* posix check */
+
+#define JACL_ORDER_LE  1234
+#define JACL_ORDER_BE	 4321
+#define JACL_ORDER_PDP	 2143
+
+// Endian order
+#if JACL_ORDER == JACL_ORDER_LE
+	#define JACL_HAS_LE 1
+	#define JACL_HAS_BE 0
+	#define JACL_HAS_PDP 0
+#elif JACL_ORDER == JACL_ORDER_BE
+	#define JACL_HAS_LE 0
+	#define JACL_HAS_BE 1
+	#define JACL_HAS_PDP 0
+#elif JACL_ORDER == JACL_ORDER_PDP
+	#define JACL_HAS_LE 0
+	#define JACL_HAS_BE 0
+	#define JACL_HAS_PDP 1
+#else
+	#error "Endian order is not defined."
+#endif
 
 // Check for atomic builtin support
 #if __has_builtin(__atomic_load_n) && __has_builtin(__atomic_compare_exchange_n) && __has_builtin(__atomic_store_n)

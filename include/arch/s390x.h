@@ -13,6 +13,7 @@
 	#define __jacl_arch_tls_get __s390x_get_tp_register
 	#define __jacl_arch_clone_thread __s390x_clone_thread
 	#define JACL_BITS 64
+	#define JACL_ORDER 4321
 #undef __ARCH_CONFIG
 #endif
 

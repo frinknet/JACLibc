@@ -13,6 +13,7 @@
 	#define __jacl_arch_tls_get __nios2_get_tp_register
 	#define __jacl_arch_clone_thread __nios2_clone_thread
 	#define JACL_BITS 32
+	#define JACL_ORDER 1234
 #undef __ARCH_CONFIG
 #endif
 

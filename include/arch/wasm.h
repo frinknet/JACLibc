@@ -10,6 +10,7 @@
 	#define JACL_ARCH_WASM 1
 	#define __jacl_arch_syscall __wasm_syscall
 	#define JACL_BITS 32
+	#define JACL_ORDER 1234
 	#include JACL_HEADER(arch,wasm_helpers);
 #undef __ARCH_CONFIG
 #endif
