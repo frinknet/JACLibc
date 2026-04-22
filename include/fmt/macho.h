@@ -2,14 +2,13 @@
 #ifndef _FMT_MACH_O_H
 #define _FMT_MACH_O_H
 
+#include <config.h>
 #include <stdint.h>
+#include <x/format_macho.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* Import generated X-macros */
-#include <x/format_macho.h>
 
 /* Expand to enums */
 #define X_ENUM(name, val) name = val,
@@ -20,6 +19,7 @@ enum { MACH_CPU_TYPES(X_ENUM) };
 #undef X_ENUM
 
 /* Minimal Mach-O structures - define only what you need */
+JACL_LAYOUT
 typedef struct {
 	uint32_t magic;
 	uint32_t cputype;
@@ -29,12 +29,13 @@ typedef struct {
 	uint32_t sizeofcmds;
 	uint32_t flags;
 	uint32_t reserved;
-} Mach_Header_64;
+} JACL_PACK Mach_Header_64;
 
+JACL_LAYOUT
 typedef struct {
 	uint32_t cmd;
 	uint32_t cmdsize;
-} Mach_Load_Command;
+} JACL_PACK Mach_Load_Command;
 
 #ifdef __FMT_INIT
 
@@ -42,8 +43,7 @@ typedef struct {
 #define __ARCH_TLS
 #include JACL_ARCH_FILE
 
-static inline void __jacl_init_fmt(void)
-{
+static inline void __jacl_init_fmt(void) {
 	/* Mach-O / dyld init - currently no-op */
 	(void)__jacl_arch_tls_get;
 	(void)__jacl_arch_tls_set;
@@ -51,8 +51,8 @@ static inline void __jacl_init_fmt(void)
 
 /* macOS: __mod_init_func section */
 typedef void (*init_func_t)(void);
-extern init_func_t __start___mod_init_func[] __attribute__((weak));
-extern init_func_t __stop___mod_init_func[] __attribute__((weak));
+extern init_func_t __start___mod_init_func[] JACL_WEAK;
+extern init_func_t __stop___mod_init_func[] JACL_WEAK;
 #define INIT_START __start___mod_init_func
 #define INIT_END __stop___mod_init_func
 

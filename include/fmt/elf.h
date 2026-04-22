@@ -3,9 +3,8 @@
 #define _FMT_ELF_H
 #pragma once
 
+#include <config.h>
 #include <stdint.h>
-#include <sys/mman.h>
-#include <string.h>
 #include <x/format_elf.h>
 #include <x/format_em.h>
 #include <x/format_auxv.h>
@@ -46,6 +45,7 @@ typedef int32_t  Elf64_Sword;
 typedef uint16_t Elf64_Half;
 
 /* ELF32 structures */
+JACL_LAYOUT
 typedef struct {
 	unsigned char e_ident[EI_NIDENT];
 	Elf32_Half    e_type;
@@ -61,8 +61,9 @@ typedef struct {
 	Elf32_Half    e_shentsize;
 	Elf32_Half    e_shnum;
 	Elf32_Half    e_shstrndx;
-} Elf32_Ehdr;
+} JACL_PACK Elf32_Ehdr;
 
+JACL_LAYOUT
 typedef struct {
 	Elf32_Word p_type;
 	Elf32_Off  p_offset;
@@ -72,8 +73,9 @@ typedef struct {
 	Elf32_Word p_memsz;
 	Elf32_Word p_flags;
 	Elf32_Word p_align;
-} Elf32_Phdr;
+} JACL_PACK Elf32_Phdr;
 
+JACL_LAYOUT
 typedef struct {
 	Elf32_Word sh_name;
 	Elf32_Word sh_type;
@@ -85,8 +87,9 @@ typedef struct {
 	Elf32_Word sh_info;
 	Elf32_Word sh_addralign;
 	Elf32_Word sh_entsize;
-} Elf32_Shdr;
+} JACL_PACK Elf32_Shdr;
 
+JACL_LAYOUT
 typedef struct {
 	Elf32_Word    st_name;
 	Elf32_Addr    st_value;
@@ -94,28 +97,32 @@ typedef struct {
 	unsigned char st_info;
 	unsigned char st_other;
 	Elf32_Half    st_shndx;
-} Elf32_Sym;
+} JACL_PACK Elf32_Sym;
 
+JACL_LAYOUT
 typedef struct {
 	Elf32_Sword d_tag;
 	union {
 		Elf32_Word d_val;
 		Elf32_Addr d_ptr;
 	} d_un;
-} Elf32_Dyn;
+} JACL_PACK Elf32_Dyn;
 
+JACL_LAYOUT
 typedef struct {
 	Elf32_Addr r_offset;
 	Elf32_Word r_info;
-} Elf32_Rel;
+} JACL_PACK Elf32_Rel;
 
+JACL_LAYOUT
 typedef struct {
 	Elf32_Addr  r_offset;
 	Elf32_Word  r_info;
 	Elf32_Sword r_addend;
-} Elf32_Rela;
+} JACL_PACK Elf32_Rela;
 
 /* ELF64 structures */
+JACL_LAYOUT
 typedef struct {
 	unsigned char e_ident[EI_NIDENT];
 	Elf64_Half    e_type;
@@ -131,8 +138,9 @@ typedef struct {
 	Elf64_Half    e_shentsize;
 	Elf64_Half    e_shnum;
 	Elf64_Half    e_shstrndx;
-} Elf64_Ehdr;
+} JACL_PACK Elf64_Ehdr;
 
+JACL_LAYOUT
 typedef struct {
 	Elf64_Word  p_type;
 	Elf64_Word  p_flags;
@@ -142,8 +150,9 @@ typedef struct {
 	Elf64_Xword p_filesz;
 	Elf64_Xword p_memsz;
 	Elf64_Xword p_align;
-} Elf64_Phdr;
+} JACL_PACK Elf64_Phdr;
 
+JACL_LAYOUT
 typedef struct {
 	Elf64_Word  sh_name;
 	Elf64_Word  sh_type;
@@ -155,8 +164,9 @@ typedef struct {
 	Elf64_Word  sh_info;
 	Elf64_Xword sh_addralign;
 	Elf64_Xword sh_entsize;
-} Elf64_Shdr;
+} JACL_PACK Elf64_Shdr;
 
+JACL_LAYOUT
 typedef struct {
 	Elf64_Word    st_name;
 	unsigned char st_info;
@@ -164,26 +174,29 @@ typedef struct {
 	Elf64_Half    st_shndx;
 	Elf64_Addr    st_value;
 	Elf64_Xword   st_size;
-} Elf64_Sym;
+} JACL_PACK Elf64_Sym;
 
+JACL_LAYOUT
 typedef struct {
 	Elf64_Sxword d_tag;
 	union {
 		Elf64_Xword d_val;
 		Elf64_Addr  d_ptr;
 	} d_un;
-} Elf64_Dyn;
+} JACL_PACK Elf64_Dyn;
 
+JACL_LAYOUT
 typedef struct {
 	Elf64_Addr  r_offset;
 	Elf64_Xword r_info;
-} Elf64_Rel;
+} JACL_PACK Elf64_Rel;
 
+JACL_LAYOUT
 typedef struct {
 	Elf64_Addr   r_offset;
 	Elf64_Xword  r_info;
 	Elf64_Sxword r_addend;
-} Elf64_Rela;
+} JACL_PACK Elf64_Rela;
 
 /* Bit-width dependent typedefs */
 #if JACL_BITS == 64
@@ -256,8 +269,8 @@ static inline int __jacl_tls_get_info(size_t* size, size_t* align, void** image,
 
 /* ELF: .init_array section */
 typedef void (*init_func_t)(void);
-extern init_func_t __init_array_start[] __attribute__((weak));
-extern init_func_t __init_array_end[] __attribute__((weak));
+extern init_func_t __init_array_start[] JACL_WEAK;
+extern init_func_t __init_array_end[] JACL_WEAK;
 #define INIT_START __init_array_start
 #define INIT_END __init_array_end
 

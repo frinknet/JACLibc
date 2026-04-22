@@ -2,6 +2,7 @@
 #ifndef _FMT_PE_H
 #define _FMT_PE_H
 
+#include <config.h>
 #include <stdint.h>
 #include <x/format_pe.h>
 
@@ -24,6 +25,7 @@ typedef uint32_t  DWORD;
 typedef uint64_t  ULONGLONG;
 
 /* DOS header */
+JACL_LAYOUT
 typedef struct {
 	WORD  e_magic;      /* Magic number (IMAGE_DOS_SIGNATURE) */
 	WORD  e_cblp;
@@ -44,17 +46,19 @@ typedef struct {
 	WORD  e_oeminfo;
 	WORD  e_res2[10];
 	DWORD e_lfanew;     /* File offset of PE header */
-} IMAGE_DOS_HEADER;
+} JACL_PACK IMAGE_DOS_HEADER;
 
 /* Data directory */
+JACL_LAYOUT
 typedef struct {
 	DWORD VirtualAddress;
 	DWORD Size;
-} IMAGE_DATA_DIRECTORY;
+} JACL_PACK IMAGE_DATA_DIRECTORY;
 
 #define IMAGE_NUMBEROF_DIRECTORY_ENTRIES 16
 
 /* COFF file header */
+JACL_LAYOUT
 typedef struct {
 	WORD  Machine;
 	WORD  NumberOfSections;
@@ -63,9 +67,10 @@ typedef struct {
 	DWORD NumberOfSymbols;
 	WORD  SizeOfOptionalHeader;
 	WORD  Characteristics;
-} IMAGE_FILE_HEADER;
+} JACL_PACK IMAGE_FILE_HEADER;
 
 /* Optional header (32-bit) */
+JACL_LAYOUT
 typedef struct {
 	WORD  Magic;
 	BYTE  MajorLinkerVersion;
@@ -98,9 +103,10 @@ typedef struct {
 	DWORD LoaderFlags;
 	DWORD NumberOfRvaAndSizes;
 	IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES];
-} IMAGE_OPTIONAL_HEADER32;
+} JACL_PACK IMAGE_OPTIONAL_HEADER32;
 
 /* Optional header (64-bit) */
+JACL_LAYOUT
 typedef struct {
 	WORD      Magic;
 	BYTE      MajorLinkerVersion;
@@ -132,24 +138,27 @@ typedef struct {
 	DWORD     LoaderFlags;
 	DWORD     NumberOfRvaAndSizes;
 	IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES];
-} IMAGE_OPTIONAL_HEADER64;
+} JACL_PACK IMAGE_OPTIONAL_HEADER64;
 
 /* NT headers */
+JACL_LAYOUT
 typedef struct {
 	DWORD                 Signature;
 	IMAGE_FILE_HEADER     FileHeader;
 	IMAGE_OPTIONAL_HEADER32 OptionalHeader;
-} IMAGE_NT_HEADERS32;
+} JACL_PACK IMAGE_NT_HEADERS32;
 
+JACL_LAYOUT
 typedef struct {
 	DWORD                 Signature;
 	IMAGE_FILE_HEADER     FileHeader;
 	IMAGE_OPTIONAL_HEADER64 OptionalHeader;
-} IMAGE_NT_HEADERS64;
+} JACL_PACK IMAGE_NT_HEADERS64;
 
 /* Section header */
 #define IMAGE_SIZEOF_SHORT_NAME 8
 
+JACL_LAYOUT
 typedef struct {
 	BYTE  Name[IMAGE_SIZEOF_SHORT_NAME];
 	union {
@@ -164,7 +173,7 @@ typedef struct {
 	WORD  NumberOfRelocations;
 	WORD  NumberOfLinenumbers;
 	DWORD Characteristics;
-} IMAGE_SECTION_HEADER;
+} JACL_PACK IMAGE_SECTION_HEADER;
 
 /* Bit-width dependent typedefs */
 #if JACL_BITS == 64
@@ -177,8 +186,8 @@ typedef struct {
 
 /* .CRT$XCU section */
 typedef void (*init_func_t)(void);
-extern init_func_t __start_.CRT$XCU[] __attribute__((weak));
-extern init_func_t __stop_.CRT$XCU[] __attribute__((weak));
+extern init_func_t __start_.CRT$XCU[] JACL_WEAK;
+extern init_func_t __stop_.CRT$XCU[] JACL_WEAK;
 #define INIT_START __start_.CRT$XCU
 #define INIT_END __stop_.CRT$XCU
 
