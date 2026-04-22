@@ -12,11 +12,14 @@
  *   TEST(function_specific_test) {  name of specific thing you are checking
  *     TEST_SKIP("reason");       skip tests that segfault until you can fix
  *     TEST_INFO("essay");        add as much explanation as you want
- *     code
  *     ASSERT...                  run whatever assertions you need
  *   }
  *
- *   TEST_MAIN()                  use this instead of defining main yourself
+ *   TEST_EACH(suite)             runs a suite of tests
+ *   TEST_ONLY(name)              runs one test
+ *   TEST_ALL()                   runs all tests
+ *   TEST_REPORT()                sprints test report
+ *   TEST_MAIN()                  runs all tests and prints report (plus more: see --help)
  *
  * ASSERTIONS:
  *
@@ -55,28 +58,49 @@
  *     ASSERT_DBL_COMPLEX(real, imag, actual, tolerance)   - double complex numbers
  *     ASSERT_LDBL_COMPLEX(real, imag, actual, tolerance)  - long complex numbers
  *
- *   Memory Comparisons:
- *     ASSERT_MEM_EQ(expected, actual, size)               - memory regions equal
- *
- *   Pointer Comparisons:
- *     ASSERT_NULL(ptr)                                    - pointer is NULL
- *     ASSERT_NOT_NULL(ptr)                                - pointer is not NULL
- *
  *   Special Values:
  *     ASSERT_NAN(x)                                       - value is NaN
  *     ASSERT_INF(x)                                       - value is infinity
  *     ASSERT_FINITE(x)                                    - value is finite
  *
+ *   Null Comparisons:
+ *     ASSERT_NULL(ptr)                                    - pointer is NULL
+ *     ASSERT_NOT_NULL(ptr)                                - pointer is not NULL
+ *
+ *   Pointer Comparisons:
+ *     ASSERT_PTR_EQ(a, b)                                 - pointers are equal
+ *     ASSERT_PTR_NE(a, b)                                 - pointers are different
+ *
+ *   Memory Comparisons:
+ *     ASSERT_MEM_EQ(expected, actual, size)               - memory regions equal
+ *     ASSERT_MEM_NE(expected, actual, size)               - memory regions different
+ *
+ *   Size Comparisons:
+ *     ASSERT_SIZE(object, size)                           - memory region is exactly size
+ *     ASSERT_SIZE_MIN(object, size)                       - memory region is at least size
+ *     ASSERT_SIZE_MAX(object, size)                       - memory region is at most size
+ *     ASSERT_SIZE_FITS(object, thing)                     - memory region fits the thing
+ *     ASSERT_SIZE_SAME(object, thing)                     - memory region is the same size
+ *     ASSERT_SIZE_ALIGNS(object, thing)                   - memory region aligns to size
+ *
+ *   Offset Comparisons:
+ *     ASSERT_OFFSET(object, property, offset)             - memory offset is exactly
+ *     ASSERT_OFFSET_PAST(object, property, offset)        - memory offset is past offset
+ *     ASSERT_OFFSET_AFTER(object, prop_a, prop_b)         - memory offset is past offset
+ *     ASSERT_OFFSET_ALIGNS(object, property, thing)       - memory offset aligns to size
+ *
  *   Errno Checks:
- *     ASSERT_ERRNO_EQ(err)                                - errno equals expected value
+ *     ASSERT_ERRNO(err)                                   - errno equals expected
  */
 
 #include <config.h>
+#include <stdarg.h>  // va_arg()
+#include <stddef.h>  // offsetof
 #include <stdio.h>   // fprintf(), printf(), puts()
 #include <stdlib.h>  // exit()
 #include <string.h>  // strcmp(), memset()
-#include <stdarg.h>  // va_arg()
 #include <inttypes.h>  // PRIdMAX, PRIuMAX
+#include <errno.h>
 #include <math.h>
 
 /* ============================================================= */
@@ -352,14 +376,18 @@ static inline void __jacl_test_report(void) {
 #define ASSERT_TRUE(x) do { \
 	if (!(x)) { \
 		TEST_FAIL("\tFAIL: %s:%d - Value should be true\n" \
-		          "\tTEST: %s", __FILE__, __LINE__, #x); \
+		          "\tTEST: %s", \
+		          __FILE__, __LINE__, \
+		          #x); \
 	} \
 } while(0)
 
 #define ASSERT_FALSE(x) do { \
 	if (x) { \
 		TEST_FAIL("\tFAIL: %s:%d\n - Value should be false\n" \
-		          "\tTEST: %s", __FILE__, __LINE__, #x); \
+		          "\tTEST: %s", \
+		          __FILE__, __LINE__, \
+		          #x); \
 	} \
 } while(0)
 
@@ -413,7 +441,6 @@ static inline void __jacl_test_report(void) {
 	} \
 } while(0)
 
-
 #define ASSERT_STR_HAS(needle, actual) do { \
 	if (!needle || !actual || strstr((actual), (needle)) == NULL) { \
 		TEST_FAIL("\tFAIL: %s:%d - String should contain substring\n" \
@@ -424,129 +451,138 @@ static inline void __jacl_test_report(void) {
 	} \
 } while(0)
 
-#define ASSERT_ERRNO_EQ(err) do { \
-	if (!((errno) == (err))) { \
-		TEST_FAIL("\tFAIL: %s:%d - Error should be set\n" \
-		          "\tTEST: error %d is %d", __FILE__, __LINE__, (errno), (err)); \
-	} \
-} while(0)
-
 #define ASSERT_INT_EQ(a, b) do { \
-	if (!((long)(a) == (long)(b))) { \
+	if (!((intmax_t)(a) == (intmax_t)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be equal\n" \
-		          "\tTEST: %ld == %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+		          "\tTEST: %" PRIdMAX " == %" PRIdMAX, \
+		          __FILE__, __LINE__, \
+		          (intmax_t)(a), (intmax_t)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_INT_GT(a, b) do { \
-	if (!((long)(a) > (long)(b))) { \
+	if (!((intmax_t)(a) > (intmax_t)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-		          "\tTEST: %ld > %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+		          "\tTEST: %" PRIdMAX " > %" PRIdMAX, \
+		          __FILE__, __LINE__, \
+		          (intmax_t)(a), (intmax_t)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_INT_LT(a, b) do { \
-	if (!((long)(a) < (long)(b))) { \
+	if (!((intmax_t)(a) < (intmax_t)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-		          "\tTEST: %ld < %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+		          "\tTEST: %" PRIdMAX " < %" PRIdMAX, \
+		          __FILE__, __LINE__, \
+		          (intmax_t)(a), (intmax_t)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_INT_GE(a, b) do { \
-	if (!((long)(a) >= (long)(b))) { \
+	if (!((intmax_t)(a) >= (intmax_t)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values shouldn't be less\n" \
-		          "\tTEST: %ld >= %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+		          "\tTEST: %" PRIdMAX " >= %" PRIdMAX, \
+		          __FILE__, __LINE__, \
+		          (intmax_t)(a), (intmax_t)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_INT_LE(a, b) do { \
-	if (!((long)(a) <= (long)(b))) { \
+	if (!((intmax_t)(a) <= (intmax_t)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values shouldn't be more\n" \
-		          "\tTEST: %ld <= %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+		          "\tTEST: %" PRIdMAX " <= %" PRIdMAX, \
+		          __FILE__, __LINE__, \
+		          (intmax_t)(a), (intmax_t)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_INT_NE(a, b) do { \
-	if (!((long)(a) != (long)(b))) { \
+	if (!((intmax_t)(a) != (intmax_t)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be different\n" \
-		          "\tTEST: %ld != %ld", __FILE__, __LINE__, (long)(a), (long)(b)); \
+		          "\tTEST: %" PRIdMAX " != %" PRIdMAX, \
+		          __FILE__, __LINE__, \
+		          (intmax_t)(a), (intmax_t)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_NAN(x) do { \
 	if (!isnan(x)) { \
 		TEST_FAIL("\tFAIL: %s:%d - Expected NaN\n" \
-		          "\tTEST: isnan(%Lf)", __FILE__, __LINE__, (long double)(x)); \
+		          "\tTEST: isnan(%Lf)", \
+		          __FILE__, __LINE__, \
+		          (long double)(x)); \
 	} \
 } while(0)
 
 #define ASSERT_INF(x) do { \
 	if (!isinf(x)) { \
 		TEST_FAIL("\tFAIL: %s:%d - Expected Infinity\n" \
-		          "\tTEST: isinf(%Lg)", __FILE__, __LINE__, (long double)(x)); \
+		          "\tTEST: isinf(%Lg)", \
+		          __FILE__, __LINE__, \
+		          (long double)(x)); \
 	} \
 } while(0)
 
 #define ASSERT_FINITE(x) do { \
 	if (!isfinite(x)) { \
 		TEST_FAIL("\tFAIL: %s:%d - Expected finite value\n" \
-		          "\tTEST: isfinite(%Lg)", __FILE__, __LINE__, (long double)(x)); \
-	} \
-} while(0)
-
-#define ASSERT_NULL(ptr) do { \
-	if ((ptr) != NULL) { \
-		TEST_FAIL("\tFAIL: %s:%d - Expected NULL pointer\n" \
-		          "\tTEST: %p == NULL", __FILE__, __LINE__, (ptr)); \
-	} \
-} while(0)
-
-#define ASSERT_NOT_NULL(ptr) do { \
-	if ((ptr) == NULL) { \
-		TEST_FAIL("\tFAIL: %s:%d - Expected non-NULL pointer\n" \
-		          "\tTEST: NULL != NULL", __FILE__, __LINE__); \
+		          "\tTEST: isfinite(%Lg)", \
+		          __FILE__, __LINE__, \
+		          (long double)(x)); \
 	} \
 } while(0)
 
 #define ASSERT_FLT_EQ(a, b) do { \
 	if (!((float)(a) == (float)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be equal\n" \
-		          "\tTEST: %g == %g", __FILE__, __LINE__, (float)(a), (float)(b)); \
+		          "\tTEST: %g == %g", \
+		          __FILE__, __LINE__, \
+		          (float)(a), (float)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_FLT_GT(a, b) do { \
 	if (!((float)(a) > (float)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-		          "\tTEST: %g > %g", __FILE__, __LINE__, (float)(a), (float)(b)); \
+		          "\tTEST: %g > %g", \
+		          __FILE__, __LINE__, \
+		         (float)(a), (float)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_FLT_LT(a, b) do { \
 	if (!((float)(a) < (float)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-		          "\tTEST: %g < %g", __FILE__, __LINE__, (float)(a), (float)(b)); \
+		          "\tTEST: %g < %g", \
+		          __FILE__, __LINE__, \
+		          (float)(a), (float)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_FLT_GE(a, b) do { \
 	if (!((float)(a) >= (float)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-		          "\tTEST: %g >= %g", __FILE__, __LINE__, (float)(a), (float)(b)); \
+		          "\tTEST: %g >= %g", \
+		          __FILE__, __LINE__, \
+		          (float)(a), (float)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_FLT_LE(a, b) do { \
 	if (!((float)(a) <= (float)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-		          "\tTEST: %g <= %g", __FILE__, __LINE__, (float)(a), (float)(b)); \
+		          "\tTEST: %g <= %g", \
+		          __FILE__, __LINE__, \
+		          (float)(a), (float)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_FLT_NE(a, b) do { \
 	if (!((float)(a) != (float)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be different\n" \
-		          "\tTEST: %g != %g", __FILE__, __LINE__, (float)(a), (float)(b)); \
+		          "\tTEST: %g != %g", \
+		          __FILE__, __LINE__, \
+		          (float)(a), (float)(b)); \
 	} \
 } while(0)
 
@@ -581,42 +617,54 @@ static inline void __jacl_test_report(void) {
 #define ASSERT_DBL_EQ(a, b) do { \
 	if (!((double)(a) == (double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be equal\n" \
-		          "\tTEST: %lg == %lg", __FILE__, __LINE__, (double)(a), (double)(b)); \
+		          "\tTEST: %lg == %lg", \
+		          __FILE__, __LINE__, \
+		          (double)(a), (double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_DBL_GT(a, b) do { \
 	if (!((double)(a) > (double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-		          "\tTEST: %lg > %lg", __FILE__, __LINE__, (double)(a), (double)(b)); \
+		          "\tTEST: %lg > %lg", \
+		          __FILE__, __LINE__, \
+		          (double)(a), (double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_DBL_LT(a, b) do { \
 	if (!((double)(a) < (double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-		          "\tTEST: %lg < %lg", __FILE__, __LINE__, (double)(a), (double)(b)); \
+		          "\tTEST: %lg < %lg", \
+		          __FILE__, __LINE__, \
+		          (double)(a), (double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_DBL_GE(a, b) do { \
 	if (!((double)(a) >= (double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-		          "\tTEST: %lg >= %lg", __FILE__, __LINE__, (double)(a), (double)(b)); \
+		          "\tTEST: %lg >= %lg", \
+		          __FILE__, __LINE__, \
+		          (double)(a), (double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_DBL_LE(a, b) do { \
 	if (!((double)(a) <= (double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-		          "\tTEST: %lg <= %lg", __FILE__, __LINE__, (double)(a), (double)(b)); \
+		          "\tTEST: %lg <= %lg", \
+		          __FILE__, __LINE__, \
+		          (double)(a), (double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_DBL_NE(a, b) do { \
 	if (!((double)(a) != (double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be different\n" \
-		          "\tTEST: %lg != %lg", __FILE__, __LINE__, (double)(a), (double)(b)); \
+		          "\tTEST: %lg != %lg", \
+		          __FILE__, __LINE__, \
+		          (double)(a), (double)(b)); \
 	} \
 } while(0)
 
@@ -651,42 +699,54 @@ static inline void __jacl_test_report(void) {
 #define ASSERT_LDBL_EQ(a, b) do { \
 	if (!((long double)(a) == (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be equal\n" \
-		          "\tTEST: %Lf == %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf == %Lf", \
+		          __FILE__, __LINE__, \
+		          (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_GT(a, b) do { \
 	if (!((long double)(a) > (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-		          "\tTEST: %Lg > %Lg", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lg > %Lg", \
+		          __FILE__, __LINE__, \
+		          (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_LT(a, b) do { \
 	if (!((long double)(a) < (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-		          "\tTEST: %Lf < %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf < %Lf", \
+		          __FILE__, __LINE__, \
+		          (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_GE(a, b) do { \
 	if (!((long double)(a) >= (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be more\n" \
-		          "\tTEST: %Lf >= %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf >= %Lf", \
+		          __FILE__, __LINE__, \
+		          (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_LE(a, b) do { \
 	if (!((long double)(a) <= (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be less\n" \
-		          "\tTEST: %Lf <= %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf <= %Lf", \
+		          __FILE__, __LINE__, \
+		          (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
 #define ASSERT_LDBL_NE(a, b) do { \
 	if (!((long double)(a) != (long double)(b))) { \
 		TEST_FAIL("\tFAIL: %s:%d - Values should be different\n" \
-		          "\tTEST: %Lf != %Lf", __FILE__, __LINE__, (long double)(a), (long double)(b)); \
+		          "\tTEST: %Lf != %Lf", \
+		          __FILE__, __LINE__, \
+		          (long double)(a), (long double)(b)); \
 	} \
 } while(0)
 
@@ -718,10 +778,155 @@ static inline void __jacl_test_report(void) {
 	} \
 } while(0)
 
+#define ASSERT_NULL(ptr) do { \
+	if (!((ptr) == NULL)) { \
+		TEST_FAIL("\tFAIL: %s:%d - Expected NULL pointer\n" \
+		          "\tTEST: %p == NULL", \
+		          __FILE__, __LINE__, \
+		          (ptr)); \
+	} \
+} while(0)
+
+#define ASSERT_NOT_NULL(ptr) do { \
+	if (!((ptr) != NULL)) { \
+		TEST_FAIL("\tFAIL: %s:%d - Expected non-NULL pointer\n" \
+		          "\tTEST: NULL != NULL", \
+		          __FILE__, __LINE__); \
+	} \
+} while(0)
+
+#define ASSERT_PTR_EQ(a, b) do { \
+	if (!((void*)(a) == (void*)(b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Pointers should be equal\n" \
+		          "\tTEST: %p == %p", \
+		          __FILE__, __LINE__, \
+		          (void*)(a), (void*)(b)); \
+		} \
+} while(0)
+
+#define ASSERT_PTR_NE(a, b) do { \
+	if (!((void*)(a) != (void*)(b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Pointers should be different\n" \
+		          "\tTEST: %p != %p", \
+		          __FILE__, __LINE__, \
+		          (void*)(a), (void*)(b)); \
+		} \
+} while(0)
+
 #define ASSERT_MEM_EQ(expected, actual, size) do { \
-	if (memcmp((expected), (actual), (size)) != 0) { \
-		TEST_FAIL("\tFAIL: %s:%d - Memory regions differ\n" \
-		          "\tSIZE: %zu bytes", __FILE__, __LINE__, (size_t)(size)); \
+	if (!(memcmp((expected), (actual), (size_t)(size)) == 0)) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory regions should be the same\n" \
+		          "\tSIZE: %zu bytes", \
+		          __FILE__, __LINE__, \
+		          (size_t)(size)); \
+	} \
+} while(0)
+
+#define ASSERT_MEM_NE(expected, actual, size) do { \
+	if (!(memcmp((expected), (actual), (size_t)(size)) != 0)) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory regions should be different\n" \
+		          "\tSIZE: %zu bytes", \
+		          __FILE__, __LINE__, \
+		          (size_t)(size)); \
+	} \
+} while(0)
+
+#define ASSERT_SIZE(object, size) do { \
+	if (!(sizeof(object) == (size_t)(size))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory size should be exact\n" \
+		          "\tTEST: sizeof(%s) == %zu", \
+		          __FILE__, __LINE__, \
+		          #object, (size_t)(size)); \
+	} \
+} while(0)
+
+#define ASSERT_SIZE_MIN(object, size) do { \
+	if (!(sizeof(object) >= (size_t)(size))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory size should be more\n" \
+		          "\tTEST: sizeof(%s) >= %zu", \
+		          __FILE__, __LINE__, \
+		          #object, (size_t)(size)); \
+	} \
+} while(0)
+
+#define ASSERT_SIZE_MAX(object, size) do { \
+	if (!(sizeof(object) <= (size_t)(size))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory size should be less\n" \
+		          "\tTEST: sizeof(%s) <= %zu", \
+		          __FILE__, __LINE__, \
+		          #object, (size_t)(size)); \
+	} \
+} while(0)
+
+#define ASSERT_SIZE_FITS(object, thing) do { \
+	if (!(sizeof(object) >= sizeof(thing))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory size should fit\n" \
+		          "\tTEST: sizeof(%s) >= sizeof(%s)", \
+		          __FILE__, __LINE__, \
+		          #object, #thing); \
+	} \
+} while(0)
+
+#define ASSERT_SIZE_SAME(object, thing) do { \
+	if (!(sizeof(object) == sizeof(thing))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory size should be the same\n" \
+		          "\tTEST: sizeof(%s) == sizeof(%s)", \
+		          __FILE__, __LINE__, \
+		          #object, #thing); \
+	} \
+} while(0)
+
+#define ASSERT_SIZE_ALIGNS(object, thing) do { \
+	if (!(sizeof(object) % sizeof(thing) == 0)) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory size should be aligned\n" \
+		          "\tTEST: sizeof(%s) %% sizeof(%s) == 0", \
+		          __FILE__, __LINE__, \
+		          #object, #thing); \
+	} \
+} while(0)
+
+#define ASSERT_OFFSET(object, property, offset) do { \
+	if (!(offsetof(object, property) == (size_t)(offset))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory offset should be exact\n" \
+		          "\tTEST: offsetof(%s, %s) == %zu", \
+		          __FILE__, __LINE__, \
+		          #object, #property, (size_t)(offset)); \
+	} \
+} while(0)
+
+#define ASSERT_OFFSET_PAST(object, property, offset) do { \
+	if (!(offsetof(object, property) >= (size_t)(offset))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory offset should be past\n" \
+		          "\tTEST: offsetof(%s, %s) >= %zu", \
+		          __FILE__, __LINE__, \
+		          #object, #property, (size_t)(offset)); \
+	} \
+} while(0)
+
+#define ASSERT_OFFSET_AFTER(object, prop_a, prop_b) do { \
+	if (!(offsetof(object, prop_a) >= offsetof(object, prop_b))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory offset should be after \n" \
+		          "\tTEST: offsetof(%s, %s) >= offsetof(%s, %s)", \
+		          __FILE__, __LINE__, \
+		          #object, #prop_a, #object, #prop_b); \
+	} \
+} while(0)
+
+#define ASSERT_OFFSET_ALIGNS(object, property, thing) do { \
+	if (!(offsetof(object, property) % sizeof(thing) == 0)) { \
+		TEST_FAIL("\tFAIL: %s:%d - Memory offset should align\n" \
+		          "\tTEST: offsetof(%s, %s) %% sizeof(%s) == 0", \
+		          __FILE__, __LINE__, \
+		          #object, #property, #thing); \
+	} \
+} while(0)
+
+#define ASSERT_ERRNO(err) do { \
+	if (!((errno) == (err))) { \
+		TEST_FAIL("\tFAIL: %s:%d - Error should be set\n" \
+		          "\tTEST: error %d is %d", \
+		          __FILE__, __LINE__, \
+		          (errno), (err)); \
 	} \
 } while(0)
 
