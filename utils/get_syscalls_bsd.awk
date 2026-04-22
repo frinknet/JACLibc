@@ -40,23 +40,17 @@
 	next
 }
 
-function process_block(num, blk,    m, sig, name) {
-	# Extract between first '{' and final '}' or '};'
-	if (!match(blk, /\{([^}]*)};?[[:space:]]*$/, m))
-		return
-
-	sig = m[1]
-
+function process_block(num, blk,    m, name) {
 	# Look for the function name: last identifier before '('
 	# This handles "ssize_t read(", "void *mmap(", etc.
-	if (!match(sig, /([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\(/, m))
+	if (!match(blk, /([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\(/, m))
 		return
 
 	name = m[1]
 
-	# Strip sys_ prefix if present
+	sub(/^__/, "", name)
 	sub(/^sys_/, "", name)
 
-	printf "X(SYS_%s, %d, %s)\n", name, num, name
+	if (name != "nosys" && name != "enosys")
+		printf "X(SYS_%s, %d, %s)\n", name, num, name
 }
-

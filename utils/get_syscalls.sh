@@ -65,7 +65,7 @@ xfiles() {
     done
     echo " */"
     echo ""
-    awk -varch="$arch" -f "$ROOT/utils/get_syscalls_${os}.awk" "$tmp"
+    awk -varch="$arch" -f "$ROOT/utils/get_syscalls_${os}.awk" "$tmp" | sort -u
   } > "$gen"
 
   if [ ! -s "$gen" ]; then
