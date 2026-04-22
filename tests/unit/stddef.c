@@ -44,9 +44,8 @@ TEST(null_pointer_checks) {
 	ASSERT_TRUE(p2 != NULL);
 }
 
-/* ============================================================================
- * SIZE_T
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(size_t);
 
 TEST(size_t_basic) {
@@ -67,9 +66,9 @@ TEST(size_t_max_value) {
 
 TEST(size_t_architecture_dependent) {
 	#if JACL_64BIT
-		ASSERT_EQ(8, sizeof(size_t));
+		ASSERT_SIZE(size_t, 8);
 	#else
-		ASSERT_EQ(4, sizeof(size_t));
+		ASSERT_SIZE(size_t, 4);
 	#endif
 }
 
@@ -88,9 +87,8 @@ TEST(size_t_array_indexing) {
 	ASSERT_EQ(9, arr[9]);
 }
 
-/* ============================================================================
- * PTRDIFF_T
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(ptrdiff_t);
 
 TEST(ptrdiff_t_basic_arithmetic) {
@@ -113,9 +111,9 @@ TEST(ptrdiff_t_pointer_subtraction) {
 
 TEST(ptrdiff_t_architecture_dependent) {
 	#if JACL_64BIT
-		ASSERT_EQ(8, sizeof(ptrdiff_t));
+		ASSERT_SIZE(ptrdiff_t, 8);
 	#else
-		ASSERT_EQ(4, sizeof(ptrdiff_t));
+		ASSERT_SIZE(ptrdiff_t, 4);
 	#endif
 }
 

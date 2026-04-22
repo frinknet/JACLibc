@@ -496,7 +496,7 @@ TEST(poll_negative_timeout_with_ready_fd) {
 TEST(poll_validate_invalid_events) {
 	struct pollfd pfd = {STDIN_FILENO, 0x8000, 0};  // Invalid event flag
 	ASSERT_EQ(-1, poll_validate(&pfd, 1));
-	ASSERT_ERRNO_EQ(EINVAL);
+	ASSERT_ERRNO(EINVAL);
 }
 
 TEST(poll_preserves_errno_on_success) {
@@ -515,7 +515,7 @@ TEST(poll_returns_enosys) {
 	struct pollfd pfd;
 	int result = poll(&pfd, 1, 0);
 	ASSERT_EQ(-1, result);
-	ASSERT_ERRNO_EQ(ENOSYS);
+	ASSERT_ERRNO(ENOSYS);
 }
 
 #endif
@@ -630,7 +630,7 @@ TEST(ppoll_returns_enosys) {
 	struct pollfd pfd;
 	int result = ppoll(&pfd, 1, NULL, NULL);
 	ASSERT_EQ(-1, result);
-	ASSERT_ERRNO_EQ(ENOSYS);
+	ASSERT_ERRNO(ENOSYS);
 }
 #endif
 

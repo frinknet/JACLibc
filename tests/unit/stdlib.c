@@ -231,28 +231,28 @@ TEST(strtol_whitespace)
 TEST(strtol_base_1_invalid)
 {
 	long result = strtol("123", NULL, 1);
-	ASSERT_ERRNO_EQ(EINVAL);
+	ASSERT_ERRNO(EINVAL);
 	ASSERT_INT_EQ(result, 0);
 }
 
 TEST(strtol_base_37_invalid)
 {
 	long result = strtol("XYZ", NULL, 37);
-	ASSERT_ERRNO_EQ(EINVAL);
+	ASSERT_ERRNO(EINVAL);
 	ASSERT_INT_EQ(result, 0);
 }
 
 TEST(strtol_overflow_positive)
 {
 	long result = strtol("99999999999999999999999", NULL, 10);
-	ASSERT_ERRNO_EQ(ERANGE);
+	ASSERT_ERRNO(ERANGE);
 	ASSERT_INT_EQ(result, LONG_MAX);
 }
 
 TEST(strtol_underflow_negative)
 {
 	long result = strtol("-99999999999999999999999", NULL, 10);
-	ASSERT_ERRNO_EQ(ERANGE);
+	ASSERT_ERRNO(ERANGE);
 	ASSERT_INT_EQ(result, LONG_MIN);
 }
 
@@ -260,7 +260,7 @@ TEST(strtol_no_conversion)
 {
 	char *ep;
 	long result = strtol("notanumber", &ep, 10);
-	ASSERT_ERRNO_EQ(0);
+	ASSERT_ERRNO(0);
 	ASSERT_INT_EQ(result, 0);
 	ASSERT_INT_EQ(ep[0], 'n');
 }
@@ -369,7 +369,7 @@ TEST(strtoll_hex)
 TEST(strtoll_overflow)
 {
 	long long result = strtoll("9999999999999999999999999999", NULL, 10);
-	ASSERT_ERRNO_EQ(ERANGE);
+	ASSERT_ERRNO(ERANGE);
 	ASSERT_INT_EQ(result, LLONG_MAX);
 }
 
@@ -443,7 +443,7 @@ TEST(strtoul_hex_prefix)
 TEST(strtoul_overflow)
 {
 	unsigned long result = strtoul("99999999999999999999", NULL, 10);
-	ASSERT_ERRNO_EQ(ERANGE);
+	ASSERT_ERRNO(ERANGE);
 	ASSERT_INT_EQ(result, ULONG_MAX);
 }
 
@@ -609,14 +609,14 @@ TEST(strtof_subnormal_small)
 TEST(strtof_overflow_to_inf)
 {
 	float result = strtof("1e100", NULL);
-	ASSERT_ERRNO_EQ(ERANGE);
+	ASSERT_ERRNO(ERANGE);
 	ASSERT_INT_EQ(isinf(result), 1);
 }
 
 TEST(strtof_underflow_to_zero)
 {
 	float result = strtof("1e-1000", NULL);
-	ASSERT_ERRNO_EQ(ERANGE);
+	ASSERT_ERRNO(ERANGE);
 	ASSERT_INT_EQ(result, 0.0);
 }
 

@@ -1,10 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 #include <dirent.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(dirent.h);
