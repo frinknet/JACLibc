@@ -250,33 +250,41 @@ static_assert(sizeof(uint_least64_t) >= 8,  "uint_least64_t must be at least 64 
 /* ============================================================= */
 
 #if JACL_64BIT
+
 typedef int64_t            intptr_t;
 typedef uint64_t           uintptr_t;
 
 #define INTPTR_MIN        INT64_MIN
 #define INTPTR_MAX        INT64_MAX
 #define UINTPTR_MAX       UINT64_MAX
+
 #elif JACL_32BIT
+
 typedef int32_t           intptr_t;
 typedef uint32_t          uintptr_t;
 
 #define INTPTR_MIN        INT32_MIN
 #define INTPTR_MAX        INT32_MAX
 #define UINTPTR_MAX       UINT32_MAX
+
 #elif JACL_16BIT
+
 typedef int16_t           intptr_t;
 typedef uint16_t          uintptr_t;
 
 #define INTPTR_MIN        INT16_MIN
 #define INTPTR_MAX        INT16_MAX
 #define UINTPTR_MAX       UINT16_MAX
+
 #else
+
 typedef int8_t            intptr_t;
 typedef uint8_t           uintptr_t;
 
 #define INTPTR_MIN        INT16_MIN
 #define INTPTR_MAX        INT16_MAX
 #define UINTPTR_MAX       UINT16_MAX
+
 #endif
 
 /* ============================================================= */
@@ -284,33 +292,41 @@ typedef uint8_t           uintptr_t;
 /* ============================================================= */
 
 #if JACL_HAS_INT64
+
 typedef int64_t           intmax_t;
 typedef uint64_t          uintmax_t;
 
 #define INTMAX_MIN        INT64_MIN
 #define INTMAX_MAX        INT64_MAX
 #define UINTMAX_MAX       UINT64_MAX
+
 #elif JACL_HAS_INT32
+
 typedef int32_t           intmax_t;
 typedef uint32_t          uintmax_t;
 
 #define INTMAX_MIN        INT32_MIN
 #define INTMAX_MAX        INT32_MAX
 #define UINTMAX_MAX       UINT32_MAX
+
 #elif JACL_HAS_INT16
+
 typedef int16_t           intmax_t;
 typedef uint16_t          uintmax_t;
 
 #define INTMAX_MIN        INT16_MIN
 #define INTMAX_MAX        INT16_MAX
 #define UINTMAX_MAX       UINT16_MAX
+
 #else
+
 typedef int8_t            intmax_t;
 typedef uint8_t           uintmax_t;
 
 #define INTMAX_MIN        INT8_MIN
 #define INTMAX_MAX        INT8_MAX
 #define UINTMAX_MAX       UINT8_MAX
+
 #endif
 
 /* ============================================================= */
@@ -318,17 +334,25 @@ typedef uint8_t           uintmax_t;
 /* ============================================================= */
 
 #if JACL_64BIT
-  #define PTRDIFF_MIN    LONG_MIN
-  #define PTRDIFF_MAX    LONG_MAX
+
+#define PTRDIFF_MIN    LONG_MIN
+#define PTRDIFF_MAX    LONG_MAX
+
 #elif JACL_32BIT
-  #define PTRDIFF_MIN    INT_MIN
-  #define PTRDIFF_MAX    INT_MAX
+
+#define PTRDIFF_MIN    INT_MIN
+#define PTRDIFF_MAX    INT_MAX
+
 #elif JACL_16BIT
-  #define PTRDIFF_MIN    SHRT_MIN
-  #define PTRDIFF_MAX    SHRT_MAX
+
+#define PTRDIFF_MIN    SHRT_MIN
+#define PTRDIFF_MAX    SHRT_MAX
+
 #else
-  #define PTRDIFF_MIN    CHAR_MIN
-  #define PTRDIFF_MAX    CHAR_MAX
+
+#define PTRDIFF_MIN    CHAR_MIN
+#define PTRDIFF_MAX    CHAR_MAX
+
 #endif
 
 #define SIG_ATOMIC_MAX  INT32_MAX
@@ -361,24 +385,24 @@ typedef uint8_t           uintmax_t;
 #define UINT16_C(c)        c##U
 
 #if JACL_HAS_INT32
-#define INT32_C(c)         c
-#define UINT32_C(c)        c##U
+	#define INT32_C(c)         c
+	#define UINT32_C(c)        c##U
 #endif
 
 #if JACL_HAS_INT64
-#define INT64_C(c)         c##LL
-#define UINT64_C(c)        c##ULL
+	#define INT64_C(c)         c##LL
+	#define UINT64_C(c)        c##ULL
 #endif
 
 #if JACL_HAS_INT64
-#define INTMAX_C(c)        c##LL
-#define UINTMAX_C(c)       c##ULL
+	#define INTMAX_C(c)        c##LL
+	#define UINTMAX_C(c)       c##ULL
 #elif JACL_HAS_INT32
-#define INTMAX_C(c)        c
-#define UINTMAX_C(c)       c##U
+	#define INTMAX_C(c)        c
+	#define UINTMAX_C(c)       c##U
 #else
-#define INTMAX_C(c)        c
-#define UINTMAX_C(c)       c##U
+	#define INTMAX_C(c)        c
+	#define UINTMAX_C(c)       c##U
 #endif
 
 #ifdef __cplusplus

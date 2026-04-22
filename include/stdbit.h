@@ -13,17 +13,17 @@ extern "C" {
 #if JACL_HAS_C23
 #  define __STDC_VERSION_STDBIT_H__ 202311L
 
-#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if JACL_HAS_BE
 #  define __STDC_ENDIAN_BIG__		 1
 #  define __STDC_ENDIAN_LITTLE__ 0
-#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#elif JACL_HAS_LE
 #  define __STDC_ENDIAN_BIG__		 0
 #  define __STDC_ENDIAN_LITTLE__ 1
 #else
 #  define __STDC_ENDIAN_BIG__		 0
 #  define __STDC_ENDIAN_LITTLE__ 0
 #endif
-#define __STDC_ENDIAN_NATIVE__	 (__STDC_ENDIAN_BIG__ ? 4321 : 1234)
+#define __STDC_ENDIAN_NATIVE__	 JACL_ORDER
 
 #endif
 
@@ -143,4 +143,5 @@ __jacl_bitgen(64, unsigned long long,	ull)
 #ifdef __cplusplus
 }
 #endif
+
 #endif /* _STDBIT_H */

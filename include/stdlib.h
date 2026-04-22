@@ -230,12 +230,21 @@ static inline int setenv(const char *name, const char *value, int overwrite) {
 	if (!name || !*name || strchr(name, '=')) { errno = EINVAL; return -1; }
 	if (!overwrite && getenv(name)) return 0;
 
-	size_t len = strlen(name) + strlen(value) + 2;
+	size_t nlen = strlen(name);
+	size_t vlen = strlen(value);
+	size_t len = nlen + vlen + 2; // name + = + value + \0
 	char *str = (char*)malloc(len);
 
 	if (!str) { errno = ENOMEM; return -1; }
 
-	snprintf(str, len, "%s=%s", name, value);
+	// Manual construction: name=value\0
+	memcpy(str, name, nlen);
+
+	str[nlen] = '=';
+
+	memcpy(str + nlen + 1, value, vlen);
+
+	str[len - 1] = '\0';
 
 	return putenv(str);
 }

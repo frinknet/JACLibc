@@ -4,7 +4,6 @@
 #pragma once
 
 #include <config.h>
-
 #include <errno.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -277,6 +276,35 @@ static inline int __jacl_buffer_output(FILE *f) {
 
 	return 0;
 }
+
+/* ============================================================= */
+/* String IO                                                     */
+/* ============================================================= */
+
+/* Printf Implementations */
+int vprintf(const char * restrict fmt, va_list ap);
+int printf(const char* restrict fmt, ...);
+int vfprintf(FILE * restrict stream, const char * restrict fmt, va_list ap);
+int fprintf(FILE* restrict stream, const char* restrict fmt, ...);
+int vsprintf(char * restrict s, const char * restrict fmt, va_list ap);
+int sprintf(char * restrict s, const char * restrict fmt, ...);
+
+#if JACL_HAS_C99
+int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap);
+int snprintf(char * restrict s, size_t n, const char * restrict fmt, ...);
+int vdprintf(int fd, const char* restrict fmt, va_list ap);
+int dprintf(int fd, const char* restrict fmt, ...);
+int vasprintf(char **strp, const char *fmt, va_list ap);
+int asprintf(char **strp, const char *fmt, ...);
+#endif
+
+/* Scanf Implementations */
+int vscanf(const char * restrict fmt, va_list ap);
+int scanf(const char * restrict fmt, ...);
+int vfscanf(FILE * restrict stream, const char * restrict fmt, va_list ap);
+int fscanf(FILE* restrict stream, const char * restrict fmt, ...);
+int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap);
+int sscanf(const char * restrict s, const char * restrict fmt, ...);
 
 /* ============================================================= */
 /* File IO                                                       */
@@ -583,31 +611,6 @@ static inline char* gets(char *s) {
 	return fgets(s, INT_MAX, stdin);  // Still unsafe!
 }
 #endif
-
-/* Printf Implementations */
-int vprintf(const char * restrict fmt, va_list ap);
-int printf(const char* restrict fmt, ...);
-int vfprintf(FILE * restrict stream, const char * restrict fmt, va_list ap);
-int fprintf(FILE* restrict stream, const char* restrict fmt, ...);
-int vsprintf(char * restrict s, const char * restrict fmt, va_list ap);
-int sprintf(char * restrict s, const char * restrict fmt, ...);
-
-#if JACL_HAS_C99
-int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap);
-int snprintf(char * restrict s, size_t n, const char * restrict fmt, ...);
-int vdprintf(int fd, const char* restrict fmt, va_list ap);
-int dprintf(int fd, const char* restrict fmt, ...);
-int vasprintf(char **strp, const char *fmt, va_list ap);
-int asprintf(char **strp, const char *fmt, ...);
-#endif
-
-/* Scanf Implementations */
-int vscanf(const char * restrict fmt, va_list ap);
-int scanf(const char * restrict fmt, ...);
-int vfscanf(FILE * restrict stream, const char * restrict fmt, va_list ap);
-int fscanf(FILE* restrict stream, const char * restrict fmt, ...);
-int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap);
-int sscanf(const char * restrict s, const char * restrict fmt, ...);
 
 /* Error Handling */
 static inline int feof(FILE* stream) { return stream ? (stream->_flags & __SEOF) : 0; }
