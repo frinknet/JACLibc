@@ -6,7 +6,7 @@
 #include <config.h>
 
 /**
- * NOTE: Polyfills are provided in config.h so we can write in modern C
+ * NOTE: Polyfills are provided in config.h so we can write in modern C everywhere!!!
  */
 
 #define __noreturn_is_defined 1

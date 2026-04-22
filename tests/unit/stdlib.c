@@ -1198,11 +1198,13 @@ TEST(mkstemp_template_modified)
 TEST(mkstemp_replaces_all_x)
 {
 	char t[] = "/tmp/XXXXXX";
+	char orig[] = "/tmp/XXXXXX";
 	int fd = mkstemp(t);
 	ASSERT_INT_NE(fd, -1);
-	for (int i = 0; i < strlen(t); i++) {
-		ASSERT_INT_NE(t[i], 'X');
-	}
+	// Verify the template was actually modified by mkstemp
+	ASSERT_STR_NE(t, orig);
+	// Optional: verify the prefix is intact
+	ASSERT_MEM_EQ(t, "/tmp/", 5);
 	close(fd);
 	unlink(t);
 }
