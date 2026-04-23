@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <core/format.h>
+#include <core/memory.h>
 
 #ifdef __cplusplus
 extern {
