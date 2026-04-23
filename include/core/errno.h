@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 thread_local int __jacl_errno = 0;
+thread_local int __jacl_h_errno = 0;
 
 #ifdef __cplusplus
 }
