@@ -22,7 +22,7 @@ typedef enum {
 extern "C" {
 #endif
 
-extern thread_local int __jacl_errno;
+extern thread_local int errno;
 
 static inline long syscall(long num, ...) {
 	va_list args;
@@ -41,7 +41,7 @@ static inline long syscall(long num, ...) {
 
 	// Convert Linux negative errno to POSIX -1 + errno
 	if (result < 0 && result >= -4095) {
-		__jacl_errno = -result;
+		errno = -result;
 
 		return -1;
 	}

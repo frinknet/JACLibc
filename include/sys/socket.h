@@ -4,6 +4,7 @@
 #pragma once
 
 #include <config.h>
+#include <errno.h>
 #include <stddef.h>    /* for size_t */
 #include <sys/uio.h>   /* for struct iovec */
 #include <sys/types.h>
@@ -152,7 +153,7 @@ struct cmsghdr {
 };
 
 /* Ancillary Data Macros */
-#define CMSG_ALIGN(len) (((len) + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1))
+#define CMSG_ALIGN(len) (((size_t)(len) + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1))
 #define CMSG_SPACE(len) (CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(len))
 #define CMSG_LEN(len)   (CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
 #define CMSG_FIRSTHDR(mhdr) \

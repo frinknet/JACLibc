@@ -1,39 +1,24 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
-#include <poll.h>
+#include <sys/poll.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
 
 TEST_TYPE(unit);
-TEST_UNIT(poll.h);
+TEST_UNIT(sys/poll.h);
 
 /* ============================================================================
  * CONSTANTS
  * ============================================================================ */
 TEST_SUITE(constants);
 
-TEST(constants_pollin) {
+TEST(constants_poll) {
 	ASSERT_EQ(0x0001, POLLIN);
-}
-
-TEST(constants_pollpri) {
 	ASSERT_EQ(0x0002, POLLPRI);
-}
-
-TEST(constants_pollout) {
 	ASSERT_EQ(0x0004, POLLOUT);
-}
-
-TEST(constants_pollerr) {
 	ASSERT_EQ(0x0008, POLLERR);
-}
-
-TEST(constants_pollhup) {
 	ASSERT_EQ(0x0010, POLLHUP);
-}
-
-TEST(constants_pollnval) {
 	ASSERT_EQ(0x0020, POLLNVAL);
 }
 

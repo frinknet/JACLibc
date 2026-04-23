@@ -13,7 +13,6 @@
 
 #include <core/errno.h>
 #include <core/stack.h>
-#include <core/memory.h>
 #include <core/fenv.h>
 #include <core/stdio.h>
 #include <core/stdlib.h>

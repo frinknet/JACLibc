@@ -7,12 +7,12 @@
 #include <errno.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdint.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(sys/socket.h);
 
 /* ============================================================================ */
-
 TEST_SUITE(constants);
 
 TEST(constants_address_families) {
@@ -61,13 +61,13 @@ TEST(constants_sock_options_timeout) {
 	ASSERT_TRUE(SO_RCVTIMEO > 0);
 	ASSERT_TRUE(SO_SNDTIMEO > 0);
 
-	#if JACL_HAS_BSD
-		ASSERT_EQ(0x1006, SO_RCVTIMEO);
-		ASSERT_EQ(0x1005, SO_SNDTIMEO);
-	#else
-		ASSERT_EQ(20, SO_RCVTIMEO);
-		ASSERT_EQ(21, SO_SNDTIMEO);
-	#endif
+#if JACL_HAS_BSD
+	ASSERT_EQ(0x1006, SO_RCVTIMEO);
+	ASSERT_EQ(0x1005, SO_SNDTIMEO);
+#else
+	ASSERT_EQ(20, SO_RCVTIMEO);
+	ASSERT_EQ(21, SO_SNDTIMEO);
+#endif
 }
 
 TEST(constants_sock_options_security_filter) {
@@ -105,7 +105,6 @@ TEST(constants_shutdown) {
 }
 
 /* ============================================================================ */
-
 TEST_SUITE(sockaddr);
 
 TEST(sockaddr_size) {
@@ -128,17 +127,9 @@ TEST(sockaddr_assignment) {
 }
 
 /* ============================================================================ */
-
 TEST_SUITE(msghdr);
 
-TEST(msghdr_exists) {
-	struct msghdr msg;
-	(void)msg;
-	ASSERT_TRUE(1);
-}
-
 TEST(msghdr_size) {
-	/* Size varies by arch, but must be at least large enough for all pointers + ints */
 	ASSERT_TRUE(sizeof(struct msghdr) >= (sizeof(void*) * 3 + sizeof(int) * 3 + sizeof(size_t)));
 }
 
@@ -164,22 +155,13 @@ TEST(msghdr_field_names) {
 }
 
 TEST(msghdr_offsets) {
-	/* Verify standard field order/offsets roughly match expectations */
 	ASSERT_TRUE(offsetof(struct msghdr, msg_name) == 0);
-	/* Note: Exact offsets depend on pointer alignment, but names must exist */
 	ASSERT_TRUE(offsetof(struct msghdr, msg_namelen) > 0);
 	ASSERT_TRUE(offsetof(struct msghdr, msg_iov) > offsetof(struct msghdr, msg_namelen));
 }
 
 /* ============================================================================ */
-
 TEST_SUITE(cmsghdr);
-
-TEST(cmsghdr_exists) {
-	struct cmsghdr cmsg;
-	(void)cmsg;
-	ASSERT_TRUE(1);
-}
 
 TEST(cmsghdr_size) {
 	ASSERT_TRUE(sizeof(struct cmsghdr) >= (sizeof(socklen_t) + sizeof(int) * 2));
@@ -205,29 +187,80 @@ TEST(cmsghdr_offsets) {
 }
 
 /* ============================================================================ */
+TEST_SUITE(cmsg_align);
 
-TEST_SUITE(cmsg_space);
-
-TEST(cmsg_space_len) {
-	size_t space = CMSG_SPACE(0);
-	size_t len = CMSG_LEN(0);
-
-	ASSERT_TRUE(space >= sizeof(struct cmsghdr));
-	ASSERT_TRUE(len >= sizeof(struct cmsghdr));
-	ASSERT_TRUE(space >= len);
+TEST(cmsg_align_zero) {
+	ASSERT_EQ(0, CMSG_ALIGN(0));
 }
 
-TEST(cmsg_space_alignment) {
-	size_t space = CMSG_SPACE(10);
-	/* Should be aligned to sizeof(size_t) or similar */
-	ASSERT_TRUE(space % sizeof(size_t) == 0);
+TEST(cmsg_align_one) {
+	ASSERT_EQ(sizeof(size_t), CMSG_ALIGN(1));
+}
+
+TEST(cmsg_align_exact) {
+	ASSERT_EQ(sizeof(size_t), CMSG_ALIGN(sizeof(size_t)));
+}
+
+TEST(cmsg_align_boundary) {
+	size_t s = sizeof(size_t);
+	ASSERT_EQ(s * 2, CMSG_ALIGN(s + 1));
+}
+
+TEST(cmsg_align_large) {
+	size_t s = sizeof(size_t);
+	size_t val = 100;
+	size_t expected = ((val + s - 1) / s) * s;
+	ASSERT_EQ(expected, CMSG_ALIGN(val));
 }
 
 /* ============================================================================ */
+TEST_SUITE(cmsg_space);
 
+TEST(cmsg_space_zero_data) {
+	size_t space = CMSG_SPACE(0);
+	ASSERT_TRUE(space >= CMSG_ALIGN(sizeof(struct cmsghdr)));
+	ASSERT_TRUE(space % sizeof(size_t) == 0);
+}
+
+TEST(cmsg_space_small_data) {
+	size_t space = CMSG_SPACE(1);
+	size_t expected = CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(1);
+	ASSERT_EQ(expected, space);
+}
+
+TEST(cmsg_space_large_data) {
+	size_t space = CMSG_SPACE(1024);
+	size_t expected = CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(1024);
+	ASSERT_EQ(expected, space);
+}
+
+/* ============================================================================ */
+TEST_SUITE(cmsg_len);
+
+TEST(cmsg_len_zero_data) {
+	size_t len = CMSG_LEN(0);
+	ASSERT_TRUE(len >= CMSG_ALIGN(sizeof(struct cmsghdr)));
+}
+
+TEST(cmsg_len_small_data) {
+	size_t len = CMSG_LEN(5);
+	/* CMSG_LEN adds header align + raw data len (no data align) */
+	size_t expected = CMSG_ALIGN(sizeof(struct cmsghdr)) + 5;
+	ASSERT_EQ(expected, len);
+}
+
+TEST(cmsg_len_vs_space) {
+	ASSERT_TRUE(CMSG_SPACE(10) >= CMSG_LEN(10));
+	/* They should differ if data size is not aligned */
+	if (10 % sizeof(size_t) != 0) {
+		ASSERT_TRUE(CMSG_SPACE(10) > CMSG_LEN(10));
+	}
+}
+
+/* ============================================================================ */
 TEST_SUITE(cmsg_data);
 
-TEST(cmsg_data_ptr) {
+TEST(cmsg_data_ptr_valid) {
 	struct cmsghdr cmsg;
 	cmsg.cmsg_len = CMSG_LEN(10);
 
@@ -238,39 +271,158 @@ TEST(cmsg_data_ptr) {
 	ASSERT_TRUE(data > (unsigned char *)&cmsg);
 }
 
+TEST(cmsg_data_offset_consistency) {
+	/* Verify offset is constant regardless of cmsg_len value */
+	struct cmsghdr cmsg1, cmsg2;
+	cmsg1.cmsg_len = CMSG_LEN(0);
+	cmsg2.cmsg_len = CMSG_LEN(100);
+
+	unsigned char *d1 = CMSG_DATA(&cmsg1);
+	unsigned char *d2 = CMSG_DATA(&cmsg2);
+
+	/* Both should point to same relative offset from their own start */
+	ASSERT_EQ((uintptr_t)d1 - (uintptr_t)&cmsg1, (uintptr_t)d2 - (uintptr_t)&cmsg2);
+}
+
+TEST(cmsg_data_writable) {
+	/* Allocate header + payload space */
+	char buffer[CMSG_SPACE(8)] = {0};
+	struct cmsghdr *cmsg = (struct cmsghdr *)buffer;
+	cmsg->cmsg_len = CMSG_LEN(8);
+	unsigned char *data = CMSG_DATA(cmsg);
+
+	/* Ensure we can write to the data pointer without crashing */
+	data[0] = 0xAA;
+	data[1] = 0xBB;
+	ASSERT_EQ(0xAA, data[0]);
+	ASSERT_EQ(0xBB, data[1]);
+}
+
+/* REMOVED: cmsg_data_alignment (Absolute alignment depends on stack, not macro) */
+
 /* ============================================================================ */
+TEST_SUITE(cmsg_firsthdr);
 
-TEST_SUITE(cmsg_fisthdr);
-
-TEST(cmsg_firsthdr_null) {
+TEST(cmsg_firsthdr_null_control) {
 	struct msghdr msg;
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
-
 	ASSERT_NULL(CMSG_FIRSTHDR(&msg));
 }
 
-/* ============================================================================ */
-
-TEST_SUITE(cmsg_nexthdr);
-
-TEST(cmsg_nxthdr_safety) {
-	/* Basic sanity check that macro compiles and doesn't crash on empty */
+TEST(cmsg_firsthdr_zero_len) {
 	struct msghdr msg;
 	struct cmsghdr cmsg;
 	memset(&msg, 0, sizeof(msg));
-	memset(&cmsg, 0, sizeof(cmsg));
-
 	msg.msg_control = &cmsg;
-	msg.msg_controllen = sizeof(cmsg);
+	msg.msg_controllen = 0;
+	ASSERT_NULL(CMSG_FIRSTHDR(&msg));
+}
 
-	/* Might return NULL if len is too small, but shouldn't crash */
-	(void)CMSG_NXTHDR(&msg, &cmsg);
+TEST(cmsg_firsthdr_too_small) {
+	struct msghdr msg;
+	struct cmsghdr cmsg;
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = &cmsg;
+	msg.msg_controllen = sizeof(struct cmsghdr) - 1;
+	ASSERT_NULL(CMSG_FIRSTHDR(&msg));
+}
+
+TEST(cmsg_firsthdr_exact_min) {
+	struct msghdr msg;
+	struct cmsghdr cmsg;
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = &cmsg;
+	msg.msg_controllen = CMSG_ALIGN(sizeof(struct cmsghdr));
+	ASSERT_PTR_EQ(CMSG_FIRSTHDR(&msg), &cmsg);
+}
+
+TEST(cmsg_firsthdr_larger_buffer) {
+	struct msghdr msg;
+	struct cmsghdr cmsg;
+	char buffer[128];
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = buffer;
+	msg.msg_controllen = sizeof(buffer);
+
+	/* Should return pointer to start of buffer casted */
+	ASSERT_PTR_EQ(CMSG_FIRSTHDR(&msg), (struct cmsghdr *)buffer);
 }
 
 /* ============================================================================ */
+TEST_SUITE(cmsg_nxthdr);
 
+TEST(cmsg_nxthdr_end_of_buffer) {
+	struct msghdr msg;
+	struct cmsghdr cmsg;
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = &cmsg;
+	msg.msg_controllen = CMSG_SPACE(0); /* Exactly one header */
+
+	cmsg.cmsg_len = CMSG_LEN(0);
+
+	/* No room for next */
+	ASSERT_NULL(CMSG_NXTHDR(&msg, &cmsg));
+}
+
+TEST(cmsg_nxthdr_exactly_fits_two) {
+	struct msghdr msg;
+	char buffer[256];
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = buffer;
+
+	size_t h1 = CMSG_SPACE(0);
+	size_t h2 = CMSG_SPACE(0);
+	msg.msg_controllen = h1 + h2;
+
+	struct cmsghdr *c1 = (struct cmsghdr *)buffer;
+	c1->cmsg_len = CMSG_LEN(0);
+
+	struct cmsghdr *c2 = CMSG_NXTHDR(&msg, c1);
+	ASSERT_NOT_NULL(c2);
+	ASSERT_PTR_EQ(c2, buffer + h1);
+}
+
+TEST(cmsg_nxthdr_truncated_middle) {
+	struct msghdr msg;
+	char buffer[256];
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = buffer;
+	msg.msg_controllen = 100; /* Arbitrary limit */
+
+	struct cmsghdr *c1 = (struct cmsghdr *)buffer;
+	/* Claim length that exceeds buffer */
+	c1->cmsg_len = CMSG_LEN(200);
+
+	/* Should return NULL because next would be out of bounds */
+	ASSERT_NULL(CMSG_NXTHDR(&msg, c1));
+}
+
+TEST(cmsg_nxthdr_chain_three) {
+	struct msghdr msg;
+	char buffer[512];
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = buffer;
+
+	size_t hs = CMSG_SPACE(10);
+	msg.msg_controllen = hs * 3;
+
+	struct cmsghdr *c1 = (struct cmsghdr *)buffer;
+	c1->cmsg_len = CMSG_LEN(10);
+
+	struct cmsghdr *c2 = CMSG_NXTHDR(&msg, c1);
+	ASSERT_NOT_NULL(c2);
+	c2->cmsg_len = CMSG_LEN(10);
+
+	struct cmsghdr *c3 = CMSG_NXTHDR(&msg, c2);
+	ASSERT_NOT_NULL(c3);
+
+	struct cmsghdr *c4 = CMSG_NXTHDR(&msg, c3);
+	ASSERT_NULL(c4); /* End of chain */
+}
+
+/* ============================================================================ */
 TEST_SUITE(socket);
 
 TEST(socket_invalid_family) {
@@ -304,7 +456,6 @@ TEST(socket_valid_udp) {
 }
 
 /* ============================================================================ */
-
 TEST_SUITE(shutdown);
 
 TEST(shutdown_invalid_fd) {
@@ -314,13 +465,10 @@ TEST(shutdown_invalid_fd) {
 }
 
 TEST(shutdown_constants_valid) {
-	/* Just ensuring constants are usable */
 	ASSERT_EQ(0, SHUT_RD);
 	ASSERT_EQ(1, SHUT_WR);
 	ASSERT_EQ(2, SHUT_RDWR);
 }
-
-/* ============================================================================ */
 
 TEST_MAIN()
 
