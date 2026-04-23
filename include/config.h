@@ -31,6 +31,10 @@
 #define JACL_X_SIGNALS JACL_HEADER(x, JACL_CONCAT_EXPAND(signals,JACL_OS,_))
 #define JACL_X_FCNTL JACL_HEADER(x, JACL_CONCAT_EXPAND(fcntl,JACL_OS_ARCH,_))
 
+// error number variables
+#define errno __jacl_errno
+#define h_errno __jacl_h_errno
+
 /* ============================================================= */
 /* C Standards Detection                                         */
 /* ============================================================= */

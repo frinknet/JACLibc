@@ -12,8 +12,7 @@
 /* Require C11 for proper thread-local errno support */
 #if JACL_HAS_C11
 
-extern thread_local int __jacl_errno;
-#define errno __jacl_errno
+extern thread_local int errno;
 
 #endif
 
