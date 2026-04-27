@@ -1,17 +1,13 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
 #include <sys/syscall.h>
-#include <unistd.h>
-#include <fcntl.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(sys/syscall.h);
 
-/* ============================================================================
- * SYSCALL WRAPPER - BASIC FUNCTIONALITY
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(syscall_wrapper);
 
 TEST(syscall_exists) {
@@ -38,17 +34,15 @@ TEST(syscall_return_value) {
 	ASSERT_EQ(pid1, pid2);
 }
 
-/* ============================================================================
- * SYSCALL NUMBERS - BASIC OPERATIONS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(syscall_numbers);
 
 #define X(SYS, num, name, ...) TEST(sys_##name) { ASSERT_TRUE(SYS > -1); }
 #include JACL_X_SYSCALL
 
-/* ============================================================================
- * SYSCALL - FILE OPERATIONS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(syscall_file_ops);
 
 TEST(syscall_open_close) {
@@ -80,9 +74,8 @@ TEST(syscall_write_read) {
 	unlink("/tmp/syscall_test2.txt");
 }
 
-/* ============================================================================
- * SYSCALL - PROCESS OPERATIONS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(syscall_process_ops);
 
 TEST(syscall_getpid) {
@@ -105,9 +98,8 @@ TEST(syscall_getgid) {
 	ASSERT_TRUE(gid >= 0);
 }
 
-/* ============================================================================
- * SYSCALL - ERROR HANDLING
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(syscall_errors);
 
 TEST(syscall_invalid_fd) {
@@ -120,9 +112,8 @@ TEST(syscall_invalid_open) {
 	ASSERT_EQ(-1, result);
 }
 
-/* ============================================================================
- * SYSCALL - VARIADIC ARGUMENTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(syscall_variadic);
 
 TEST(syscall_zero_args) {
@@ -151,9 +142,8 @@ TEST(syscall_six_args) {
 	ASSERT_TRUE(result > 0);
 }
 
-/* ============================================================================
- * SYSCALL CONSISTENCY
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(syscall_consistency);
 
 TEST(syscall_vs_wrapper_getpid) {
@@ -183,13 +173,6 @@ TEST(syscall_multiple_calls) {
 	}
 }
 
-TEST_MAIN()
+/* ============================================================================ */
 
-#else
-
-int main(void) {
-	printf("sys/syscall.h requires POSIX\n");
-	return 0;
-}
-
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "sys/syscall.h requires POSIX\n")

@@ -19,7 +19,12 @@ extern "C" {
 #endif
 
 extern char **environ;
-typedef unsigned int useconds_t;
+
+#if JACL_16BIT || JACL_8BIT
+	typedef unsigned long useconds_t;
+#else
+	typedef unsigned int useconds_t;
+#endif
 
 #define STDIN_FILENO    0
 #define STDOUT_FILENO   1
@@ -121,6 +126,12 @@ static inline int execvp(const char *file, char *const argv[]) {
 			char full_path[4096];
 
 			while (temp[file_len]) file_len++;
+
+			if (dir_len + 1 + file_len + 1 > sizeof(full_path)) {
+				errno = ENAMETOOLONG;
+
+				continue;
+			}
 
 			for (size_t j = 0; j < dir_len; j++) full_path[i++] = start[j];
 

@@ -1,5 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
+
 #include <stdbit.h>
 
 TEST_TYPE(unit);
@@ -7,10 +8,9 @@ TEST_UNIT(stdbit.h);
 
 #if JACL_HAS_C23
 
-/* ============================================================================
- * ENDIANNESS MACROS
- * ============================================================================ */
-TEST_SUITE(endianness);
+/* ============================================================================ */
+
+TEST_SUITE(endian);
 
 TEST(endian_macros_defined) {
 	// At least one should be set
@@ -31,9 +31,8 @@ TEST(endian_native) {
 	}
 }
 
-/* ============================================================================
- * LEADING ZEROS TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(leading_zeros);
 
 TEST(clz_zero) {
@@ -66,9 +65,8 @@ TEST(clz_mixed_bits) {
 	ASSERT_EQ(16, stdc_leading_zeros(0x0000FFFFU));
 }
 
-/* ============================================================================
- * LEADING ONES TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(leading_ones);
 
 TEST(clo_zero) {
@@ -92,9 +90,8 @@ TEST(clo_mixed) {
 	ASSERT_EQ(24, stdc_leading_ones(0xFFFFFF00U));
 }
 
-/* ============================================================================
- * TRAILING ZEROS TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(trailing_zeros);
 
 TEST(ctz_zero) {
@@ -127,9 +124,8 @@ TEST(ctz_mixed_bits) {
 	ASSERT_EQ(16, stdc_trailing_zeros(0xFFFF0000U));
 }
 
-/* ============================================================================
- * TRAILING ONES TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(trailing_ones);
 
 TEST(cto_zero) {
@@ -154,9 +150,8 @@ TEST(cto_mixed) {
 	ASSERT_EQ(16, stdc_trailing_ones(0x0000FFFFU));
 }
 
-/* ============================================================================
- * COUNT ONES (POPCOUNT) TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(count_ones);
 
 TEST(popcount_zero) {
@@ -192,9 +187,8 @@ TEST(popcount_mixed) {
 	ASSERT_EQ(24, stdc_count_ones(0x00FFFFFFU));
 }
 
-/* ============================================================================
- * COUNT ZEROS TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(count_zeros);
 
 TEST(count_zeros_zero) {
@@ -216,9 +210,8 @@ TEST(count_zeros_consistency) {
 	ASSERT_EQ(32, stdc_count_ones(val) + stdc_count_zeros(val));
 }
 
-/* ============================================================================
- * BIT WIDTH TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(bit_width);
 
 TEST(bit_width_zero) {
@@ -250,9 +243,8 @@ TEST(bit_width_max) {
 	ASSERT_EQ(8, stdc_bit_width((unsigned char)UINT8_MAX));
 }
 
-/* ============================================================================
- * BIT FLOOR TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(bit_floor);
 
 TEST(bit_floor_zero) {
@@ -282,9 +274,8 @@ TEST(bit_floor_large) {
 	ASSERT_EQ(0x80000000U, stdc_bit_floor(UINT32_MAX));
 }
 
-/* ============================================================================
- * BIT CEIL TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(bit_ceil);
 
 TEST(bit_ceil_zero) {
@@ -314,9 +305,8 @@ TEST(bit_ceil_large) {
 	ASSERT_EQ(256U, stdc_bit_ceil(256U));
 }
 
-/* ============================================================================
- * HAS SINGLE BIT (POWER OF 2) TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(has_single_bit);
 
 TEST(has_single_bit_zero) {
@@ -347,14 +337,13 @@ TEST(has_single_bit_max) {
 	ASSERT_FALSE(stdc_has_single_bit(UINT32_MAX));
 }
 
-/* ============================================================================
- * TYPE-SPECIFIC TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(type_specific);
 
 TEST(unsigned_char_operations) {
 	unsigned char val = 0xF0;
-	
+
 	ASSERT_EQ(4, stdc_count_ones(val));
 	ASSERT_EQ(0, stdc_leading_zeros(val));
 	ASSERT_EQ(4, stdc_trailing_zeros(val));
@@ -363,7 +352,7 @@ TEST(unsigned_char_operations) {
 
 TEST(unsigned_short_operations) {
 	unsigned short val = 0xF00F;
-	
+
 	ASSERT_EQ(8, stdc_count_ones(val));
 	ASSERT_EQ(0, stdc_leading_zeros(val));
 	ASSERT_EQ(0, stdc_trailing_zeros(val));
@@ -372,7 +361,7 @@ TEST(unsigned_short_operations) {
 
 TEST(unsigned_int_operations) {
 	unsigned int val = 0xDEADBEEF;
-	
+
 	ASSERT_TRUE(stdc_count_ones(val) > 0);
 	ASSERT_EQ(0, stdc_leading_zeros(val));
 	ASSERT_EQ(32, stdc_bit_width(val));
@@ -380,19 +369,18 @@ TEST(unsigned_int_operations) {
 
 TEST(unsigned_long_operations) {
 	unsigned long val = 0x12345678UL;
-	
+
 	ASSERT_TRUE(stdc_count_ones(val) > 0);
 	ASSERT_TRUE(stdc_bit_width(val) > 0);
 }
 
-/* ============================================================================
- * EDGE CASES
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(edge_cases);
 
 TEST(all_bits_set) {
 	unsigned int all = UINT32_MAX;
-	
+
 	ASSERT_EQ(32, stdc_count_ones(all));
 	ASSERT_EQ(0, stdc_count_zeros(all));
 	ASSERT_EQ(32, stdc_leading_ones(all));
@@ -411,46 +399,39 @@ TEST(single_bit_set) {
 TEST(alternating_bits) {
 	unsigned int pattern1 = 0xAAAAAAAAU;
 	unsigned int pattern2 = 0x55555555U;
-	
+
 	ASSERT_EQ(16, stdc_count_ones(pattern1));
 	ASSERT_EQ(16, stdc_count_ones(pattern2));
 }
 
-/* ============================================================================
- * CONSISTENCY TESTS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(consistency);
 
 TEST(leading_trailing_sum) {
 	unsigned int val = 0x0000FF00U;
-	
+
 	int lead = stdc_leading_zeros(val);
 	int trail = stdc_trailing_zeros(val);
 	int ones = stdc_count_ones(val);
-	
+
 	ASSERT_EQ(32, lead + trail + ones);
 }
 
 TEST(bit_operations_consistency) {
 	unsigned int val = 42U;
-	
+
 	int width = stdc_bit_width(val);
 	unsigned int floor = stdc_bit_floor(val);
 	unsigned int ceil = stdc_bit_ceil(val);
-	
+
 	ASSERT_TRUE(floor <= val);
 	ASSERT_TRUE(val <= ceil);
 	ASSERT_TRUE(width > 0);
 }
 
-TEST_MAIN()
+#endif /* JACL_HAS_C23 */
 
-#else
+/* ============================================================================ */
 
-// Stub for pre-C23
-int main(void) {
-	printf("stdbit.h requires C23\n");
-	return 0;
-}
-
-#endif
+TEST_MAIN_IF(JACL_HAS_C23, "stdbit.h requires C23\n")

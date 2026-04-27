@@ -292,7 +292,7 @@ static inline int open(const char *pathname, int flags, ...) {
 	if (flags & O_CREAT) {
 		va_list args;
 		va_start(args, flags);
-		mode = va_arg(args, mode_t);
+		mode = va_arg(args, int);
 		va_end(args);
 	}
 
@@ -313,7 +313,7 @@ static inline int openat(int dirfd, const char *pathname, int flags, ...) {
 	if (flags & O_CREAT) {
 		va_list args;
 		va_start(args, flags);
-		mode = va_arg(args, mode_t);
+		mode = va_arg(args, int);
 		va_end(args);
 	}
 
@@ -468,7 +468,12 @@ static inline int fcntl64(int fd, int cmd, ...) {
 	#endif
 
 	/* Fallback to regular fcntl */
-	return fcntl(fd, cmd, arg);
+	#if JACL_HAS_LFS && JACL_32BIT
+		errno = ENOSYS;
+			return -1;
+	#else
+				return fcntl(fd, cmd, arg);
+	#endif
 }
 
 static inline int posix_fadvise64(int fd, off64_t offset, off64_t len, int advice) {
@@ -480,7 +485,6 @@ static inline int posix_fadvise64(int fd, off64_t offset, off64_t len, int advic
 		return -1;
 	#endif
 }
-
 
 static inline int posix_fallocate64(int fd, off64_t offset, off64_t len) {
 	#if JACL_HASSYS(fallocate)
@@ -540,7 +544,7 @@ static inline int fcntl_dupfd_cloexec(int fd, int min_fd) {
 	if (new_fd == -1) return -1;
 
 	if (fcntl_set_cloexec(new_fd) == -1) {
-		syscall(SYS_close, new_fd);
+		close(new_fd);
 
 		return -1;
 	}

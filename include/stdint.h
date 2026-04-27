@@ -4,7 +4,6 @@
 #pragma once
 
 #include <config.h>
-#include <limits.h>
 #include <stddef.h>
 
 #if JACL_HAS_C23
@@ -86,27 +85,27 @@ extern "C" {
 /* ============================================================= */
 
 #if JACL_HAS_INT8
-	#define INT8_MIN    (-127-1)
-	#define INT8_MAX    (127)
-	#define UINT8_MAX   (255U)
+	#define UINT8_MAX    ((uint8_t)-1)
+	#define INT8_MAX     (UINT8_MAX >> 1)
+	#define INT8_MIN     (-INT8_MAX - 1)
 #endif
 
 #if JACL_HAS_INT16
-	#define INT16_MIN   (-32767-1)
-	#define INT16_MAX   (32767)
-	#define UINT16_MAX  (65535U)
+	#define UINT16_MAX   ((uint16_t)-1)
+	#define INT16_MAX    (UINT16_MAX >> 1)
+	#define INT16_MIN    (-INT16_MAX - 1)
 #endif
 
 #if JACL_HAS_INT32
-	#define INT32_MIN   (-2147483647-1)
-	#define INT32_MAX   (2147483647)
-	#define UINT32_MAX  (4294967295U)
+	#define UINT32_MAX   ((uint32_t)-1)
+	#define INT32_MAX    (UINT32_MAX >> 1)
+	#define INT32_MIN    (-INT32_MAX - 1)
 #endif
 
 #if JACL_HAS_INT64
-	#define INT64_MIN   (-9223372036854775807LL-1)
-	#define INT64_MAX   (9223372036854775807LL)
-	#define UINT64_MAX  (18446744073709551615ULL)
+	#define UINT64_MAX   ((uint64_t)-1)
+	#define INT64_MAX    (UINT64_MAX >> 1)
+	#define INT64_MIN    (-INT64_MAX - 1)
 #endif
 
 /* ============================================================= */
@@ -120,8 +119,8 @@ typedef unsigned int                       uint_fast8_t;
 #define INT_FAST8_MAX                      INT_MAX
 #define UINT_FAST8_MAX                     UINT_MAX
 
-static_assert(sizeof(int_fast8_t)  >= 1,   "int_fast8_t must be at fast 8 bits");
-static_assert(sizeof(uint_fast8_t) >= 1,   "uint_fast8_t must be at fast 8 bits");
+static_assert(sizeof(int_fast8_t)  >= 1,   "int_fast8_t must be at least 8 bits");
+static_assert(sizeof(uint_fast8_t) >= 1,   "uint_fast8_t must be at least 8 bits");
 
 typedef int                                int_fast16_t;
 typedef unsigned int                       uint_fast16_t;
@@ -130,8 +129,8 @@ typedef unsigned int                       uint_fast16_t;
 #define INT_FAST16_MAX                     INT_MAX
 #define UINT_FAST16_MAX                    UINT_MAX
 
-static_assert(sizeof(int_fast16_t)  >= 2,  "int_fast16_t must be at fast 16 bits");
-static_assert(sizeof(uint_fast16_t) >= 2,  "uint_fast16_t must be at fast 16 bits");
+static_assert(sizeof(int_fast16_t)  >= 2,  "int_fast16_t must be at least 16 bits");
+static_assert(sizeof(uint_fast16_t) >= 2,  "uint_fast16_t must be at least 16 bits");
 
 #if INT_BIT >= 32
 
@@ -147,14 +146,14 @@ typedef unsigned int                       uint_fast32_t;
 typedef long                               int_fast32_t;
 typedef unsigned long                      uint_fast32_t;
 
-#define INT_FAST32_MIN                     INT_MIN
-#define INT_FAST32_MAX                     INT_MAX
-#define UINT_FAST32_MAX                    UINT_MAX
+#define INT_FAST32_MIN                     LONG_MIN
+#define INT_FAST32_MAX                     LONG_MAX
+#define UINT_FAST32_MAX                    ULONG_MAX
 
 #endif
 
-static_assert(sizeof(int_fast32_t) >= 4,   "int_fast32_t must be at fast 32 bits");
-static_assert(sizeof(uint_fast32_t) >= 4,  "uint_fast32_t must be at fast 32 bits");
+static_assert(sizeof(int_fast32_t) >= 4,   "int_fast32_t must be at least 32 bits");
+static_assert(sizeof(uint_fast32_t) >= 4,  "uint_fast32_t must be at least 32 bits");
 
 #if JACL_HAS_INT64
 
@@ -165,8 +164,8 @@ typedef uint64_t                           uint_fast64_t;
 #define INT_FAST64_MAX                     INT64_MAX
 #define UINT_FAST64_MAX                    UINT64_MAX
 
-static_assert(sizeof(int_fast64_t) >= 8,   "int_fast64_t must be at fast 64 bits");
-static_assert(sizeof(uint_fast64_t) >= 8,  "uint_fast64_t must be at fast 64 bits");
+static_assert(sizeof(int_fast64_t) >= 8,   "int_fast64_t must be at least 64 bits");
+static_assert(sizeof(uint_fast64_t) >= 8,  "uint_fast64_t must be at least 64 bits");
 
 #endif
 
@@ -281,9 +280,9 @@ typedef uint16_t          uintptr_t;
 typedef int8_t            intptr_t;
 typedef uint8_t           uintptr_t;
 
-#define INTPTR_MIN        INT16_MIN
-#define INTPTR_MAX        INT16_MAX
-#define UINTPTR_MAX       UINT16_MAX
+#define INTPTR_MIN        INT8_MIN
+#define INTPTR_MAX        INT8_MAX
+#define UINTPTR_MAX       UINT8_MAX
 
 #endif
 
@@ -330,7 +329,30 @@ typedef uint8_t           uintmax_t;
 #endif
 
 /* ============================================================= */
-/* Limits of Other Integer Types                                 */
+/* Wide Character Limits                                         */
+/* ============================================================= */
+
+#ifndef WINT_MIN
+#define WINT_MIN 0
+#endif
+
+#ifndef WINT_MAX
+#define WINT_MAX ((wint_t)-2)
+#endif
+
+#ifndef WCHAR_MIN
+#define WCHAR_MIN 0
+#endif
+
+// Limit cap at the *Unicode* ceiling
+#if INT_BIT >= 32
+	#define WCHAR_MAX 0x10FFFF  // UCS‑4‑like, full Unicode
+#else
+	#define WCHAR_MAX 0xFFFF    // BMP‑only wide‑chars
+#endif
+
+/* ============================================================= */
+/* Pointer Difference Limits                                     */
 /* ============================================================= */
 
 #if JACL_64BIT
@@ -350,28 +372,26 @@ typedef uint8_t           uintmax_t;
 
 #else
 
-#define PTRDIFF_MIN    CHAR_MIN
-#define PTRDIFF_MAX    CHAR_MAX
+#define PTRDIFF_MIN    SCHAR_MIN
+#define PTRDIFF_MAX    SCHAR_MAX
 
 #endif
+
+#ifdef JACL_HAS_POSIX
+static_assert(PTRDIFF_MIN <= -65535, "POSIX: PTRDIFF_MIN must be ≤ -65535");
+static_assert(PTRDIFF_MAX >=  65535, "POSIX: PTRDIFF_MAX must be ≥ 65535");
+#endif
+
+#if JACL_32BIT
 
 #define SIG_ATOMIC_MAX  INT32_MAX
 #define SIG_ATOMIC_MIN  INT32_MIN
 
-#ifndef WCHAR_MIN
-#define WCHAR_MIN          0
-#endif
+#else
 
-#ifndef WCHAR_MAX
-#define WCHAR_MAX          UINT32_MAX
-#endif
+#define SIG_ATOMIC_MAX  INT_MAX
+#define SIG_ATOMIC_MIN  INT_MIN
 
-#ifndef WINT_MIN
-#define WINT_MIN           0
-#endif
-
-#ifndef WINT_MAX
-#define WINT_MAX           UINT32_MAX
 #endif
 
 /* ============================================================= */

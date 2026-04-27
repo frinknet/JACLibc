@@ -141,7 +141,7 @@ struct msghdr {
     struct iovec *msg_iov;        /* Scatter/gather array */
     size_t        msg_iovlen;     /* # elements in msg_iov */
     void         *msg_control;    /* Ancillary data */
-    size_t        msg_controllen; /* Ancillary data buffer len */
+    socklen_t     msg_controllen; /* Ancillary data buffer len */
     int           msg_flags;      /* Flags on received message */
 };
 
@@ -152,18 +152,27 @@ struct cmsghdr {
     int       cmsg_type;  /* Protocol-specific type */
 };
 
+/* SO_LINGER socket option */
+struct linger {
+	int l_onoff;   /* 0 = off, non-zero = on */
+	int l_linger;  /* linger time in seconds */
+};
+
 /* Ancillary Data Macros */
 #define CMSG_ALIGN(len) (((size_t)(len) + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1))
 #define CMSG_SPACE(len) (CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(len))
 #define CMSG_LEN(len)   (CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
 #define CMSG_FIRSTHDR(mhdr) \
-    ((mhdr)->msg_controllen >= sizeof(struct cmsghdr) ? \
-     (struct cmsghdr *)(mhdr)->msg_control : \
-     (struct cmsghdr *)0)
+		((mhdr)->msg_controllen >= CMSG_LEN(0) ? \
+		(struct cmsghdr *)(mhdr)->msg_control : \
+		(struct cmsghdr *)0)
 #define CMSG_NXTHDR(mhdr, cmsg) \
-    (((cmsg)->cmsg_len + CMSG_ALIGN(sizeof(struct cmsghdr)) > (mhdr)->msg_controllen) ? \
-     (struct cmsghdr *)0 : \
-     (struct cmsghdr *)((char *)(cmsg) + CMSG_ALIGN((cmsg)->cmsg_len)))
+	(((cmsg) == NULL) || \
+	 ((cmsg)->cmsg_len < sizeof(struct cmsghdr)) || \
+		((unsigned char *)(cmsg) + CMSG_ALIGN((cmsg)->cmsg_len) >= \
+			(unsigned char *)(mhdr)->msg_control + (mhdr)->msg_controllen) \
+		? (struct cmsghdr *)NULL \
+		: (struct cmsghdr *)((unsigned char *)(cmsg) + CMSG_ALIGN((cmsg)->cmsg_len)))
 #define CMSG_DATA(cmsg) ((unsigned char *)(cmsg) + CMSG_ALIGN(sizeof(struct cmsghdr)))
 
 #if JACL_HAS_POSIX
@@ -187,7 +196,7 @@ static inline int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen,
 	#if JACL_HASSYS(accept4)
 		return (int)syscall(SYS_accept4, sockfd, addr, addrlen, flags);
 	#else
-		(void)flags;
+		(void)flags;  /* POSIX: use fcntl() after accept() for FD_CLOEXEC/O_NONBLOCK */
 		return accept(sockfd, addr, addrlen);
 	#endif
 }

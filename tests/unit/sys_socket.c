@@ -1,18 +1,13 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <sys/socket.h>
-#include <errno.h>
-#include <string.h>
-#include <stddef.h>
-#include <stdint.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(sys/socket.h);
 
 /* ============================================================================ */
+
 TEST_SUITE(constants);
 
 TEST(constants_address_families) {
@@ -105,6 +100,7 @@ TEST(constants_shutdown) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(sockaddr);
 
 TEST(sockaddr_size) {
@@ -127,6 +123,7 @@ TEST(sockaddr_assignment) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(msghdr);
 
 TEST(msghdr_size) {
@@ -161,6 +158,7 @@ TEST(msghdr_offsets) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(cmsghdr);
 
 TEST(cmsghdr_size) {
@@ -187,6 +185,7 @@ TEST(cmsghdr_offsets) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(cmsg_align);
 
 TEST(cmsg_align_zero) {
@@ -214,6 +213,7 @@ TEST(cmsg_align_large) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(cmsg_space);
 
 TEST(cmsg_space_zero_data) {
@@ -235,6 +235,7 @@ TEST(cmsg_space_large_data) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(cmsg_len);
 
 TEST(cmsg_len_zero_data) {
@@ -258,6 +259,7 @@ TEST(cmsg_len_vs_space) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(cmsg_data);
 
 TEST(cmsg_data_ptr_valid) {
@@ -298,9 +300,8 @@ TEST(cmsg_data_writable) {
 	ASSERT_EQ(0xBB, data[1]);
 }
 
-/* REMOVED: cmsg_data_alignment (Absolute alignment depends on stack, not macro) */
-
 /* ============================================================================ */
+
 TEST_SUITE(cmsg_firsthdr);
 
 TEST(cmsg_firsthdr_null_control) {
@@ -351,6 +352,7 @@ TEST(cmsg_firsthdr_larger_buffer) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(cmsg_nxthdr);
 
 TEST(cmsg_nxthdr_end_of_buffer) {
@@ -423,6 +425,7 @@ TEST(cmsg_nxthdr_chain_three) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(socket);
 
 TEST(socket_invalid_family) {
@@ -456,6 +459,7 @@ TEST(socket_valid_udp) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(shutdown);
 
 TEST(shutdown_invalid_fd) {
@@ -470,13 +474,4 @@ TEST(shutdown_constants_valid) {
 	ASSERT_EQ(2, SHUT_RDWR);
 }
 
-TEST_MAIN()
-
-#else
-
-int main(void) {
-	printf("sys/socket.h requires POSIX\n");
-	return 0;
-}
-
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "sys/socket.h requires POSIX\n")

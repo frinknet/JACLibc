@@ -1,16 +1,12 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <sys/select.h>
-#include <signal.h>
-#include <string.h>
-#include <errno.h>
 
 TEST_TYPE(unit);
-
 TEST_UNIT(sys/select.h);
+
+/* ============================================================================ */
 
 TEST_SUITE(fd_setsize);
 
@@ -18,12 +14,15 @@ TEST(fd_setsize_check) {
 	ASSERT_EQ(1024, FD_SETSIZE);
 }
 
+/* ============================================================================ */
+
 TEST_SUITE(nfdbits);
 
 TEST(nfdbits_check) {
 	ASSERT_EQ((int)(sizeof(unsigned long) * 8), NFDBITS);
 }
 
+/* ============================================================================ */
 
 TEST_SUITE(fd_zero);
 
@@ -42,6 +41,8 @@ TEST(fd_zero_resets) {
 	FD_ZERO(&set);
 	ASSERT_FALSE(FD_ISSET(10, &set));
 }
+
+/* ============================================================================ */
 
 TEST_SUITE(fd_set);
 
@@ -84,6 +85,8 @@ TEST(fd_set_even_odd_mask) {
 	}
 }
 
+/* ============================================================================ */
+
 TEST_SUITE(fd_clr);
 
 TEST(fd_clr_target) {
@@ -111,6 +114,8 @@ TEST(fd_clr_preserves) {
 	ASSERT_TRUE(FD_ISSET(20, &set));
 }
 
+/* ============================================================================ */
+
 TEST_SUITE(fd_isset);
 
 TEST(fd_isset_true) {
@@ -135,6 +140,8 @@ TEST(fd_isset_word_boundary) {
 	ASSERT_TRUE(FD_ISSET(NFDBITS, &set));
 	ASSERT_FALSE(FD_ISSET(NFDBITS + 1, &set));
 }
+
+/* ============================================================================ */
 
 TEST_SUITE(select);
 
@@ -167,6 +174,8 @@ TEST(select_negative_nfds) {
 	int ret = select(-1, NULL, NULL, NULL, &tv);
 	ASSERT_TRUE(ret == -1); /* POSIX: nfds must be >= 0 */
 }
+
+/* ============================================================================ */
 
 TEST_SUITE(pselect);
 
@@ -202,10 +211,6 @@ TEST(pselect_sigset_compile) {
 	ASSERT_TRUE(ret == 0 || ret == -1);
 }
 
-TEST_MAIN()
+/* ============================================================================ */
 
-#else
-
-int main(void) { printf("sys/select.h requires POSIX\n"); return 0; }
-
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "sys/select.h requires POSIX\n")
