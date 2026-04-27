@@ -6,8 +6,8 @@
 	#define JACL_OS freebsd
 	#define JACL_OS_BSD 1
 	#define JACL_OS_FREEBSD 1
-	#define JACL_FMT elf
-	#define JACL_FMT_ELF
+	#define JACL_BIN elf
+	#define JACL_BIN_ELF
 	#define __jacl_os_init      __freebsd_init
 	#define __jacl_os_syscall   __freebsd_syscall
 	#define __jacl_os_stat      __freebsd_stat

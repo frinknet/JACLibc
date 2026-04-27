@@ -6,8 +6,8 @@
 	#define JACL_OS dragonfly
 	#define JACL_OS_BSD 1
 	#define JACL_OS_DRAGONFLY 1
-	#define JACL_FMT elf
-	#define JACL_FMT_ELF
+	#define JACL_BIN elf
+	#define JACL_BIN_ELF
 	#define __jacl_os_init      __dragonfly_init
 	#define __jacl_os_syscall   __dragonfly_syscall
 	#define __jacl_os_stat      __dragonfly_stat

@@ -6,8 +6,8 @@
 	#define JACL_OS netbsd
 	#define JACL_OS_BSD 1
 	#define JACL_OS_NETBSD 1
-	#define JACL_FMT elf
-	#define JACL_FMT_ELF
+	#define JACL_BIN elf
+	#define JACL_BIN_ELF
 	#define __jacl_os_init     __netbsd_init
 	#define __jacl_os_syscall  __netbsd_syscall
 #undef __OS_CONFIG

@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef _FMT_ELF_H
-#define _FMT_ELF_H
+#ifndef _BIN_ELF_H
+#define _BIN_ELF_H
 #pragma once
 
 #include <config.h>
@@ -227,7 +227,7 @@ typedef struct {
 	typedef Elf32_Off  Elf_Off;
 #endif
 
-#ifdef __FMT_INIT
+#ifdef __BIN_INIT
 
 /* TLS internals */
 #define JACL_TCB_SIZE 128
@@ -280,11 +280,11 @@ extern init_func_t __init_array_end[] JACL_WEAK;
 #define INIT_START __init_array_start
 #define INIT_END __init_array_end
 
-#undef __FMT_INIT
+#undef __BIN_INIT
 #endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _FMT_ELF_H */
+#endif /* _BIN_ELF_H */

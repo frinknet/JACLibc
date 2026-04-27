@@ -4,6 +4,8 @@
 	#undef windows
 	#define JACL_OS windows
 	#define JACL_OS_WINDOWS 1
+	#define JACL_BIN pe
+	#define JACL_BIN_PE
 	#define __jacl_os_init     __windows_init
 	#define __jacl_os_syscall  __windows_syscall
 #undef __OS_CONFIG

@@ -7,8 +7,8 @@
 #include <stdlib.h>
 
 /* Get TLS functions from format */
-#define __FMT_INIT
-#include JACL_FMT_FILE
+#define __BIN_INIT
+#include JACL_BIN_FILE
 
 #ifdef __cplusplus
 extern "C" {

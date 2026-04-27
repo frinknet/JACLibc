@@ -5,8 +5,8 @@
 	#undef linux
 	#define JACL_OS linux
 	#define JACL_OS_LINUX 1
-	#define JACL_FMT elf
-	#define JACL_FMT_ELF 1
+	#define JACL_BIN elf
+	#define JACL_BIN_ELF 1
 	#define __jacl_os_init      __linux_init
 	#define __jacl_os_syscall   __linux_syscall
 	#define __jacl_os_stat      __linux_stat
@@ -29,8 +29,8 @@
 
 #ifdef __OS_INIT
 	/* Pull in format helpers for TLS metadata */
-	#define __FMT_INIT
-	#include JACL_FMT_FILE
+	#define __BIN_INIT
+	#include JACL_BIN_FILE
 
 	#if defined(JACL_ARCH_X64) || defined(JACL_ARCH_X86)
 		#define ARCH_SET_FS 0x1002

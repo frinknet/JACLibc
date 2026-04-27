@@ -5,8 +5,8 @@
 	#undef elf
 	#define JACL_OS none
 	#define JACL_OS_NONE 1
-	#define JACL_FMT elf
-	#define JACL_FMT_ELF
+	#define JACL_BIN elf
+	#define JACL_BIN_ELF
 	#define __jacl_os_init     __none_init
 	#define __jacl_os_syscall  __none_syscall
 #undef __OS_CONFIG

@@ -6,8 +6,8 @@
 	#define JACL_OS openbsd
 	#define JACL_OS_BSD 1
 	#define JACL_OS_OPENBSD 1
-	#define JACL_FMT elf
-	#define JACL_FMT_ELF
+	#define JACL_BIN elf
+	#define JACL_BIN_ELF
 	#define __jacl_os_init      __openbsd_init
 	#define __jacl_os_syscall   __openbsd_syscall
 	#define __jacl_os_stat      __openbsd_stat

@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef _FMT_MACH_O_H
-#define _FMT_MACH_O_H
+#ifndef _BIN_MACHO_H
+#define _BIN_MACHO_H
 
 #include <config.h>
 #include <endian.h>
@@ -42,7 +42,7 @@ typedef struct {
 	uint32_t cmdsize;
 } JACL_PACK Mach_Load_Command;
 
-#ifdef __FMT_INIT
+#ifdef __BIN_INIT
 
 /* Get TLS functions from arch */
 #define __ARCH_TLS
@@ -61,11 +61,11 @@ extern init_func_t __stop___mod_init_func[] JACL_WEAK;
 #define INIT_START __start___mod_init_func
 #define INIT_END __stop___mod_init_func
 
-#undef __FMT_INIT
+#undef __BIN_INIT
 #endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _FMT_MACH_O_H */
+#endif /* _BIN_MACHO_H */

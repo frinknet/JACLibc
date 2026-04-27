@@ -4,6 +4,8 @@
 	#undef wasi
 	#define JACL_OS wasi
 	#define JACL_OS_WASI 1
+	#define JACL_BIN wasm
+	#define JACL_BIN_WASM
 	#define __jacl_os_init     __wasi_init
 	#define __jacl_os_syscall  __wasi_syscall
 #undef __OS_CONFIG

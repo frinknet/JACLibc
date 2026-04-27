@@ -1,6 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
-#ifndef _FMT_PE_H
-#define _FMT_PE_H
+#ifndef _BIN_PE_H
+#define _BIN_PE_H
 
 #include <config.h>
 #include <endian.h>
@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#ifdef __FMT_INIT
+#ifdef __BIN_INIT
 
 #define X_ENUM(name, val) name = (val),
 	enum { PE_MAGICS(X_ENUM) };
@@ -197,11 +197,11 @@ extern init_func_t __stop_.CRT$XCU[] JACL_WEAK;
 #define INIT_START __start_.CRT$XCU
 #define INIT_END __stop_.CRT$XCU
 
-#undef __FMT_INIT
+#undef __BIN_INIT
 #endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _FMT_PE_H */
+#endif /* _BIN_PE_H */

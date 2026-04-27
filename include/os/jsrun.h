@@ -4,6 +4,8 @@
 	#undef jsrun
 	#define JACL_OS jsrun
 	#define JACL_OS_JSRUN 1
+	#define JACL_BIN wasm
+	#define JACL_BIN_WASM
 	#define __jacl_os_init    __jsrun_init
 	#define __jacl_os_syscall __jsrun_syscall
 #undef __OS_CONFIG

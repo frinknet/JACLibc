@@ -5,8 +5,8 @@
 	#undef macho
 	#define JACL_OS darwin
 	#define JACL_OS_DARWIN 1
-	#define JACL_FMT macho
-	#define JACL_FMT_MACHO
+	#define JACL_BIN macho
+	#define JACL_BIN_MACHO
 	#define __jacl_os_init      __darwin_init
 	#define __jacl_os_syscall   __darwin_syscall
 	#define __jacl_os_stat      __darwin_stat

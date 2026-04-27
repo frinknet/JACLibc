@@ -6,7 +6,7 @@
 #define JACL_VERSION 1.83
 #define JACL_RELEASE 202511L
 
-// avoid compile screams
+// compiler screams
 #if defined(__GNUC__) || defined(__clang__)
   #pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
   #pragma GCC diagnostic ignored "-Wincompatible-library-redeclaration"
@@ -15,8 +15,8 @@
 // useful macros
 #define JACL_QUOTE(x) #x
 #define JACL_EXPAND(x) x
-#define JACL_CONCAT(a, b, space) a##space##b
-#define JACL_CONCAT_EXPAND(a, b, space) JACL_CONCAT(a,b,space)
+#define JACL_CONCAT(a, b, spacer) a##spacer##b
+#define JACL_CONCAT_EXPAND(a, b, spacer) JACL_CONCAT(a,b,spacer)
 #define JACL_CONCAT_HAS(a, b) __##a##_has_##b
 #define JACL_CONCAT_HAS_EXPAND(a, b) JACL_CONCAT_HAS(a, b)
 #define JACL_HEADER(dir, file) <dir/file.h>
@@ -25,7 +25,7 @@
 #define JACL_ALIGN_UP(x,a) (((x) + ((a) - 1u)) & ~((a) - 1u))
 
 #define JACL_OS_FILE JACL_HEADER(os, detect)
-#define JACL_FMT_FILE JACL_HEADER(fmt, JACL_FMT)
+#define JACL_BIN_FILE JACL_HEADER(bin, JACL_BIN)
 #define JACL_ARCH_FILE JACL_HEADER(arch, detect)
 #define JACL_X_SYSCALL JACL_HEADER(x, JACL_OS_ARCH)
 #define JACL_X_SIGNALS JACL_HEADER(x, JACL_CONCAT_EXPAND(signals,JACL_OS,_))
@@ -304,6 +304,20 @@ typedef void (*__jacl_init_fn)(void);
 /* Builtin Polyfills                                             */
 /* ============================================================= */
 
+// null should be available across the board
+#ifndef NULL
+	#ifdef __cplusplus
+		#define NULL nullptr
+	#else
+		#define NULL ((void*)0)
+	#endif
+#endif
+
+/* Offset of member in a struct (portable, builtin-free) */
+#ifndef offsetof
+	#define offsetof(type, member) ((size_t)&(((type*)0)->member))
+#endif
+
 // Feature attribute detection
 #ifndef __has_attribute
   #define __has_attribute(x) 0
@@ -491,5 +505,10 @@ static inline void* __jacl_frame_address(int level) {
 
 // Syscall checks
 #include JACL_HEADER(x, config_has)
+
+/* POSIX Version compliance */
+#define _POSIX_VERSION    201710L  /* POSIX.1-2017 */
+#define _POSIX2_VERSION   200809L  /* POSIX.2-2008 */
+#define _XOPEN_VERSION    700      /* XPG7 */
 
 #endif /* _CONFIG_H */
