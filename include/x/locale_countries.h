@@ -1439,7 +1439,7 @@
 
 /* Include Countries */
 #define X_COUNTRIES \
-	X_CC(NONE, "", 0x0000) /* NONE */ \
+	X_CC(NONE, "\0", 0x0000) /* NONE */ \
 	X_CC(IN, "IN", 0x494E) /* India */ \
 	X_CC(CN, "CN", 0x434E) /* China */ \
 	X_CC(US, "US", 0x5553) /* United States */ \

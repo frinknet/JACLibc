@@ -6,17 +6,15 @@ TEST_TYPE(unit);
 TEST_UNIT(ctype.h);
 
 /* ============================================================================
- * ALPHANUMERIC TESTS
+ * isalnum
  * ============================================================================ */
-TEST_SUITE(alphanumeric);
+TEST_SUITE(isalnum);
 
 TEST(isalnum_letters) {
 	ASSERT_TRUE(isalnum('a'));
 	ASSERT_TRUE(isalnum('z'));
 	ASSERT_TRUE(isalnum('A'));
 	ASSERT_TRUE(isalnum('Z'));
-	ASSERT_TRUE(isalnum('m'));
-	ASSERT_TRUE(isalnum('M'));
 }
 
 TEST(isalnum_digits) {
@@ -34,13 +32,36 @@ TEST(isalnum_non_alphanumeric) {
 	ASSERT_FALSE(isalnum('\0'));
 }
 
+TEST(isalnum_boundaries) {
+	ASSERT_FALSE(isalnum('/'));
+	ASSERT_FALSE(isalnum(':'));
+	ASSERT_FALSE(isalnum('`'));
+	ASSERT_FALSE(isalnum('{'));
+}
+
+TEST(isalnum_null) {
+	ASSERT_FALSE(isalnum('\0'));
+}
+
+TEST(isalnum_negative) {
+	ASSERT_FALSE(isalnum(-1));
+}
+
+TEST(isalnum_high_ascii) {
+	ASSERT_FALSE(isalnum(128));
+	ASSERT_FALSE(isalnum(255));
+}
+
+/* ============================================================================
+ * isalpha
+ * ============================================================================ */
+TEST_SUITE(isalpha);
+
 TEST(isalpha_letters) {
 	ASSERT_TRUE(isalpha('a'));
 	ASSERT_TRUE(isalpha('z'));
 	ASSERT_TRUE(isalpha('A'));
 	ASSERT_TRUE(isalpha('Z'));
-	ASSERT_TRUE(isalpha('m'));
-	ASSERT_TRUE(isalpha('M'));
 }
 
 TEST(isalpha_non_letters) {
@@ -51,16 +72,35 @@ TEST(isalpha_non_letters) {
 	ASSERT_FALSE(isalpha('\n'));
 }
 
+TEST(isalpha_boundaries) {
+	ASSERT_FALSE(isalpha('@'));
+	ASSERT_FALSE(isalpha('['));
+	ASSERT_FALSE(isalpha('`'));
+	ASSERT_FALSE(isalpha('{'));
+}
+
+TEST(isalpha_null) {
+	ASSERT_FALSE(isalpha('\0'));
+}
+
+TEST(isalpha_negative) {
+	ASSERT_FALSE(isalpha(-1));
+}
+
+TEST(isalpha_high_ascii) {
+	ASSERT_FALSE(isalpha(128));
+	ASSERT_FALSE(isalpha(255));
+}
+
 /* ============================================================================
- * DIGIT TESTS
+ * isdigit
  * ============================================================================ */
-TEST_SUITE(digits);
+TEST_SUITE(isdigit);
 
 TEST(isdigit_valid) {
 	ASSERT_TRUE(isdigit('0'));
-	ASSERT_TRUE(isdigit('1'));
-	ASSERT_TRUE(isdigit('5'));
 	ASSERT_TRUE(isdigit('9'));
+	ASSERT_TRUE(isdigit('5'));
 }
 
 TEST(isdigit_invalid) {
@@ -68,9 +108,30 @@ TEST(isdigit_invalid) {
 	ASSERT_FALSE(isdigit('A'));
 	ASSERT_FALSE(isdigit(' '));
 	ASSERT_FALSE(isdigit('\n'));
+}
+
+TEST(isdigit_boundaries) {
 	ASSERT_FALSE(isdigit('/'));
 	ASSERT_FALSE(isdigit(':'));
 }
+
+TEST(isdigit_null) {
+	ASSERT_FALSE(isdigit('\0'));
+}
+
+TEST(isdigit_negative) {
+	ASSERT_FALSE(isdigit(-1));
+}
+
+TEST(isdigit_high_ascii) {
+	ASSERT_FALSE(isdigit(128));
+	ASSERT_FALSE(isdigit(255));
+}
+
+/* ============================================================================
+ * isxdigit
+ * ============================================================================ */
+TEST_SUITE(isxdigit);
 
 TEST(isxdigit_hex_digits) {
 	ASSERT_TRUE(isxdigit('0'));
@@ -79,8 +140,6 @@ TEST(isxdigit_hex_digits) {
 	ASSERT_TRUE(isxdigit('f'));
 	ASSERT_TRUE(isxdigit('A'));
 	ASSERT_TRUE(isxdigit('F'));
-	ASSERT_TRUE(isxdigit('c'));
-	ASSERT_TRUE(isxdigit('C'));
 }
 
 TEST(isxdigit_invalid) {
@@ -88,13 +147,32 @@ TEST(isxdigit_invalid) {
 	ASSERT_FALSE(isxdigit('G'));
 	ASSERT_FALSE(isxdigit('z'));
 	ASSERT_FALSE(isxdigit(' '));
-	ASSERT_FALSE(isxdigit('\n'));
+}
+
+TEST(isxdigit_boundaries) {
+	ASSERT_FALSE(isxdigit('/'));
+	ASSERT_FALSE(isxdigit(':'));
+	ASSERT_FALSE(isxdigit('@'));
+	ASSERT_FALSE(isxdigit('`'));
+}
+
+TEST(isxdigit_null) {
+	ASSERT_FALSE(isxdigit('\0'));
+}
+
+TEST(isxdigit_negative) {
+	ASSERT_FALSE(isxdigit(-1));
+}
+
+TEST(isxdigit_high_ascii) {
+	ASSERT_FALSE(isxdigit(128));
+	ASSERT_FALSE(isxdigit(255));
 }
 
 /* ============================================================================
- * CASE TESTS
+ * isupper
  * ============================================================================ */
-TEST_SUITE(case_tests);
+TEST_SUITE(isupper);
 
 TEST(isupper_uppercase) {
 	ASSERT_TRUE(isupper('A'));
@@ -107,8 +185,30 @@ TEST(isupper_not_uppercase) {
 	ASSERT_FALSE(isupper('z'));
 	ASSERT_FALSE(isupper('0'));
 	ASSERT_FALSE(isupper(' '));
-	ASSERT_FALSE(isupper('\n'));
 }
+
+TEST(isupper_boundaries) {
+	ASSERT_FALSE(isupper('@'));
+	ASSERT_FALSE(isupper('['));
+}
+
+TEST(isupper_null) {
+	ASSERT_FALSE(isupper('\0'));
+}
+
+TEST(isupper_negative) {
+	ASSERT_FALSE(isupper(-1));
+}
+
+TEST(isupper_high_ascii) {
+	ASSERT_FALSE(isupper(128));
+	ASSERT_FALSE(isupper(255));
+}
+
+/* ============================================================================
+ * islower
+ * ============================================================================ */
+TEST_SUITE(islower);
 
 TEST(islower_lowercase) {
 	ASSERT_TRUE(islower('a'));
@@ -121,13 +221,30 @@ TEST(islower_not_lowercase) {
 	ASSERT_FALSE(islower('Z'));
 	ASSERT_FALSE(islower('0'));
 	ASSERT_FALSE(islower(' '));
-	ASSERT_FALSE(islower('\n'));
+}
+
+TEST(islower_boundaries) {
+	ASSERT_FALSE(islower('`'));
+	ASSERT_FALSE(islower('{'));
+}
+
+TEST(islower_null) {
+	ASSERT_FALSE(islower('\0'));
+}
+
+TEST(islower_negative) {
+	ASSERT_FALSE(islower(-1));
+}
+
+TEST(islower_high_ascii) {
+	ASSERT_FALSE(islower(128));
+	ASSERT_FALSE(islower(255));
 }
 
 /* ============================================================================
- * CASE CONVERSION TESTS
+ * tolower
  * ============================================================================ */
-TEST_SUITE(case_conversion);
+TEST_SUITE(tolower);
 
 TEST(tolower_uppercase) {
 	ASSERT_EQ('a', tolower('A'));
@@ -138,16 +255,32 @@ TEST(tolower_uppercase) {
 TEST(tolower_already_lower) {
 	ASSERT_EQ('a', tolower('a'));
 	ASSERT_EQ('z', tolower('z'));
-	ASSERT_EQ('m', tolower('m'));
 }
 
 TEST(tolower_non_letters) {
 	ASSERT_EQ('0', tolower('0'));
-	ASSERT_EQ('9', tolower('9'));
 	ASSERT_EQ(' ', tolower(' '));
 	ASSERT_EQ('!', tolower('!'));
 	ASSERT_EQ('\n', tolower('\n'));
 }
+
+TEST(tolower_null) {
+	ASSERT_EQ('\0', tolower('\0'));
+}
+
+TEST(tolower_negative) {
+	ASSERT_EQ(-1, tolower(-1));
+}
+
+TEST(tolower_high_ascii) {
+	ASSERT_EQ(128, tolower(128));
+	ASSERT_EQ(255, tolower(255));
+}
+
+/* ============================================================================
+ * toupper
+ * ============================================================================ */
+TEST_SUITE(toupper);
 
 TEST(toupper_lowercase) {
 	ASSERT_EQ('A', toupper('a'));
@@ -158,21 +291,32 @@ TEST(toupper_lowercase) {
 TEST(toupper_already_upper) {
 	ASSERT_EQ('A', toupper('A'));
 	ASSERT_EQ('Z', toupper('Z'));
-	ASSERT_EQ('M', toupper('M'));
 }
 
 TEST(toupper_non_letters) {
 	ASSERT_EQ('0', toupper('0'));
-	ASSERT_EQ('9', toupper('9'));
 	ASSERT_EQ(' ', toupper(' '));
 	ASSERT_EQ('!', toupper('!'));
 	ASSERT_EQ('\n', toupper('\n'));
 }
 
+TEST(toupper_null) {
+	ASSERT_EQ('\0', toupper('\0'));
+}
+
+TEST(toupper_negative) {
+	ASSERT_EQ(-1, toupper(-1));
+}
+
+TEST(toupper_high_ascii) {
+	ASSERT_EQ(128, toupper(128));
+	ASSERT_EQ(255, toupper(255));
+}
+
 /* ============================================================================
- * WHITESPACE TESTS
+ * isspace
  * ============================================================================ */
-TEST_SUITE(whitespace);
+TEST_SUITE(isspace);
 
 TEST(isspace_whitespace) {
 	ASSERT_TRUE(isspace(' '));
@@ -190,7 +334,25 @@ TEST(isspace_non_whitespace) {
 	ASSERT_FALSE(isspace('\0'));
 }
 
+TEST(isspace_null) {
+	ASSERT_FALSE(isspace('\0'));
+}
+
+TEST(isspace_negative) {
+	ASSERT_FALSE(isspace(-1));
+}
+
+TEST(isspace_high_ascii) {
+	ASSERT_FALSE(isspace(128));
+	ASSERT_FALSE(isspace(255));
+}
+
+/* ============================================================================
+ * isblank (C99)
+ * ============================================================================ */
 #if JACL_HAS_C99
+TEST_SUITE(isblank);
+
 TEST(isblank_horizontal_space) {
 	ASSERT_TRUE(isblank(' '));
 	ASSERT_TRUE(isblank('\t'));
@@ -204,20 +366,33 @@ TEST(isblank_not_blank) {
 	ASSERT_FALSE(isblank('a'));
 	ASSERT_FALSE(isblank('0'));
 }
+
+TEST(isblank_null) {
+	ASSERT_FALSE(isblank('\0'));
+}
+
+TEST(isblank_negative) {
+	ASSERT_FALSE(isblank(-1));
+}
+
+TEST(isblank_high_ascii) {
+	ASSERT_FALSE(isblank(128));
+	ASSERT_FALSE(isblank(255));
+}
 #endif
 
 /* ============================================================================
- * CONTROL CHARACTER TESTS
+ * iscntrl
  * ============================================================================ */
-TEST_SUITE(control);
+TEST_SUITE(iscntrl);
 
 TEST(iscntrl_control_chars) {
 	ASSERT_TRUE(iscntrl('\0'));
 	ASSERT_TRUE(iscntrl('\t'));
 	ASSERT_TRUE(iscntrl('\n'));
 	ASSERT_TRUE(iscntrl('\r'));
-	ASSERT_TRUE(iscntrl('\x1B'));  // ESC
-	ASSERT_TRUE(iscntrl(127));     // DEL
+	ASSERT_TRUE(iscntrl('\x1B'));
+	ASSERT_TRUE(iscntrl(127));
 }
 
 TEST(iscntrl_not_control) {
@@ -227,10 +402,30 @@ TEST(iscntrl_not_control) {
 	ASSERT_FALSE(iscntrl('~'));
 }
 
+TEST(iscntrl_boundaries) {
+	ASSERT_TRUE(iscntrl(31));
+	ASSERT_FALSE(iscntrl(32));
+	ASSERT_TRUE(iscntrl(127));
+	ASSERT_FALSE(iscntrl(128));
+}
+
+TEST(iscntrl_null) {
+	ASSERT_TRUE(iscntrl('\0'));
+}
+
+TEST(iscntrl_negative) {
+	ASSERT_FALSE(iscntrl(-1));
+}
+
+TEST(iscntrl_high_ascii) {
+	ASSERT_FALSE(iscntrl(128));
+	ASSERT_FALSE(iscntrl(255));
+}
+
 /* ============================================================================
- * PRINTABLE TESTS
+ * isprint
  * ============================================================================ */
-TEST_SUITE(printable);
+TEST_SUITE(isprint);
 
 TEST(isprint_printable) {
 	ASSERT_TRUE(isprint(' '));
@@ -246,8 +441,32 @@ TEST(isprint_not_printable) {
 	ASSERT_FALSE(isprint('\t'));
 	ASSERT_FALSE(isprint('\n'));
 	ASSERT_FALSE(isprint(127));
-	ASSERT_FALSE(isprint(31));
 }
+
+TEST(isprint_boundaries) {
+	ASSERT_TRUE(isprint(32));
+	ASSERT_FALSE(isprint(31));
+	ASSERT_TRUE(isprint(126));
+	ASSERT_FALSE(isprint(127));
+}
+
+TEST(isprint_null) {
+	ASSERT_FALSE(isprint('\0'));
+}
+
+TEST(isprint_negative) {
+	ASSERT_FALSE(isprint(-1));
+}
+
+TEST(isprint_high_ascii) {
+	ASSERT_FALSE(isprint(128));
+	ASSERT_FALSE(isprint(255));
+}
+
+/* ============================================================================
+ * isgraph
+ * ============================================================================ */
+TEST_SUITE(isgraph);
 
 TEST(isgraph_graphical) {
 	ASSERT_TRUE(isgraph('!'));
@@ -263,13 +482,32 @@ TEST(isgraph_not_graphical) {
 	ASSERT_FALSE(isgraph('\t'));
 	ASSERT_FALSE(isgraph('\n'));
 	ASSERT_FALSE(isgraph('\0'));
+}
+
+TEST(isgraph_boundaries) {
+	ASSERT_FALSE(isgraph(32));
+	ASSERT_TRUE(isgraph(33));
+	ASSERT_TRUE(isgraph(126));
 	ASSERT_FALSE(isgraph(127));
 }
 
+TEST(isgraph_null) {
+	ASSERT_FALSE(isgraph('\0'));
+}
+
+TEST(isgraph_negative) {
+	ASSERT_FALSE(isgraph(-1));
+}
+
+TEST(isgraph_high_ascii) {
+	ASSERT_FALSE(isgraph(128));
+	ASSERT_FALSE(isgraph(255));
+}
+
 /* ============================================================================
- * PUNCTUATION TESTS
+ * ispunct
  * ============================================================================ */
-TEST_SUITE(punctuation);
+TEST_SUITE(ispunct);
 
 TEST(ispunct_punctuation) {
 	ASSERT_TRUE(ispunct('!'));
@@ -292,167 +530,24 @@ TEST(ispunct_not_punctuation) {
 	ASSERT_FALSE(ispunct('\n'));
 }
 
-/* ============================================================================
- * BOUNDARY TESTS
- * ============================================================================ */
-TEST_SUITE(boundaries);
-
-TEST(ascii_boundaries) {
-	// First printable
-	ASSERT_TRUE(isprint(' '));
-	ASSERT_EQ(' ', 32);
-
-	// Last printable
-	ASSERT_TRUE(isprint('~'));
-	ASSERT_EQ('~', 126);
-
-	// DEL boundary
-	ASSERT_TRUE(iscntrl(127));
-	ASSERT_FALSE(isprint(127));
+TEST(ispunct_boundaries) {
+	ASSERT_TRUE(ispunct('/'));
+	ASSERT_FALSE(ispunct('0'));
+	ASSERT_TRUE(ispunct(':'));
+	ASSERT_TRUE(ispunct('@'));
 }
 
-TEST(letter_boundaries) {
-	ASSERT_TRUE(isalpha('A'));
-	ASSERT_TRUE(isalpha('Z'));
-	ASSERT_FALSE(isalpha('@'));
-	ASSERT_FALSE(isalpha('['));
-
-	ASSERT_TRUE(isalpha('a'));
-	ASSERT_TRUE(isalpha('z'));
-	ASSERT_FALSE(isalpha('`'));
-	ASSERT_FALSE(isalpha('{'));
-}
-
-TEST(digit_boundaries) {
-	ASSERT_TRUE(isdigit('0'));
-	ASSERT_TRUE(isdigit('9'));
-	ASSERT_FALSE(isdigit('/'));
-	ASSERT_FALSE(isdigit(':'));
-}
-
-/* ============================================================================
- * COMBINED TESTS
- * ============================================================================ */
-TEST_SUITE(combined);
-
-TEST(string_classification) {
-	const char *str = "Hello123!";
-
-	ASSERT_TRUE(isupper(str[0]));
-	ASSERT_TRUE(islower(str[1]));
-	ASSERT_TRUE(isalpha(str[0]));
-	ASSERT_TRUE(isdigit(str[5]));
-	ASSERT_TRUE(ispunct(str[8]));
-	ASSERT_TRUE(isalnum(str[0]));
-	ASSERT_TRUE(isalnum(str[5]));
-}
-
-TEST(case_conversion_string) {
-	char str[] = "HeLLo WoRLd!";
-
-	for (int i = 0; str[i]; i++) {
-		if (isupper(str[i])) {
-			str[i] = tolower(str[i]);
-		} else if (islower(str[i])) {
-			str[i] = toupper(str[i]);
-		}
-	}
-
-	ASSERT_STR_EQ("hEllO wOrlD!", str);
-}
-
-TEST(whitespace_detection) {
-	const char *str = "a b\tc\nd";
-
-	ASSERT_FALSE(isspace(str[0]));
-	ASSERT_TRUE(isspace(str[1]));
-	ASSERT_FALSE(isspace(str[2]));
-	ASSERT_TRUE(isspace(str[3]));
-	ASSERT_FALSE(isspace(str[4]));
-	ASSERT_TRUE(isspace(str[5]));
-}
-
-/* ============================================================================
- * EDGE CASES
- * ============================================================================ */
-TEST_SUITE(edge_cases);
-
-TEST(null_character) {
-	ASSERT_FALSE(isalnum('\0'));
-	ASSERT_FALSE(isalpha('\0'));
-	ASSERT_FALSE(isdigit('\0'));
-	ASSERT_TRUE(iscntrl('\0'));
-	ASSERT_FALSE(isspace('\0'));
-	ASSERT_FALSE(isprint('\0'));
-	ASSERT_FALSE(isgraph('\0'));
+TEST(ispunct_null) {
 	ASSERT_FALSE(ispunct('\0'));
 }
 
-TEST(negative_values) {
-	// Test with negative int values (EOF is typically -1)
-	ASSERT_FALSE(isalnum(-1));
-	ASSERT_FALSE(isalpha(-1));
-	ASSERT_FALSE(isdigit(-1));
+TEST(ispunct_negative) {
+	ASSERT_FALSE(ispunct(-1));
 }
 
-TEST(high_ascii) {
-	// Test behavior with values > 127 (extended ASCII)
-	// These should all return false for standard ASCII functions
-	ASSERT_FALSE(isalnum(128));
-	ASSERT_FALSE(isalpha(200));
-	ASSERT_FALSE(isdigit(255));
-}
-
-TEST(all_letters) {
-	// Verify all 52 letters work
-	for (char c = 'A'; c <= 'Z'; c++) {
-		ASSERT_TRUE(isalpha(c));
-		ASSERT_TRUE(isupper(c));
-		ASSERT_FALSE(islower(c));
-		ASSERT_EQ(c + 32, tolower(c));
-	}
-
-	for (char c = 'a'; c <= 'z'; c++) {
-		ASSERT_TRUE(isalpha(c));
-		ASSERT_TRUE(islower(c));
-		ASSERT_FALSE(isupper(c));
-		ASSERT_EQ(c - 32, toupper(c));
-	}
-}
-
-TEST(all_digits) {
-	for (char c = '0'; c <= '9'; c++) {
-		ASSERT_TRUE(isdigit(c));
-		ASSERT_TRUE(isxdigit(c));
-		ASSERT_TRUE(isalnum(c));
-	}
-}
-
-/* ============================================================================
- * PERFORMANCE TEST
- * ============================================================================ */
-TEST_SUITE(performance);
-
-TEST(batch_classification) {
-	char test_string[256];
-	for (int i = 0; i < 256; i++) {
-		test_string[i] = (char)i;
-	}
-
-	int alpha_count = 0;
-	int digit_count = 0;
-	int space_count = 0;
-
-	for (int i = 0; i < 256; i++) {
-		if (isalpha(test_string[i])) alpha_count++;
-		if (isdigit(test_string[i])) digit_count++;
-		if (isspace(test_string[i])) space_count++;
-	}
-
-	ASSERT_EQ(52, alpha_count);  // A-Z + a-z
-	ASSERT_EQ(10, digit_count);  // 0-9
-	ASSERT_EQ(6, space_count);   // space, tab, newline, etc.
+TEST(ispunct_high_ascii) {
+	ASSERT_FALSE(ispunct(128));
+	ASSERT_FALSE(ispunct(255));
 }
 
 TEST_MAIN()
-

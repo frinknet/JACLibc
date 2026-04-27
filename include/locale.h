@@ -145,21 +145,34 @@ static void __jacl_locale_split(const char *s, __jacl_locale_lang_t *out_lang, _
 	const char *p = s;
 	char lang[4];
 	char cc[3];
-	unsigned i = 0, j = 0;
+	unsigned i = 0, j =  0;
 
-	/* lang: up to '_' or end, max 3 */
-	while (p[i] && p[i] != '_' && i < 3) lang[i] = p[i], i++;
-
-	lang[i] = '\0';
-
-	/* CC: if '_' present, copy next up-to-2 chars */
-	if (p[i] == '_') {
-		const char *q = p + i + 1;
-
-		while (q[j] && j < 2) cc[j] = q[j], j++;
+	if (strcmp(s, "C")) {
+		// lang: up to '_' or end, max 3
+		while (islower(p[i]) && p[i] != '_' && i < 3) lang[i] = toupper(p[i]), i++;
+	} else {
+		lang[0] = s[0];
+		i = 1;
 	}
 
-	cc[j] = '\0';
+	lang[i] = '\0';
+	j = i;
+	i  = 0;
+
+	// CC: if '_' present, copy next up-to-2 chars
+	if (s[j] == '_') {
+		p = s + j + 1;
+
+		while (isupper(p[i]) && i < 2) cc[i] = toupper(p[i]), i++;
+
+		j += i + 1;
+	}
+
+	cc[i] = '\0';
+
+	// extra forces lang to fail which cascades
+	if (isalpha(s[j])) lang[0] = '\0';
+
 	*out_lang = __jacl_locale_lang(lang);
 	*out_cc   = __jacl_locale_cc(cc);
 }
@@ -278,7 +291,7 @@ static char *__jacl_locale_get(int category) {
 	return buf;
 }
 
-static const char *__jacl_locale_env(int category) {  /* Return const char* */
+static const char *__jacl_locale_env(int category) {
 	const char *env = getenv("LC_ALL");
 
 	if (!env || !env[0]) {
@@ -320,10 +333,11 @@ static void __jacl_locale_update(int category, __jacl_locale_lang_t lang, __jacl
 static inline char *setlocale(int category, const char *locale) {
 	if (locale == NULL)  return __jacl_locale_get(category);
 	if (locale[0] == '\0') locale = __jacl_locale_env(category);
+	if (strcmp(locale, "POSIX") == 0) locale = "C";
+	if (strcmp(locale, __jacl_locale_get(category)) == 0) return __jacl_locale_get(category);
 
 	__jacl_locale_lang_t L;
 	__jacl_locale_cc_t   C;
-
 	__jacl_locale_split(locale, &L, &C);
 
 	if (L == LANG_ERR || C == CC_ERR) return NULL;

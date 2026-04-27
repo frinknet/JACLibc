@@ -12,51 +12,21 @@
 extern "C" {
 #endif
 
-typedef int wctype_t;
+typedef uint32_t wctype_t;
 typedef int wctrans_t;
 
 extern thread_local __jacl_wctype_t __jacl_wctype;
 
 /* Conversions */
-static inline int iswdigit(wint_t c) {
-	for (int i = 0; i < 10; i++) {
-		if (__jacl_wctype.d[i] == c) return 1;
-	}
-
-	return 0;
-}
-
 static inline int iswcntrl(wint_t c) {
 	return (c >= 0x0000 && c <= 0x001F)
 		|| (c >= 0x007F && c <= 0x009F)
-		|| c == 0x0085   // NEL
 		|| c == 0x2028   // LS
 		|| c == 0x2029;  // PS
 }
 
 static inline int iswspace(wint_t c) {
 	return c == L' ' || c == L'\t' || c == L'\n' || c == L'\v' || c == L'\f' || c == L'\r';
-}
-
-/* Optimized iswlower/iswupper */
-static inline int iswlower(wint_t c) {
-	for (uint8_t i = 0; i < __jacl_wctype.l_count; i++) {
-		if (__jacl_wctype.l[i] == c) return 1;
-	}
-
-	return 0;
-}
-
-static inline int iswupper(wint_t c) {
-	for (uint8_t i = 0; i < __jacl_wctype.u_count; i++) {
-		if (__jacl_wctype.u[i] == c) return 1;
-	}
-
-	return 0;
-}
-
-static inline int iswxdigit(wint_t c) {
-	return (c >= L'0' && c <= L'9') || (c >= L'A' && c <= L'F') || (c >= L'a' && c <= L'f');
 }
 
 static inline int iswblank(wint_t c) {
@@ -69,6 +39,19 @@ static inline int iswprint(wint_t c) {
 
 static inline int iswgraph(wint_t c) {
 	return iswprint(c) && !iswspace(c);
+}
+
+static inline int iswxdigit(wint_t c) {
+	return (c >= L'0' && c <= L'9') || (c >= L'A' && c <= L'F') || (c >= L'a' && c <= L'f');
+}
+
+/*  */
+static inline int iswdigit(wint_t c) {
+	for (int i = 0; i < 10; i++) {
+		if (__jacl_wctype.d[i] == c) return 1;
+	}
+
+	return 0;
 }
 
 static inline int iswpunct(wint_t c) {
@@ -85,6 +68,22 @@ static inline int iswpunct(wint_t c) {
 	return 0;
 }
 
+static inline int iswlower(wint_t c) {
+	for (uint8_t i = 0; i < __jacl_wctype.l_count; i++) {
+		if (__jacl_wctype.l[i] == c) return 1;
+	}
+
+	return 0;
+}
+
+static inline int iswupper(wint_t c) {
+	for (uint8_t i = 0; i < __jacl_wctype.u_count; i++) {
+		if (__jacl_wctype.u[i] == c) return 1;
+	}
+
+	return 0;
+}
+
 static inline int iswalpha(wint_t c) {
 	if(!__jacl_wctype.u_count && !__jacl_wctype.l_count) return (c >= __jacl_wctype.u[0] &&  c <= __jacl_wctype.l[0]);
 
@@ -94,6 +93,7 @@ static inline int iswalpha(wint_t c) {
 static inline int iswalnum(wint_t c) {
 	return iswalpha(c) || iswdigit(c);
 }
+
 
 /* Case Conversion */
 static inline wint_t towupper(wint_t c) {

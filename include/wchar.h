@@ -3,30 +3,29 @@
 #define _WCHAR_H
 #pragma once
 
+/**
+ * Policy: wchar_t is wide‑enough‑fast for the target word model.
+ *
+ *  - 32‑bit or wider: full Unicode (0x0000..0x10FFFF).
+ *  - 16‑bit or smaller: BMP‑only (0x0000..0xFFFF).
+ *
+ * This way even on constrained machines you still basic UTF-8.
+ */
+
 #include <config.h>
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-#include <stddef.h>
 #include <stdio.h>
 
 // Constants
 #define MB_CUR_MAX 4
-#define WEOF ((wint_t)-1)
-#define WCHAR_MIN 0
-#define WCHAR_MAX 0xFFFFFFFFu
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #if JACL_HAS_C99
-
-#ifndef __WINT_TYPE__
-typedef unsigned int wint_t;
-#else
-typedef __WINT_TYPE__ wint_t;
-#endif
 
 #ifndef WEOF
 #define WEOF ((wint_t)-1)

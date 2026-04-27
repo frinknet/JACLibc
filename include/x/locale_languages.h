@@ -10,7 +10,7 @@
 /* Standard Locale */
 #define X_LANG_C(...) X(LANG_C, __VA_ARGS__)
 
-/* English - 1.5B total speakers */
+/* English - 1.5B */
 #if 1500000000 >= LOCALE_MINIMUM
 #define X_LANG_EN(...) X(LANG_EN, __VA_ARGS__)
 #else
@@ -176,6 +176,13 @@
 #define X_LANG_HA(...) X(LANG_HA, __VA_ARGS__)
 #else
 #define X_LANG_HA(...)
+#endif
+
+/* Wu Chinese - 80M */
+#if 80000000 >= LOCALE_MINIMUM
+#define X_LANG_WUU(...) X(LANG_WUU, __VA_ARGS__)
+#else
+#define X_LANG_WUU(...)
 #endif
 
 /* Farsi - 70M */
@@ -430,6 +437,13 @@
 #define X_LANG_SO(...)
 #endif
 
+/* Akan - 20M */
+#if 20000000 >= LOCALE_MINIMUM
+#define X_LANG_AK(...) X(LANG_AK, __VA_ARGS__)
+#else
+#define X_LANG_AK(...)
+#endif
+
 /* Zhuang - 18M */
 #if 18000000 >= LOCALE_MINIMUM
 #define X_LANG_ZA(...) X(LANG_ZA, __VA_ARGS__)
@@ -477,6 +491,13 @@
 #define X_LANG_LN(...) X(LANG_LN, __VA_ARGS__)
 #else
 #define X_LANG_LN(...)
+#endif
+
+/* Swedish - 10M */
+#if 10000000 >= LOCALE_MINIMUM
+#define X_LANG_SV(...) X(LANG_SV, __VA_ARGS__)
+#else
+#define X_LANG_SV(...)
 #endif
 
 /* Luganda - 10M */
@@ -619,11 +640,11 @@
 #define X_LANG_SN(...)
 #endif
 
-/* Akan/Twi - 11M */
+/* Twi - 11M */
 #if 11000000 >= LOCALE_MINIMUM
-#define X_LANG_AK(...) X(LANG_AK, __VA_ARGS__)
+#define X_LANG_TW(...) X(LANG_TW, __VA_ARGS__)
 #else
-#define X_LANG_AK(...)
+#define X_LANG_TW(...)
 #endif
 
 /* Catalan - 10M */
@@ -710,6 +731,13 @@
 #define X_LANG_KI(...)
 #endif
 
+/* Lao - ~8M */
+#if 8000000 >= LOCALE_MINIMUM
+#define X_LANG_LO(...) X(LANG_LO, __VA_ARGS__)
+#else
+#define X_LANG_LO(...)
+#endif
+
 /* Xhosa - 8M */
 #if 8000000 >= LOCALE_MINIMUM
 #define X_LANG_XH(...) X(LANG_XH, __VA_ARGS__)
@@ -722,13 +750,6 @@
 #define X_LANG_KOK(...) X(LANG_KOK, __VA_ARGS__)
 #else
 #define X_LANG_KOK(...)
-#endif
-
-/* Kongo - 6M */
-#if 6000000 >= LOCALE_MINIMUM
-#define X_LANG_KON(...) X(LANG_KON, __VA_ARGS__)
-#else
-#define X_LANG_KON(...)
 #endif
 
 /* Santali - 7.4M */
@@ -752,11 +773,53 @@
 #define X_LANG_KS(...)
 #endif
 
+/* Kabyle - 7M */
+#if 7000000 >= LOCALE_MINIMUM
+#define X_LANG_KAB(...) X(LANG_KAB, __VA_ARGS__)
+#else
+#define X_LANG_KAB(...)
+#endif
+
 /* Guarani - 6.5M */
 #if 6500000 >= LOCALE_MINIMUM
 #define X_LANG_GN(...) X(LANG_GN, __VA_ARGS__)
 #else
 #define X_LANG_GN(...)
+#endif
+
+/* Danish - 6M */
+#if 6000000 >= LOCALE_MINIMUM
+#define X_LANG_DA(...) X(LANG_DA, __VA_ARGS__)
+#else
+#define X_LANG_DA(...)
+#endif
+
+/* Bulgarian - 6M */
+#if 6000000 >= LOCALE_MINIMUM
+#define X_LANG_BG(...) X(LANG_BG, __VA_ARGS__)
+#else
+#define X_LANG_BG(...)
+#endif
+
+/* Armenian - 6M */
+#if 6000000 >= LOCALE_MINIMUM
+#define X_LANG_HY(...) X(LANG_HY, __VA_ARGS__)
+#else
+#define X_LANG_HY(...)
+#endif
+
+/* Kongo - 6M */
+#if 6000000 >= LOCALE_MINIMUM
+#define X_LANG_KON(...) X(LANG_KON, __VA_ARGS__)
+#else
+#define X_LANG_KON(...)
+#endif
+
+/* Mongolian - 6M */
+#if 6000000 >= LOCALE_MINIMUM
+#define X_LANG_MN(...) X(LANG_MN, __VA_ARGS__)
+#else
+#define X_LANG_MN(...)
 #endif
 
 /* Tibetan - 6M */
@@ -766,11 +829,11 @@
 #define X_LANG_BO(...)
 #endif
 
-/* Kabyle - 7M */
-#if 7000000 >= LOCALE_MINIMUM
-#define X_LANG_KAB(...) X(LANG_KAB, __VA_ARGS__)
+/* Finnish - 5M */
+#if 5000000 >= LOCALE_MINIMUM
+#define X_LANG_FI(...) X(LANG_FI, __VA_ARGS__)
 #else
-#define X_LANG_KAB(...)
+#define X_LANG_FI(...)
 #endif
 
 /* Tatar - 5M */
@@ -787,6 +850,13 @@
 #define X_LANG_BE(...)
 #endif
 
+/* Fante - 5M */
+#if 5000000 >= LOCALE_MINIMUM
+#define X_LANG_FAT(...) X(LANG_FAT, __VA_ARGS__)
+#else
+#define X_LANG_FAT(...)
+#endif
+
 /* Luo - 5M */
 #if 5000000 >= LOCALE_MINIMUM
 #define X_LANG_LUO(...) X(LANG_LUO, __VA_ARGS__)
@@ -794,18 +864,25 @@
 #define X_LANG_LUO(...)
 #endif
 
-/* Chechen - 1.7M */
-#if 1700000 >= LOCALE_MINIMUM
-#define X_LANG_CE(...) X(LANG_CE, __VA_ARGS__)
+/* Slovak - 5M */
+#if 5000000 >= LOCALE_MINIMUM
+#define X_LANG_SK(...) X(LANG_SK, __VA_ARGS__)
 #else
-#define X_LANG_CE(...)
+#define X_LANG_SK(...)
 #endif
 
-/* Naxi - 300K */
-#if 300000 >= LOCALE_MINIMUM
-#define X_LANG_DTX(...) X(LANG_DTX, __VA_ARGS__)
+/* Croatian - 5M */
+#if 5000000 >= LOCALE_MINIMUM
+#define X_LANG_HR(...) X(LANG_HR, __VA_ARGS__)
 #else
-#define X_LANG_DTX(...)
+#define X_LANG_HR(...)
+#endif
+
+/* Albanian - 5M */
+#if 5000000 >= LOCALE_MINIMUM
+#define X_LANG_SQ(...) X(LANG_SQ, __VA_ARGS__)
+#else
+#define X_LANG_SQ(...)
 #endif
 
 /* Norwegian Bokmål - 4.5M */
@@ -813,6 +890,13 @@
 #define X_LANG_NB(...) X(LANG_NB, __VA_ARGS__)
 #else
 #define X_LANG_NB(...)
+#endif
+
+/* Georgian - 4M */
+#if 4000000 >= LOCALE_MINIMUM
+#define X_LANG_KA(...) X(LANG_KA, __VA_ARGS__)
+#else
+#define X_LANG_KA(...)
 #endif
 
 /* Tok Pisin - 4M */
@@ -827,6 +911,13 @@
 #define X_LANG_BEM(...) X(LANG_BEM, __VA_ARGS__)
 #else
 #define X_LANG_BEM(...)
+#endif
+
+/* Lithuanian - 3M */
+#if 3000000 >= LOCALE_MINIMUM
+#define X_LANG_LT(...) X(LANG_LT, __VA_ARGS__)
+#else
+#define X_LANG_LT(...)
 #endif
 
 /* Dogri - 2.6M */
@@ -892,6 +983,20 @@
 #define X_LANG_NAH(...)
 #endif
 
+/* Chechen - 1.7M */
+#if 1700000 >= LOCALE_MINIMUM
+#define X_LANG_CE(...) X(LANG_CE, __VA_ARGS__)
+#else
+#define X_LANG_CE(...)
+#endif
+
+/* Latvian - 1.5M */
+#if 1500000 >= LOCALE_MINIMUM
+#define X_LANG_LV(...) X(LANG_LV, __VA_ARGS__)
+#else
+#define X_LANG_LV(...)
+#endif
+
 /* Bodo - 1.5M */
 #if 1500000 >= LOCALE_MINIMUM
 #define X_LANG_BRX(...) X(LANG_BRX, __VA_ARGS__)
@@ -906,6 +1011,13 @@
 #define X_LANG_EU(...)
 #endif
 
+/* Estonian - 1M */
+#if 1000000 >= LOCALE_MINIMUM
+#define X_LANG_ET(...) X(LANG_ET, __VA_ARGS__)
+#else
+#define X_LANG_ET(...)
+#endif
+
 /* Sardinian - 1M */
 #if 1000000 >= LOCALE_MINIMUM
 #define X_LANG_SC(...) X(LANG_SC, __VA_ARGS__)
@@ -913,11 +1025,18 @@
 #define X_LANG_SC(...)
 #endif
 
-/* Aramaic (all dialects) - 1M */
+/* Aramaic - 1M */
 #if 1000000 >= LOCALE_MINIMUM
 #define X_LANG_ARC(...) X(LANG_ARC, __VA_ARGS__)
 #else
 #define X_LANG_ARC(...)
+#endif
+
+/* Syriac - 1M */
+#if 1000000 >= LOCALE_MINIMUM
+#define X_LANG_SYC(...) X(LANG_SYC, __VA_ARGS__)
+#else
+#define X_LANG_SYC(...)
 #endif
 
 /* Welsh - 900K */
@@ -932,6 +1051,13 @@
 #define X_LANG_YI(...) X(LANG_YI, __VA_ARGS__)
 #else
 #define X_LANG_YI(...)
+#endif
+
+/* Maltese - 520K */
+#if 520000 >= LOCALE_MINIMUM
+#define X_LANG_MT(...) X(LANG_MT, __VA_ARGS__)
+#else
+#define X_LANG_MT(...)
 #endif
 
 /* Samoan - 510K */
@@ -962,11 +1088,11 @@
 #define X_LANG_LB(...)
 #endif
 
-/* Fijian - 340K */
-#if 340000 >= LOCALE_MINIMUM
-#define X_LANG_FJ(...) X(LANG_FJ, __VA_ARGS__)
+/* Icelandic - 380K */
+#if 380000 >= LOCALE_MINIMUM
+#define X_LANG_IS(...) X(LANG_IS, __VA_ARGS__)
 #else
-#define X_LANG_FJ(...)
+#define X_LANG_IS(...)
 #endif
 
 /* Papiamento - 350K */
@@ -974,6 +1100,20 @@
 #define X_LANG_PAP(...) X(LANG_PAP, __VA_ARGS__)
 #else
 #define X_LANG_PAP(...)
+#endif
+
+/* Fijian - 340K */
+#if 340000 >= LOCALE_MINIMUM
+#define X_LANG_FJ(...) X(LANG_FJ, __VA_ARGS__)
+#else
+#define X_LANG_FJ(...)
+#endif
+
+/* Naxi - 300K */
+#if 300000 >= LOCALE_MINIMUM
+#define X_LANG_DTX(...) X(LANG_DTX, __VA_ARGS__)
+#else
+#define X_LANG_DTX(...)
 #endif
 
 /* Dzongkha - 240K */
@@ -1297,6 +1437,7 @@
 	X_LANG(VI,   "vi",   0x5649,     0x564945  ) /* Vietnamese */ \
 	X_LANG(KO,   "ko",   0x4B4F,     0x4B4F52  ) /* Korean */ \
 	X_LANG(HA,   "ha",   0x4841,     0x484155  ) /* Hausa */ \
+	X_LANG(WUU,  "wuu",  0x575555,   0x575555  ) /* Wu Chinese */ \
 	X_LANG(FA,   "fa",   0x4641,     0x464153  ) /* Persian (Farsi) */ \
 	X_LANG(JV,   "jv",   0x4A56,     0x4A4156  ) /* Javanese */ \
 	X_LANG(IT,   "it",   0x4954,     0x495441  ) /* Italian */ \
@@ -1333,6 +1474,7 @@
 	X_LANG(NL,   "nl",   0x4E4C,     0x4E4C44  ) /* Dutch */ \
 	X_LANG(AZ,   "az",   0x415A,     0x415A45  ) /* Azerbaijani */ \
 	X_LANG(SO,   "so",   0x534F,     0x534F4D  ) /* Somali */ \
+	X_LANG(AK,   "ak",   0x414B,     0x414B41  ) /* Akan */ \
 	X_LANG(ZA,   "za",   0x5A41,     0x5A4841  ) /* Zhuang */ \
 	X_LANG(HNE,  "hne",  0x484E45,   0x484E45  ) /* Chhattisgarhi */ \
 	X_LANG(SI,   "si",   0x5349,     0x53494E  ) /* Sinhala */ \
@@ -1340,6 +1482,7 @@
 	X_LANG(KM,   "km",   0x4B4D,     0x4B484D  ) /* Khmer */ \
 	X_LANG(AS,   "as",   0x4153,     0x41534D  ) /* Assamese */ \
 	X_LANG(LN,   "ln",   0x4C4E,     0x4C494E  ) /* Lingala */ \
+	X_LANG(SV,   "sv",   0x5356,     0x535645  ) /* Swedish */ \
 	X_LANG(LG,   "lg",   0x4C47,     0x4C5547  ) /* Luganda */ \
 	X_LANG(MAD,  "mad",  0x4D4144,   0x4D4144  ) /* Madurese */ \
 	X_LANG(EL,   "el",   0x454C,     0x454C4C  ) /* Greek */ \
@@ -1360,7 +1503,7 @@
 	X_LANG(SYL,  "syl",  0x53594C,   0x53594C  ) /* Sylheti */ \
 	X_LANG(DHD,  "dhd",  0x444844,   0x444844  ) /* Dhundhari */ \
 	X_LANG(SN,   "sn",   0x534E,     0x534E41  ) /* Shona */ \
-	X_LANG(AK,   "ak",   0x414B,     0x414B41  ) /* Akan / Twi */ \
+	X_LANG(TW,   "tw",   0x5457,     0x545749  ) /* Twi */ \
 	X_LANG(CA,   "ca",   0x4341,     0x434154  ) /* Catalan */ \
 	X_LANG(CS,   "cs",   0x4353,     0x434553  ) /* Czech */ \
 	X_LANG(MNP,  "mnp",  0x4D4E50,   0x4D4E50  ) /* Min Bei Chinese */ \
@@ -1373,23 +1516,33 @@
 	X_LANG(TI,   "ti",   0x5449,     0x544952  ) /* Tigrinya */ \
 	X_LANG(QU,   "qu",   0x5155,     0x515545  ) /* Quechua */ \
 	X_LANG(KI,   "ki",   0x4B49,     0x4B494B  ) /* Kikuyu */ \
+	X_LANG(LO,   "lo",   0x4C4F,     0x4C414F  ) /* Lao */ \
 	X_LANG(XH,   "xh",   0x5848,     0x58484F  ) /* Xhosa */ \
 	X_LANG(KOK,  "kok",  0x4B4F4B,   0x4B4F4B  ) /* Konkani */ \
-	X_LANG(KON,  "kon",  0x4B4F4E,   0x4B4F4E  ) /* Kongo */ \
 	X_LANG(SAT,  "sat",  0x534154,   0x534154  ) /* Santali */ \
 	X_LANG(AF,   "af",   0x4146,     0x414652  ) /* Afrikaans */ \
 	X_LANG(KS,   "ks",   0x4B53,     0x4B4153  ) /* Kashmiri */ \
-	X_LANG(GN,   "gn",   0x474E,     0x47524E  ) /* Guarani */ \
-	X_LANG(BO,   "bo",   0x424F,     0x424F44  ) /* Tibetan */ \
 	X_LANG(KAB,  "kab",  0x4B4142,   0x4B4142  ) /* Kabyle */ \
+	X_LANG(GN,   "gn",   0x474E,     0x47524E  ) /* Guarani */ \
+	X_LANG(DA,   "da",   0x4441,     0x44414E  ) /* Danish */ \
+	X_LANG(BG,   "bg",   0x4247,     0x42474E  ) /* Bulgarian */ \
+	X_LANG(HY,   "hy",   0x4859,     0x48594E  ) /* Armenian */ \
+	X_LANG(KON,  "kon",  0x4B4F4E,   0x4B4F4E  ) /* Kongo */ \
+	X_LANG(MN,   "mn",   0x4D4E,     0x4D4E47  ) /* Mongolian */ \
+	X_LANG(BO,   "bo",   0x424F,     0x424F44  ) /* Tibetan */ \
+	X_LANG(FI,   "fi",   0x4649,     0x46494E  ) /* Finnish */ \
 	X_LANG(TT,   "tt",   0x5454,     0x544154  ) /* Tatar */ \
 	X_LANG(BE,   "be",   0x4245,     0x42454C  ) /* Belarusian */ \
+	X_LANG(FAT,  "fat",  0x464154,   0x464154  ) /* Fante */ \
 	X_LANG(LUO,  "luo",  0x4C554F,   0x4C554F  ) /* Luo */ \
-	X_LANG(CE,   "ce",   0x4345,     0x434845  ) /* Chechen */ \
-	X_LANG(DTX,  "dtx",  0x445458,   0x445458  ) /* Naxi */ \
+	X_LANG(SK,   "sk",   0x534B,     0x534C4F  ) /* Slovak */ \
+	X_LANG(HR,   "hr",   0x4852,     0x485256  ) /* Croatian */ \
+	X_LANG(SQ,   "sq",   0x5351,     0x535149  ) /* Albanian */ \
 	X_LANG(NB,   "nb",   0x4E42,     0x4E4F42  ) /* Norwegian Bokmål */ \
+	X_LANG(KA,   "ka",   0x4B41,     0x4B4152  ) /* Georgian */ \
 	X_LANG(TPI,  "tpi",  0x545049,   0x545049  ) /* Tok Pisin */ \
 	X_LANG(BEM,  "bem",  0x42454D,   0x42454D  ) /* Bemba */ \
+	X_LANG(LT,   "lt",   0x4C54,     0x4C5455  ) /* Lithuanian */ \
 	X_LANG(DOI,  "doi",  0x444F49,   0x444F49  ) /* Dogri */ \
 	X_LANG(BS,   "bs",   0x4253,     0x424F53  ) /* Bosnian */ \
 	X_LANG(GL,   "gl",   0x474C,     0x474C47  ) /* Galician */ \
@@ -1399,18 +1552,25 @@
 	X_LANG(MNI,  "mni",  0x4D4E49,   0x4D4E49  ) /* Manipuri */ \
 	X_LANG(GA,   "ga",   0x4741,     0x474C45  ) /* Irish Gaelic */ \
 	X_LANG(NAH,  "nah",  0x4E4148,   0x4E4148  ) /* Nahuatl */ \
+	X_LANG(CE,   "ce",   0x4345,     0x434845  ) /* Chechen */ \
+	X_LANG(LV,   "lv",   0x4C56,     0x4C5641  ) /* Latvian */ \
 	X_LANG(BRX,  "brx",  0x425258,   0x425258  ) /* Bodo */ \
 	X_LANG(EU,   "eu",   0x4555,     0x455553  ) /* Basque */ \
+	X_LANG(ET,   "et",   0x4554,     0x45544F  ) /* Estonian */ \
 	X_LANG(SC,   "sc",   0x5343,     0x53434E  ) /* Sardinian */ \
 	X_LANG(ARC,  "arc",  0x415243,   0x415243  ) /* Aramaic */ \
+	X_LANG(SYC,  "syc",  0x535943,   0x535943  ) /* Syriac */ \
 	X_LANG(CY,   "cy",   0x4359,     0x43594D  ) /* Welsh */ \
 	X_LANG(YI,   "yi",   0x5949,     0x494949  ) /* Yiddish */ \
+	X_LANG(MT,   "mt",   0x4D54,     0x4D544C  ) /* Maltese */ \
 	X_LANG(SM,   "sm",   0x534D,     0x534D4F  ) /* Samoan */ \
 	X_LANG(OC,   "oc",   0x4F43,     0x4F4349  ) /* Occitan */ \
 	X_LANG(NN,   "nn",   0x4E4E,     0x4E4E4F  ) /* Norwegian Nynorsk */ \
 	X_LANG(LB,   "lb",   0x4C42,     0x4C545A  ) /* Luxembourgish */ \
-	X_LANG(FJ,   "fj",   0x464A,     0x46494A  ) /* Fijian */ \
+	X_LANG(IS,   "is",   0x4953,     0x49534C  ) /* Icelandic */ \
 	X_LANG(PAP,  "pap",  0x504150,   0x504150  ) /* Papiamento */ \
+	X_LANG(FJ,   "fj",   0x464A,     0x46494A  ) /* Fijian */ \
+	X_LANG(DTX,  "dtx",  0x445458,   0x445458  ) /* Naxi */ \
 	X_LANG(DZ,   "dz",   0x445A,     0x445A4F  ) /* Dzongkha */ \
 	X_LANG(CNR,  "cnr",  0x434E52,   0x434E52  ) /* Montenegrin */ \
 	X_LANG(BR,   "br",   0x4252,     0x425245  ) /* Breton */ \
