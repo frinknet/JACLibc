@@ -1,10 +1,7 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <net/telnet.h>
-#include <string.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(net/telnet.h);
@@ -92,10 +89,6 @@ TEST(telnet_is_opt_unassigned) { ASSERT_FALSE(telnet_is_opt(44)); }
 
 TEST(telnet_is_opt_iac_boundary) { ASSERT_TRUE(telnet_is_opt(IAC)); }
 
-TEST_MAIN()
+/* ============================================================================ */
 
-#else
-
-int main(void) { printf("net/telnet.h requires POSIX\n"); return 0; }
-
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "net/telnet.h requires POSIX\n")

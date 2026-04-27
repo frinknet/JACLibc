@@ -1,10 +1,7 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <net/ethernet.h>
-#include <string.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(net/ethernet.h);
@@ -342,9 +339,6 @@ TEST(ether_wire_bytes_exact) {
 }
 
 /* ============================================================================ */
-/* ============================================================================ */
-
-/* ============================================================================ */
 
 TEST_SUITE(ether_addr_edge_cases);
 
@@ -421,8 +415,4 @@ TEST(qinq_outer_tag_detection) {
 
 /* ============================================================================ */
 
-TEST_MAIN()
-
-#else
-int main(void) { printf("net/ethernet.h requires POSIX\n"); return 0; }
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "net/ethernet.h requires POSIX\n")

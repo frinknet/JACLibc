@@ -1,7 +1,6 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_C99 && __has_attribute(vector_size)
 #include <immintrin.h>
 #include <math.h>
 
@@ -344,13 +343,4 @@ TEST(mm_fmadd_pd) {
 	ASSERT_FLOAT_EQ(17.0, result[1], 0.01);  // 3*5 + 2 = 17
 }
 
-TEST_MAIN()
-
-#else
-
-int main(void) {
-	printf("immintrin.h requires C99 and vector_size attribute support\n");
-	return 0;
-}
-
-#endif
+TEST_MAIN_IF(JACL_HAS_C99, "immintrin.h requires C99 and vector_size attribute support\n")

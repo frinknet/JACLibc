@@ -1,8 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <net/dns.h>
 
 TEST_TYPE(unit);
@@ -243,10 +241,4 @@ TEST(dn_expand_invalid_pointer) {
 
 /* ============================================================================ */
 
-TEST_MAIN()
-
-#else
-
-int main(void) { printf("net/dns.h requires POSIX\n"); return 0; }
-
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "net/dns.h requires POSIX\n")

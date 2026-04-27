@@ -1,8 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <net/ipv6.h>
 #include <string.h>
 
@@ -337,8 +335,4 @@ TEST(in6addr_loopback_init_bytes) {
 
 /* ============================================================================ */
 
-TEST_MAIN()
-
-#else
-int main(void) { printf("net/ipv6.h requires POSIX\n"); return 0; }
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "net/ipv6.h requires POSIX\n")

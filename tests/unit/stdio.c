@@ -14,48 +14,60 @@ static const double dbl_vals[] = {0.0, -0.0, 1.5, -1.5, 123.456, -123.456, 0.001
 static const int widths[] = {0, 1, 5, 10, 15, 20, 25};
 static const int precisions[] = {0, 1, 2, 3, 4, 6, 10};
 
-#if INTMAX_MAX == LLONG_MAX
-  #define CAST_INTMAX(x)    ((long long)(x))
-  #define READ_INTMAX(xptr) ((long long*)(xptr))
-#elif INTMAX_MAX == LONG_MAX
-  #define CAST_INTMAX(x)    ((long)(x))
-  #define READ_INTMAX(xptr) ((long*)(xptr))
+#if INTMAX_MAX == INT64_MAX
+  #define CAST_INTMAX(x)    ((int64_t)(x))
+  #define READ_INTMAX(xptr) ((int64_t*)(xptr))
+#elif INTMAX_MAX == INT32_MAX
+  #define CAST_INTMAX(x)    ((int32_t)(x))
+  #define READ_INTMAX(xptr) ((int32_t*)(xptr))
+#elif INTMAX_MAX == INT16_MAX
+  #define CAST_INTMAX(x)    ((int16_t)(x))
+  #define READ_INTMAX(xptr) ((int16_t*)(xptr))
 #else
-  #define CAST_INTMAX(x)    ((int)(x))
-  #define READ_INTMAX(xptr) ((int*)(xptr))
+  #define CAST_INTMAX(x)    ((int8_t)(x))
+  #define READ_INTMAX(xptr) ((int8_t*)(xptr))
 #endif
 
-#if UINTMAX_MAX == ULLONG_MAX
-  #define CAST_UINTMAX(x)    ((unsigned long long)(x))
-  #define READ_UINTMAX(xptr) ((unsigned long long*)(xptr))
-#elif UINTMAX_MAX == ULONG_MAX
-  #define CAST_UINTMAX(x)    ((unsigned long)(x))
-  #define READ_UINTMAX(xptr) ((unsigned long*)(xptr))
+#if UINTMAX_MAX == UINT64_MAX
+  #define CAST_UINTMAX(x)    ((uint64_t)(x))
+  #define READ_UINTMAX(xptr) ((uint64_t*)(xptr))
+#elif UINTMAX_MAX == UINT32_MAX
+  #define CAST_UINTMAX(x)    ((uint32_t)(x))
+  #define READ_UINTMAX(xptr) ((uint32_t*)(xptr))
+#elif UINTMAX_MAX == UINT16_MAX
+  #define CAST_UINTMAX(x)    ((uint16_t)(x))
+  #define READ_UINTMAX(xptr) ((uint16_t*)(xptr))
 #else
-  #define CAST_UINTMAX(x)    ((unsigned)(x))
-  #define READ_UINTMAX(xptr) ((unsigned*)(xptr))
+  #define CAST_UINTMAX(x)    ((uint8_t)(x))
+  #define READ_UINTMAX(xptr) ((uint8_t*)(xptr))
 #endif
 
-#if INTPTR_MAX == LLONG_MAX
-  #define CAST_INTPTR(x)    ((long long)(x))
-  #define READ_INTPTR(xptr) ((long long*)(xptr))
-#elif INTPTR_MAX == LONG_MAX
-  #define CAST_INTPTR(x)    ((long)(x))
-  #define READ_INTPTR(xptr) ((long*)(xptr))
+#if INTPTR_MAX == INT64_MAX
+  #define CAST_INTPTR(x)    ((int64_t)(x))
+  #define READ_INTPTR(xptr) ((int64_t*)(xptr))
+#elif INTPTR_MAX == INT32_MAX
+  #define CAST_INTPTR(x)    ((int32_t)(x))
+  #define READ_INTPTR(xptr) ((int32_t*)(xptr))
+#elif INTPTR_MAX == INT16_MAX
+  #define CAST_INTPTR(x)    ((int16_t)(x))
+  #define READ_INTPTR(xptr) ((int16_t*)(xptr))
 #else
-  #define CAST_INTPTR(x)    ((int)(x))
-  #define READ_INTPTR(xptr) ((int*)(xptr))
+  #define CAST_INTPTR(x)    ((int8_t)(x))
+  #define READ_INTPTR(xptr) ((int8_t*)(xptr))
 #endif
 
-#if UINTPTR_MAX == ULLONG_MAX
-  #define CAST_UINTPTR(x)    ((unsigned long long)(x))
-  #define READ_UINTPTR(xptr) ((unsigned long long*)(xptr))
-#elif UINTPTR_MAX == ULONG_MAX
-  #define CAST_UINTPTR(x)    ((unsigned long)(x))
-  #define READ_UINTPTR(xptr) ((unsigned long*)(xptr))
+#if UINTPTR_MAX == UINT64_MAX
+  #define CAST_UINTPTR(x)    ((uint64_t)(x))
+  #define READ_UINTPTR(xptr) ((uint64_t*)(xptr))
+#elif UINTPTR_MAX == UINT32_MAX
+  #define CAST_UINTPTR(x)    ((uint32_t)(x))
+  #define READ_UINTPTR(xptr) ((uint32_t*)(xptr))
+#elif UINTPTR_MAX == UINT16_MAX
+  #define CAST_UINTPTR(x)    ((uint16_t)(x))
+  #define READ_UINTPTR(xptr) ((uint16_t*)(xptr))
 #else
-  #define CAST_UINTPTR(x)    ((unsigned)(x))
-  #define READ_UINTPTR(xptr) ((unsigned*)(xptr))
+  #define CAST_UINTPTR(x)    ((uint8_t)(x))
+  #define READ_UINTPTR(xptr) ((uint8_t*)(xptr))
 #endif
 
 /* ============================================================= */

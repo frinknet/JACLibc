@@ -1,13 +1,12 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <sys/uio.h>
-#include <string.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(sys/uio.h);
+
+/* ============================================================================ */
 
 TEST_SUITE(iovec_struct);
 
@@ -72,10 +71,6 @@ TEST(iovec_max_constant) {
 }
 #endif
 
-TEST_MAIN()
+/* ============================================================================ */
 
-#else
-
-int main(void) { printf("sys/uio.h requires POSIX\n"); return 0; }
-
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "sys/uio.h requires POSIX\n")

@@ -1,15 +1,13 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <net/dns.h>
-#include <string.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(net/dns.h);
 
 /* ============================================================================ */
+
 TEST_SUITE(constants);
 
 TEST(constants_sizes) {
@@ -42,6 +40,7 @@ TEST/constants_opcodes_rcodes) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(dns_get16);
 
 TEST(dns_get16_basic) {
@@ -60,6 +59,7 @@ TEST(dns_get16_max) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(dns_put16);
 
 TEST(dns_put16_basic) {
@@ -84,6 +84,7 @@ TEST(dns_put16_max) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(dns_get32);
 
 TEST(dns_get32_basic) {
@@ -97,6 +98,7 @@ TEST(dns_get32_zero) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(dns_put32);
 
 TEST(dns_put32_basic) {
@@ -114,6 +116,7 @@ TEST(dns_put32_zero) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(dns_name_compress);
 
 TEST(dns_name_compress_simple) {
@@ -146,6 +149,7 @@ TEST(dns_name_compress_null) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(dn_expand);
 
 TEST(dn_expand_simple) {
@@ -183,6 +187,7 @@ TEST(dn_expand_invalid_pointer) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(dns_name_compress_roundtrip);
 
 TEST(dns_name_compress_roundtrip_basic) {
@@ -206,6 +211,7 @@ TEST(dns_name_compress_roundtrip_root) {
 }
 
 /* ============================================================================ */
+
 TEST_SUITE(dns_hdr_layout);
 
 TEST(dns_hdr_layout_id) {
@@ -222,10 +228,6 @@ TEST(dns_hdr_layout_qdcount) {
 	ASSERT_EQ(1, ntohs(hdr.qdcount));
 }
 
-TEST_MAIN()
+/* ============================================================================ */
 
-#else
-
-int main(void) { printf("net/dns.h requires POSIX\n"); return 0; }
-
-#endif
+TEST_MAIN._IF(JACL_HAS_POSIX, "net/dns.h requires POSIX\n")

@@ -1,18 +1,13 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <sys/un.h>
-#include <string.h>
-#include <errno.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(sys/un.h);
 
-/* ============================================================================
- * CONSTANTS & MACROS
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(sun_len);
 
 TEST(sun_len_empty) {
@@ -53,6 +48,7 @@ TEST(sun_len_abstract_socket) {
 	/* Macro returns header size + 1 when first char is null */
 	ASSERT_EQ(offsetof(struct sockaddr_un, sun_path) + 1, SUN_LEN(&addr));
 }
+
 /* ============================================================================ */
 
 TEST_SUITE(sockaddr_un);
@@ -101,13 +97,6 @@ TEST(sockaddr_un_abi_alignment) {
 	ASSERT_EQ(sizeof(struct sockaddr_un), 2 + UNIX_PATH_MAX);
 }
 
-TEST_MAIN()
+/* ============================================================================ */
 
-#else
-
-int main(void) {
-	printf("sys/un.h requires POSIX\n");
-	return 0;
-}
-
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "sys/un.h requires POSIX\n")

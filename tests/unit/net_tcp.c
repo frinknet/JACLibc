@@ -1,17 +1,13 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <net/tcp.h>
-#include <string.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(net/tcp.h);
 
 /* ============================================================================ */
-/* CONSTANTS                                                                    */
-/* ============================================================================ */
+
 TEST_SUITE(constants);
 
 TEST(constants_states) {
@@ -63,11 +59,14 @@ TEST(constants_socket_options) {
 }
 
 /* ============================================================================ */
-/* STRUCT: tcp_hdr                                                              */
-/* ============================================================================ */
+
 TEST_SUITE(tcp_hdr);
 
-TEST(tcp_hdr_size) { ASSERT_SIZE(struct tcp_hdr, 20); }
+TEST(tcp_hdr_size) {
+	ASSERT_SIZE(struct tcp_hdr, 20);
+}
+
+/* ============================================================================ */
 
 TEST(tcp_hdr_layout) {
 	struct tcp_hdr h; memset(&h, 0, sizeof(h));
@@ -87,11 +86,12 @@ TEST(tcp_hdr_urg_without_ptr) {
 }
 
 /* ============================================================================ */
-/* STRUCT: tcphdr                                                               */
-/* ============================================================================ */
+
 TEST_SUITE(tcphdr);
 
-TEST(tcphdr_size) { ASSERT_SIZE(struct tcphdr, 20); }
+TEST(tcphdr_size) {
+	ASSERT_SIZE(struct tcphdr, 20);
+}
 
 TEST(tcphdr_bsd_alias_layout) {
 	struct tcphdr th; memset(&th, 0, sizeof(th));
@@ -100,8 +100,7 @@ TEST(tcphdr_bsd_alias_layout) {
 }
 
 /* ============================================================================ */
-/* MACRO: TCP_DATA_OFFSET                                                       */
-/* ============================================================================ */
+
 TEST_SUITE(tcp_data_offset);
 
 TEST(tcp_data_offseT_min_doff) {
@@ -130,8 +129,7 @@ TEST(tcp_data_offseT_null_safety) {
 }
 
 /* ============================================================================ */
-/* FUNCTION: tcp_pseudo_sum                                                     */
-/* ============================================================================ */
+
 TEST_SUITE(tcp_pseudo_sum);
 
 TEST(tcp_pseudo_sum_nonzero_addrs) {
@@ -146,8 +144,7 @@ TEST(tcp_pseudo_sum_zero_addrs) {
 }
 
 /* ============================================================================ */
-/* FUNCTION: tcp_checksum_finish                                                */
-/* ============================================================================ */
+
 TEST_SUITE(tcp_checksum_finish);
 
 TEST(tcp_checksum_finish_basic_roundtrip) {
@@ -182,8 +179,7 @@ TEST(tcp_checksum_finish_carry_propagation) {
 }
 
 /* ============================================================================ */
-/* CONSTANTS: tcp_options (Byte layout verification)                            */
-/* ============================================================================ */
+
 TEST_SUITE(tcp_options);
 
 TEST(tcp_options_eol_early) {
@@ -207,8 +203,6 @@ TEST(tcp_options_unknown_code) {
 	ASSERT_EQ(255, opts[0]);
 }
 
-TEST_MAIN()
+/* ============================================================================ */
 
-#else
-int main(void) { printf("net/tcp.h requires POSIX\n"); return 0; }
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "net/tcp.h requires POSIX\n")

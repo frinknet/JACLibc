@@ -1,15 +1,10 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <net/icmp.h>
-#include <string.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(net/icmp.h);
-
-/* ============================================================================ */
 
 /* ============================================================================ */
 TEST_SUITE(constants);
@@ -337,10 +332,6 @@ TEST(icmp_checksum_empty_buf) {
     ASSERT_EQ(0xFFFF, icmp_checksum(NULL, 0));
 }
 
-TEST_MAIN()
+/* ============================================================================ */
 
-#else
-
-int main(void) { printf("net/icmp.h requires POSIX\n"); return 0; }
-
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "net/icmp.h requires POSIX\n")

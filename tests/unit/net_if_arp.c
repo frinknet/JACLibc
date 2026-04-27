@@ -1,8 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <net/if_arp.h>
 
 TEST_TYPE(unit);
@@ -168,13 +166,6 @@ TEST(arphdr_is_valid) {
 	ASSERT_FALSE(arphdr_is_valid(NULL));
 }
 
-TEST_MAIN()
+/* ============================================================================ */
 
-#else
-
-int main(void) {
-	printf("net/if_arp.h requires POSIX\n");
-	return 0;
-}
-
-#endif
+TEST_MAIN_IF(JACL_HAS_POSIX, "net/if_arp.h requires POSIX\n")
