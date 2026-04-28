@@ -43,13 +43,24 @@ typedef struct {
 static inline int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, struct timeval *timeout) {
 	return (int)syscall(SYS_select, nfds, readfds, writefds, errorfds, timeout);
 }
-
 static inline int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, const struct timespec *timeout, const sigset_t *sigmask) {
 	return (int)syscall(SYS_pselect6, nfds, readfds, writefds, errorfds, timeout, sigmask);
 }
 #else
-static inline int select(int n, fd_set *r, fd_set *w, fd_set *e, struct timeval *t) { (void)n;(void)r;(void)w;(void)e;(void)t; errno=ENOSYS; return -1; }
-static inline int pselect(int n, fd_set *r, fd_set *w, fd_set *e, const struct timespec *t, const sigset_t *s) { (void)n;(void)r;(void)w;(void)e;(void)t;(void)s; errno=ENOSYS; return -1; }
+static inline int select(int n, fd_set *r, fd_set *w, fd_set *e, struct timeval *t) {
+	(void)n;(void)r;(void)w;(void)e;(void)t;
+
+	errno=ENOSYS;
+
+	return -1;
+}
+static inline int pselect(int n, fd_set *r, fd_set *w, fd_set *e, const struct timespec *t, const sigset_t *s) {
+	(void)n;(void)r;(void)w;(void)e;(void)t;(void)s;
+
+	errno=ENOSYS;
+
+	return -1;
+}
 #endif
 
 #ifdef __cplusplus

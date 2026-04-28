@@ -89,12 +89,21 @@
 /* AT_* constants for *at() functions                               */
 /* ================================================================ */
 
-#define AT_FDCWD             -100  /* Use current working directory */
-#define AT_SYMLINK_NOFOLLOW  0x100 /* Don't follow symbolic links */
-#define AT_REMOVEDIR         0x200 /* Remove directory instead of file */
-#define AT_EACCESS           0x200 /* Use effective IDs for access check */
-#define AT_SYMLINK_FOLLOW    0x400 /* Follow symbolic links */
-#define AT_EMPTY_PATH        0x1000 /* Allow empty pathname for fd-relative ops */
+#if JACL_OS_NETBSD
+	#define AT_FDCWD             -100  /* Use current working directory */
+	#define AT_SYMLINK_NOFOLLOW  0x100 /* Don't follow symbolic links */
+	#define AT_REMOVEDIR         0x200 /* Remove directory instead of file */
+	#define AT_EACCESS           0x80 /* Use effective IDs for access check */
+	#define AT_SYMLINK_FOLLOW    0x400 /* Follow symbolic links */
+	#define AT_EMPTY_PATH        0x1000 /* Allow empty pathname for fd-relative ops */
+#else
+	#define AT_FDCWD             -100  /* Use current working directory */
+	#define AT_SYMLINK_NOFOLLOW  0x100 /* Don't follow symbolic links */
+	#define AT_REMOVEDIR         0x200 /* Remove directory instead of file */
+	#define AT_EACCESS           0x200 /* Use effective IDs for access check */
+	#define AT_SYMLINK_FOLLOW    0x400 /* Follow symbolic links */
+	#define AT_EMPTY_PATH        0x1000 /* Allow empty pathname for fd-relative ops */
+#endif
 
 /* ================================================================ */
 /* Structures                                                       */
@@ -144,6 +153,20 @@ struct stat64 {
 };
 
 #endif
+
+struct statvfs {
+	unsigned long  f_bsize;    /* Filesystem block size */
+	unsigned long  f_frsize;   /* Fragment size */
+	fsblkcnt_t     f_blocks;   /* Size of fs in f_frsize units */
+	fsblkcnt_t     f_bfree;    /* Number of free blocks */
+	fsblkcnt_t     f_bavail;   /* Number of free blocks for non-root */
+	fsfilcnt_t     f_files;    /* Number of inodes */
+	fsfilcnt_t     f_ffree;    /* Number of free inodes */
+	fsfilcnt_t     f_favail;   /* Number of free inodes for non-root */
+	unsigned long  f_fsid;     /* Filesystem ID */
+	unsigned long  f_flag;     /* Mount flags */
+	unsigned long  f_namemax;  /* Maximum filename length */
+};
 
 // need OS first
 #define __OS_STAT
@@ -597,6 +620,57 @@ static inline int futimens(int fd, const struct timespec times[2]) {
 }
 
 #endif
+
+/* ================================================================ */
+/* File System Statistics (POSIX.1-2017 §12.2.3)                   */
+/* ================================================================ */
+
+#if STAT_POSIX || STAT_WASM
+
+static inline int statvfs(const char *path, struct statvfs *buf) {
+	if (!path || !buf) return -1;
+
+#if JACL_HASSYS(statvfs)
+	return (int)syscall(SYS_statvfs, path, buf);
+#elif JACL_HASSYS(fstatat)
+	/* Fallback: use fstatat with AT_FDCWD */
+	return (int)syscall(SYS_fstatat, AT_FDCWD, path, buf, 0);
+#else
+	errno = ENOSYS;
+	return -1;
+#endif
+}
+
+static inline int fstatvfs(int fd, struct statvfs *buf) {
+	if (!buf) return -1;
+
+#if JACL_HASSYS(fstatvfs)
+	return (int)syscall(SYS_fstatvfs, fd, buf);
+#elif JACL_HASSYS(fstatat)
+	/* Fallback: use fstatat with empty path and AT_EMPTY_PATH */
+	return (int)syscall(SYS_fstatat, fd, "", buf, AT_EMPTY_PATH);
+#else
+	errno = ENOSYS;
+	return -1;
+#endif
+}
+
+#else /* STAT_WIN32 */
+
+/* Windows stubs for statvfs/fstatvfs */
+static inline int statvfs(const char *path, struct statvfs *buf) {
+	(void)path; (void)buf;
+	errno = ENOSYS;
+	return -1;
+}
+
+static inline int fstatvfs(int fd, struct statvfs *buf) {
+	(void)fd; (void)buf;
+	errno = ENOSYS;
+	return -1;
+}
+
+#endif /* STAT_POSIX || STAT_WASM */
 
 
 #ifdef __cplusplus

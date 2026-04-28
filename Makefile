@@ -8,7 +8,7 @@ COMPS     ?= clang gcc tcc xcc osx win
 MKGOAL    := clean unit-test build shared respond
 CFLAGS    := -Wno-unknown-warning-option -g -O0  -fno-omit-frame-pointer -fno-stack-protector
 CXXFLAGS  :=
-LDFLAGS   := -s -flto
+LDFLAGS   := -flto
 TSFLAGS   := -include static.h
 
 OUTDIR    := out

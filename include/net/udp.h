@@ -26,43 +26,6 @@ extern "C" {
 #endif
 
 /* ======================================================================== */
-/* Standard UDP Ports (IANA Assigned)                                       */
-/* ======================================================================== */
-
-#define IPPORT_ECHO		7
-#define IPPORT_DISCARD		9
-#define IPPORT_SYSTAT		11
-#define IPPORT_DAYTIME		13
-#define IPPORT_NETSTAT		15
-#define IPPORT_FTPDATA		20
-#define IPPORT_FTP		21
-#define IPPORT_SSH		22
-#define IPPORT_TELNET		23
-#define IPPORT_SMTP		25
-#define IPPORT_NAMESERVER	42
-#define IPPORT_DOMAIN		53
-#define IPPORT_BOOTPS		67
-#define IPPORT_BOOTPC		68
-#define IPPORT_TFTP		69
-#define IPPORT_RJE		77
-#define IPPORT_FINGER		79
-#define IPPORT_HTTP		80
-#define IPPORT_SUPDUP		95
-#define IPPORT_EXECSERVER	512
-#define IPPORT_LOGINSERVER	513
-#define IPPORT_CMDSERVER	514
-#define IPPORT_EFSSERVER	520
-#define IPPORT_BIFFUDP		512
-#define IPPORT_WHOSERVER	513
-#define IPPORT_ROUTESERVER	520
-#define IPPORT_NTP		123
-#define IPPORT_SNMP		161
-#define IPPORT_SNMPTRAP		162
-#define IPPORT_IMAPS		993
-#define IPPORT_IRCS		994
-#define IPPORT_POP3S		995
-
-/* ======================================================================== */
 /* Header Structures                                                        */
 /* ======================================================================== */
 
@@ -108,11 +71,14 @@ struct udppseudo6 {
 /* UDP Socket Options (Linux/BSD compatible subset)                         */
 /* ======================================================================== */
 
-#define UDP_ENCAP		100
-#define UDP_CORK		1
-#define UDP_NO_CHECK6_TX	100
-#define UDP_NO_CHECK6_RX	101
-#define UDP_SEGMENT		103 /* GSO/UDP segmentation */
+#define UDP_CORK		        1
+#define UDP_ENCAP	        	100
+#define UDP_NO_CHECK6_TX	  100
+#define UDP_NO_CHECK6_RX   	101
+#define UDP_NO_CHECK_TX     100 /* Deprecated alias for NO_CHECK6_TX */
+#define UDP_NO_CHECK_RX     101 /* Deprecated alias for NO_CHECK6_RX */
+#define UDP_SEGMENT     		103 /* GSO/UDP segmentation */
+
 
 /* ======================================================================== */
 /* Checksum Helpers (RFC 768 Pseudo-Header)                                 */
@@ -147,6 +113,21 @@ static inline uint16_t udp_checksum_finish(uint32_t sum, const void *buf, int le
 static inline uint16_t udp_checksum_ipv4(struct in_addr src, struct in_addr dst,
                                          const void *data, uint16_t len) {
 	uint32_t sum = udp_pseudo_sum_ipv4(src, dst, len);
+	return udp_checksum_finish(sum, data, len);
+}
+
+/* One-shot helper for IPv6 UDP checksum */
+static inline uint16_t udp_checksum_ipv6(struct in6_addr src, struct in6_addr dst, const void *data, uint32_t len) {
+	uint32_t sum = 0;
+	const uint16_t *s = (const uint16_t *)&src;
+	const uint16_t *d = (const uint16_t *)&dst;
+
+	for (int i = 0; i < 8; i++) sum += s[i];
+	for (int i = 0; i < 8; i++) sum += d[i];
+
+	sum += htonl(len);
+	sum += htons(IPPROTO_UDP);
+
 	return udp_checksum_finish(sum, data, len);
 }
 

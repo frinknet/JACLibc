@@ -1,4 +1,5 @@
 #!/usr/bin/awk -f
+# (c) 2026 FRINKnet & Friends – MIT licence
 
 BEGIN {
 	o_count = 0
