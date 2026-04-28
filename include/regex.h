@@ -131,30 +131,12 @@ static void __jacl_add_range(regex_t *re, uint32_t lo, uint32_t hi, uint8_t cid,
 
 static void __jacl_resolve_cclass(regex_t *re, const char *nm, uint8_t cid)
 {
-    /* FIX: Handle walpha/walnum explicitly */
-    if (strcmp(nm, "walpha") == 0) {
-        __jacl_add_range(re, 'a', 'z', cid, 0);
-        __jacl_add_range(re, 'A', 'Z', cid, 0);
-        /* Add wide alpha */
-        wctype_t w = wctype("alpha");
+    /* Handle w-prefixed classes by scanning full range 0-0xFFFF */
+    if (nm[0] == 'w') {
+        wctype_t w = wctype(nm + 1);
+        if (!w) w = wctype(nm); /* Fallback */
         if (w) {
-            for (uint32_t i = 256; i <= 0xFFFF; i++) {
-                if (iswctype(i, w)) {
-                    uint32_t s = i;
-                    while (i <= 0xFFFF && iswctype(i, w)) i++;
-                    __jacl_add_range(re, s, i - 1, cid, 0);
-                }
-            }
-        }
-        return;
-    } else if (strcmp(nm, "walnum") == 0) {
-        __jacl_add_range(re, 'a', 'z', cid, 0);
-        __jacl_add_range(re, 'A', 'Z', cid, 0);
-        __jacl_add_range(re, '0', '9', cid, 0);
-        /* Add wide alnum */
-        wctype_t w = wctype("alnum");
-        if (w) {
-            for (uint32_t i = 256; i <= 0xFFFF; i++) {
+            for (uint32_t i = 0; i <= 0xFFFF; i++) {
                 if (iswctype(i, w)) {
                     uint32_t s = i;
                     while (i <= 0xFFFF && iswctype(i, w)) i++;
@@ -429,12 +411,7 @@ static const char *__jacl_match(__jacl_node_t *n, const regex_t *re, const char 
             const char *r = __jacl_match(n->a, re, s, end, pos, caps, ic, nl, ef, depth+1);
             if (r) {
                 caps[n->cap_id*2+1] = r - s;
-                const char *res = __jacl_match(n->b, re, s, end, r, caps, ic, nl, ef, depth+1);
-                if (!res) {
-                    caps[n->cap_id*2] = sv_so;
-                    caps[n->cap_id*2+1] = sv_eo;
-                }
-                return res;
+                return __jacl_match(n->b, re, s, end, r, caps, ic, nl, ef, depth+1);
             } else {
                 caps[n->cap_id*2] = sv_so; 
                 caps[n->cap_id*2+1] = sv_eo;
@@ -454,27 +431,33 @@ static const char *__jacl_match(__jacl_node_t *n, const regex_t *re, const char 
             return __jacl_match(n->b, re, s, end, pos, caps, ic, nl, ef, depth+1);
         }
         case __jacl_REP: {
-            const char *path[1024];
-            regoff_t cpath[1024][16];
-            int k = 0;
+            regoff_t saved_caps[16];
+            memcpy(saved_caps, caps, sizeof(saved_caps));
             
-            path[0] = pos;
-            memcpy(cpath[0], caps, sizeof(cpath[0]));
-            
-            while (k < 1023) {
-                memcpy(cpath[k+1], cpath[k], sizeof(cpath[0]));
-                const char *next = __jacl_match(n->a, re, s, end, path[k], cpath[k+1], ic, nl, ef, depth+1);
-                if (!next || next == path[k]) break;
-                path[++k] = next;
-            }
+            int k = n->max;
+            if (k > 1000) k = 1000; 
             
             for (; k >= n->min; k--) {
-                memcpy(caps, cpath[k], sizeof(cpath[0]));
-                if (n->b) {
-                    const char *res = __jacl_match(n->b, re, s, end, path[k], caps, ic, nl, ef, depth+1);
-                    if (res) return res;
-                } else {
-                    return path[k];
+                memcpy(caps, saved_caps, sizeof(saved_caps));
+                const char *current_pos = pos;
+                int failed = 0;
+                
+                for (int i = 0; i < k; i++) {
+                    const char *next_pos = __jacl_match(n->a, re, s, end, current_pos, caps, ic, nl, ef, depth+1);
+                    if (!next_pos) {
+                        failed = 1;
+                        break;
+                    }
+                    current_pos = next_pos;
+                }
+                
+                if (!failed) {
+                    if (n->b) {
+                        const char *res = __jacl_match(n->b, re, s, end, current_pos, caps, ic, nl, ef, depth+1);
+                        if (res) return res;
+                    } else {
+                        return current_pos;
+                    }
                 }
             }
             return 0;

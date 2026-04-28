@@ -221,6 +221,7 @@ static inline wint_t towupper(wint_t c) { return towupper_l(c, __jacl_locale_cur
 static inline wctrans_t wctrans(const char *c) { return wctrans_l(c, __jacl_locale_current); }
 static inline wctrans_t towctrans(wint_t c, wctrans_t t) { return towctrans_l(c, t, __jacl_locale_current); }
 
+static inline int iswctype(wint_t c, wctype_t t) { return iswctype_l(c, t,  __jacl_locale_current); }
 static inline wctype_t wctype(const char *c) { return wctype_l(c, __jacl_locale_current); }
 
 #ifdef __cplusplus
