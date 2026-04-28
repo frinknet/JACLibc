@@ -42,9 +42,6 @@ typedef uint16_t in_port_t;
 #define INADDR_LOOPBACK		((in_addr_t) 0x7f000001)
 #define INADDR_NONE		((in_addr_t) 0xffffffff)
 
-#define IPPORT_RESERVED		1024
-#define IPPORT_USERRESERVED	5000
-
 #define X(ID, num, ...) ID = num,
 enum {
 #include <x/ip_protocols.h>
@@ -52,6 +49,15 @@ enum {
 #undef X
 
 #define IPPROTO_IP 0
+
+#define X(ID, num, ...) ID = num,
+enum {
+#include <x/ip_ports.h>
+} __jacl_ipport_t;
+#undef X
+
+#define IPPORT_RESERVED		1024
+#define IPPORT_USERRESERVED	5000
 
 #define IN_CLASSA(a)		(((in_addr_t)(a) & 0x80000000) == 0)
 #define IN_CLASSA_NET		0xff000000
