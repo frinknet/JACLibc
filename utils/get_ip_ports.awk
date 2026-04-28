@@ -25,14 +25,23 @@ $2 ~ /^[0-9]+$/ {
 
   # Treat each port as a key; favor first non‑empty desc
   if ( ! seen_port[port] ) {
-    # Build clean keyword
+    # Build clean keyword fromservice name
     kw_clean = svc
-
     gsub(/ *\(deprecated\).*/, "", kw_clean)
     gsub(/[^A-Za-z0-9]/, "_", kw_clean)
     gsub(/_+/, "_", kw_clean)
-
     kw_clean = toupper(kw_clean)
+
+    # Handle empty or numeric-only keywords
+    if (kw_clean == "" || kw_clean ~ /^[0-9]+$/) {
+        kw_clean = "PORT_" port
+    }
+
+    # Detect service name collisions: if we've seen this keyword before, append port
+    if (seen_keyword[kw_clean]) {
+        kw_clean = kw_clean "_" port
+    }
+    seen_keyword[kw_clean] = 1
 
     if (kw_clean == "" || kw_clean ~ /^[0-9]+$/) {
       if (port == 0) kw_clean = "PORT_0"

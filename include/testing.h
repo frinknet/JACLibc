@@ -440,7 +440,7 @@ static inline void __jacl_test_report(void) {
 } while(0)
 #define ASSERT_INT_LT(a, b) do { \
 	if (!((intmax_t)(a) < (intmax_t)(b))) { \
-		TEST_FAIL(Values should be less\n\tINPUT: %s < %s\n\tVALUE: %" PRIdMAX " < %" PRIdMAX, \
+		TEST_FAIL("Values should be less\n\tINPUT: %s < %s\n\tVALUE: %" PRIdMAX " < %" PRIdMAX, \
 		          #a, #b, (intmax_t)(a), (intmax_t)(b)); \
 	} \
 } while(0)

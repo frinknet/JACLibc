@@ -115,7 +115,8 @@ TEST(tcp_data_offseT_max_doff) {
 
 TEST(tcp_data_offseT_invalid_low_doff) {
 	struct tcp_hdr h = {0}; h.doff = 4;
-	ASSERT_LT(TCP_DATA_OFFSET(&h), TCP_HDR_LEN);
+	uint8_t offset = TCP_DATA_OFFSET(&h);
+	ASSERT_LT(offset, TCP_HDR_LEN);
 }
 
 TEST(tcp_data_offseT_calc) {
