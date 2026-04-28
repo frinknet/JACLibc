@@ -30,9 +30,8 @@ TEST(locale_constants_unique) {
 	ASSERT_NE(LC_NUMERIC, LC_TIME);
 }
 
-/* ============================================================================
- * lconv
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(lconv);
 
 TEST(lconv_decimal_point) {
@@ -173,9 +172,8 @@ TEST(lconv_int_n_sign_posn) {
 	ASSERT_EQ(CHAR_MAX, conv.int_n_sign_posn);
 }
 
-/* ============================================================================
- * setlocale
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(setlocale);
 
 TEST(setlocale_query) {
@@ -309,9 +307,8 @@ TEST(setlocale_env_empty) {
 	unsetenv("LANG");
 }
 
-/* ============================================================================
- * localeconv
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(localeconv);
 
 TEST(localeconv_returns_pointer) {
@@ -485,9 +482,8 @@ TEST(localeconv_currency_empty) {
 	ASSERT_TRUE(strlen(conv->int_curr_symbol) == 0);
 }
 
-/* ============================================================================
- * locale_posix_compliance
- * ============================================================================ */
+/* ============================================================================ */
+
 TEST_SUITE(locale_posix_compliance);
 
 TEST(locale_posix_lconv_fields) {
@@ -530,5 +526,217 @@ TEST(locale_posix_localeconv_static) {
 	struct lconv *conv2 = localeconv();
 	ASSERT_EQ(conv1, conv2);
 }
+
+/* ============================================================================ */
+
+TEST_SUITE(duplocale);
+
+TEST(duplocale_basic) {
+	locale_t orig = __jacl_locale_global;
+	locale_t copy = duplocale(orig);
+	ASSERT_NOT_NULL(copy);
+	ASSERT_NE(orig, copy);
+	ASSERT_EQ(orig->lcats.wctype, copy->lcats.wctype);
+	freelocale(copy);
+}
+
+TEST(duplocale_null) {
+	locale_t copy = duplocale(NULL);
+	ASSERT_NULL(copy);
+}
+
+TEST(duplocale_sentinel) {
+	locale_t copy = duplocale(LC_GLOBAL_LOCALE);
+	ASSERT_NOT_NULL(copy);
+	ASSERT_EQ(copy->lcats.wctype, __jacl_locale_global->lcats.wctype);
+	freelocale(copy);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(newlocale);
+
+TEST(newlocale_basic) {
+	/* Parse "C" locale with numeric mask */
+	locale_t loc = newlocale(LC_NUMERIC_MASK, "C", NULL);
+	ASSERT_NOT_NULL(loc);
+	/* "C" locale should have valid numeric settings (not ERR) */
+	ASSERT_NE(loc->lcats.numeric, CC_ERR);
+	freelocale(loc);
+}
+
+TEST(newlocale_null_base) {
+	/* NULL base should fallback to current, then global */
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	ASSERT_NOT_NULL(loc);
+	freelocale(loc);
+}
+
+TEST(newlocale_global_base) {
+	/* Explicit global sentinel should work */
+	locale_t loc = newlocale(LC_ALL_MASK, "C", LC_GLOBAL_LOCALE);
+	ASSERT_NOT_NULL(loc);
+	freelocale(loc);
+}
+
+TEST(newlocale_thread_base) {
+	/* Thread sentinel should work */
+	locale_t loc = newlocale(LC_ALL_MASK, "C", LC_THREAD_LOCALE);
+	ASSERT_NOT_NULL(loc);
+	freelocale(loc);
+}
+
+TEST(newlocale_invalid_locale) {
+	/* Invalid locale string should return NULL */
+	errno = 0;
+	locale_t loc = newlocale(LC_ALL_MASK, "invalid_xyz_123", NULL);
+	ASSERT_NULL(loc);
+	ASSERT_EQ(errno, EINVAL);
+}
+
+TEST(newlocale_invalid_mask) {
+	/* Zero mask should still succeed (no changes) */
+	locale_t loc = newlocale(0, "C", NULL);
+	ASSERT_NOT_NULL(loc);
+	freelocale(loc);
+}
+
+TEST(newlocale_bitmask) {
+	/* Multiple categories via bitmask */
+	locale_t loc = newlocale(LC_NUMERIC_MASK | LC_TIME_MASK, "C", NULL);
+	ASSERT_NOT_NULL(loc);
+	ASSERT_NE(loc->lcats.numeric, CC_ERR);
+	ASSERT_NE(loc->lcats.time, LANG_ERR);
+	freelocale(loc);
+}
+
+TEST(newlocale_errno_on_invalid) {
+	/* errno should be set on invalid locale */
+	errno = 0;
+	locale_t loc = newlocale(LC_CTYPE_MASK, "not_a_lang", NULL);
+	ASSERT_NULL(loc);
+	ASSERT_EQ(errno, EINVAL);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(uselocale);
+
+TEST(uselocale_basic) {
+	locale_t old = __jacl_locale_current;
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	locale_t prev = uselocale(loc);
+	ASSERT_EQ(prev, old);
+	ASSERT_EQ(__jacl_locale_current, loc);
+	uselocale(old);
+	freelocale(loc);
+}
+
+TEST(uselocale_global_sentinel) {
+	locale_t old = __jacl_locale_current;
+	locale_t prev = uselocale(LC_GLOBAL_LOCALE);
+	ASSERT_EQ(prev, old);
+	ASSERT_EQ(__jacl_locale_current, __jacl_locale_global);
+	uselocale(old);
+}
+
+TEST(uselocale_null) {
+	locale_t old = __jacl_locale_current;
+	locale_t prev = uselocale(NULL);
+	ASSERT_EQ(prev, old);
+	ASSERT_EQ(__jacl_locale_current, old);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(freelocale);
+
+TEST(freelocale_basic) {
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	ASSERT_NOT_NULL(loc);
+	freelocale(loc);
+}
+
+TEST(freelocale_null) {
+	freelocale(NULL);
+}
+
+TEST(freelocale_global_sentinel) {
+	freelocale(LC_GLOBAL_LOCALE);
+}
+
+TEST(freelocale_global_pointer) {
+	freelocale(__jacl_locale_global);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(thread_locale);
+
+TEST(thread_locale_initial) {
+	ASSERT_EQ(__jacl_locale_current, __jacl_locale_global);
+}
+
+TEST(thread_locale_setlocale_sync) {
+	char *orig = setlocale(LC_ALL, NULL);
+	setlocale(LC_NUMERIC, "C");
+	ASSERT_EQ(__jacl_locale_current, __jacl_locale_global);
+	setlocale(LC_ALL, orig);
+}
+
+TEST(thread_locale_uselocale_private) {
+	locale_t private = newlocale(LC_ALL_MASK, "C", NULL);
+	locale_t old = uselocale(private);
+	ASSERT_EQ(__jacl_locale_current, private);
+	ASSERT_NE(__jacl_locale_current, __jacl_locale_global);
+	uselocale(old);
+	freelocale(private);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(integration);
+
+TEST(integration_setlocale_then_localeconv) {
+	setlocale(LC_NUMERIC, "C");
+	struct lconv *conv = localeconv();
+	ASSERT_STR_EQ(".", conv->decimal_point);
+}
+
+TEST(integration_newlocale_then_uselocale) {
+	locale_t loc = newlocale(LC_NUMERIC_MASK, "C", NULL);
+	uselocale(loc);
+	struct lconv *conv = localeconv();
+	ASSERT_STR_EQ(".", conv->decimal_point);
+	uselocale(LC_GLOBAL_LOCALE);
+	freelocale(loc);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(edge_cases);
+
+TEST(edge_case_rapid_locale_switching) {
+	for (int i = 0; i < 100; i++) {
+		locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+		uselocale(loc);
+		uselocale(LC_GLOBAL_LOCALE);
+		freelocale(loc);
+	}
+}
+
+TEST(edge_case_nested_duplocale) {
+	locale_t l1 = duplocale(__jacl_locale_global);
+	locale_t l2 = duplocale(l1);
+	locale_t l3 = duplocale(l2);
+	ASSERT_NOT_NULL(l1);
+	ASSERT_NOT_NULL(l2);
+	ASSERT_NOT_NULL(l3);
+	freelocale(l3);
+	freelocale(l2);
+	freelocale(l1);
+}
+
+/* ============================================================================ */
 
 TEST_MAIN()

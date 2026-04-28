@@ -13,13 +13,24 @@
 #include <x/locale_languages.h>
 #include <x/locale_countries.h>
 
-#define LC_CTYPE  	0
-#define LC_NUMERIC  1
-#define LC_TIME	    2
-#define LC_COLLATE  3
-#define LC_MONETARY 4
-#define LC_MESSAGES 5
-#define LC_ALL	    6
+#define LC_CTYPE         0
+#define LC_NUMERIC       1
+#define LC_TIME	         2
+#define LC_COLLATE       3
+#define LC_MONETARY      4
+#define LC_MESSAGES      5
+#define LC_ALL           6
+
+#define LC_CTYPE_MASK    (1 << LC_CTYPE)
+#define LC_NUMERIC_MASK  (1 << LC_NUMERIC)
+#define LC_TIME_MASK     (1 << LC_TIME)
+#define LC_COLLATE_MASK  (1 << LC_COLLATE)
+#define LC_MONETARY_MASK (1 << LC_MONETARY)
+#define LC_MESSAGES_MASK (1 << LC_MESSAGES)
+#define LC_ALL_MASK      ((1 << LC_ALL) - 1)
+
+#define LC_GLOBAL_LOCALE ((locale_t)-1)
+#define LC_THREAD_LOCALE ((locale_t)-2)
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,8 +41,8 @@ extern "C" {
 #endif
 
 #define X(code, ...) code,
-typedef enum locale_lang { LANG_ERR, X_LANGUAGES } __jacl_locale_lang_t;
-typedef enum locale_cc { CC_ERR, X_COUNTRIES } __jacl_locale_cc_t;
+typedef enum locale_lang { X_LANGUAGES LANG_ERR } __jacl_locale_lang_t;
+typedef enum locale_cc { X_COUNTRIES CC_ERR } __jacl_locale_cc_t;
 #undef X
 
 typedef struct {
@@ -51,7 +62,7 @@ typedef struct {
 	__jacl_locale_lang_t  message;
 	__jacl_locale_cc_t    numeric;
 	__jacl_locale_cc_t    monetary;
-} __jacl_locale_t;
+} __jacl_lcats_t;
 
 typedef struct {
 	const char *days_full[7];
@@ -66,8 +77,7 @@ typedef struct {
 	const char *fmt_time_12;
 } __jacl_time_t;
 
-/* C99 localization */
-struct lconv {
+typedef struct lconv {
 	/* numeric */
 	char	*decimal_point;
 	char	*thousands_sep;
@@ -97,14 +107,40 @@ struct lconv {
 	char	int_n_sep_by_space;
 	char	int_p_sign_posn;
 	char	int_n_sign_posn;
-};
+} __jacl_lconv_t;
 
-extern thread_local __jacl_locale_t __jacl_locale;
-extern thread_local __jacl_wctype_t __jacl_wctype;
-extern thread_local __jacl_time_t   __jacl_time;
-extern thread_local struct lconv	__jacl_lconv;
+typedef struct {
+	__jacl_lcats_t  lcats;   // lang/cc category
+	__jacl_wctype_t wctype;  // your tables
+	__jacl_time_t   time;    // your time data
+	__jacl_lconv_t  lconv;   // numeric/monetary
+} __jacl_locale_t;
 
-// Parse language code
+typedef __jacl_locale_t *locale_t;
+
+extern locale_t __jacl_locale_global;
+extern thread_local locale_t __jacl_locale_current;
+
+static const char *__jacl_locale_env(int cat) {
+	const char *env = getenv("LC_ALL");
+
+	if (!env || !env[0]) {
+		switch (cat) {
+			case LC_CTYPE:	  env = getenv("LC_CTYPE"); break;
+			case LC_NUMERIC:  env = getenv("LC_NUMERIC"); break;
+			case LC_TIME:	    env = getenv("LC_TIME"); break;
+			case LC_COLLATE:  env = getenv("LC_COLLATE"); break;
+			case LC_MONETARY: env = getenv("LC_MONETARY"); break;
+			case LC_MESSAGES: env = getenv("LC_MESSAGES"); break;
+		}
+	}
+
+	if (!env || !env[0]) env = getenv("LANG");
+	if (!env || !env[0]) env = "C";
+
+	return env;
+}
+
 static __jacl_locale_lang_t __jacl_locale_lang(const char *lang) {
 	size_t len = strlen(lang);
 
@@ -127,7 +163,6 @@ static __jacl_locale_lang_t __jacl_locale_lang(const char *lang) {
 	return LANG_ERR;
 }
 
-// Parse country code
 static __jacl_locale_cc_t __jacl_locale_cc(const char *cc) {
 	if (*cc == '\0') return CC_NONE;
 
@@ -140,7 +175,6 @@ static __jacl_locale_cc_t __jacl_locale_cc(const char *cc) {
 	return CC_ERR;
 }
 
-// Parse locale
 static void __jacl_locale_split(const char *s, __jacl_locale_lang_t *out_lang, __jacl_locale_cc_t *out_cc) {
 	const char *p = s;
 	char lang[4];
@@ -177,25 +211,24 @@ static void __jacl_locale_split(const char *s, __jacl_locale_lang_t *out_lang, _
 	*out_cc   = __jacl_locale_cc(cc);
 }
 
-static void __jacl_locale_wctype(__jacl_locale_lang_t lang) {
-	__jacl_locale.wctype = lang;
+static void __jacl_locale_wctype(__jacl_locale_lang_t lang, locale_t l) {
+	l->lcats.wctype = lang;
 
-	#define X(LANG, ...) case LANG: __jacl_wctype = (__jacl_wctype_t){ __VA_ARGS__ }; break;
+	#define X(LANG, ...) case LANG: l->wctype = (__jacl_wctype_t){ __VA_ARGS__ }; break;
 	switch(lang) {
 	#include <x/locale_wctype.h>
 	}
   #undef X
 }
 
-static void __jacl_locale_numeric(__jacl_locale_cc_t cc) {
-	__jacl_locale.numeric = cc;
+static void __jacl_locale_numeric(__jacl_locale_cc_t cc, locale_t l) {
+	l->lcats.numeric = cc;
 
-	// Update numeric formatting
 	#define X(CC, dec, sep, group) \
 		case CC: \
-			__jacl_lconv.decimal_point = dec; \
-			__jacl_lconv.thousands_sep = sep; \
-			__jacl_lconv.grouping = group; \
+			l->lconv.decimal_point = dec; \
+			l->lconv.thousands_sep = sep; \
+			l->lconv.grouping = group; \
 			break;
 	switch(cc) {
 	#include <x/locale_numeric.h>
@@ -203,52 +236,52 @@ static void __jacl_locale_numeric(__jacl_locale_cc_t cc) {
 	#undef X
 }
 
-static void __jacl_locale_time(__jacl_locale_lang_t lang) {
-	__jacl_locale.time = lang;
+static void __jacl_locale_time(__jacl_locale_lang_t lang, locale_t l) {
+	l->lcats.time = lang;
 
-	#define X(LANG, ...) case LANG: __jacl_time = (__jacl_time_t){ __VA_ARGS__ }; break;
+	#define X(LANG, ...) case LANG: l->time = (__jacl_time_t){ __VA_ARGS__ }; break;
 	switch(lang) {
 	#include <x/locale_time.h>
 	}
   #undef X
 }
 
-static void __jacl_locale_collate(__jacl_locale_lang_t lang) {
-	__jacl_locale.collate = lang;
+static void __jacl_locale_collate(__jacl_locale_lang_t lang, locale_t l) {
+	l->lcats.collate = lang;
 	// Update collation rules (affects strcoll, strxfrm)
 }
 
-static void __jacl_locale_message(__jacl_locale_lang_t lang) {
-	__jacl_locale.message = lang;
+static void __jacl_locale_message(__jacl_locale_lang_t lang, locale_t l) {
+	l->lcats.message = lang;
 	// Update message formatting (affects gettext, error messages)
 }
 
-static void __jacl_locale_monetary(__jacl_locale_cc_t cc) {
-	__jacl_locale.monetary = cc;
+static void __jacl_locale_monetary(__jacl_locale_cc_t cc, locale_t l) {
+	l->lcats.monetary = cc;
 
 	#define X(name, curr, mdec, mthou, mgrp, pos, neg, ifd, fd, pcp, psb, ncp, nsb, psp, nsp) \
 		case name: \
-			__jacl_lconv.int_curr_symbol = curr; \
-			__jacl_lconv.currency_symbol = curr; \
-			__jacl_lconv.mon_decimal_point = mdec; \
-			__jacl_lconv.mon_thousands_sep = mthou; \
-			__jacl_lconv.mon_grouping = mgrp; \
-			__jacl_lconv.positive_sign = pos; \
-			__jacl_lconv.negative_sign = neg; \
-			__jacl_lconv.int_frac_digits = ifd; \
-			__jacl_lconv.frac_digits = fd; \
-			__jacl_lconv.int_p_cs_precedes = pcp; \
-			__jacl_lconv.p_cs_precedes = pcp; \
-			__jacl_lconv.int_p_sep_by_space = psb; \
-			__jacl_lconv.p_sep_by_space = psb; \
-			__jacl_lconv.int_n_cs_precedes = ncp; \
-			__jacl_lconv.n_cs_precedes = ncp; \
-			__jacl_lconv.int_n_sep_by_space = nsb; \
-			__jacl_lconv.n_sep_by_space = nsb; \
-			__jacl_lconv.int_p_sign_posn = psp; \
-			__jacl_lconv.p_sign_posn = psp; \
-			__jacl_lconv.int_n_sign_posn = nsp; \
-			__jacl_lconv.n_sign_posn = nsp; \
+			l->lconv.int_curr_symbol = curr; \
+			l->lconv.currency_symbol = curr; \
+			l->lconv.mon_decimal_point = mdec; \
+			l->lconv.mon_thousands_sep = mthou; \
+			l->lconv.mon_grouping = mgrp; \
+			l->lconv.positive_sign = pos; \
+			l->lconv.negative_sign = neg; \
+			l->lconv.int_frac_digits = ifd; \
+			l->lconv.frac_digits = fd; \
+			l->lconv.int_p_cs_precedes = pcp; \
+			l->lconv.p_cs_precedes = pcp; \
+			l->lconv.int_p_sep_by_space = psb; \
+			l->lconv.p_sep_by_space = psb; \
+			l->lconv.int_n_cs_precedes = ncp; \
+			l->lconv.n_cs_precedes = ncp; \
+			l->lconv.int_n_sep_by_space = nsb; \
+			l->lconv.n_sep_by_space = nsb; \
+			l->lconv.int_p_sign_posn = psp; \
+			l->lconv.p_sign_posn = psp; \
+			l->lconv.int_n_sign_posn = nsp; \
+			l->lconv.n_sign_posn = nsp; \
 			break;
 	switch (cc) {
 	#include <x/locale_monetary.h>
@@ -256,20 +289,40 @@ static void __jacl_locale_monetary(__jacl_locale_cc_t cc) {
 	#undef X
 }
 
-static char *__jacl_locale_get(int category) {
+static void __jacl_locale_update(int cat, __jacl_locale_lang_t lang, __jacl_locale_cc_t cc, locale_t l) {
+	switch (cat) {
+	case LC_CTYPE:    __jacl_locale_wctype(lang, l);  break;
+	case LC_TIME:  	  __jacl_locale_time(lang, l);    break;
+	case LC_COLLATE:  __jacl_locale_collate(lang, l); break;
+	case LC_MESSAGES: __jacl_locale_message(lang, l); break;
+	case LC_NUMERIC:  __jacl_locale_numeric(cc, l);   break;
+	case LC_MONETARY: __jacl_locale_monetary(cc, l);  break;
+	case LC_ALL:
+		__jacl_locale_wctype(lang, l);
+		__jacl_locale_time(lang, l);
+		__jacl_locale_collate(lang, l);
+		__jacl_locale_message(lang, l);
+		__jacl_locale_numeric(cc, l);
+		__jacl_locale_monetary(cc, l);
+
+		break;
+	}
+}
+
+static char *__jacl_locale_get(int cat, locale_t l) {
 	static thread_local char buf[32];
-	__jacl_locale_lang_t lang = __jacl_locale.wctype;
-	__jacl_locale_cc_t cc = __jacl_locale.numeric;
+	__jacl_locale_lang_t lang = l->lcats.wctype;
+	__jacl_locale_cc_t cc = l->lcats.numeric;
 	char *lstr;
 	char *cstr;
 
-	switch (category) {
-		case LC_CTYPE:	  lang = __jacl_locale.wctype; break;
-		case LC_TIME:	    lang = __jacl_locale.time; break;
-		case LC_COLLATE:  lang = __jacl_locale.collate; break;
-		case LC_MESSAGES: lang = __jacl_locale.message; break;
-		case LC_NUMERIC:  cc = __jacl_locale.numeric; break;
-		case LC_MONETARY: cc = __jacl_locale.monetary; break;
+	switch (cat) {
+		case LC_CTYPE:	  lang = l->lcats.wctype; break;
+		case LC_TIME:	    lang = l->lcats.time; break;
+		case LC_COLLATE:  lang = l->lcats.collate; break;
+		case LC_MESSAGES: lang = l->lcats.message; break;
+		case LC_NUMERIC:  cc   = l->lcats.numeric; break;
+		case LC_MONETARY: cc   = l->lcats.monetary; break;
 	}
 
 	#define X(LANG, name, ...) case LANG: lstr = name; break;
@@ -291,63 +344,104 @@ static char *__jacl_locale_get(int category) {
 	return buf;
 }
 
-static const char *__jacl_locale_env(int category) {
-	const char *env = getenv("LC_ALL");
-
-	if (!env || !env[0]) {
-		switch (category) {
-			case LC_CTYPE:	  env = getenv("LC_CTYPE"); break;
-			case LC_NUMERIC:  env = getenv("LC_NUMERIC"); break;
-			case LC_TIME:	    env = getenv("LC_TIME"); break;
-			case LC_COLLATE:  env = getenv("LC_COLLATE"); break;
-			case LC_MONETARY: env = getenv("LC_MONETARY"); break;
-			case LC_MESSAGES: env = getenv("LC_MESSAGES"); break;
-		}
-	}
-	if (!env || !env[0]) env = getenv("LANG");
-	if (!env || !env[0]) env = "C";
-
-	return env;
+static inline void freelocale(locale_t l) {
+	if (l != __jacl_locale_global && l != LC_GLOBAL_LOCALE) free(l);
 }
 
-static void __jacl_locale_update(int category, __jacl_locale_lang_t lang, __jacl_locale_cc_t cc) {
-	switch (category) {
-	case LC_CTYPE:    __jacl_locale_wctype(lang);  break;
-	case LC_TIME:  	  __jacl_locale_time(lang);    break;
-	case LC_COLLATE:  __jacl_locale_collate(lang); break;
-	case LC_MESSAGES: __jacl_locale_message(lang); break;
-	case LC_NUMERIC:  __jacl_locale_numeric(cc);   break;
-	case LC_MONETARY: __jacl_locale_monetary(cc);  break;
-	case LC_ALL:
-		__jacl_locale_wctype(lang);
-		__jacl_locale_time(lang);
-		__jacl_locale_collate(lang);
-		__jacl_locale_message(lang);
-		__jacl_locale_numeric(cc);
-		__jacl_locale_monetary(cc);
+static inline locale_t duplocale(locale_t l) {
+	if (l == NULL) { errno = EINVAL; return NULL; }
+	if (l == LC_GLOBAL_LOCALE) l = __jacl_locale_global;
+	if (l == LC_THREAD_LOCALE) l = __jacl_locale_current;
 
-		break;
-	}
+	locale_t nl = malloc(sizeof(__jacl_locale_t));
+
+	if (!nl) return NULL;
+
+	memcpy(nl, l, sizeof(__jacl_locale_t));
+
+	return nl;
 }
 
-static inline char *setlocale(int category, const char *locale) {
-	if (locale == NULL)  return __jacl_locale_get(category);
-	if (locale[0] == '\0') locale = __jacl_locale_env(category);
-	if (strcmp(locale, "POSIX") == 0) locale = "C";
-	if (strcmp(locale, __jacl_locale_get(category)) == 0) return __jacl_locale_get(category);
+static inline locale_t newlocale(int mask, const char *name, locale_t l) {
+	if (l == (locale_t)0) l = __jacl_locale_global;
+	if (l == LC_THREAD_LOCALE) l = __jacl_locale_current;
+	if (l == LC_GLOBAL_LOCALE) l = __jacl_locale_global;
+
+	locale_t nl = duplocale(l);
+
+	if (!nl) return NULL;
+
+	/* Parse once */
+	__jacl_locale_lang_t L;
+	__jacl_locale_cc_t C;
+
+	__jacl_locale_split(name, &L, &C);
+
+	/* Validate language parsing */
+	if ((mask & (LC_CTYPE_MASK | LC_TIME_MASK | LC_COLLATE_MASK | LC_MESSAGES_MASK)) && L == LANG_ERR) {
+		freelocale(nl);
+
+		errno = EINVAL;
+
+		return NULL;
+	}
+
+	/* Validate region parsing */
+	if ((mask & (LC_NUMERIC_MASK | LC_MONETARY_MASK)) && C == CC_ERR) {
+		freelocale(nl);
+
+		errno = EINVAL;
+
+		return NULL;
+	}
+
+	/* Apply to each set bit */
+	if (mask & LC_CTYPE_MASK)    __jacl_locale_wctype(L, nl);
+	if (mask & LC_NUMERIC_MASK)  __jacl_locale_numeric(C, nl);
+	if (mask & LC_TIME_MASK)     __jacl_locale_time(L, nl);
+	if (mask & LC_COLLATE_MASK)  __jacl_locale_collate(L, nl);
+	if (mask & LC_MESSAGES_MASK) __jacl_locale_message(L, nl);
+	if (mask & LC_MONETARY_MASK) __jacl_locale_monetary(C, nl);
+
+	return nl;
+}
+
+static inline char *setlocale(int cat, const char *name) {
+	if (name == NULL) return __jacl_locale_get(cat, __jacl_locale_current);
+	if (name[0] == '\0') name = __jacl_locale_env(cat);
+	if (strcmp(name, "POSIX") == 0) name = "C";
+	if (strcmp(name, __jacl_locale_get(cat, __jacl_locale_current)) == 0) return __jacl_locale_get(cat, __jacl_locale_current);
 
 	__jacl_locale_lang_t L;
 	__jacl_locale_cc_t   C;
-	__jacl_locale_split(locale, &L, &C);
+
+	__jacl_locale_split(name, &L, &C);
 
 	if (L == LANG_ERR || C == CC_ERR) return NULL;
 
-	__jacl_locale_update(category, L, C);
+	__jacl_locale_update(cat, L, C, __jacl_locale_global);
 
-	return __jacl_locale_get(category);
+	__jacl_locale_current = __jacl_locale_global;
+
+	return __jacl_locale_get(cat, __jacl_locale_current);
 }
 
-static inline struct lconv *localeconv(void) { return &__jacl_lconv; }
+static inline locale_t uselocale(locale_t l) {
+	if (l == NULL) l = __jacl_locale_current;
+	if (l == NULL) l = __jacl_locale_global;
+	if (l == LC_GLOBAL_LOCALE) l = __jacl_locale_global;
+	if (l == LC_THREAD_LOCALE) l = __jacl_locale_current;
+	if (l == NULL) { errno = EINVAL; return __jacl_locale_current; }
+
+	locale_t old = __jacl_locale_current;
+	__jacl_locale_current = l;
+
+	return old;
+}
+
+static inline struct lconv *localeconv(void) {
+	return &__jacl_locale_current->lconv;
+}
 
 #ifdef __cplusplus
 }

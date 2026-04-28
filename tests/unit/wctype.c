@@ -3,7 +3,7 @@
 #include <wctype.h>
 #include <locale.h>
 
-extern thread_local __jacl_wctype_t __jacl_wctype;
+extern thread_local locale_t __jacl_locale_current;
 
 TEST_TYPE(unit);
 TEST_UNIT(wctype.h);
@@ -184,45 +184,241 @@ TEST(towlower_non_letters) {
 
 /* ============================================================================ */
 
+TEST_SUITE(wctype_l_variants);
+
+TEST(iswcntrl_l_uses_locale) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	ASSERT_TRUE(iswcntrl_l(L'\0', loc));
+	ASSERT_FALSE(iswcntrl_l(L'A', loc));
+	freelocale(loc);
+}
+
+TEST(iswalpha_l_uses_locale_tables) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	ASSERT_TRUE(iswalpha_l(L'A', loc));
+	ASSERT_FALSE(iswalpha_l(L'0', loc));
+	freelocale(loc);
+}
+
+TEST(iswdigit_l_uses_locale_digits) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	for (int i = 0; i < 10; i++) {
+		ASSERT_TRUE(iswdigit_l(loc->wctype.d[i], loc));
+	}
+	freelocale(loc);
+}
+
+TEST(iswpunct_l_uses_locale_extra) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	for (int i = 0; i < loc->wctype.e_count; i++) {
+		ASSERT_TRUE(iswpunct_l(loc->wctype.e[i], loc));
+	}
+	freelocale(loc);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(towcase_l_variants);
+
+TEST(towupper_l_uses_locale_mapping) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	if (loc->wctype.u_count == loc->wctype.l_count) {
+		for (int i = 0; i < loc->wctype.l_count; i++) {
+			ASSERT_EQ(towupper_l(loc->wctype.l[i], loc), loc->wctype.u[i]);
+		}
+	}
+	freelocale(loc);
+}
+
+TEST(towlower_l_uses_locale_mapping) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	if (loc->wctype.u_count == loc->wctype.l_count) {
+		for (int i = 0; i < loc->wctype.u_count; i++) {
+			ASSERT_EQ(towlower_l(loc->wctype.u[i], loc), loc->wctype.l[i]);
+		}
+	}
+	freelocale(loc);
+}
+
+TEST(towupper_l_no_mapping) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	if (loc->wctype.u_count != loc->wctype.l_count) {
+		ASSERT_EQ(towupper_l(L'a', loc), L'a');
+	}
+	freelocale(loc);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(wctype_query);
+
+TEST(wctype_l_valid_names) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	ASSERT_EQ(wctype_l("alpha", loc), WCTYPE_ALPHA);
+	ASSERT_EQ(wctype_l("digit", loc), WCTYPE_DIGIT);
+	ASSERT_EQ(wctype_l("space", loc), WCTYPE_SPACE);
+	ASSERT_EQ(wctype_l("punct", loc), WCTYPE_PUNCT);
+	freelocale(loc);
+}
+
+TEST(wctype_l_invalid_name) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	ASSERT_EQ(wctype_l("invalid", loc), WCTYPE_UNKNOWN);
+	freelocale(loc);
+}
+
+TEST(iswctype_l_alpha) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	wctype_t t = wctype_l("alpha", loc);
+	ASSERT_TRUE(iswctype_l(L'A', t, loc));
+	ASSERT_FALSE(iswctype_l(L'0', t, loc));
+	freelocale(loc);
+}
+
+TEST(iswctype_l_digit) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	wctype_t t = wctype_l("digit", loc);
+	ASSERT_TRUE(iswctype_l(L'5', t, loc));
+	ASSERT_FALSE(iswctype_l(L'A', t, loc));
+	freelocale(loc);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(wctrans_query);
+
+TEST(wctrans_l_valid_names) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	ASSERT_EQ(wctrans_l("toupper", loc), WCTRANS_TOUPPER);
+	ASSERT_EQ(wctrans_l("tolower", loc), WCTRANS_TOLOWER);
+	freelocale(loc);
+}
+
+TEST(wctrans_l_invalid_name) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	ASSERT_EQ(wctrans_l("invalid", loc), 0);
+	freelocale(loc);
+}
+
+TEST(towctrans_l_toupper) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	wctrans_t t = wctrans_l("toupper", loc);
+	ASSERT_EQ(towctrans_l(L'a', t, loc), L'A');
+	ASSERT_EQ(towctrans_l(L'0', t, loc), L'0');
+	freelocale(loc);
+}
+
+TEST(towctrans_l_tolower) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	wctrans_t t = wctrans_l("tolower", loc);
+	ASSERT_EQ(towctrans_l(L'A', t, loc), L'a');
+	ASSERT_EQ(towctrans_l(L'0', t, loc), L'0');
+	freelocale(loc);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(wctype_wrappers);
+
+TEST(iswalpha_uses_current_locale) {
+	locale_t old = __jacl_locale_current;
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	uselocale(loc);
+	ASSERT_TRUE(iswalpha(L'A'));
+	uselocale(old);
+	freelocale(loc);
+}
+
+TEST(towupper_uses_current_locale) {
+	locale_t old = __jacl_locale_current;
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	uselocale(loc);
+	ASSERT_EQ(towupper(L'a'), L'A');
+	uselocale(old);
+	freelocale(loc);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(wctype_edge);
+
+TEST(iswalpha_empty_locale_tables) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	if (!loc->wctype.u_count && !loc->wctype.l_count) {
+		ASSERT_TRUE(iswalpha_l(loc->wctype.u[0], loc));
+	}
+	freelocale(loc);
+}
+
+TEST(iswpunct_core_set) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	ASSERT_TRUE(iswpunct_l(L'.', loc));
+	ASSERT_TRUE(iswpunct_l(L'!', loc));
+	ASSERT_TRUE(iswpunct_l(L',', loc));
+	freelocale(loc);
+}
+
+TEST(iswdigit_locale_specific) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	for (int i = 0; i < 10; i++) {
+		ASSERT_TRUE(iswdigit_l(loc->wctype.d[i], loc));
+	}
+	freelocale(loc);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(wctype_thread);
+
+TEST(wctype_thread_isolation) {
+	locale_t loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+	locale_t old = uselocale(loc);
+	ASSERT_TRUE(iswalpha(L'A'));
+	uselocale(old);
+	freelocale(loc);
+}
+
+/* ============================================================================ */
+
 #define X(LANG, name, ...) \
 TEST_SUITE(LANG); \
 TEST(LANG##_isdigit) { \
 	setlocale(LC_CTYPE, name); \
-	for (int i = 0; i < 10; i++) ASSERT_TRUE(isdigit(__jacl_wctype.d[i])); \
-	for (int i = 0; i < __jacl_wctype.u_count; i++) ASSERT_FALSE(isdigit(__jacl_wctype.u[i])); \
+	for (int i = 0; i < 10; i++) ASSERT_TRUE(isdigit(__jacl_locale_current->wctype.d[i])); \
+	for (int i = 0; i < __jacl_locale_current->wctype.u_count; i++) ASSERT_FALSE(isdigit(__jacl_locale_current->wctype.u[i])); \
 } \
 TEST(LANG##_ispunct) { \
-	for (int i = 0; i < __jacl_wctype.e_count; i++) ASSERT_TRUE(ispunct(__jacl_wctype.e[i])); \
-	for (int i = 0; i < __jacl_wctype.u_count; i++) ASSERT_FALSE(ispunct(__jacl_wctype.u[i])); \
+	for (int i = 0; i < __jacl_locale_current->wctype.e_count; i++) ASSERT_TRUE(ispunct(__jacl_locale_current->wctype.e[i])); \
+	for (int i = 0; i < __jacl_locale_current->wctype.u_count; i++) ASSERT_FALSE(ispunct(__jacl_locale_current->wctype.u[i])); \
 } \
 TEST(LANG##_iswalpha) { \
-	if(!__jacl_wctype.u_count && !__jacl_wctype.l_count) {\
-		for (int i = __jacl_wctype.u[0]; i < __jacl_wctype.l[0]; i++) ASSERT_TRUE(isalpha(__jacl_wctype.e[i])); \
+	if(!__jacl_locale_current->wctype.u_count && !__jacl_locale_current->wctype.l_count) {\
+		for (int i = __jacl_locale_current->wctype.u[0]; i < __jacl_locale_current->wctype.l[0]; i++) ASSERT_TRUE(isalpha(__jacl_locale_current->wctype.e[i])); \
 	} \
 } \
 TEST(LANG##_iswupper) { \
-	if(__jacl_wctype.u_count == __jacl_wctype.l_count) { \
-		for (int i = 0; i < __jacl_wctype.u_count; i++) ASSERT_TRUE(isupper(__jacl_wctype.u[i])); \
-		for (int i = 0; i < __jacl_wctype.l_count; i++) ASSERT_FALSE(isupper(__jacl_wctype.l[i])); \
+	if(__jacl_locale_current->wctype.u_count == __jacl_locale_current->wctype.l_count) { \
+		for (int i = 0; i < __jacl_locale_current->wctype.u_count; i++) ASSERT_TRUE(isupper(__jacl_locale_current->wctype.u[i])); \
+		for (int i = 0; i < __jacl_locale_current->wctype.l_count; i++) ASSERT_FALSE(isupper(__jacl_locale_current->wctype.l[i])); \
 	} \
 } \
 TEST(LANG##_iswlower) { \
-	if(__jacl_wctype.u_count == __jacl_wctype.l_count) { \
-		for (int i = 0; i < __jacl_wctype.l_count; i++) ASSERT_TRUE(islower(__jacl_wctype.l[i])); \
-		for (int i = 0; i < __jacl_wctype.u_count; i++) ASSERT_FALSE(islower(__jacl_wctype.u[i])); \
+	if(__jacl_locale_current->wctype.u_count == __jacl_locale_current->wctype.l_count) { \
+		for (int i = 0; i < __jacl_locale_current->wctype.l_count; i++) ASSERT_TRUE(islower(__jacl_locale_current->wctype.l[i])); \
+		for (int i = 0; i < __jacl_locale_current->wctype.u_count; i++) ASSERT_FALSE(islower(__jacl_locale_current->wctype.u[i])); \
 	} \
 } \
 TEST(LANG##_towupper) { \
-	if(__jacl_wctype.u_count == __jacl_wctype.l_count) { \
-		for (int i = 0; i < __jacl_wctype.l_count; i++) ASSERT_EQ(toupper(__jacl_wctype.l[i]), __jacl_wctype.u[i]); \
+	if(__jacl_locale_current->wctype.u_count == __jacl_locale_current->wctype.l_count) { \
+		for (int i = 0; i < __jacl_locale_current->wctype.l_count; i++) ASSERT_EQ(toupper(__jacl_locale_current->wctype.l[i]), __jacl_locale_current->wctype.u[i]); \
 	} \
 } \
 TEST(LANG##_towlower) { \
-	if(__jacl_wctype.u_count == __jacl_wctype.l_count) { \
-		for (int i = 0; i < __jacl_wctype.l_count; i++) ASSERT_EQ(tolower(__jacl_wctype.u[i]), __jacl_wctype.l[i]); \
+	if(__jacl_locale_current->wctype.u_count == __jacl_locale_current->wctype.l_count) { \
+		for (int i = 0; i < __jacl_locale_current->wctype.l_count; i++) ASSERT_EQ(tolower(__jacl_locale_current->wctype.u[i]), __jacl_locale_current->wctype.l[i]); \
 	} \
 }
 #include <x/locale_wctype.h>
 #undef X
 
-TEST_MAIN_IF(JACL_HAS_C99, "wctype.h requires C99 or later\n")
+TEST_MAIN_IF(JACL_HAS_C99, "wctype.h requires C99 or later.")
