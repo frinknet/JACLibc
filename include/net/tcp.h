@@ -53,6 +53,7 @@ typedef uint32_t tcp_cc; /* congestion control state */
 /* TCP Flags (RFC 793, RFC 3168, RFC 3540)                                  */
 /* ======================================================================== */
 
+/* Flag Masks */
 #define TH_FIN		0x01
 #define TH_SYN		0x02
 #define TH_RST		0x04
@@ -62,8 +63,13 @@ typedef uint32_t tcp_cc; /* congestion control state */
 #define TH_ECE		0x40 /* ECN-Echo */
 #define TH_CWR		0x80 /* Congestion Window Reduced */
 #define TH_NS		0x100 /* Nonce Sum (RFC 3540) */
-
 #define TH_FLAGS	(TH_FIN|TH_SYN|TH_RST|TH_PUSH|TH_ACK|TH_URG|TH_ECE|TH_CWR)
+
+/* Access Macros (POSIX/BSD Standard) */
+#define TH_OFF(th)      (((th)->th_offx2 & 0xf0) >> 4)
+#define TH_X2(th)       ((th)->th_offx2 & 0x0f)
+#define TH_FLAGS(th)    ((th)->th_flags)
+
 
 /* ======================================================================== */
 /* TCP Options (RFC 793, 1323, 2018, 7323, 6824)                            */

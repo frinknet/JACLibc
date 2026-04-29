@@ -158,6 +158,30 @@ struct linger {
 	int l_linger;  /* linger time in seconds */
 };
 
+/* struct sockaddr_storage */
+struct sockaddr_storage {
+	unsigned short ss_family;  /* Address family (AF_*) */
+
+	/* Padding to ensure alignment and size */
+	#if defined(_LP64) || defined(__x86_64__) || defined(__aarch64__)
+		/* 64-bit systems: need 128 bytes total, 8-byte aligned */
+		unsigned short __ss_pad1[3];   /* 6 bytes padding */
+		unsigned long  __ss_pad2[14];  /* 112 bytes padding + family */
+	#else
+		/* 32-bit systems: need 128 bytes total, 4-byte aligned */
+		unsigned char  __ss_pad1[26];  /* 26 bytes padding */
+		unsigned long  __ss_pad2[12];  /* 96 bytes padding + family */
+	#endif
+};
+
+/* Standard constants for sockaddr_storage */
+#ifndef _SS_MAXSIZE
+#define _SS_MAXSIZE 128
+#endif
+#ifndef _SS_ALIGNSIZE
+#define _SS_ALIGNSIZE (sizeof(long))
+#endif
+
 /* Ancillary Data Macros */
 #define CMSG_ALIGN(len) (((size_t)(len) + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1))
 #define CMSG_SPACE(len) (CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(len))
