@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <stdbit.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -602,19 +603,19 @@ static inline int __jacl_input_str(FILE *stream, const char **in, size_t *read, 
 	return (pad && i == 0) ? 0 : 1;
 }
 static inline int __jacl_input_scan(FILE *stream, const char **in, size_t *read, const char **fmt, int width, char *buf) {
-	int cset[256];
-	int i = 256, invert = 0, ch, match;
+	int i = 0, ch, match;
 	unsigned char start, end, c;
 
-	// Guarantee zeros
-	while (--i) cset[i] = 0;
+	BITS(cset, 256);
 
 	// Skip opening '['
 	(*fmt)++;
 
 	// Check special chars
-	if (**fmt == '^') { invert = 1; (*fmt)++; }
-	if (**fmt == ']') { cset[(unsigned char)']'] = 1; (*fmt)++; }
+	if (**fmt == '^') { ONES(cset); (*fmt)++; }
+	else { ZERO(cset); }
+
+	if (**fmt == ']') { BITFLIP(cset, (unsigned char)']'); (*fmt)++; }
 
 	// Build charset
 	while (**fmt && **fmt != ']') {
@@ -623,11 +624,11 @@ static inline int __jacl_input_scan(FILE *stream, const char **in, size_t *read,
 			start = (unsigned char)**fmt;
 			end = (unsigned char)(*fmt)[2];
 
-			if (start <= end) for (c = start; c <= end; c++) cset[c] = 1;
+			if (start <= end) for (c = start; c <= end; c++) BITFLIP(cset, (unsigned char)c);
 
 			(*fmt) += 3;
 		} else {
-			cset[(unsigned char)**fmt] = 1;
+			BITFLIP(cset, (unsigned char)**fmt);
 
 			(*fmt)++;
 		}
@@ -643,9 +644,8 @@ static inline int __jacl_input_scan(FILE *stream, const char **in, size_t *read,
 
 		if (ch == EOF) break;
 
-		match = cset[(unsigned char)ch];
+		match = BITCHECK(cset, (unsigned char)ch);
 
-		if (invert) match = !match;
 		if (!match) { __jacl_read_back(ch, stream, in, read); break; }
 		if (buf) buf[i] = (char)ch;
 

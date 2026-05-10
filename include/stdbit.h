@@ -140,6 +140,21 @@ __jacl_bitgen(64, unsigned long long,	ull)
 
 #endif /* JACL_HAS_C23 */
 
+#include <limits.h>
+#include <stddef.h>  // size_t
+
+#define __BIT_INDEX(bit) ((bit) / CHAR_BIT)
+#define __BIT_MASK(bit) (1u << ((bit) % CHAR_BIT))
+
+#define BITS(name, size) unsigned char name[(size + CHAR_BIT - 1) / CHAR_BIT]
+#define ZERO(name) memset((name), 0, sizeof(name))
+#define ONES(name) memset((name), ~0U, sizeof(name))
+
+#define BITON(name, bit)   do { unsigned char *p = (unsigned char *)(name); p[__BIT_INDEX(bit)] |= __BIT_MASK(bit); } while(0)
+#define BITOFF(name, bit)  do { unsigned char *p = (unsigned char *)(name); p[__BIT_INDEX(bit)] &= ~__BIT_MASK(bit);} while(0)
+#define BITFLIP(name, bit) do { unsigned char *p = (unsigned char *)(name); p[__BIT_INDEX(bit)] ^= __BIT_MASK(bit); } while(0)
+#define BITCHECK(name, bit) (!!(((unsigned char *)(name))[__BIT_INDEX(bit)] & __BIT_MASK(bit)))
+
 #ifdef __cplusplus
 }
 #endif
