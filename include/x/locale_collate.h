@@ -2,9 +2,6 @@
 
 /* X_LANG(LANG, sort, fold_from, fold_to, sort_count, fold_count) */
 
-/* X_LANG(LANG, punct_first, digit_first, upper_first, mixed_case, fold_from, fold_to, fold_count, ) */
-
-
 X_LANG(C,    0, 1, 1, 0, L"", L"", 0)
 X_LANG(EN,   0, 1, 1, 1, L"ÀÂÇÉÈÊËÎÏÔÙÛÜàâçéèêëîïôùûü", L"AACEEEEIIOUUUaaceeeeiiouuu", 28) // English
 X_LANG(ZH,   0, 1, 1, 0, L"", L"", 0) // Chinese

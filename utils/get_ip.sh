@@ -39,7 +39,7 @@ xfiles() {
     done
     echo " */"
     echo
-    awk -F, -f "$ROOT/utils/get_ip_$lst.awk" "$tmp" | sort
+    awk -F, -f "$ROOT/utils/get_ip_$lst.awk" "$tmp"
   } > "$out"
 
   if [ ! -s "$out" ]; then
