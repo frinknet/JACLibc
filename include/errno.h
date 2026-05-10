@@ -203,8 +203,7 @@ extern thread_local int errno;
 #define ENOPROTOOPT    42    /* Protocol not available */
 #define EPROTONOSUPPORT 43   /* Protocol not supported */
 #define ESOCKTNOSUPPORT 44   /* Socket type not supported */
-#define ENOTSUP        45    /* Operation not supported */
-#define EOPNOTSUPP     ENOTSUP
+#define EOPNOTSUPP      45    /* Operation not supported */
 #define EPFNOSUPPORT   46    /* Protocol family not supported */
 #define EAFNOSUPPORT   47    /* Address family not supported by protocol family */
 #define EADDRINUSE     48    /* Address already in use */
@@ -351,6 +350,11 @@ extern thread_local int errno;
 
 #else
   #error "Platform not supported - errno values not defined"
+#endif
+
+/* POSIX required */
+#if JACL_HAS_POSIX
+#define ENOTSUP EOPNOTSUPP
 #endif
 
 #endif /* _ERRNO_H */
