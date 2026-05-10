@@ -193,18 +193,10 @@ typedef struct matcher {
 #define JACL_ATOM_MAP(X) X('[', __jacl_atom_bracket) X('(', __jacl_atom_paren) X('\\', __jacl_atom_escape)
 #define JACL_ATOM_CASE(ch, fn) case ch: n = (fn)(p); break;
 #define JACL_UTF8_CONT(ptr) (((uint8_t)*(ptr) & 0xC0) == 0x80)
-
 #define JACL_PRIM_ANCHOR(name, cond, eflag) static inline const char *__jacl_prim_##name(match_node_t *n, const matcher_t *m, const char *s, const char *end, const char *pos, matchoff_t *caps, int ic, int nl, int ef, int depth, uint32_t extra) { \
 	if (ef & eflag) return 0; \
 	if (cond) return matchfind(n->b, m, s, end, pos, caps, ic, nl, ef, depth); \
 	return 0; \
-}
-#define JACL_PRIM_RECURSE_ONE(name, target) static inline const char *__jacl_prim_##name(match_node_t *n, const matcher_t *m, const char *s, const char *end, const char *pos, matchoff_t *caps, int ic, int nl, int ef, int depth, uint32_t extra) { \
-	return matchfind(target, m, s, end, pos, caps, ic, nl, ef, depth); \
-}
-#define JACL_PRIM_RECURSE_COND(name, target, condition) static inline const char *__jacl_prim_##name(match_node_t *n, const matcher_t *m, const char *s, const char *end, const char *pos, matchoff_t *caps, int ic, int nl, int ef, int depth, uint32_t extra) { \
-	if (!(condition)) return 0; \
-	return matchfind(target, m, s, end, pos, caps, ic, nl, ef, depth); \
 }
 #define JACL_PRIM_CAP static inline const char *__jacl_prim_CAP(match_node_t *n, const matcher_t *m, const char *s, const char *end, const char *pos, matchoff_t *caps, int ic, int nl, int ef, int depth, uint32_t extra) { \
 	int idx = n->cap_id * 2; \
@@ -675,8 +667,13 @@ static inline const char *__jacl_prim_ANY(match_node_t *n, const matcher_t *m, c
 JACL_PRIM_ANCHOR(BOL, pos == s || (nl && pos > s && *(pos-1) == '\n'), MEXEC_NOTBOL)
 JACL_PRIM_ANCHOR(EOL, pos == end || (nl && pos < end && *pos == '\n'), MEXEC_NOTEOL)
 JACL_PRIM_CAP
-JACL_PRIM_RECURSE_ONE(FLAGS, n->a)
-JACL_PRIM_RECURSE_COND(CALL, m->groups[n->val], n->val < 32 && m->groups[n->val])
+static inline const char *__jacl_prim_FLAGS(match_node_t *n, const matcher_t *m, const char *s, const char *end, const char *pos, matchoff_t *caps, int ic, int nl, int ef, int depth, uint32_t extra) {
+	return matchfind(n->a, m, s, end, pos, caps, ic, nl, ef, depth);
+}
+static inline const char *__jacl_prim_CALL(match_node_t *n, const matcher_t *m, const char *s, const char *end, const char *pos, matchoff_t *caps, int ic, int nl, int ef, int depth, uint32_t extra) {
+	if (!(n->val < 32 && m->groups[n->val])) return 0;
+	return matchfind(m->groups[n->val], m, s, end, pos, caps, ic, nl, ef, depth + 1);
+}
 static inline const char *__jacl_prim_SEQ(match_node_t *n, const matcher_t *m, const char *s, const char *end, const char *pos, matchoff_t *caps, int ic, int nl, int ef, int depth, uint32_t extra) {
 	while (n->type == MTOK_SEQ) {
 		const char *r = matchfind(n->a, m, s, end, pos, caps, ic, nl, ef, depth+1);
@@ -804,7 +801,7 @@ static inline const char *matchgate(const matcher_t *m, const char *s, const cha
 	return NULL;
 }
 
-static inline int matchcomp(matcher_t *restrict m, const char *pat, mcomp_flag_t fl) {
+static inline match_err_t matchcomp(matcher_t *restrict m, const char *pat, mcomp_flag_t fl) {
 	memset(m, 0, sizeof(*m));
 	m->cflags = fl; m->has_unicode = 0; match_parser_t p = {pat, pat+strlen(pat), m, 0, 0, 0, fl, 0, 0}; m->root = __jacl_match_expr(&p);
 	if (p.err) { __jacl_match_cleanup(m, &p); return p.err; }
@@ -826,7 +823,7 @@ static inline int matchcomp(matcher_t *restrict m, const char *pat, mcomp_flag_t
 	}
 	return M_SUCCESS;
 }
-static inline int matchexec(const matcher_t *restrict m, const char *s, const char *end, match_find_t *pm, size_t nm, mexec_flag_t fl) {
+static inline match_err_t matchexec(const matcher_t *restrict m, const char *s, const char *end, match_find_t *pm, size_t nm, mexec_flag_t fl) {
 	int ic = (m->eflags | fl) & MEXEC_ICASE, nl = (m->eflags | fl) & MEXEC_NEWLINE, anchored = 0;
 	if (m->root && ((match_node_t*)m->root)->type == MTOK_BOL) anchored = 1;
 	const char *start = anchored ? s : matchgate(m, s, end, ic);

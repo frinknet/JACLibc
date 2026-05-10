@@ -147,7 +147,7 @@ TEST(anchors_non_word_boundary_fail) {
 	regfree(&re);
 }
 
-TEST(anchors_locale_aware_word_boundary) {
+TEST(anchors_word_boundary_locale_aware) {
 	regex_t re;
 	/* \b should respect locale word character definitions */
 	setlocale(LC_CTYPE, "fr_FR.UTF-8");
@@ -170,6 +170,24 @@ TEST(anchors_word_boundary_only_nonword) {
 	regex_t re;
 	ASSERT_REG_BUILD(&re, "\\b", REG_EXTENDED);
 	ASSERT_REG_MATCH(&re, "!!!", 1, NULL, 0);
+	regfree(&re);
+}
+
+TEST(anchors_multiline_multiple_matches) {
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "^line$", REG_NEWLINE | REG_EXTENDED);
+	ASSERT_REG_MATCH(&re, "start\nline\nend", 1, NULL, 0);
+	ASSERT_REG_FAILS(&re, "start\nlines\nend", 1, NULL, 0);
+	regfree(&re);
+}
+
+TEST(anchors_word_boundary_unicode) {
+	TEST_SKIP("currently unsupported");
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "\\bcafé\\b", REG_RE2);
+	ASSERT_REG_MATCH(&re, "café", 1, NULL, 0);
+	ASSERT_REG_FAILS(&re, "xcafé", 1, NULL, 0);
+	ASSERT_REG_FAILS(&re, "caféx", 1, NULL, 0);
 	regfree(&re);
 }
 
@@ -1169,6 +1187,25 @@ TEST(repeats_zero_times_exact) {
 	regfree(&re);
 }
 
+TEST(repeats_greedy_vs_lazy_same_input) {
+	regex_t re_greedy, re_lazy;
+	ASSERT_REG_BUILD(&re_greedy, "a+b", REG_EXTENDED);
+	ASSERT_REG_BUILD(&re_lazy, "a+?b", REG_PCRE2);
+	ASSERT_REG_MATCH(&re_greedy, "ab", 1, NULL, 0);
+	ASSERT_REG_MATCH(&re_lazy, "ab", 1, NULL, 0);
+	regfree(&re_greedy); regfree(&re_lazy);
+}
+
+TEST(repeats_zero_width_quantifier) {
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "a*", REG_EXTENDED);
+	regmatch_t p[1];
+	ASSERT_REG_MATCH(&re, "b", 1, p, 0);
+	ASSERT_EQ(0, p[0].rm_so);
+	ASSERT_EQ(0, p[0].rm_eo);
+	regfree(&re);
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(nesting)
@@ -1559,6 +1596,15 @@ TEST(empty_zero_capture) {
 	regfree(&re);
 }
 
+TEST(empty_match_null_string) {
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "a*", REG_RE2);
+	/* NULL subject should fail gracefully */
+	int rc = regexec(&re, NULL, 0, NULL, 0);
+	ASSERT_EQ(REG_BADPAT, rc);
+	regfree(&re);
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(flags)
@@ -1670,6 +1716,27 @@ TEST(flags_nosub_with_captures_requested) {
 	regfree(&re);
 }
 
+TEST(flags_runtime_icase_override) {
+	regex_t re;
+	/* Compile WITHOUT ICASE */
+	ASSERT_REG_BUILD(&re, "abc", REG_EXTENDED);
+	/* Match fails without flag */
+	ASSERT_REG_FAILS(&re, "ABC", 1, NULL, 0);
+	/* Match succeeds with runtime ICASE */
+	ASSERT_REG_MATCH(&re, "ABC", 1, NULL, REG_ICASE);
+	regfree(&re);
+}
+
+TEST(flags_runtime_notbol_with_newline) {
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "^test", REG_NEWLINE | REG_EXTENDED);
+	/* ^ matches after \n by default with REG_NEWLINE */
+	ASSERT_REG_MATCH(&re, "line\ntest", 1, NULL, 0);
+	/* REG_NOTBOL should disable ^ matching after \n too */
+	ASSERT_REG_FAILS(&re, "line\ntest", 1, NULL, REG_NOTBOL);
+	regfree(&re);
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(unicode)
@@ -1719,6 +1786,33 @@ TEST(unicode_word_char) {
 	regfree(&re);
 }
 
+TEST(unicode_mixed_scripts) {
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "\\w+", REG_RE2);
+	/* Mixed Latin + CJK + emoji */
+	ASSERT_REG_MATCH(&re, "Hello世界🌍", 1, NULL, 0);
+	regfree(&re);
+}
+
+TEST(unicode_normalization_nfc) {
+	regex_t re;
+	/* NFC form: é as single codepoint U+00E9 */
+	ASSERT_REG_BUILD(&re, "caf\xC3\xA9", REG_RE2);
+	ASSERT_REG_MATCH(&re, "caf\xC3\xA9", 1, NULL, 0);
+	regfree(&re);
+}
+
+TEST(unicode_case_fold_turkish) {
+	TEST_SKIP("currently unsupported");
+	regex_t re;
+	setlocale(LC_CTYPE, "tr_TR.UTF-8");
+	ASSERT_REG_BUILD(&re, "(?i)istanbul", REG_PCRE2);
+	/* Turkish: I (U+0049) lowercases to ı (U+0131), not i */
+	ASSERT_REG_MATCH(&re, "İstanbul", 1, NULL, 0);
+	regfree(&re);
+	setlocale(LC_CTYPE, "C");
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(errors)
@@ -1733,6 +1827,101 @@ TEST(errors_null_pattern) {
 	regex_t re;
 	int rc = regcomp(&re, NULL, REG_RE2);
 	ASSERT_EQ(REG_BADPAT, rc);
+}
+
+TEST(errors_recursion_limit) {
+	TEST_SKIP("currently unsupported");
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "\\((?:[^()]|(?R))*\\)", REG_PCRE2);
+	/* Very deep nesting - should fail with REG_EDEPTH */
+	char deep[4000] = {0};
+	for(int i=0; i<2000; i++) deep[i] = '(';
+	for(int i=2000; i<4000; i++) deep[i] = ')';
+	int rc = regexec(&re, deep, 0, NULL, 0);
+	ASSERT_TRUE(rc == REG_NOMATCH || rc == REG_EDEPTH);
+	regfree(&re);
+}
+
+TEST(errors_pattern_too_long) {
+	regex_t re;
+	char pat[8192] = {0};
+	for(int i=0; i<8191; i++) pat[i] = 'a';
+	int rc = regcomp(&re, pat, REG_EXTENDED);
+	/* Should compile or fail with REG_ESPACE */
+	ASSERT_TRUE(rc == 0 || rc == REG_ESPACE);
+	if (rc == 0) regfree(&re);
+}
+
+TEST(errors_regerror_buffer_small) {
+	regex_t re;
+	regcomp(&re, "[invalid", REG_EXTENDED);
+	char tiny[5];
+	size_t len = regerror(REG_EBRACK, &re, tiny, sizeof(tiny));
+	/* Should return full length even if buffer too small */
+	ASSERT_TRUE(len > sizeof(tiny));
+	ASSERT_TRUE(tiny[sizeof(tiny)-1] == '\0');
+	regfree(&re);
+}
+
+TEST(errors_regerror_null_buffer) {
+	regex_t re;
+	regcomp(&re, "[invalid", REG_EXTENDED);
+	/* NULL buffer should return length without crashing */
+	size_t len = regerror(REG_EBRACK, &re, NULL, 0);
+	ASSERT_TRUE(len > 0);
+	regfree(&re);
+}
+
+TEST(errors_regerror_unknown_code) {
+	regex_t re;
+	/* Unknown error code should return "Unknown error" */
+	char msg[256];
+	size_t len = regerror(999, &re, msg, sizeof(msg));
+	ASSERT_STR_EQ("Unknown error", msg);
+	/* Should also work with NULL buffer */
+	len = regerror(999, &re, NULL, 0);
+	ASSERT_TRUE(len > 0);
+}
+
+TEST(errors_recursion_limit_exists) {
+	regex_t re;
+	/* Pattern that recurses: balanced parens */
+	ASSERT_REG_BUILD(&re, "\\((?:[^()]|(?R))*\\)", REG_PCRE2);
+
+	/* Shallow nesting should work */
+	ASSERT_REG_MATCH(&re, "((((()))))", 1, NULL, 0);
+
+	/* Medium nesting should work */
+	char medium[200] = {0};
+	for(int i=0; i<100; i++) medium[i] = '(';
+	for(int i=100; i<200; i++) medium[i] = ')';
+	ASSERT_REG_MATCH(&re, medium, 1, NULL, 0);
+
+	regfree(&re);
+}
+
+TEST(errors_recursion_limit_enforced) {
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "\\((?:[^()]|(?R))*\\)", REG_PCRE2);
+
+	char deep[5000] = {0};
+	for(int i=0; i<2500; i++) deep[i] = '(';
+	for(int i=2500; i<5000; i++) deep[i] = ')';
+
+	int rc = regexec(&re, deep, 0, NULL, 0);
+	ASSERT_EQ(rc, REG_EDEPTH);
+
+	regfree(&re);
+}
+
+TEST(errors_recursion_no_crash) {
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "(?R)", REG_PCRE2);
+
+	int rc = regexec(&re, "test", 0, NULL, 0);
+	ASSERT_EQ(rc, REG_EDEPTH);
+
+	regfree(&re);
 }
 
 /* ============================================================================ */

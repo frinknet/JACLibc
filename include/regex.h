@@ -221,40 +221,43 @@ static inline int regexec(const regex_t *restrict re, const char *restrict s, si
 	if (!re || !s) return REG_BADPAT;
 
 	mexec_flag_t mexec = re->eflags | __reg_to_mexec(ef);
-	int err = matchexec( re, s, s + strlen(s), (match_find_t *)pm, nm, mexec);
 
-	return (err == M_SUCCESS) ? REG_SUCCESS : REG_NOMATCH;
+	return matchexec( re, s, s + strlen(s), (match_find_t *)pm, nm, mexec);
 }
 
 static inline size_t regerror(int ec, const regex_t *restrict re, char *restrict buf, size_t sz) {
 	static const char *msgs[] = {
-		[REG_SUCCESS]   = "Success",
-		[REG_NOMATCH]   = "No match",
-		[REG_BADPAT]    = "Bad pattern",
-		[REG_EESCAPE]   = "Bad escape",
-		[REG_ESUBREG]   = "Bad sub",
-		[REG_EBRACK]    = "Bad bracket",
-		[REG_EPAREN]    = "Unmatched paren",
-		[REG_ECOLLATE]  = "Bad collation",
-		[REG_ECTYPE]    = "Bad class",
-		[REG_BADBR]     = "Bad repeat",
-		[REG_EBRACE]    = "Unmatched brace",
-		[REG_ERANGE]    = "Bad range",
-		[REG_BADRPT]    = "Bad repeat",
-		[REG_ESPACE]    = "Memory exhausted",
-		[REG_EDEPTH]    = "Recursion depth",
-		[REG_EFLAGS]    = "Invalid flags",
-		[REG_EINTERNAL] = "Internal error",
-		[REG_EUNSAFE]   = "Unsafe pattern",
-		[REG_ECALL]     = "Invalid call",
-		[REG_ECOND]     = "Invalid conditional",
-		[REG_ELOOK]     = "Invalid lookaround",
-		[REG_EVERB]     = "Invalid verb"
+		[REG_SUCCESS]     = "Success",
+		[REG_NOMATCH]     = "No match",
+		[REG_BADPAT]      = "Bad pattern",
+		[REG_ECOLLATE]    = "Bad collation",
+		[REG_ECTYPE]      = "Bad class",
+		[REG_EESCAPE]     = "Bad escape",
+		[REG_ESUBREG]     = "Bad sub",
+		[REG_EBRACK]      = "Bad bracket",
+		[REG_EPAREN]      = "Unmatched paren",
+		[REG_EBRACE]      = "Unmatched brace",
+		[REG_BADBR]       = "Bad repeat",
+		[REG_ERANGE]      = "Bad range",
+		[REG_ESPACE]      = "Memory exhausted",
+		[REG_BADRPT]      = "Bad repeat",
+		[REG_EDEPTH]      = "Recursion depth exceeded",
+		[REG_EFLAGS]      = "Invalid flags",
+		[REG_EINTERNAL]   = "Internal error",
+		[REG_EUNSAFE]     = "Unsafe pattern",
+		[REG_ECALL]       = "Invalid call",
+		[REG_ECOND]       = "Invalid conditional",
+		[REG_ELOOK]       = "Invalid lookaround",
+		[REG_EVERB]       = "Invalid verb"
 	};
 
-	const char *msg = (ec >= 0 && ec <= 13) ? msgs[ec] : "Unknown error";
+	const char *msg = (ec >= 0 && ec < M_LAST && msgs[ec]) ? msgs[ec] : "Unknown error";
+
 	size_t len = strlen(msg) + 1;
-	if (buf && sz > 0) { strncpy(buf, msg, sz - 1); buf[sz - 1] = '\0'; }
+	if (buf && sz > 0) {
+		strncpy(buf, msg, sz - 1);
+		buf[sz - 1] = '\0';
+	}
 
 	return len;
 }
