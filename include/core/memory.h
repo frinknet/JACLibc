@@ -1,6 +1,6 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef CORE_MEMORY_H
-#define CORE_MEMORY_H
+#ifndef CORE__MEMORY_H
+#define CORE__MEMORY_H
 
 #include <config.h>
 #include <stdlib.h>
@@ -696,24 +696,39 @@ void* calloc(size_t nmemb, size_t size) {
 
 void* realloc(void* ptr, size_t size) {
 	if (!ptr) return malloc(size);
-	if (size == 0) {
-		free(ptr);
-
-		return NULL;
-	}
+	if (!size) { free(ptr); return NULL; }
 
 	__jacl_memhdr_t* h = (__jacl_memhdr_t*)ptr - 1;
-	size_t old_size = h->size - sizeof(__jacl_memhdr_t);
 
-	if (size <= old_size) return ptr;
+	size_t old_total = h->size;
+	size_t old_data = old_total - sizeof(__jacl_memhdr_t);
+
+	if (size <= old_data) return ptr;
+
+	if (h->flags & JACL_HDR_ARENA) {
+		size_t new_total = __jacl_alloc_need(size);
+		uint32_t top = atomic_load_explicit(&__jacl_tls_cursor, memory_order_acquire);
+
+		if ((uint8_t*)h + old_total == __jacl_static_heap + top) {
+			size_t growth = new_total - old_total;
+
+			if (top + growth <= (JACL_HEAP_INIT / 4)) {
+				h->size = new_total;
+
+				atomic_fetch_add_explicit(&__jacl_tls_cursor, (uint32_t)growth, memory_order_release);
+
+				return ptr;
+			}
+		}
+	}
 
 	void* new_ptr = malloc(size);
 
-	if (!new_ptr) return NULL;
+	if (new_ptr) {
+		memcpy(new_ptr, ptr, old_data);
 
-	memcpy(new_ptr, ptr, old_size);
-
-	if (!(h->flags & JACL_HDR_ARENA)) free(ptr);
+		if (!(h->flags & JACL_HDR_ARENA)) free(ptr);
+	}
 
 	return new_ptr;
 }
@@ -768,4 +783,4 @@ void* reallocarray(void* ptr, size_t nmemb, size_t size) {
 }
 #endif
 
-#endif /* CORE_STDLIB_H */
+#endif /* CORE__MEMORY_H */
