@@ -413,9 +413,9 @@ static inline void __jacl_test_report(void) {
 } while(0)
 #define ASSERT_STR_SUF(suffix, string) do { \
 	size_t __test_suf_len = suffix ? strlen(suffix) : 0; \
-	size_t __test_act_len = string ? strlen(string) : 0; \
-	if (!suffix || !string || __test_act_len < __test_suf_len || \
-	    strcmp((string) + __test_act_len - __test_suf_len, (suffix)) != 0) { \
+	size_t __test_str_len = string ? strlen(string) : 0; \
+	if (!suffix || !string || __test_str_len < __test_suf_len || \
+	    strcmp((string) + __test_str_len - __test_suf_len, (suffix)) != 0) { \
 		TEST_FAIL("String should have suffix\n\tINPUT: (%s) ends with (%s)\n\tVALUE: \"%s\" ends with \"%s\"", \
 		          #string, #suffix, (string) ? (string) : "(null)", (suffix) ? (suffix) : "(null)"); \
 	} \
