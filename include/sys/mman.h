@@ -5,6 +5,7 @@
 
 #include <config.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 #ifdef __cplusplus
@@ -24,33 +25,34 @@ extern "C" {
 /* ================================================================ */
 /* Memory protection flags                                          */
 /* ================================================================ */
-
-#define PROT_NONE  0x00  /* No access */
-#define PROT_READ  0x01  /* Read access */
-#define PROT_WRITE 0x02  /* Write access */
-#define PROT_EXEC  0x04  /* Execute access */
+#define PROT_NONE  0x00
+#define PROT_READ  0x01
+#define PROT_WRITE 0x02
+#define PROT_EXEC  0x04
 
 /* ================================================================ */
 /* Memory mapping flags                                             */
 /* ================================================================ */
-
-#define MAP_SHARED     0x01  /* Share mapping with other processes */
-#define MAP_PRIVATE    0x02  /* Private copy-on-write mapping */
-#define MAP_FIXED      0x10  /* Map at exact address */
-#define MAP_ANONYMOUS  0x20  /* Anonymous mapping (no file) */
-#define MAP_ANON       MAP_ANONYMOUS  /* BSD compatibility */
+#define MAP_SHARED     0x01
+#define MAP_PRIVATE    0x02
+#define MAP_FIXED      0x10
+#define MAP_ANONYMOUS  0x20
+#define MAP_ANON       MAP_ANONYMOUS
+#define MAP_SHARED_VALIDATE 0x03 /* Linux 4.15+ */
 
 /* Linux-specific flags */
 #if JACL_OS_LINUX
-#define MAP_GROWSDOWN  0x0100  /* Stack grows down */
-#define MAP_DENYWRITE  0x0800  /* Do not permit writes to file */
-#define MAP_EXECUTABLE 0x1000  /* Mark as executable */
-#define MAP_LOCKED     0x2000  /* Lock pages in memory */
-#define MAP_NORESERVE  0x4000  /* Don't reserve swap space */
-#define MAP_POPULATE   0x8000  /* Populate (prefault) page tables */
-#define MAP_NONBLOCK   0x10000 /* Don't block on IO */
-#define MAP_STACK      0x20000 /* Allocation for stack */
-#define MAP_HUGETLB    0x40000 /* Use huge pages */
+#define MAP_GROWSDOWN  0x00100
+#define MAP_DENYWRITE  0x00800
+#define MAP_EXECUTABLE 0x01000
+#define MAP_LOCKED     0x02000
+#define MAP_NORESERVE  0x04000
+#define MAP_POPULATE   0x08000
+#define MAP_NONBLOCK   0x10000
+#define MAP_STACK      0x20000
+#define MAP_HUGETLB    0x40000
+#define MAP_SYNC       0x80000 /* DAX sync */
+#define MAP_UNINITIALIZED 0x4000000 /* Kernel config dependent */
 #endif
 
 /* Error return value */
@@ -59,38 +61,41 @@ extern "C" {
 /* ================================================================ */
 /* Memory synchronization flags                                     */
 /* ================================================================ */
-
-#define MS_ASYNC      0x01  /* Asynchronous sync */
-#define MS_SYNC       0x04  /* Synchronous sync */
-#define MS_INVALIDATE 0x02  /* Invalidate caches */
+#define MS_ASYNC      0x01
+#define MS_SYNC       0x04
+#define MS_INVALIDATE 0x02
 
 /* ================================================================ */
 /* Memory advisory flags                                            */
 /* ================================================================ */
+#define POSIX_MADV_NORMAL     0
+#define POSIX_MADV_RANDOM     1
+#define POSIX_MADV_SEQUENTIAL 2
+#define POSIX_MADV_WILLNEED   3
+#define POSIX_MADV_DONTNEED   4
 
-#define MADV_NORMAL     0   /* No special treatment */
-#define MADV_RANDOM     1   /* Expect random page access */
-#define MADV_SEQUENTIAL 2   /* Expect sequential page access */
-#define MADV_WILLNEED   3   /* Will need these pages */
-#define MADV_DONTNEED   4   /* Don't need these pages */
-
-/* Linux-specific advisory flags */
-#if JACL_OS_LINUX
-#define MADV_REMOVE     9   /* Remove pages from backing store */
-#define MADV_DONTFORK   10  /* Don't inherit across fork */
-#define MADV_DOFORK     11  /* Do inherit across fork */
-#define MADV_MERGEABLE  12  /* KSM may merge identical pages */
-#define MADV_UNMERGEABLE 13 /* KSM may not merge identical pages */
-#define MADV_HUGEPAGE   14  /* Use transparent huge pages */
-#define MADV_NOHUGEPAGE 15  /* Don't use transparent huge pages */
-#endif
+#define MADV_NORMAL       0
+#define MADV_RANDOM       1
+#define MADV_SEQUENTIAL   2
+#define MADV_WILLNEED     3
+#define MADV_DONTNEED     4
+#define MADV_FREE         8
+#define MADV_REMOVE       9
+#define MADV_DONTFORK     10
+#define MADV_DOFORK       11
+#define MADV_MERGEABLE    12
+#define MADV_UNMERGEABLE  13
+#define MADV_HUGEPAGE     14
+#define MADV_NOHUGEPAGE   15
+#define MADV_WIPEONFORK   18
+#define MADV_KEEPONFORK   19
 
 /* ================================================================ */
 /* Memory locking flags                                             */
 /* ================================================================ */
-
-#define MCL_CURRENT 0x01  /* Lock currently mapped pages */
-#define MCL_FUTURE  0x02  /* Lock pages mapped in future */
+#define MCL_CURRENT 0x01
+#define MCL_FUTURE  0x02
+#define MCL_ONFAULT 0x04
 
 /* ================================================================ */
 /* Function implementations                                         */
@@ -98,22 +103,22 @@ extern "C" {
 
 #if JACL_OS_WINDOWS
 /* ================================================================ */
-/* Windows implementation using Win32 APIs                         */
+/* Windows implementation using Win32 APIs                          */
 /* ================================================================ */
 
 static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
-	(void)addr; /* Windows chooses the address */
+	(void)addr; /* Windows chooses address unless MAP_FIXED is handled */
 
-	/* Convert protection flags */
+	/* Protection flags */
 	DWORD win_prot = PAGE_NOACCESS;
-	if ((prot & (PROT_READ | PROT_WRITE)) == (PROT_READ | PROT_WRITE)) {
-		win_prot = (prot & PROT_EXEC) ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
-	} else if (prot & PROT_WRITE) {
-		win_prot = (prot & PROT_EXEC) ? PAGE_EXECUTE_WRITECOPY : PAGE_WRITECOPY;
-	} else if (prot & PROT_READ) {
-		win_prot = (prot & PROT_EXEC) ? PAGE_EXECUTE_READ : PAGE_READONLY;
-	} else if (prot & PROT_EXEC) {
-		win_prot = PAGE_EXECUTE;
+	if (flags & MAP_ANONYMOUS) {
+		if (prot & PROT_EXEC) win_prot = (prot & PROT_WRITE) ? PAGE_EXECUTE_READWRITE : PAGE_EXECUTE_READ;
+		else if (prot & PROT_WRITE) win_prot = PAGE_READWRITE;
+		else if (prot & PROT_READ) win_prot = PAGE_READONLY;
+	} else {
+		if (prot & PROT_EXEC) win_prot = (prot & PROT_WRITE) ? PAGE_EXECUTE_WRITECOPY : PAGE_EXECUTE_READ;
+		else if (prot & PROT_WRITE) win_prot = (prot & PROT_READ) ? PAGE_READWRITE : PAGE_WRITECOPY;
+		else if (prot & PROT_READ) win_prot = PAGE_READONLY;
 	}
 
 	HANDLE hFile = INVALID_HANDLE_VALUE;
@@ -121,15 +126,14 @@ static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 	void *result;
 
 	if (flags & MAP_ANONYMOUS) {
-		/* Anonymous mapping */
-		hMapping = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, win_prot, (DWORD)(length >> 32), (DWORD)length, NULL);
+		hMapping = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, win_prot,
+		                              (DWORD)(length >> 32), (DWORD)length, NULL);
 	} else {
-		/* File mapping */
 		hFile = (HANDLE)_get_osfhandle(fd);
-
 		if (hFile == INVALID_HANDLE_VALUE) return MAP_FAILED;
-
-		hMapping = CreateFileMappingA(hFile, NULL, win_prot, (DWORD)((offset + length) >> 32), (DWORD)(offset + length), NULL);
+		/* Size is maximum mapping size, not offset+length */
+		hMapping = CreateFileMappingA(hFile, NULL, win_prot,
+		                              (DWORD)((offset + length) >> 32), (DWORD)(offset + length), NULL);
 	}
 
 	if (!hMapping) return MAP_FAILED;
@@ -140,161 +144,69 @@ static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 	if (prot & PROT_EXEC) access |= FILE_MAP_EXECUTE;
 
 	result = MapViewOfFile(hMapping, access, (DWORD)(offset >> 32), (DWORD)offset, length);
-
 	CloseHandle(hMapping);
 
 	return result ? result : MAP_FAILED;
 }
 
 static inline int munmap(void *addr, size_t length) {
-	(void)length; /* Windows doesn't need length for unmapping */
+	(void)length;
 	return UnmapViewOfFile(addr) ? 0 : -1;
 }
 
 static inline int mprotect(void *addr, size_t len, int prot) {
-	DWORD old_protect;
-	DWORD new_protect = PAGE_NOACCESS;
-
-	if ((prot & (PROT_READ | PROT_WRITE)) == (PROT_READ | PROT_WRITE)) {
-		new_protect = (prot & PROT_EXEC) ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
-	} else if (prot & PROT_WRITE) {
-		new_protect = (prot & PROT_EXEC) ? PAGE_EXECUTE_WRITECOPY : PAGE_WRITECOPY;
-	} else if (prot & PROT_READ) {
-		new_protect = (prot & PROT_EXEC) ? PAGE_EXECUTE_READ : PAGE_READONLY;
-	} else if (prot & PROT_EXEC) {
-		new_protect = PAGE_EXECUTE;
-	}
+	DWORD old_protect, new_protect = PAGE_NOACCESS;
+	if (prot & PROT_EXEC) new_protect = (prot & PROT_WRITE) ? PAGE_EXECUTE_READWRITE : (prot & PROT_READ) ? PAGE_EXECUTE_READ : PAGE_EXECUTE;
+	else if (prot & PROT_WRITE) new_protect = PAGE_READWRITE;
+	else if (prot & PROT_READ) new_protect = PAGE_READONLY;
 
 	return VirtualProtect(addr, len, new_protect, &old_protect) ? 0 : -1;
 }
 
 static inline int msync(void *addr, size_t length, int flags) {
-	(void)flags; /* Windows always syncs synchronously */
+	(void)flags;
 	return FlushViewOfFile(addr, length) ? 0 : -1;
 }
 
-static inline int madvise(void *addr, size_t length, int advice) {
-	(void)addr; (void)length; (void)advice;
-	return 0; /* No-op on Windows */
-}
-
-static inline int mlock(const void *addr, size_t len) {
-	return VirtualLock((void*)addr, len) ? 0 : -1;
-}
-
-static inline int munlock(const void *addr, size_t len) {
-	return VirtualUnlock((void*)addr, len) ? 0 : -1;
-}
-
-static inline int mlockall(int flags) {
-	(void)flags;
-	/* Windows doesn't have equivalent - would need SetProcessWorkingSetSize */
-	return -1;
-}
-
-static inline int munlockall(void) {
-	/* Windows doesn't have equivalent */
-	return -1;
-}
-
-static inline int mincore(void *addr, size_t length, unsigned char *vec) {
-	(void)addr; (void)length; (void)vec;
-	/* Windows has VirtualQuery but different interface */
-	return -1;
-}
+static inline int madvise(void *addr, size_t length, int advice) { (void)addr; (void)length; (void)advice; return 0; }
+static inline int mlock(const void *addr, size_t len) { return VirtualLock((void*)addr, len) ? 0 : -1; }
+static inline int munlock(const void *addr, size_t len) { return VirtualUnlock((void*)addr, len) ? 0 : -1; }
+static inline int mlockall(int flags) { (void)flags; return -1; }
+static inline int munlockall(void) { return -1; }
+static inline int mincore(void *addr, size_t length, unsigned char *vec) { (void)addr; (void)length; (void)vec; return -1; }
 
 #elif JACL_ARCH_WASM
 /* ================================================================ */
-/* WebAssembly - Memory mapping not supported                      */
+/* WebAssembly - Memory mapping not supported                       */
 /* ================================================================ */
-
-static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
-	(void)addr; (void)length; (void)prot; (void)flags; (void)fd; (void)offset;
-	return MAP_FAILED; /* Not supported in WASM */
-}
-
-static inline int munmap(void *addr, size_t length) {
-	(void)addr; (void)length;
-	return -1; /* Not supported */
-}
-
-static inline int mprotect(void *addr, size_t len, int prot) {
-	(void)addr; (void)len; (void)prot;
-	return -1; /* Not supported */
-}
-
-static inline int msync(void *addr, size_t length, int flags) {
-	(void)addr; (void)length; (void)flags;
-	return -1; /* Not supported */
-}
-
-static inline int madvise(void *addr, size_t length, int advice) {
-	(void)addr; (void)length; (void)advice;
-	return -1; /* Not supported */
-}
-
-static inline int mlock(const void *addr, size_t len) {
-	(void)addr; (void)len;
-	return -1; /* Not supported */
-}
-
-static inline int munlock(const void *addr, size_t len) {
-	(void)addr; (void)len;
-	return -1; /* Not supported */
-}
-
-static inline int mlockall(int flags) {
-	(void)flags;
-	return -1; /* Not supported */
-}
-
-static inline int munlockall(void) {
-	return -1; /* Not supported */
-}
-
-static inline int mincore(void *addr, size_t length, unsigned char *vec) {
-	(void)addr; (void)length; (void)vec;
-	return -1; /* Not supported */
-}
+static inline void *mmap(void *a, size_t l, int p, int f, int fd, off_t o) { (void)a;(void)l;(void)p;(void)f;(void)fd;(void)o; return MAP_FAILED; }
+static inline int munmap(void *a, size_t l) { (void)a;(void)l; return -1; }
+static inline int mprotect(void *a, size_t l, int p) { (void)a;(void)l;(void)p; return -1; }
+static inline int msync(void *a, size_t l, int f) { (void)a;(void)l;(void)f; return -1; }
+static inline int madvise(void *a, size_t l, int adv) { (void)a;(void)l;(void)adv; return -1; }
+static inline int mlock(const void *a, size_t l) { (void)a;(void)l; return -1; }
+static inline int munlock(const void *a, size_t l) { (void)a;(void)l; return -1; }
+static inline int mlockall(int f) { (void)f; return -1; }
+static inline int munlockall(void) { return -1; }
+static inline int mincore(void *a, size_t l, unsigned char *v) { (void)a;(void)l;(void)v; return -1; }
 
 #else
 /* ================================================================ */
-/* POSIX/Linux implementation using system calls                   */
+/* POSIX/Linux implementation using system calls                    */
 /* ================================================================ */
-
 static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
-	long result = syscall(SYS_mmap, (long)addr, (long)length, (long)prot, (long)flags, (long)fd, (long)offset);
-
-	return (void*)result;
+	long res = syscall(SYS_mmap, (long)(uintptr_t)addr, (long)length, (long)prot, (long)flags, (long)fd, (long)offset);
+	return (void*)res;
 }
-static inline int munmap(void *addr, size_t length) {
-	return (int)syscall(SYS_munmap, (long)addr, (long)length);
-}
-static inline int mprotect(void *addr, size_t len, int prot) {
-	return (int)syscall(SYS_mprotect, (long)addr, (long)len, (long)prot);
-}
-static inline int msync(void *addr, size_t length, int flags) {
-	return (int)syscall(SYS_msync, (long)addr, (long)length, (long)flags);
-}
-static inline int madvise(void *addr, size_t length, int advice) {
-	return (int)syscall(SYS_madvise, (long)addr, (long)length, (long)advice);
-}
-static inline int mlock(const void *addr, size_t len) {
-	return (int)syscall(SYS_mlock, (long)addr, (long)len);
-}
-static inline int munlock(const void *addr, size_t len) {
-	return (int)syscall(SYS_munlock, (long)addr, (long)len);
-}
-static inline int mlockall(int flags) {
-	return (int)syscall(SYS_mlockall, (long)flags);
-}
-static inline int munlockall(void) {
-	return (int)syscall(SYS_munlockall);
-}
-static inline int mincore(void *addr, size_t length, unsigned char *vec) {
-	return (int)syscall(SYS_mincore, (long)addr, (long)length, (long)vec);
-}
-
+static inline int munmap(void *addr, size_t length) { return (int)syscall(SYS_munmap, (long)(uintptr_t)addr, (long)length); }
+static inline int mprotect(void *addr, size_t len, int prot) { return (int)syscall(SYS_mprotect, (long)(uintptr_t)addr, (long)len, (long)prot); }
+static inline int msync(void *addr, size_t length, int flags) { return (int)syscall(SYS_msync, (long)(uintptr_t)addr, (long)length, (long)flags); }
+static inline int madvise(void *addr, size_t length, int advice) { return (int)syscall(SYS_madvise, (long)(uintptr_t)addr, (long)length, (long)advice); }
+static inline int mlock(const void *addr, size_t len) { return (int)syscall(SYS_mlock, (long)(uintptr_t)addr, (long)len); }
+static inline int munlock(const void *addr, size_t len) { return (int)syscall(SYS_munlock, (long)(uintptr_t)addr, (long)len); }
+static inline int mlockall(int flags) { return (int)syscall(SYS_mlockall, (long)flags); }
+static inline int munlockall(void) { return (int)syscall(SYS_munlockall); }
+static inline int mincore(void *addr, size_t length, unsigned char *vec) { return (int)syscall(SYS_mincore, (long)(uintptr_t)addr, (long)length, (long)(uintptr_t)vec); }
 #endif
 
 #ifdef __cplusplus

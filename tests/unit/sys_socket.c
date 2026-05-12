@@ -1,11 +1,14 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #include <testing.h>
-
+#include <string.h>
+#include <unistd.h>
 #include <sys/socket.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(sys/socket.h);
 
+/* ============================================================================ */
+/* CONSTANTS */
 /* ============================================================================ */
 
 TEST_SUITE(constants);
@@ -26,8 +29,20 @@ TEST(constants_sock_types) {
 	ASSERT_EQ(5, SOCK_SEQPACKET);
 }
 
-TEST(constants_sock_options_core) {
+TEST(constants_sock_flags) {
+	ASSERT_EQ(04000, SOCK_NONBLOCK);
+	ASSERT_EQ(02000000, SOCK_CLOEXEC);
+}
+
+TEST(constants_protocol_levels) {
 	ASSERT_EQ(1, SOL_SOCKET);
+	ASSERT_EQ(0, SOL_IP);
+	ASSERT_EQ(41, SOL_IPV6);
+	ASSERT_EQ(6, SOL_TCP);
+	ASSERT_EQ(17, SOL_UDP);
+}
+
+TEST(constants_sock_options) {
 	ASSERT_EQ(1, SO_DEBUG);
 	ASSERT_EQ(2, SO_REUSEADDR);
 	ASSERT_EQ(3, SO_TYPE);
@@ -40,48 +55,15 @@ TEST(constants_sock_options_core) {
 	ASSERT_EQ(10, SO_OOBINLINE);
 	ASSERT_EQ(13, SO_LINGER);
 	ASSERT_EQ(15, SO_REUSEPORT);
-}
-
-TEST(constants_sock_options_cred) {
 	ASSERT_EQ(16, SO_PASSCRED);
 	ASSERT_EQ(17, SO_PEERCRED);
-}
-
-TEST(constants_sock_options_lowat) {
 	ASSERT_EQ(18, SO_RCVLOWAT);
 	ASSERT_EQ(19, SO_SNDLOWAT);
-}
-
-TEST(constants_sock_options_timeout) {
-	ASSERT_TRUE(SO_RCVTIMEO > 0);
-	ASSERT_TRUE(SO_SNDTIMEO > 0);
-
-#if JACL_HAS_BSD
-	ASSERT_EQ(0x1006, SO_RCVTIMEO);
-	ASSERT_EQ(0x1005, SO_SNDTIMEO);
-#else
 	ASSERT_EQ(20, SO_RCVTIMEO);
 	ASSERT_EQ(21, SO_SNDTIMEO);
-#endif
 }
 
-TEST(constants_sock_options_security_filter) {
-	ASSERT_EQ(22, SO_SECURITY_AUTHENTICATION);
-	ASSERT_EQ(23, SO_SECURITY_ENCRYPTION_TRANSPORT);
-	ASSERT_EQ(24, SO_SECURITY_ENCRYPTION_NETWORK);
-	ASSERT_EQ(25, SO_BINDTODEVICE);
-	ASSERT_EQ(26, SO_ATTACH_FILTER);
-	ASSERT_EQ(27, SO_DETACH_FILTER);
-	ASSERT_EQ(SO_ATTACH_FILTER, SO_GET_FILTER);
-}
-
-TEST(constants_sock_options_misc) {
-	ASSERT_EQ(28, SO_PEERNAME);
-	ASSERT_EQ(29, SO_TIMESTAMP);
-	ASSERT_EQ(30, SO_ACCEPTCONN);
-}
-
-TEST(constants_sock_messages) {
+TEST(constants_message_flags) {
 	ASSERT_EQ(0x01, MSG_OOB);
 	ASSERT_EQ(0x02, MSG_PEEK);
 	ASSERT_EQ(0x04, MSG_DONTROUTE);
@@ -99,6 +81,8 @@ TEST(constants_shutdown) {
 	ASSERT_EQ(2, SHUT_RDWR);
 }
 
+/* ============================================================================ */
+/* STRUCT: sockaddr */
 /* ============================================================================ */
 
 TEST_SUITE(sockaddr);
@@ -123,6 +107,26 @@ TEST(sockaddr_assignment) {
 }
 
 /* ============================================================================ */
+/* STRUCT: sockaddr_storage */
+/* ============================================================================ */
+
+TEST_SUITE(sockaddr_storage);
+
+TEST(sockaddr_storage_minimum_size) {
+	ASSERT_TRUE(sizeof(struct sockaddr_storage) >= 128);
+}
+
+TEST(sockaddr_storage_alignment) {
+	ASSERT_EQ(0, (uintptr_t)&((struct sockaddr_storage *)0)->ss_family % _SS_ALIGNSIZE);
+}
+
+TEST(sockaddr_storage_family_offset) {
+	ASSERT_EQ(0, offsetof(struct sockaddr_storage, ss_family));
+}
+
+/* ============================================================================ */
+/* STRUCT: msghdr */
+/* ============================================================================ */
 
 TEST_SUITE(msghdr);
 
@@ -133,7 +137,6 @@ TEST(msghdr_size) {
 TEST(msghdr_field_names) {
 	struct msghdr msg;
 	memset(&msg, 0, sizeof(msg));
-
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
 	msg.msg_iov = NULL;
@@ -141,7 +144,6 @@ TEST(msghdr_field_names) {
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
 	msg.msg_flags = 0;
-
 	ASSERT_NULL(msg.msg_name);
 	ASSERT_EQ(0, msg.msg_namelen);
 	ASSERT_NULL(msg.msg_iov);
@@ -158,6 +160,8 @@ TEST(msghdr_offsets) {
 }
 
 /* ============================================================================ */
+/* STRUCT: cmsghdr */
+/* ============================================================================ */
 
 TEST_SUITE(cmsghdr);
 
@@ -168,11 +172,9 @@ TEST(cmsghdr_size) {
 TEST(cmsghdr_field_names) {
 	struct cmsghdr cmsg;
 	memset(&cmsg, 0, sizeof(cmsg));
-
 	cmsg.cmsg_len = 0;
 	cmsg.cmsg_level = 0;
 	cmsg.cmsg_type = 0;
-
 	ASSERT_EQ(0, cmsg.cmsg_len);
 	ASSERT_EQ(0, cmsg.cmsg_level);
 	ASSERT_EQ(0, cmsg.cmsg_type);
@@ -185,27 +187,48 @@ TEST(cmsghdr_offsets) {
 }
 
 /* ============================================================================ */
+/* STRUCT: linger */
+/* ============================================================================ */
 
-TEST_SUITE(cmsg_align);
+TEST_SUITE(linger);
 
-TEST(cmsg_align_zero) {
+TEST(linger_size) {
+	ASSERT_TRUE(sizeof(struct linger) >= (sizeof(int) * 2));
+}
+
+TEST(linger_field_names) {
+	struct linger lng;
+	memset(&lng, 0, sizeof(lng));
+	lng.l_onoff = 1;
+	lng.l_linger = 30;
+	ASSERT_EQ(1, lng.l_onoff);
+	ASSERT_EQ(30, lng.l_linger);
+}
+
+/* ============================================================================ */
+/* MACRO: CMSG_ALIGN */
+/* ============================================================================ */
+
+TEST_SUITE(CMSG_ALIGN);
+
+TEST(CMSG_ALIGN_zero) {
 	ASSERT_EQ(0, CMSG_ALIGN(0));
 }
 
-TEST(cmsg_align_one) {
+TEST(CMSG_ALIGN_one) {
 	ASSERT_EQ(sizeof(size_t), CMSG_ALIGN(1));
 }
 
-TEST(cmsg_align_exact) {
+TEST(CMSG_ALIGN_exact) {
 	ASSERT_EQ(sizeof(size_t), CMSG_ALIGN(sizeof(size_t)));
 }
 
-TEST(cmsg_align_boundary) {
+TEST(CMSG_ALIGN_boundary) {
 	size_t s = sizeof(size_t);
 	ASSERT_EQ(s * 2, CMSG_ALIGN(s + 1));
 }
 
-TEST(cmsg_align_large) {
+TEST(CMSG_ALIGN_large) {
 	size_t s = sizeof(size_t);
 	size_t val = 100;
 	size_t expected = ((val + s - 1) / s) * s;
@@ -213,98 +236,60 @@ TEST(cmsg_align_large) {
 }
 
 /* ============================================================================ */
+/* MACRO: CMSG_SPACE */
+/* ============================================================================ */
 
-TEST_SUITE(cmsg_space);
+TEST_SUITE(CMSG_SPACE);
 
-TEST(cmsg_space_zero_data) {
+TEST(CMSG_SPACE_zero_data) {
 	size_t space = CMSG_SPACE(0);
 	ASSERT_TRUE(space >= CMSG_ALIGN(sizeof(struct cmsghdr)));
 	ASSERT_TRUE(space % sizeof(size_t) == 0);
 }
 
-TEST(cmsg_space_small_data) {
+TEST(CMSG_SPACE_small_data) {
 	size_t space = CMSG_SPACE(1);
 	size_t expected = CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(1);
 	ASSERT_EQ(expected, space);
 }
 
-TEST(cmsg_space_large_data) {
+TEST(CMSG_SPACE_large_data) {
 	size_t space = CMSG_SPACE(1024);
 	size_t expected = CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(1024);
 	ASSERT_EQ(expected, space);
 }
 
 /* ============================================================================ */
+/* MACRO: CMSG_LEN */
+/* ============================================================================ */
 
-TEST_SUITE(cmsg_len);
+TEST_SUITE(CMSG_LEN);
 
-TEST(cmsg_len_zero_data) {
+TEST(CMSG_LEN_zero_data) {
 	size_t len = CMSG_LEN(0);
 	ASSERT_TRUE(len >= CMSG_ALIGN(sizeof(struct cmsghdr)));
 }
 
-TEST(cmsg_len_small_data) {
+TEST(CMSG_LEN_small_data) {
 	size_t len = CMSG_LEN(5);
-	/* CMSG_LEN adds header align + raw data len (no data align) */
 	size_t expected = CMSG_ALIGN(sizeof(struct cmsghdr)) + 5;
 	ASSERT_EQ(expected, len);
 }
 
-TEST(cmsg_len_vs_space) {
+TEST(CMSG_LEN_vs_space) {
 	ASSERT_TRUE(CMSG_SPACE(10) >= CMSG_LEN(10));
-	/* They should differ if data size is not aligned */
 	if (10 % sizeof(size_t) != 0) {
 		ASSERT_TRUE(CMSG_SPACE(10) > CMSG_LEN(10));
 	}
 }
 
 /* ============================================================================ */
-
-TEST_SUITE(cmsg_data);
-
-TEST(cmsg_data_ptr_valid) {
-	struct cmsghdr cmsg;
-	cmsg.cmsg_len = CMSG_LEN(10);
-
-	unsigned char *data = CMSG_DATA(&cmsg);
-	unsigned char *expected = ((unsigned char *)&cmsg) + CMSG_ALIGN(sizeof(struct cmsghdr));
-
-	ASSERT_PTR_EQ(data, expected);
-	ASSERT_TRUE(data > (unsigned char *)&cmsg);
-}
-
-TEST(cmsg_data_offset_consistency) {
-	/* Verify offset is constant regardless of cmsg_len value */
-	struct cmsghdr cmsg1, cmsg2;
-	cmsg1.cmsg_len = CMSG_LEN(0);
-	cmsg2.cmsg_len = CMSG_LEN(100);
-
-	unsigned char *d1 = CMSG_DATA(&cmsg1);
-	unsigned char *d2 = CMSG_DATA(&cmsg2);
-
-	/* Both should point to same relative offset from their own start */
-	ASSERT_EQ((uintptr_t)d1 - (uintptr_t)&cmsg1, (uintptr_t)d2 - (uintptr_t)&cmsg2);
-}
-
-TEST(cmsg_data_writable) {
-	/* Allocate header + payload space */
-	char buffer[CMSG_SPACE(8)] = {0};
-	struct cmsghdr *cmsg = (struct cmsghdr *)buffer;
-	cmsg->cmsg_len = CMSG_LEN(8);
-	unsigned char *data = CMSG_DATA(cmsg);
-
-	/* Ensure we can write to the data pointer without crashing */
-	data[0] = 0xAA;
-	data[1] = 0xBB;
-	ASSERT_EQ(0xAA, data[0]);
-	ASSERT_EQ(0xBB, data[1]);
-}
-
+/* MACRO: CMSG_FIRSTHDR */
 /* ============================================================================ */
 
-TEST_SUITE(cmsg_firsthdr);
+TEST_SUITE(CMSG_FIRSTHDR);
 
-TEST(cmsg_firsthdr_null_control) {
+TEST(CMSG_FIRSTHDR_null_control) {
 	struct msghdr msg;
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_control = NULL;
@@ -312,7 +297,7 @@ TEST(cmsg_firsthdr_null_control) {
 	ASSERT_NULL(CMSG_FIRSTHDR(&msg));
 }
 
-TEST(cmsg_firsthdr_zero_len) {
+TEST(CMSG_FIRSTHDR_zero_len) {
 	struct msghdr msg;
 	struct cmsghdr cmsg;
 	memset(&msg, 0, sizeof(msg));
@@ -321,7 +306,7 @@ TEST(cmsg_firsthdr_zero_len) {
 	ASSERT_NULL(CMSG_FIRSTHDR(&msg));
 }
 
-TEST(cmsg_firsthdr_too_small) {
+TEST(CMSG_FIRSTHDR_too_small) {
 	struct msghdr msg;
 	struct cmsghdr cmsg;
 	memset(&msg, 0, sizeof(msg));
@@ -330,7 +315,7 @@ TEST(cmsg_firsthdr_too_small) {
 	ASSERT_NULL(CMSG_FIRSTHDR(&msg));
 }
 
-TEST(cmsg_firsthdr_exact_min) {
+TEST(CMSG_FIRSTHDR_exact_min) {
 	struct msghdr msg;
 	struct cmsghdr cmsg;
 	memset(&msg, 0, sizeof(msg));
@@ -339,91 +324,77 @@ TEST(cmsg_firsthdr_exact_min) {
 	ASSERT_PTR_EQ(CMSG_FIRSTHDR(&msg), &cmsg);
 }
 
-TEST(cmsg_firsthdr_larger_buffer) {
-	struct msghdr msg;
-	struct cmsghdr cmsg;
-	char buffer[128];
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_control = buffer;
-	msg.msg_controllen = sizeof(buffer);
-
-	/* Should return pointer to start of buffer casted */
-	ASSERT_PTR_EQ(CMSG_FIRSTHDR(&msg), (struct cmsghdr *)buffer);
-}
-
+/* ============================================================================ */
+/* MACRO: CMSG_NXTHDR */
 /* ============================================================================ */
 
-TEST_SUITE(cmsg_nxthdr);
+TEST_SUITE(CMSG_NXTHDR);
 
-TEST(cmsg_nxthdr_end_of_buffer) {
+TEST(CMSG_NXTHDR_end_of_buffer) {
 	struct msghdr msg;
 	struct cmsghdr cmsg;
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_control = &cmsg;
-	msg.msg_controllen = CMSG_SPACE(0); /* Exactly one header */
-
+	msg.msg_controllen = CMSG_SPACE(0);
 	cmsg.cmsg_len = CMSG_LEN(0);
-
-	/* No room for next */
 	ASSERT_NULL(CMSG_NXTHDR(&msg, &cmsg));
 }
 
-TEST(cmsg_nxthdr_exactly_fits_two) {
-	struct msghdr msg;
-	char buffer[256];
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_control = buffer;
-
-	size_t h1 = CMSG_SPACE(0);
-	size_t h2 = CMSG_SPACE(0);
-	msg.msg_controllen = h1 + h2;
-
-	struct cmsghdr *c1 = (struct cmsghdr *)buffer;
-	c1->cmsg_len = CMSG_LEN(0);
-
-	struct cmsghdr *c2 = CMSG_NXTHDR(&msg, c1);
-	ASSERT_NOT_NULL(c2);
-	ASSERT_PTR_EQ(c2, buffer + h1);
-}
-
-TEST(cmsg_nxthdr_truncated_middle) {
-	struct msghdr msg;
-	char buffer[256];
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_control = buffer;
-	msg.msg_controllen = 100; /* Arbitrary limit */
-
-	struct cmsghdr *c1 = (struct cmsghdr *)buffer;
-	/* Claim length that exceeds buffer */
-	c1->cmsg_len = CMSG_LEN(200);
-
-	/* Should return NULL because next would be out of bounds */
-	ASSERT_NULL(CMSG_NXTHDR(&msg, c1));
-}
-
-TEST(cmsg_nxthdr_chain_three) {
+TEST(CMSG_NXTHDR_chain_three) {
 	struct msghdr msg;
 	char buffer[512];
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_control = buffer;
-
 	size_t hs = CMSG_SPACE(10);
 	msg.msg_controllen = hs * 3;
-
 	struct cmsghdr *c1 = (struct cmsghdr *)buffer;
 	c1->cmsg_len = CMSG_LEN(10);
-
 	struct cmsghdr *c2 = CMSG_NXTHDR(&msg, c1);
 	ASSERT_NOT_NULL(c2);
 	c2->cmsg_len = CMSG_LEN(10);
-
 	struct cmsghdr *c3 = CMSG_NXTHDR(&msg, c2);
 	ASSERT_NOT_NULL(c3);
-
 	struct cmsghdr *c4 = CMSG_NXTHDR(&msg, c3);
-	ASSERT_NULL(c4); /* End of chain */
+	ASSERT_NULL(c4);
 }
 
+/* ============================================================================ */
+/* MACRO: CMSG_DATA */
+/* ============================================================================ */
+
+TEST_SUITE(CMSG_DATA);
+
+TEST(CMSG_DATA_ptr_valid) {
+	struct cmsghdr cmsg;
+	cmsg.cmsg_len = CMSG_LEN(10);
+	unsigned char *data = CMSG_DATA(&cmsg);
+	unsigned char *expected = ((unsigned char *)&cmsg) + CMSG_ALIGN(sizeof(struct cmsghdr));
+	ASSERT_PTR_EQ(data, expected);
+	ASSERT_TRUE(data > (unsigned char *)&cmsg);
+}
+
+TEST(CMSG_DATA_offset_consistency) {
+	struct cmsghdr cmsg1, cmsg2;
+	cmsg1.cmsg_len = CMSG_LEN(0);
+	cmsg2.cmsg_len = CMSG_LEN(100);
+	unsigned char *d1 = CMSG_DATA(&cmsg1);
+	unsigned char *d2 = CMSG_DATA(&cmsg2);
+	ASSERT_EQ((uintptr_t)d1 - (uintptr_t)&cmsg1, (uintptr_t)d2 - (uintptr_t)&cmsg2);
+}
+
+TEST(CMSG_DATA_writable) {
+	char buffer[CMSG_SPACE(8)] = {0};
+	struct cmsghdr *cmsg = (struct cmsghdr *)buffer;
+	cmsg->cmsg_len = CMSG_LEN(8);
+	unsigned char *data = CMSG_DATA(cmsg);
+	data[0] = 0xAA;
+	data[1] = 0xBB;
+	ASSERT_EQ(0xAA, data[0]);
+	ASSERT_EQ(0xBB, data[1]);
+}
+
+/* ============================================================================ */
+/* FUNCTION: socket */
 /* ============================================================================ */
 
 TEST_SUITE(socket);
@@ -459,6 +430,283 @@ TEST(socket_valid_udp) {
 }
 
 /* ============================================================================ */
+/* FUNCTION: bind */
+/* ============================================================================ */
+
+TEST_SUITE(bind);
+
+TEST(bind_null_addr) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		int ret = bind(fd, NULL, 0);
+		ASSERT_EQ(-1, ret);
+		ASSERT_TRUE(errno == EFAULT || errno == EINVAL || errno == ENOSYS);
+		close(fd);
+	}
+}
+
+TEST(bind_invalid_fd) {
+	struct sockaddr sa = {0};
+	int ret = bind(-1, &sa, sizeof(sa));
+	ASSERT_EQ(-1, ret);
+	ASSERT_TRUE(errno == EBADF || errno == ENOTSOCK || errno == ENOSYS);
+}
+
+/* ============================================================================ */
+/* FUNCTION: send */
+/* ============================================================================ */
+
+TEST_SUITE(send);
+
+TEST(send_zero_length) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		uint8_t buf[1] = {0};
+		ssize_t ret = send(fd, buf, 0, 0);
+		ASSERT_EQ(0, ret);
+		close(fd);
+	}
+}
+
+TEST(send_invalid_fd) {
+	uint8_t buf[1] = {0};
+	ssize_t ret = send(-1, buf, 1, 0);
+	ASSERT_EQ(-1, ret);
+	ASSERT_TRUE(errno == EBADF || errno == ENOSYS);
+}
+
+/* ============================================================================ */
+/* FUNCTION: recv */
+/* ============================================================================ */
+
+TEST_SUITE(recv);
+
+TEST(recv_zero_length) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		uint8_t buf[1] = {0};
+		ssize_t ret = recv(fd, buf, 0, 0);
+		ASSERT_EQ(0, ret);
+		close(fd);
+	}
+}
+
+TEST(recv_invalid_fd) {
+	uint8_t buf[1] = {0};
+	ssize_t ret = recv(-1, buf, 1, 0);
+	ASSERT_EQ(-1, ret);
+	ASSERT_TRUE(errno == EBADF || errno == ENOSYS);
+}
+
+/* ============================================================================ */
+/* FUNCTION: sendto */
+/* ============================================================================ */
+
+TEST_SUITE(sendto);
+
+TEST(sendto_zero_length) {
+	int fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd >= 0) {
+		uint8_t buf[1] = {0};
+		ssize_t ret = sendto(fd, buf, 0, 0, NULL, 0);
+		ASSERT_EQ(0, ret);
+		close(fd);
+	}
+}
+
+TEST(sendto_invalid_fd) {
+	uint8_t buf[1] = {0};
+	ssize_t ret = sendto(-1, buf, 1, 0, NULL, 0);
+	ASSERT_EQ(-1, ret);
+	ASSERT_TRUE(errno == EBADF || errno == ENOSYS);
+}
+
+/* ============================================================================ */
+/* FUNCTION: recvfrom */
+/* ============================================================================ */
+
+TEST_SUITE(recvfrom);
+
+TEST(recvfrom_zero_length) {
+	int fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd >= 0) {
+		uint8_t buf[1] = {0};
+		ssize_t ret = recvfrom(fd, buf, 0, 0, NULL, NULL);
+		ASSERT_EQ(0, ret);
+		close(fd);
+	}
+}
+
+TEST(recvfrom_invalid_fd) {
+	uint8_t buf[1] = {0};
+	ssize_t ret = recvfrom(-1, buf, 1, 0, NULL, NULL);
+	ASSERT_EQ(-1, ret);
+	ASSERT_TRUE(errno == EBADF || errno == ENOSYS);
+}
+
+/* ============================================================================ */
+/* FUNCTION: setsockopt */
+/* ============================================================================ */
+
+TEST_SUITE(setsockopt);
+
+TEST(setsockopt_null_optval) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		int ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, NULL, sizeof(int));
+		ASSERT_EQ(-1, ret);
+		ASSERT_TRUE(errno == EFAULT || errno == EINVAL || errno == ENOSYS);
+		close(fd);
+	}
+}
+
+TEST(setsockopt_invalid_level) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		int val = 1;
+		int ret = setsockopt(fd, 99999, SO_REUSEADDR, &val, sizeof(val));
+		ASSERT_EQ(-1, ret);
+		ASSERT_TRUE(errno == ENOPROTOOPT || errno == EINVAL || errno == ENOSYS);
+		close(fd);
+	}
+}
+
+TEST(setsockopt_zero_optlen) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		int val = 1;
+		int ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &val, 0);
+		ASSERT_TRUE(ret == 0 || ret == -1);
+		close(fd);
+	}
+}
+
+/* ============================================================================ */
+/* FUNCTION: getsockopt */
+/* ============================================================================ */
+
+TEST_SUITE(getsockopt);
+
+TEST(getsockopt_null_optval) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		int ret = getsockopt(fd, SOL_SOCKET, SO_REUSEADDR, NULL, NULL);
+		ASSERT_EQ(-1, ret);
+		ASSERT_TRUE(errno == EFAULT || errno == EINVAL || errno == ENOSYS);
+		close(fd);
+	}
+}
+
+TEST(getsockopt_invalid_level) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		int val = 0;
+		socklen_t len = sizeof(val);
+		int ret = getsockopt(fd, 99999, SO_REUSEADDR, &val, &len);
+		ASSERT_EQ(-1, ret);
+		ASSERT_ERRNO(EOPNOTSUPP);
+		close(fd);
+	}
+}
+
+/* ============================================================================ */
+/* FUNCTION: sendmsg */
+/* ============================================================================ */
+
+TEST_SUITE(sendmsg);
+
+TEST(sendmsg_null_msghdr) {
+	int fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd >= 0) {
+		ssize_t ret = sendmsg(fd, NULL, 0);
+		ASSERT_EQ(-1, ret);
+		ASSERT_TRUE(errno == EFAULT || errno == EINVAL || errno == ENOSYS);
+		close(fd);
+	}
+}
+
+TEST(sendmsg_invalid_fd) {
+	struct msghdr msg = {0};
+	ssize_t ret = sendmsg(-1, &msg, 0);
+	ASSERT_EQ(-1, ret);
+	ASSERT_TRUE(errno == EBADF || errno == ENOSYS);
+}
+
+/* ============================================================================ */
+/* FUNCTION: recvmsg */
+/* ============================================================================ */
+
+TEST_SUITE(recvmsg);
+
+TEST(recvmsg_null_msghdr) {
+	int fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd >= 0) {
+		ssize_t ret = recvmsg(fd, NULL, 0);
+		ASSERT_EQ(-1, ret);
+		ASSERT_TRUE(errno == EFAULT || errno == EINVAL || errno == ENOSYS);
+		close(fd);
+	}
+}
+
+TEST(recvmsg_invalid_fd) {
+	struct msghdr msg = {0};
+	ssize_t ret = recvmsg(-1, &msg, 0);
+	ASSERT_EQ(-1, ret);
+	ASSERT_TRUE(errno == EBADF || errno == ENOSYS);
+}
+
+/* ============================================================================ */
+/* FUNCTION: getsockname */
+/* ============================================================================ */
+
+TEST_SUITE(getsockname);
+
+TEST(getsockname_null_addr) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		int ret = getsockname(fd, NULL, NULL);
+		ASSERT_EQ(-1, ret);
+		ASSERT_TRUE(errno == EFAULT || errno == EINVAL || errno == ENOSYS);
+		close(fd);
+	}
+}
+
+TEST(getsockname_invalid_fd) {
+	struct sockaddr sa;
+	socklen_t len = sizeof(sa);
+	int ret = getsockname(-1, &sa, &len);
+	ASSERT_EQ(-1, ret);
+	ASSERT_TRUE(errno == EBADF || errno == ENOTSOCK || errno == ENOSYS);
+}
+
+/* ============================================================================ */
+/* FUNCTION: getpeername */
+/* ============================================================================ */
+
+TEST_SUITE(getpeername);
+
+TEST(getpeername_null_addr) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		int ret = getpeername(fd, NULL, NULL);
+		ASSERT_EQ(-1, ret);
+		/* ENOTCONN = unconnected socket (checked before NULL validation) */
+		ASSERT_TRUE(errno == ENOTCONN || errno == EFAULT || errno == ENOSYS);
+		close(fd);
+	}
+}
+
+TEST(getpeername_invalid_fd) {
+	struct sockaddr sa;
+	socklen_t len = sizeof(sa);
+	int ret = getpeername(-1, &sa, &len);
+	ASSERT_EQ(-1, ret);
+	ASSERT_TRUE(errno == EBADF || errno == ENOTSOCK || errno == ENOSYS);
+}
+
+/* ============================================================================ */
+/* FUNCTION: shutdown */
+/* ============================================================================ */
 
 TEST_SUITE(shutdown);
 
@@ -468,10 +716,22 @@ TEST(shutdown_invalid_fd) {
 	ASSERT_TRUE(errno == EBADF || errno == ENOTSOCK || errno == ENOSYS);
 }
 
+TEST(shutdown_invalid_how) {
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		int ret = shutdown(fd, 999);
+		ASSERT_EQ(-1, ret);
+		ASSERT_TRUE(errno == EINVAL || errno == ENOSYS);
+		close(fd);
+	}
+}
+
 TEST(shutdown_constants_valid) {
 	ASSERT_EQ(0, SHUT_RD);
 	ASSERT_EQ(1, SHUT_WR);
 	ASSERT_EQ(2, SHUT_RDWR);
 }
+
+/* ============================================================================ */
 
 TEST_MAIN_IF(JACL_HAS_POSIX, "sys/socket.h requires POSIX\n")

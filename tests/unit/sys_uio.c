@@ -8,6 +8,8 @@ TEST_UNIT(sys/uio.h);
 
 /* ============================================================================ */
 
+#if JACL_HAS_POSIX
+
 TEST_SUITE(iovec_struct);
 
 TEST(iovec_layout) {
@@ -72,5 +74,7 @@ TEST(iovec_max_constant) {
 #endif
 
 /* ============================================================================ */
+
+#endif
 
 TEST_MAIN_IF(JACL_HAS_POSIX, "sys/uio.h requires POSIX\n")
