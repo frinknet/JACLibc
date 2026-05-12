@@ -14,16 +14,7 @@ extern "C" {
 /* Standard Types                                                */
 /* ============================================================= */
 
-/* size_t - unsigned size type */
-#if JACL_64BIT
-	#if defined(_WIN64) || defined(__LLP64__)
-		typedef unsigned long long size_t;
-	#else
-		typedef unsigned long size_t;
-	#endif
-#else
-	typedef unsigned int size_t;
-#endif
+/* size_t - unsigned size type - defined in limits.h */
 
 /* ptrdiff_t - pointer difference type */
 #if JACL_64BIT

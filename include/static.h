@@ -20,6 +20,7 @@
 #include <core/complex.h>
 #include <core/unistd.h>
 #include <core/locale.h>
+#include <core/match.h>
 #include <core/jsio.h>
 #include <core/start.h>
 

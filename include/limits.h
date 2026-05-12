@@ -230,6 +230,16 @@
 /* Signed and Unsigned Size Type                                 */
 /* ============================================================= */
 
+#if JACL_64BIT
+	#if defined(_WIN64) || defined(__LLP64__)
+		typedef unsigned long long size_t;
+	#else
+		typedef unsigned long size_t;
+	#endif
+#else
+	typedef unsigned int size_t;
+#endif
+
 #ifndef SIZE_MAX
 	#if defined(__SIZE_MAX__)
 		#define SIZE_MAX __SIZE_MAX__
