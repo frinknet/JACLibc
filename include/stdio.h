@@ -11,9 +11,9 @@
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <math.h>
-#include <sys/stat.h>
 #include <time.h>
 
 #if JACL_HAS_POSIX
@@ -62,6 +62,14 @@
 
 #ifndef EOF
 #define EOF (-1)
+#endif
+
+#if JACL_OS_ANDROID
+	#define JACL_SHELL_PATH "/system/bin/sh"
+#elif JACL_OS_WINDOWS
+	#define JACL_SHELL_PATH "cmd.exe"
+#else
+	#define JACL_SHELL_PATH "/bin/sh"
 #endif
 
 #ifdef __cplusplus
@@ -283,27 +291,30 @@ static inline int __jacl_buffer_output(FILE *f) {
 
 /* Printf Implementations */
 int vprintf(const char * restrict fmt, va_list ap);
-int printf(const char* restrict fmt, ...);
 int vfprintf(FILE * restrict stream, const char * restrict fmt, va_list ap);
-int fprintf(FILE* restrict stream, const char* restrict fmt, ...);
 int vsprintf(char * restrict s, const char * restrict fmt, va_list ap);
+
+int printf(const char* restrict fmt, ...);
+int fprintf(FILE* restrict stream, const char* restrict fmt, ...);
 int sprintf(char * restrict s, const char * restrict fmt, ...);
 
 #if JACL_HAS_C99
 int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap);
-int snprintf(char * restrict s, size_t n, const char * restrict fmt, ...);
 int vdprintf(int fd, const char* restrict fmt, va_list ap);
-int dprintf(int fd, const char* restrict fmt, ...);
 int vasprintf(char **strp, const char *fmt, va_list ap);
+
+int snprintf(char * restrict s, size_t n, const char * restrict fmt, ...);
+int dprintf(int fd, const char* restrict fmt, ...);
 int asprintf(char **strp, const char *fmt, ...);
 #endif
 
 /* Scanf Implementations */
 int vscanf(const char * restrict fmt, va_list ap);
-int scanf(const char * restrict fmt, ...);
 int vfscanf(FILE * restrict stream, const char * restrict fmt, va_list ap);
-int fscanf(FILE* restrict stream, const char * restrict fmt, ...);
 int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap);
+
+int scanf(const char * restrict fmt, ...);
+int fscanf(FILE* restrict stream, const char * restrict fmt, ...);
 int sscanf(const char * restrict s, const char * restrict fmt, ...);
 
 /* ============================================================= */

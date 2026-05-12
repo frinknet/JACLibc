@@ -147,10 +147,11 @@ int asprintf(char **strp, const char *fmt, ...) {
 /* Scanf Implementations                                         */
 /* ============================================================= */
 int vscanf(const char * restrict fmt, va_list ap) { return __jacl_scanf(stdin, NULL, fmt, ap); }
-int scanf(const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vscanf(fmt, ap); va_end(ap); return r; }
 int vfscanf(FILE * restrict stream, const char * restrict fmt, va_list ap) { return __jacl_scanf(stream, NULL, fmt, ap); }
-int fscanf(FILE* restrict stream, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vfscanf(stream, fmt, ap); va_end(ap); return r; }
 int vsscanf(const char * restrict s, const char* restrict fmt, va_list ap) { const char *in = s; return __jacl_scanf(NULL, &in, fmt, ap); }
+
+int scanf(const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vscanf(fmt, ap); va_end(ap); return r; }
+int fscanf(FILE* restrict stream, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vfscanf(stream, fmt, ap); va_end(ap); return r; }
 int sscanf(const char * restrict s, const char * restrict fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsscanf(s, fmt, ap); va_end(ap); return r; }
 
 #ifdef __cplusplus
