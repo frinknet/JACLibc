@@ -596,7 +596,6 @@ TEST(classes_equivalence_empty) {
 }
 
 TEST(classes_locale_unavailable) {
-	TEST_SKIP("currently unsupported");
 	regex_t re;
 	char *saved = setlocale(LC_CTYPE, NULL);
 	/* Try invalid locale - should fall back to C */
@@ -1462,7 +1461,6 @@ TEST(recursion_call_by_number) {
 }
 
 TEST(recursion_call_by_name) {
-	//TEST_SKIP("causes segfault");
 	regex_t re;
 	regmatch_t p[2];
 	ASSERT_REG_BUILD(&re, "(?<paren>\\((?:[^()]++|(?&paren))*\\))", REG_PCRE2);
@@ -1803,12 +1801,12 @@ TEST(unicode_normalization_nfc) {
 }
 
 TEST(unicode_case_fold_turkish) {
-	TEST_SKIP("currently unsupported");
-	regex_t re;
 	setlocale(LC_CTYPE, "tr_TR.UTF-8");
-	ASSERT_REG_BUILD(&re, "(?i)istanbul", REG_PCRE2);
-	/* Turkish: I (U+0049) lowercases to ı (U+0131), not i */
-	ASSERT_REG_MATCH(&re, "İstanbul", 1, NULL, 0);
+	regex_t re;
+	ASSERT_REG_BUILD(&re, "istanbul1", REG_PCRE2 | REG_ICASE);
+	ASSERT_REG_MATCH(&re, "İstanbul1", 1, NULL, 0);
+	ASSERT_REG_BUILD(&re, "(?i)istanbul2", REG_PCRE2);
+	ASSERT_REG_MATCH(&re, "İstanbul2", 1, NULL, 0);
 	regfree(&re);
 	setlocale(LC_CTYPE, "C");
 }
@@ -1830,7 +1828,6 @@ TEST(errors_null_pattern) {
 }
 
 TEST(errors_recursion_limit) {
-	TEST_SKIP("currently unsupported");
 	regex_t re;
 	ASSERT_REG_BUILD(&re, "\\((?:[^()]|(?R))*\\)", REG_PCRE2);
 	/* Very deep nesting - should fail with REG_EDEPTH */
