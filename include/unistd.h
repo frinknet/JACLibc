@@ -297,6 +297,36 @@ static inline int pause(void) {
 	#endif
 }
 
+#if JACL_OS_LINUX
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
+	return syscall(SYS_pread64, fd, buf, count, offset);
+}
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
+	return syscall(SYS_pwrite64, fd, buf, count, offset);
+}
+#elif JACL_OS_DRAGONFLY
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
+	return syscall(SYS_extpread, fd, buf, count, 0, offset);
+}
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
+	return syscall(SYS_extpwrite, fd, buf, count, 0, offset);
+}
+#elif JACL_OS_FREEBSD || JACL_OS_NETBSD || JACL_OS_OPENBSD
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
+	return syscall(SYS_pread, fd, buf, count, offset);
+}
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
+	return syscall(SYS_pwrite, fd, buf, count, offset);
+}
+#elif JACL_OS_DARWIN
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
+	return syscall(SYS_pread, fd, buf, count, offset);
+}
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
+	return syscall(SYS_pwrite, fd, buf, count, offset);
+}
+#endif
+
 #else /* !JACL_HAS_POSIX */
 
 /* Process control */
@@ -376,12 +406,17 @@ static inline int usleep(useconds_t usec) { (void)usec; errno = ENOSYS; return -
 static inline unsigned int alarm(unsigned int seconds) { (void)seconds; errno = ENOSYS; return 0; }
 static inline int pause(void) { errno = ENOSYS; return -1; }
 
-/* System configuration */
-static inline long sysconf(int name) { (void)name; errno = ENOSYS; return -1; }
-static inline long pathconf(const char *path, int name) { (void)path; (void)name; errno = ENOSYS; return -1; }
-static inline long fpathconf(int fd, int name) { (void)fd; (void)name; errno = ENOSYS; return -1; }
-static inline size_t confstr(int name, char *buf, size_t len) { (void)name; (void)buf; (void)len; errno = ENOSYS; return 0; }
-
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
+}
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
+}
+/* Thread-safe pread/pwrite stubs */
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
+	(void)fd; (void)buf; (void)count; (void)offset; errno = ENOSYS; return -1;
+}
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
+	(void)fd; (void)buf; (void)count; (void)offset; errno = ENOSYS; return -1;
+}
 #endif /* JACL_HAS_POSIX */
 
 #ifdef __cplusplus
