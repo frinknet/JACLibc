@@ -8,6 +8,7 @@ extern thread_local locale_t __jacl_locale_current;
 TEST_TYPE(unit);
 TEST_UNIT(wctype.h);
 
+#if JACL_HAS_C99
 /* ============================================================================ */
 
 TEST_SUITE(iswcntrl);
@@ -420,5 +421,7 @@ TEST(LANG##_towlower) { \
 }
 #include <x/locale_wctype.h>
 #undef X
+
+#endif
 
 TEST_MAIN_IF(JACL_HAS_C99, "wctype.h requires C99 or later.")
