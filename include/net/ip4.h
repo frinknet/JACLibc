@@ -1,11 +1,25 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef _NET_IPV4_H
-#define _NET_IPV4_H
+#ifndef _NET_IP4_H
+#define _NET_IP4_H
 #pragma once
+
+/**
+ * NOTE: This header consolidates functionality traditionally found in:
+ *
+ *   - <netinet/ip.h> (Raw IPv4 Headers - BSD & Linux)
+ *   - <netinet/in_systm.h> (Legacy Types)
+ *
+ * We unify these into <net/ip4.h> for clarity.
+ *
+ * COMPATIBILITY:
+ * - struct ipv4_hdr: Linux-style naming (saddr, daddr)
+ * - struct ip: BSD-style naming (ip_src, ip_dst)
+ * Both have identical 20-byte memory layout.
+ */
 
 #include <config.h>
 #include <stdint.h>
-#include <net/inet.h>
+#include <net/inet.h> /* For struct in_addr, IPPROTO_*, etc. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,17 +33,18 @@ typedef uint32_t n_long;
 typedef uint32_t n_time;
 
 /* ======================================================================== */
-/* IPv4 Header Structure                                                    */
+/* IPv4 Header Structure (Linux-style naming)                               */
 /* ======================================================================== */
 JACL_LAYOUT
 struct ipv4_hdr {
-#if defined(__STDC_ENDIAN_BIG__) && __STDC_ENDIAN_BIG__
+#if JACL_HAS_BE
 	uint8_t  version:4;
 	uint8_t  ihl:4;
+#elif JACL_HAS_LE
+	uint8_t  ihl:4;
+	uint8_t  version:4;
 #else
-	/* C99/C11 fallback: default LE bit ordering (GCC/Clang standard) */
-	uint8_t  ihl:4;
-	uint8_t  version:4;
+#error "Unsupported endianness. Define JACL_HAS_BE or JACL_HAS_LE."
 #endif
 	uint8_t  tos;
 	uint16_t tot_len;
@@ -42,16 +57,19 @@ struct ipv4_hdr {
 	uint32_t daddr;
 } JACL_PACK;
 
-/* BSD-style alias for compatibility */
+/* ======================================================================== */
+/* IPv4 Header Structure (BSD-style naming)                                 */
+/* ======================================================================== */
 JACL_LAYOUT
 struct ip {
-#if defined(__STDC_ENDIAN_BIG__) && __STDC_ENDIAN_BIG__
+#if JACL_HAS_BE
 	uint8_t  ip_v:4;
 	uint8_t  ip_hl:4;
+#elif JACL_HAS_LE
+	uint8_t  ip_hl:4;
+	uint8_t  ip_v:4;
 #else
-	/* C99/C11 fallback: default LE bit ordering */
-	uint8_t  ip_hl:4;
-	uint8_t  ip_v:4;
+#error "Unsupported endianness. Define JACL_HAS_BE or JACL_HAS_LE."
 #endif
 	uint8_t  ip_tos;
 	uint16_t ip_len;
@@ -60,27 +78,25 @@ struct ip {
 	uint8_t  ip_ttl;
 	uint8_t  ip_p;
 	uint16_t ip_sum;
-	struct in_addr ip_src, ip_dst;
+	struct in_addr ip_src;
+	struct in_addr ip_dst;
 } JACL_PACK;
 
-#define IPV4_HDR_LEN  sizeof(struct ipv4_hdr)
-#define IP_VERSION_4  4
-#define IPVERSION     4
+/* Linux compatibility shim */
+typedef struct ipv4_hdr iphdr;
+
+#define IP4_HDR_LEN  sizeof(struct ipv4_hdr)
+#define IPV4_HDR_LEN sizeof(struct ipv4_hdr)
+#define IP_VERSION_4 4
+#define IPVERSION    4
 
 /* ======================================================================== */
 /* Fragmentation Flags                                                      */
 /* ======================================================================== */
-#define IP_RF         0x8000
-#define IP_DF         0x4000
-#define IP_MF         0x2000
-#define IP_OFFMASK    0x1fff
-
-/* ======================================================================== */
-/* Protocol Constants                                                       */
-/* ======================================================================== */
-#define IPPROTO_ICMP  1
-#define IPPROTO_TCP   6
-#define IPPROTO_UDP   17
+#define IP_RF         0x8000 /* Reserved bit */
+#define IP_DF         0x4000 /* Don't Fragment */
+#define IP_MF         0x2000 /* More Fragments */
+#define IP_OFFMASK    0x1fff /* Mask for fragment offset */
 
 /* ======================================================================== */
 /* Type of Service / DSCP Constants                                         */
@@ -161,21 +177,21 @@ struct ip {
 #define IP_MAXPACKET	65535
 
 /* ======================================================================== */
-/* Byte-Access Macros (C99/C11 Fallback & Test Compatibility)               */
+/* Byte-Access Macros                                                       */
 /* ======================================================================== */
-#define IPV4_VERS_IHL(v, hl) (((uint8_t)(v) << 4) | ((uint8_t)(hl) & 0x0F))
-#define IPV4_VERSION(b)      ((uint8_t)(b) >> 4)
-#define IPV4_IHL(b)          ((uint8_t)(b) & 0x0F)
+#define IP_VERS_HL(v, hl)    (((uint8_t)(v) << 4) | ((uint8_t)(hl) & 0x0F))
+#define IP_VERSION(b)        ((uint8_t)(b) >> 4)
+#define IP_HL(b)             ((uint8_t)(b) & 0x0F)
 
-/* BSD aliases */
-#define IP_VERS_HL(v, hl)    IPV4_VERS_IHL(v, hl)
-#define IP_VERSION(b)        IPV4_VERSION(b)
-#define IP_HL(b)             IPV4_IHL(b)
+/* IPv4-prefixed aliases for compatibility */
+#define IPV4_VERS_IHL(v, hl) IP_VERS_HL(v, hl)
+#define IPV4_VERSION(b)      IP_VERSION(b)
+#define IPV4_IHL(b)          IP_HL(b)
 
 /* ======================================================================== */
-/* Helper: Calculate IPv4 Header Checksum (Alignment-Safe)                  */
+/* Helper: Calculate IPv4 Header Checksum                                   */
 /* ======================================================================== */
-static inline uint16_t ipv4_checksum(void *buf, int len) {
+static inline uint16_t ip_checksum(void *buf, int len) {
 	uint32_t sum = 0;
 	uint8_t *ptr = (uint8_t *)buf;
 
@@ -190,8 +206,11 @@ static inline uint16_t ipv4_checksum(void *buf, int len) {
 	return (uint16_t)(~sum);
 }
 
+/* Legacy alias */
+#define ipv4_checksum ip_checksum
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _NET_IPV4_H */
+#endif /* _NET_IP4_H */

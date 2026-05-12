@@ -13,7 +13,7 @@
  * We unify these into a single header here at <net/if.h> for maintenance
  * and clarity with hopes that one day C Standards or POSIX may revamp layout
  * for sanity's sake so that we can remove the abstraction libraries that cause
- * so many security bugs because the codes don't see how things really work.
+ * so many security bugs because the coders don't see how things really work.
  *
  * There has to be a better way!!!
  */
@@ -76,6 +76,7 @@ struct ifmap {
 
 /* ======================================================================== */
 /* Interface Request Structure (ifreq)                                      */
+/* NOTE: Do not pack. ABI relies on natural alignment & padding.            */
 /* ======================================================================== */
 
 struct ifreq {
@@ -86,7 +87,7 @@ struct ifreq {
 		struct sockaddr ifru_broadaddr;
 		struct sockaddr ifru_netmask;
 		struct sockaddr ifru_hwaddr;
-		short		int ifru_flags;
+		short		ifru_flags;
 		int		ifru_ifindex;
 		int		ifru_metric;
 		int		ifru_mtu;
@@ -113,13 +114,14 @@ struct ifreq {
 
 /* ======================================================================== */
 /* Interface Configuration Buffer (ifconf)                                  */
+/* NOTE: Do not pack. Matches kernel ioctl ABI.                             */
 /* ======================================================================== */
 
 struct ifconf {
 	int	ifc_len;
 	union {
-		char	*ifcu_buf;
-		struct ifreq *ifcu_req;
+		char		*ifcu_buf;
+		struct ifreq	*ifcu_req;
 	} ifc_ifcu;
 };
 
@@ -136,7 +138,8 @@ struct if_nameindex {
 };
 
 /* ======================================================================== */
-/* Ioctl Command Constants (Linux/POSIX Standard)                           */
+/* Ioctl Command Constants (Linux/glibc Standard)                           */
+/* NOTE: POSIX mandates functions, not ioctl numbers. These are Linux-safe. */
 /* ======================================================================== */
 
 #define SIOCGIFNAME	0x8910
@@ -158,7 +161,7 @@ struct if_nameindex {
 #define SIOCSIFNAME	0x8923
 
 /* ======================================================================== */
-/* POSIX Interface Functions (Header-Only Stubs)                            */
+/* POSIX Interface Functions (Header-Only Implementations)                  */
 /* ======================================================================== */
 
 #if JACL_HAS_POSIX
@@ -167,15 +170,13 @@ static inline unsigned int if_nametoindex(const char *name) {
 	if (!name) return 0;
 
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
-
 	if (fd < 0) return 0;
 
 	struct ifreq ifr = {0};
-
 	strncpy(ifr.ifr_name, name, IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = '\0'; /* Guarantee null-termination */
 
 	int r = ioctl(fd, SIOCGIFINDEX, &ifr);
-
 	close(fd);
 
 	return r < 0 ? 0 : (unsigned int)ifr.ifr_ifindex;
@@ -185,7 +186,6 @@ static inline char *if_indextoname(unsigned int ifindex, char *ifname) {
 	if (!ifname) return NULL;
 
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
-
 	if (fd < 0) return NULL;
 
 	char buf[4096];
@@ -193,49 +193,40 @@ static inline char *if_indextoname(unsigned int ifindex, char *ifname) {
 
 	if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) { close(fd); return NULL; }
 
-	close(fd);
-
+	/* Linux: ifc_len = bytes used. BSD: ifc_len = entry count. */
 	struct ifreq *ifr = ifc.ifc_req;
 	int count = ifc.ifc_len / sizeof(struct ifreq);
 
 	for (int i = 0; i < count; i++) {
 		struct ifreq tmp = {0};
-
 		strncpy(tmp.ifr_name, ifr[i].ifr_name, IFNAMSIZ - 1);
+		tmp.ifr_name[IFNAMSIZ - 1] = '\0';
 
-		int fd2 = socket(AF_INET, SOCK_DGRAM, 0);
-
-		if (fd2 < 0) continue;
-
-		if (ioctl(fd2, SIOCGIFINDEX, &tmp) == 0 && (unsigned int)tmp.ifr_ifindex == ifindex) {
+		/* Reuse FD instead of reopening per loop */
+		if (ioctl(fd, SIOCGIFINDEX, &tmp) == 0 && tmp.ifr_ifindex == ifindex) {
 			strncpy(ifname, tmp.ifr_name, IFNAMSIZ - 1);
-
 			ifname[IFNAMSIZ - 1] = '\0';
-
-			close(fd2);
-
+			close(fd);
 			return ifname;
 		}
-
-		close(fd2);
 	}
 
+	close(fd);
 	errno = ENOENT;
-
 	return NULL;
 }
 
 static inline void if_freenameindex(struct if_nameindex *ptr) {
 	if (!ptr) return;
 
-	for (int i = 0; ptr[i].if_index != 0 || ptr[i].if_name != NULL; i++) free(ptr[i].if_name);
-
+	for (int i = 0; ptr[i].if_index != 0 || ptr[i].if_name != NULL; i++) {
+		free(ptr[i].if_name);
+	}
 	free(ptr);
 }
 
 static inline struct if_nameindex *if_nameindex(void) {
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
-
 	if (fd < 0) return NULL;
 
 	char buf[8192];
@@ -243,21 +234,36 @@ static inline struct if_nameindex *if_nameindex(void) {
 
 	if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) { close(fd); return NULL; }
 
-	close(fd);
-
 	int count = ifc.ifc_len / sizeof(struct ifreq);
 	struct if_nameindex *idx = calloc(count + 1, sizeof(struct if_nameindex));
+	if (!idx) { close(fd); return NULL; }
 
-	if (!idx) return NULL;
+	/* Reuse a single FD for batch index resolution */
+	int fd2 = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd2 < 0) { close(fd); if_freenameindex(idx); return NULL; }
 
 	for (int i = 0; i < count; i++) {
-		idx[i].if_index = if_nametoindex(ifc.ifc_req[i].ifr_name);
-		idx[i].if_name = strdup(ifc.ifc_req[i].ifr_name);
+		struct ifreq ifr = {0};
+		strncpy(ifr.ifr_name, ifc.ifc_req[i].ifr_name, IFNAMSIZ - 1);
+		ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 
-		if (!idx[i].if_name) { if_freenameindex(idx); return NULL; }
+		if (ioctl(fd2, SIOCGIFINDEX, &ifr) == 0) {
+			idx[i].if_index = ifr.ifr_ifindex;
+			idx[i].if_name = strdup(ifr.ifr_name);
+		} else {
+			idx[i].if_index = 0;
+			idx[i].if_name = strdup(ifr.ifr_name);
+		}
+
+		if (!idx[i].if_name) {
+			if_freenameindex(idx);
+			close(fd); close(fd2);
+			return NULL;
+		}
 	}
 
-	return idx;
+	close(fd); close(fd2);
+	return idx; /* Sentinel {0, NULL} auto-zeroed by calloc */
 }
 
 #else

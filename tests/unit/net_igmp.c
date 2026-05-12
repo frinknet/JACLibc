@@ -323,8 +323,9 @@ TEST(igmp_checksum_zero) {
 TEST(igmp_checksum_verify) {
 	uint8_t buf[8] = {0x11, 0x00, 0x00, 0x00, 0xE0, 0x00, 0x00, 0x01};
 	uint16_t csum = igmp_checksum(buf, 8);
-	buf[2] = csum & 0xFF;
-	buf[3] = (csum >> 8) & 0xFF;
+	/* Patch in network byte order (high byte first) */
+	buf[2] = (csum >> 8) & 0xFF;
+	buf[3] = csum & 0xFF;
 	ASSERT_EQ(0x0000, igmp_checksum(buf, 8));
 }
 

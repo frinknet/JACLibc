@@ -37,10 +37,10 @@ typedef uint16_t in_port_t;
 #define INET_ADDRSTRLEN		16
 #define INET6_ADDRSTRLEN	46
 
-#define INADDR_ANY		((in_addr_t) 0x00000000)
-#define INADDR_BROADCAST	((in_addr_t) 0xffffffff)
-#define INADDR_LOOPBACK		((in_addr_t) 0x7f000001)
-#define INADDR_NONE		((in_addr_t) 0xffffffff)
+#define INADDR_ANY        ((in_addr_t) 0x00000000)
+#define INADDR_BROADCAST  ((in_addr_t) 0xffffffff)
+#define INADDR_LOOPBACK   ((in_addr_t) 0x7f000001) /* Host byte order */
+#define INADDR_NONE       ((in_addr_t) 0xffffffff)
 
 #define X(ID, num, ...) ID = num,
 enum {
@@ -48,7 +48,8 @@ enum {
 } __jacl_ipproto_t;
 #undef X
 
-#define IPPROTO_IP 0
+// x/ip_protocols.h define 0 as HOPOPT
+#define IPPROTO_IP IPPROTO_HOPOPTS
 
 #define X(ID, num, ...) ID = num,
 enum {
@@ -59,58 +60,79 @@ enum {
 #define IPPORT_RESERVED		1024
 #define IPPORT_USERRESERVED	5000
 
-#define IN_CLASSA(a)		(((in_addr_t)(a) & 0x80000000) == 0)
-#define IN_CLASSA_NET		0xff000000
-#define IN_CLASSB(a)		(((in_addr_t)(a) & 0xc0000000) == 0x80000000)
-#define IN_CLASSB_NET		0xffff0000
-#define IN_CLASSC(a)		(((in_addr_t)(a) & 0xe0000000) == 0xc0000000)
-#define IN_CLASSC_NET		0xffffff00
-#define IN_CLASSD(a)		(((in_addr_t)(a) & 0xf0000000) == 0xe0000000)
-#define IN_CLASSE(a)		(((in_addr_t)(a) & 0xf8000000) == 0xf0000000)
-#define IN_LOOPBACK(a)	(((in_addr_t)(a) & 0xff000000) == 0x7f000000)
+#define IN_CLASSA(a)    (((in_addr_t)(a) & 0x80000000) == 0)
+#define IN_CLASSA_NET   0xff000000
+#define IN_CLASSB(a)    (((in_addr_t)(a) & 0xc0000000) == 0x80000000)
+#define IN_CLASSB_NET   0xffff0000
+#define IN_CLASSC(a)    (((in_addr_t)(a) & 0xe0000000) == 0xc0000000)
+#define IN_CLASSC_NET   0xffffff00
+#define IN_CLASSD(a)    (((in_addr_t)(a) & 0xf0000000) == 0xe0000000)
+#define IN_CLASSE(a)    (((in_addr_t)(a) & 0xf8000000) == 0xf0000000)
+#define IN_LOOPBACK(a)  (((in_addr_t)(a) & 0xff000000) == 0x7f000000)
 
 struct in_addr {
-    in_addr_t           s_addr;
+	in_addr_t           s_addr;
 };
 
 struct in6_addr {
-    union {
-        uint8_t         u6_addr8[16];
-        uint16_t        u6_addr16[8];
-        uint32_t        u6_addr32[4];
-    } in6_u;
+	uint8_t             s6_addr[16];
 };
 
 struct sockaddr_in {
-    sa_family_t         sin_family;
-    in_port_t           sin_port;
-    struct in_addr      sin_addr;
-    unsigned char       sin_zero[8];
+	sa_family_t         sin_family;
+	in_port_t           sin_port;
+	struct in_addr      sin_addr;
+	unsigned char       __pad[8]; /* Padding to maintain 16-byte ABI size */
 };
 
 struct sockaddr_in6 {
-    sa_family_t         sin6_family;
-    in_port_t           sin6_port;
-    uint32_t            sin6_flowinfo;
-    struct in6_addr     sin6_addr;
-    uint32_t            sin6_scope_id;
+	sa_family_t         sin6_family;
+	in_port_t           sin6_port;
+	uint32_t            sin6_flowinfo;
+	struct in6_addr     sin6_addr;
+	uint32_t            sin6_scope_id;
 };
 
 struct ip_mreq {
-    struct in_addr      imr_multiaddr;
-    struct in_addr      imr_interface;
+	struct in_addr      imr_multiaddr;
+	struct in_addr      imr_interface;
 };
 
 struct ip_mreqn {
-    struct in_addr      imr_multiaddr;
-    struct in_addr      imr_address;
-    int                 imr_ifindex;
+	struct in_addr      imr_multiaddr;
+	struct in_addr      imr_address;
+	int                 imr_ifindex;
 };
 
 struct ipv6_mreq {
-    struct in6_addr     ipv6mr_multiaddr;
-    unsigned int        ipv6mr_interface;
+	struct in6_addr     ipv6mr_multiaddr;
+	unsigned int        ipv6mr_interface;
 };
+
+/* Convenience macros for 16/32-bit word access (polyfill) */
+#define IN6_ADDR16(a, i)  (((uint16_t *)(a)->s6_addr)[i])
+#define IN6_ADDR32(a, i)  (((uint32_t *)(a)->s6_addr)[i])
+
+/* Optional: Reverse macros for construction */
+#define IN6_SET_ADDR16(a, i, v)  (IN6_ADDR16(a, i) = htons(v))
+#define IN6_SET_ADDR32(a, i, v)  (IN6_ADDR32(a, i) = htonl(v))
+
+/* ======================================================================== */
+/* POSIX Mandated External Variables                                       */
+/* ======================================================================== */
+
+/* Compile-time initializers */
+#define IN6ADDR_ANY_INIT {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}}
+#define IN6ADDR_LOOPBACK_INIT {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}}
+
+/*
+ * In a header-only library, we use static const to provide storage
+ * without requiring a .c file definition. This avoids linker errors
+ * while satisfying POSIX visibility requirements.
+ */
+static const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+static const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
+
 
 /* ======================================================================== */
 /* IPv6 Address Test Macros                                                 */
@@ -144,6 +166,18 @@ struct ipv6_mreq {
 	 !(((const uint8_t *)(a))[12] == 0 && ((const uint8_t *)(a))[13] == 0 && \
 	 	((const uint8_t *)(a))[14] == 0 && ((const uint8_t *)(a))[15] == 1))
 
+/* Multicast Scope Macros (POSIX Required) */
+#define IN6_IS_ADDR_MC_NODELOCAL(a) \
+	(((const uint8_t *)(a))[1] == 0x01)
+#define IN6_IS_ADDR_MC_LINKLOCAL(a) \
+	(((const uint8_t *)(a))[1] == 0x02)
+#define IN6_IS_ADDR_MC_SITELOCAL(a) \
+	(((const uint8_t *)(a))[1] == 0x05)
+#define IN6_IS_ADDR_MC_ORGLOCAL(a) \
+	(((const uint8_t *)(a))[1] == 0x08)
+#define IN6_IS_ADDR_MC_GLOBAL(a) \
+	(((const uint8_t *)(a))[1] == 0x0e)
+
 /* ======================================================================== */
 /* Address Conversion Internals                                             */
 /* ======================================================================== */
@@ -171,13 +205,33 @@ static inline int __jacl_pton_ip6(int af, const char *src, void *dst) {
 
 	while (*p) {
 		if (*p == ':') {
-			if (comp >= 0) return 0;
+			if (*(p+1) == ':') {
+				if (comp >= 0) return 0;
 
-			comp = i;
+				comp = i;
+				p += 2;
 
-			if (*++p == ':') p++;
+				continue;
+			} else {
+				p++;
 
-			continue;
+				continue;
+			}
+		}
+
+		/* Check if this segment is IPv4 */
+		if (isdigit((unsigned char)*p) && strchr(p, '.')) {
+			unsigned a,b,c,d;
+
+			if (sscanf(p, "%u.%u.%u.%u", &a,&b,&c,&d) != 4 ||
+			    a>255||b>255||c>255||d>255) return 0;
+
+			if (comp < 0 && i != 6) return 0;
+
+			w[i++] = (a << 8) | b;
+			w[i++] = (c << 8) | d;
+
+			break; /* Done */
 		}
 
 		if (!isxdigit((unsigned char)*p)) return 0;
@@ -189,34 +243,23 @@ static inline int __jacl_pton_ip6(int af, const char *src, void *dst) {
 
 		w[i++] = (uint16_t)v;
 		p = e;
-
-		if (*p == '.') {
-			unsigned a,b,c,d;
-
-			if (sscanf(p, "%u.%u.%u.%u", &a,&b,&c,&d) != 4 || a>255||b>255||c>255||d>255) return 0;
-			if (comp < 0 && i != 6) return 0;
-
-			w[i++] = (a << 8) | b;
-			w[i++] = (c << 8) | d;
-
-			break;
-		}
 	}
 
 	if (comp >= 0) {
-		int z = 8 - i + 1;
+		int zeros_needed = 8 - i;
 
-		if (i + z > 8) return 0;
-
-		memmove(&w[comp + z], &w[comp], (i - comp) * 2);
-		memset(&w[comp], 0, z * 2);
+		memmove(&w[comp + zeros_needed], &w[0], i * sizeof(uint16_t));
+		memset(&w[comp], 0, zeros_needed * sizeof(uint16_t));
 	} else if (i != 8) {
 		return 0;
 	}
 
 	uint8_t *o = dst;
 
-	for (int j = 0; j < 8; j++) { o[j*2] = w[j] >> 8; o[j*2+1] = w[j] & 0xff; }
+	for (int j = 0; j < 8; j++) {
+		o[j*2] = w[j] >> 8;
+		o[j*2+1] = w[j] & 0xff;
+	}
 
 	return 1;
 }
@@ -232,59 +275,64 @@ static inline const char *__jacl_ntop_ip4(int af, const void *src, char *dst, so
 }
 
 static inline const char *__jacl_ntop_ip6(int af, const void *src, char *dst, socklen_t size) {
-		const unsigned char *b = (const unsigned char *)src;
-		uint16_t words[8];
+	const unsigned char *b = (const unsigned char *)src;
+	uint16_t words[8];
 
-		for (int i = 0; i < 8; i++) words[i] = (b[i*2] << 8) | b[i*2+1];
+	for (int i = 0; i < 8; i++) words[i] = (b[i*2] << 8) | b[i*2+1];
 
-		int best_len = 0, best_idx = -1;
-		int cur_len = 0, cur_idx = -1;
+	int best_len = 0, best_idx = -1;
+	int cur_len = 0, cur_idx = -1;
 
-		for (int i = 0; i < 8; i++) {
-			if (words[i] == 0) {
-				if (cur_len == 0) cur_idx = i;
-
-				cur_len++;
-
-				if (cur_len > best_len) {
-					best_len = cur_len;
-					best_idx = cur_idx;
-				}
-			} else {
-				cur_len = 0;
+	for (int i = 0; i < 8; i++) {
+		if (words[i] == 0) {
+			if (cur_len == 0) cur_idx = i;
+			cur_len++;
+			if (cur_len > best_len) {
+				best_len = cur_len;
+				best_idx = cur_idx;
 			}
+		} else {
+			cur_len = 0;
+		}
+	}
+
+	if (best_len < 2) best_idx = -1;
+	if (size < INET6_ADDRSTRLEN) return NULL;
+
+	char *p = dst;
+
+	for (int i = 0; i < 8; ) {
+		if (i == best_idx) {
+			*p++ = ':';
+			*p++ = ':';
+			i += best_len;
+			continue;
 		}
 
-		if (best_len < 2) best_idx = -1;
-		if (size < INET6_ADDRSTRLEN) return NULL;
-
-		char *p = dst;
-
-		for (int i = 0; i < 8; i++) {
-			if (i == best_idx) {
-				if (i == 0) *p++ = ':';
-
+		/* Add separator if not at start and not immediately following :: */
+		if (p != dst) {
+			/* If we just wrote ::, the last char is ':'.
+			   We don't want :::1. We want ::1.
+			   So if last char is ':', skip adding another. */
+			if (*(p-1) != ':') {
 				*p++ = ':';
-				i += best_len - 1;
-
-				continue;
 			}
-
-			if (i > 0 && i != best_idx + 1) *p++ = ':';
-
-			p += snprintf(p, (size_t)(dst + size - p), "%x", words[i]);
 		}
 
-		*p = '\0';
+		p += snprintf(p, (size_t)(dst + size - p), "%x", words[i]);
+		i++;
+	}
 
-		return dst;
+	*p = '\0';
+
+	return dst;
 }
 
 /* ======================================================================== */
 /* Address Conversion Functions                                             */
 /* ======================================================================== */
 
-static inline int inet_pton(int af, const char *src, void *dst) {
+static inline int inet_pton(int af, const char *restrict src, void *restrict dst) {
 	if (!src || !dst) return 0;
 	if (af == AF_INET) return __jacl_pton_ip4(af, src, dst);
 	if (af == AF_INET6) return __jacl_pton_ip6(af, src, dst);
@@ -292,7 +340,7 @@ static inline int inet_pton(int af, const char *src, void *dst) {
 	return -1;
 }
 
-static inline const char *inet_ntop(int af, const void *src, char *dst, socklen_t size) {
+static inline const char *inet_ntop(int af, const void *restrict src, char *restrict dst, socklen_t size) {
 	if (!src || !dst) return NULL;
 	if (af == AF_INET) return __jacl_ntop_ip4(af, src, dst, size);
 	if (af == AF_INET6) return __jacl_ntop_ip6(af, src, dst, size);
@@ -322,6 +370,3 @@ static inline in_addr_t inet_addr(const char *cp) {
 #endif
 
 #endif /* _NET_INET_H */
-
-
-

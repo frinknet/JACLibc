@@ -1,10 +1,9 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
-
-#include <net/ipv4.h>
+#include <net/ip4.h>
 
 TEST_TYPE(unit);
-TEST_UNIT(net/ipv4.h);
+TEST_UNIT(net/ip4.h);
 
 /* ============================================================================ */
 

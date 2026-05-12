@@ -9,7 +9,7 @@
  *   - <arpa/nameser.h> (Packet structures and macros)
  *   - <resolv.h> (Resolution helpers like dn_expand)
  *
- * We unify these into a single header at <net/dns.h> for easy maintenance
+ * We unify these into a single header at <net/dns.h> for ease maintenance
  * and clarity with hopes that one day C Standards or POSIX may revamp layout
  * for sanity's sake so that we can remove the abstraction libraries that cause
  * so many security bugs because the coders don't see how things really work.
@@ -155,8 +155,7 @@ static inline void dns_put32(uint8_t *ptr, uint32_t val) {
 /* ======================================================================== */
 
 static inline int dn_expand(const uint8_t *msg, const uint8_t *eom, const uint8_t *src, char *dst, int dstsiz) {
-	int pos = 0;
-	int consumed = 0;
+	int pos = 0, consumed = 0, jumps = 0;
 	const uint8_t *p = src;
 
 	while (p < eom) {
@@ -169,11 +168,13 @@ static inline int dn_expand(const uint8_t *msg, const uint8_t *eom, const uint8_
 		}
 
 		if ((len & 0xC0) == 0xC0) {
-			if (p + 1 >= eom) return -1; /* Not enough bytes for pointer */
+			if (p + 1 >= eom) return -1;
+
+			/* FIXED: Limit pointer jumps to prevent infinite loops */
+			if (++jumps > 10) return -1;
 
 			int offset = ((len & 0x3F) << 8) | p[1];
 
-			/* SAFETY CHECK: Ensure target is within bounds */
 			if (offset >= (eom - msg)) return -1;
 
 			if (consumed == 0) consumed = (int)(p - src + 2);
@@ -181,11 +182,11 @@ static inline int dn_expand(const uint8_t *msg, const uint8_t *eom, const uint8_
 			continue;
 		}
 
-		if (len > 63) return -1; /* Invalid label length */
-		if (p + 1 + len > eom) return -1; /* Label extends past end */
+		if (len > 63) return -1;
+		if (p + 1 + len > eom) return -1;
 
 		if (pos > 0 && pos < dstsiz) dst[pos++] = '.';
-		if (pos + len >= dstsiz) return -1; /* Output buffer full */
+		if (pos + len >= dstsiz) return -1;
 
 		memcpy(dst + pos, p + 1, len);
 		pos += len;
@@ -204,26 +205,26 @@ static inline int dn_comp(const char *src, uint8_t *dst, int dstsiz, uint8_t **d
 
 	if (!src || !dst || dstsiz <= 0) return -1;
 
-	/* Special case: Root domain "." */
 	if (strcmp(src, ".") == 0) {
 		if (dstsiz < 1) return -1;
 		dst[0] = 0;
 		return 1;
 	}
 
-	/* Compression table lookup (if provided) */
 	if (dnptrs && *dnptrs && lastdnptr && *lastdnptr) {
 		const char *check = src;
 		while (*check) {
 			const char *dot = strchr(check, '.');
 			int len = dot ? (int)(dot - check) : (int)strlen(check);
-            if (len == 0) { /* Skip empty labels caused by trailing dots or ".." */
-                if (!dot) break;
-                check = dot + 1;
-                continue;
-            }
+			if (len == 0) {
+				if (!dot) break;
+				check = dot + 1;
+				continue;
+			}
 			for (uint8_t **pp = dnptrs; pp < lastdnptr && *pp; pp++) {
 				const uint8_t *entry = *pp;
+				/* FIXED: Validate entry points within dst buffer */
+				if (entry < dst || entry >= dst + dstsiz) continue;
 				if (entry[0] == len && memcmp(entry + 1, check, len) == 0) {
 					if (pos + 2 > dstsiz) return -1;
 					int offset = (int)(entry - dst);
@@ -237,18 +238,16 @@ static inline int dn_comp(const char *src, uint8_t *dst, int dstsiz, uint8_t **d
 		}
 	}
 
-	/* Emit literal labels */
 	label = src;
 	while (*label) {
 		const char *dot = strchr(label, '.');
 		int len = dot ? (int)(dot - label) : (int)strlen(label);
 
-        /* Skip empty labels (e.g., trailing dots) */
-        if (len == 0) {
-            if (!dot) break;
-            label = dot + 1;
-            continue;
-        }
+		if (len == 0) {
+			if (!dot) break;
+			label = dot + 1;
+			continue;
+		}
 
 		if (len > 63 || pos + len + 1 >= dstsiz) return -1;
 

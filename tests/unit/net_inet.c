@@ -225,67 +225,194 @@ TEST(sockaddr_in_size) { ASSERT_EQ(16, sizeof(struct sockaddr_in)); }
 TEST_SUITE(in6_is_macros);
 
 TEST(in6_is_addr_unspecified_match) {
-	struct in6_addr a = {{{0}}}; ASSERT_TRUE(IN6_IS_ADDR_UNSPECIFIED(&a));
+	struct in6_addr a = {{0}};
+	ASSERT_TRUE(IN6_IS_ADDR_UNSPECIFIED(&a));
 }
 
 TEST(in6_is_addr_unspecified_mismatch) {
-	struct in6_addr a = {{{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}}};
+	struct in6_addr a = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
 	ASSERT_FALSE(IN6_IS_ADDR_UNSPECIFIED(&a));
 }
 
 TEST(in6_is_addr_loopback_match) {
-	struct in6_addr a = {{{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}}};
+	struct in6_addr a = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
 	ASSERT_TRUE(IN6_IS_ADDR_LOOPBACK(&a));
 }
 
 TEST(in6_is_addr_loopback_mismatch) {
-	struct in6_addr a = {{{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2}}};
+	struct in6_addr a = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2}};
 	ASSERT_FALSE(IN6_IS_ADDR_LOOPBACK(&a));
 }
 
 TEST(in6_is_addr_multicast_match) {
-	struct in6_addr a = {{{0xff, 0x02, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}}};
+	struct in6_addr a = {{0xff, 0x02, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
 	ASSERT_TRUE(IN6_IS_ADDR_MULTICAST(&a));
 }
 
 TEST(in6_is_addr_multicast_mismatch) {
-	struct in6_addr a = {{{0x20, 0x01, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}}};
+	struct in6_addr a = {{0x20, 0x01, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
 	ASSERT_FALSE(IN6_IS_ADDR_MULTICAST(&a));
 }
 
 TEST(in6_is_addr_linklocal_match) {
-	struct in6_addr a = {{{0xfe, 0x80, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}}};
+	struct in6_addr a = {{0xfe, 0x80, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
 	ASSERT_TRUE(IN6_IS_ADDR_LINKLOCAL(&a));
 }
 
 TEST(in6_is_addr_linklocal_mismatch) {
-	struct in6_addr a = {{{0xfe, 0xc0, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}}};
+	struct in6_addr a = {{0xfe, 0xc0, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
 	ASSERT_FALSE(IN6_IS_ADDR_LINKLOCAL(&a));
 }
 
 TEST(in6_is_addr_sitelocal_match) {
-	struct in6_addr a = {{{0xfe, 0xc0, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}}};
+	struct in6_addr a = {{0xfe, 0xc0, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
 	ASSERT_TRUE(IN6_IS_ADDR_SITELOCAL(&a));
 }
 
 TEST(in6_is_addr_v4mapped_match) {
-	struct in6_addr a = {{{0,0,0,0,0,0,0,0,0,0,0xFF,0xFF,192,168,1,1}}};
+	struct in6_addr a = {{0,0,0,0,0,0,0,0,0,0,0xFF,0xFF,192,168,1,1}};
 	ASSERT_TRUE(IN6_IS_ADDR_V4MAPPED(&a));
 }
 
 TEST(in6_is_addr_v4mapped_mismatch) {
-	struct in6_addr a = {{{0,0,0,0,0,0,0,0,0,0,0,0,192,168,1,1}}};
+	struct in6_addr a = {{0,0,0,0,0,0,0,0,0,0,0,0,192,168,1,1}};
 	ASSERT_FALSE(IN6_IS_ADDR_V4MAPPED(&a));
 }
 
 TEST(in6_is_addr_v4compat_match) {
-	struct in6_addr a = {{{0,0,0,0,0,0,0,0,0,0,0,0,192,168,1,1}}};
+	struct in6_addr a = {{0,0,0,0,0,0,0,0,0,0,0,0,192,168,1,1}};
 	ASSERT_TRUE(IN6_IS_ADDR_V4COMPAT(&a));
 }
 
 TEST(in6_is_addr_v4compat_mismatch) {
-	struct in6_addr a = {{{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}}};
+	struct in6_addr a = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}};
 	ASSERT_FALSE(IN6_IS_ADDR_V4COMPAT(&a));
 }
+
+/* ============================================================================ */
+TEST_SUITE(inet_pton_ipv6);
+
+TEST(inet_pton_v6_full) {
+	struct in6_addr a;
+	int r = inet_pton(AF_INET6, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", &a);
+	ASSERT_EQ(1, r);
+	/* Check first 32 bits via pointer cast (polyfill style) */
+	ASSERT_EQ(0x20010DB8, ntohl(((uint32_t *)a.s6_addr)[0]));
+}
+
+TEST(inet_pton_v6_compressed) {
+	struct in6_addr a;
+	int r = inet_pton(AF_INET6, "::1", &a);
+	ASSERT_EQ(1, r);
+	ASSERT_TRUE(IN6_IS_ADDR_LOOPBACK(&a));
+}
+
+TEST(inet_pton_v6_mixed) {
+	struct in6_addr a;
+	int r = inet_pton(AF_INET6, "::ffff:192.168.1.1", &a);
+	ASSERT_EQ(1, r);
+	ASSERT_TRUE(IN6_IS_ADDR_V4MAPPED(&a));
+}
+
+TEST(inet_pton_v6_invalid_double_colon) {
+	struct in6_addr a;
+	int r = inet_pton(AF_INET6, "2001::db8::1", &a);
+	ASSERT_EQ(0, r);
+}
+
+TEST(inet_pton_v6_null_src) {
+	struct in6_addr a;
+	ASSERT_EQ(0, inet_pton(AF_INET6, NULL, &a));
+}
+
+TEST(inet_pton_v6_null_dst) {
+	ASSERT_EQ(0, inet_pton(AF_INET6, "::1", NULL));
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(inet_ntop_ipv6);
+
+TEST(inet_ntop_v6_loopback) {
+	struct in6_addr a = IN6ADDR_LOOPBACK_INIT;
+	char buf[INET6_ADDRSTRLEN];
+	const char *s = inet_ntop(AF_INET6, &a, buf, sizeof(buf));
+	ASSERT_NOT_NULL(s);
+	ASSERT_STR_EQ("::1", s);
+}
+
+TEST(inet_ntop_v6_any) {
+	struct in6_addr a = IN6ADDR_ANY_INIT;
+	char buf[INET6_ADDRSTRLEN];
+	const char *s = inet_ntop(AF_INET6, &a, buf, sizeof(buf));
+	ASSERT_NOT_NULL(s);
+	ASSERT_STR_EQ("::", s);
+}
+
+TEST(inet_ntop_v6_full) {
+	struct in6_addr a = {{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+	                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}};
+	char buf[INET6_ADDRSTRLEN];
+	const char *s = inet_ntop(AF_INET6, &a, buf, sizeof(buf));
+	ASSERT_NOT_NULL(s);
+	ASSERT_STR_EQ("2001:db8::1", s);
+}
+
+TEST(inet_ntop_v6_buffer_small) {
+	struct in6_addr a = IN6ADDR_LOOPBACK_INIT;
+	char buf[5];
+	ASSERT_NULL(inet_ntop(AF_INET6, &a, buf, sizeof(buf)));
+}
+
+TEST(inet_ntop_v6_null_src) {
+	char buf[INET6_ADDRSTRLEN];
+	ASSERT_NULL(inet_ntop(AF_INET6, NULL, buf, sizeof(buf)));
+}
+
+TEST(inet_ntop_v6_null_dst) {
+	struct in6_addr a = IN6ADDR_LOOPBACK_INIT;
+	/* Use constant size, buf is not needed for this check */
+	ASSERT_NULL(inet_ntop(AF_INET6, &a, NULL, INET6_ADDRSTRLEN));
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(in6_mc_macros);
+
+TEST(in6_is_addr_mc_nodelocal) {
+	struct in6_addr a = {{0xff, 0x01, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
+	ASSERT_TRUE(IN6_IS_ADDR_MC_NODELOCAL(&a));
+}
+
+TEST(in6_is_addr_mc_linklocal) {
+	struct in6_addr a = {{0xff, 0x02, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
+	ASSERT_TRUE(IN6_IS_ADDR_MC_LINKLOCAL(&a));
+}
+
+TEST(in6_is_addr_mc_sitelocal) {
+	struct in6_addr a = {{0xff, 0x05, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
+	ASSERT_TRUE(IN6_IS_ADDR_MC_SITELOCAL(&a));
+}
+
+TEST(in6_is_addr_mc_orglocal) {
+	struct in6_addr a = {{0xff, 0x08, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
+	ASSERT_TRUE(IN6_IS_ADDR_MC_ORGLOCAL(&a));
+}
+
+TEST(in6_is_addr_mc_global) {
+	struct in6_addr a = {{0xff, 0x0e, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
+	ASSERT_TRUE(IN6_IS_ADDR_MC_GLOBAL(&a));
+}
+
+TEST(in6_is_addr_mc_mismatch) {
+	struct in6_addr a = {{0xff, 0x00, 0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
+	ASSERT_FALSE(IN6_IS_ADDR_MC_NODELOCAL(&a));
+	ASSERT_FALSE(IN6_IS_ADDR_MC_LINKLOCAL(&a));
+	ASSERT_FALSE(IN6_IS_ADDR_MC_SITELOCAL(&a));
+	ASSERT_FALSE(IN6_IS_ADDR_MC_ORGLOCAL(&a));
+	ASSERT_FALSE(IN6_IS_ADDR_MC_GLOBAL(&a));
+}
+
+/* ============================================================================ */
 
 TEST_MAIN()
