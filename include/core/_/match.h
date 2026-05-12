@@ -32,27 +32,27 @@ typedef enum {
 } match_tok_t;
 
 typedef enum {
-	M_SUCCESS     = 0, M_NOMATCH     = 1, M_BADPAT      = 2, M_EESCAPE     = 5, M_ESUBMATCH   = 6,
-	M_EBRACK      = 7, M_EPAREN      = 8, M_ECOLLATE    = 9, M_ECTYPE      = 10, M_BADBR       = 11,
-	M_EBRACE      = 12, M_ERANGE      = 13, M_BADRPT      = 14, M_ESPACE      = 15, M_EDEPTH      = 16,
-	M_EFLAGS      = 17, M_EINTERNAL   = 18, M_EUNSAFE     = 19, M_ECALL       = 20, M_ECOND       = 21,
-	M_ELOOK       = 22, M_EVERB       = 23, M_LAST        = 24
+	M_SUCCESS     = 0,    M_NOMATCH     = 1,   M_BADPAT      = 2,   M_EESCAPE     = 5,    M_ESUBMATCH   = 6,
+	M_EBRACK      = 7,    M_EPAREN      = 8,   M_ECOLLATE    = 9,   M_ECTYPE      = 10,   M_BADBR      = 11,
+	M_EBRACE      = 12,   M_ERANGE     = 13,   M_BADRPT     = 14,   M_ESPACE      = 15,   M_EDEPTH     = 16,
+	M_EFLAGS      = 17,   M_EINTERNAL  = 18,   M_EUNSAFE    = 19,   M_ECALL       = 20,   M_ECOND      = 21,
+	M_ELOOK       = 22,   M_EVERB      = 23,   M_LAST       = 24
 } match_err_t;
 
 typedef enum {
-	MCOMP_ANCHOR       = 0x01, MCOMP_ALTERN       = 0x02, MCOMP_QUANT        = 0x04, MCOMP_ESCAPE       = 0x08,
-	MCOMP_BOUNDARY     = 0x10, MCOMP_ABSOLUTE     = 0x20, MCOMP_UNGREEDY     = 0x40, MCOMP_CAPTURE      = 0x100,
-	MCOMP_BACKREF      = 0x200, MCOMP_NAMEREF      = 0x400, MCOMP_RECURSE      = 0x800, MCOMP_LOOKFWD      = 0x1000,
-	MCOMP_LOOKBACK     = 0x2000, MCOMP_ATOMIC       = 0x4000, MCOMP_COND         = 0x8000, MCOMP_CALLOUT      = 0x10000,
-	MCOMP_VERB         = 0x20000,
+	MCOMP_ANCHOR    = 0x01,    MCOMP_ALTERN    = 0x02,    MCOMP_QUANT      = 0x04,    MCOMP_ESCAPE     = 0x08,
+	MCOMP_BOUNDARY  = 0x10,    MCOMP_ABSOLUTE  = 0x20,    MCOMP_UNGREEDY   = 0x40,    MCOMP_CAPTURE    = 0x100,
+	MCOMP_BACKREF   = 0x200,   MCOMP_NAMEREF   = 0x400,   MCOMP_RECURSE    = 0x800,   MCOMP_LOOKFWD    = 0x1000,
+	MCOMP_LOOKBACK  = 0x2000,  MCOMP_ATOMIC    = 0x4000,  MCOMP_COND       = 0x8000,  MCOMP_CALLOUT    = 0x10000,
+	MCOMP_VERB      = 0x20000,
 } mcomp_flag_t;
 
 typedef enum {
-	MEXEC_DEFAULT      = 0, MEXEC_ICASE        = 0x01, MEXEC_NEWLINE      = 0x02, MEXEC_NOTBOL       = 0x04,
-	MEXEC_NOTEOL       = 0x08, MEXEC_DOTALL       = 0x10, MEXEC_MULTILINE    = 0x20, MEXEC_UNGREEDY     = 0x40,
-	MEXEC_LONGEST      = 0x80, MEXEC_UTF          = 0x100, MEXEC_UCP          = 0x200, MEXEC_NOSUB        = 0x400,
-	MEXEC_ANYCRLF      = 0x800, MEXEC_PARTSOFT     = 0x1000, MEXEC_PARTHARD     = 0x2000, MEXEC_NOOPTIM      = 0x4000,
-	MEXEC_JIT          = 0x8000,
+	MEXEC_DEFAULT   = 0,      MEXEC_ICASE      = 0x01,    MEXEC_NEWLINE    = 0x02,    MEXEC_NOTBOL    = 0x04,
+	MEXEC_NOTEOL    = 0x08,   MEXEC_DOTALL     = 0x10,    MEXEC_MULTILINE  = 0x20,    MEXEC_UNGREEDY  = 0x40,
+	MEXEC_LONGEST   = 0x80,   MEXEC_UTF        = 0x100,   MEXEC_UCP        = 0x200,   MEXEC_NOSUB     = 0x400,
+	MEXEC_ANYCRLF   = 0x800,  MEXEC_PARTSOFT   = 0x1000,  MEXEC_PARTHARD   = 0x2000,  MEXEC_NOOPTIM   = 0x4000,
+	MEXEC_JIT       = 0x8000,
 } mexec_flag_t;
 
 #define MCOMP_RE2        (MCOMP_ANCHOR|MCOMP_ALTERN|MCOMP_QUANT|MCOMP_ESCAPE|MCOMP_BOUNDARY)
@@ -194,12 +194,7 @@ static inline uint32_t __jacl_match_utf8_next(const char **p, const char *end) {
 static inline int __jacl_match_fold(uint32_t cp, uint32_t m, int ic) {
 	if (cp == m) return 1;
 	if (!ic) return 0;
-	if (cp < 128 && m < 128) {
-		if (cp >= 'A' && cp <= 'Z' && cp + 32 == m) return 1;
-		if (m >= 'A' && m <= 'Z' && m + 32 == cp) return 1;
-	} else {
-		if (towlower((wint_t)cp) == towlower((wint_t)m)) return 1;
-	}
+	if (towlower((wint_t)cp) == towlower((wint_t)m)) return 1;
 	return 0;
 }
 static inline int __jacl_match_is_word(uint32_t cp) {
@@ -323,8 +318,8 @@ static inline uint32_t __jacl_paren_recursion(match_parser_t *p) {
 static inline uint32_t __jacl_paren_flags(match_parser_t *p) {
 	uint8_t new_flags = p->eflags; int is_scope = 0;
 	while (1) { char c = *p->p;
-		if (c == 'i') { new_flags |= MEXEC_ICASE; p->p++; }
-		else if (c == 's') { new_flags |= MEXEC_DOTALL; p->p++; }
+		if (c == 'i' || c == 'I') { new_flags |= MEXEC_ICASE; p->p++; }
+		else if (c == 's' || c == 'S') { new_flags |= MEXEC_DOTALL; p->p++; }
 		else if (c == '-') { p->p++; if (*p->p == 'i') { new_flags &= ~MEXEC_ICASE; p->p++; } else if (*p->p == 's') { new_flags &= ~MEXEC_DOTALL; p->p++; } else JACL_PARSE_FAIL(p, M_BADPAT); }
 		else if (c == ':') { is_scope = 1; p->p++; break; }
 		else if (c == ')' || c == '\0') { if (c == ')') p->p++; break; }
@@ -478,7 +473,6 @@ static inline const char *__jacl_prim_CHAR(match_ctx_t *c, uint32_t n_idx, const
 	match_node_t *n = &c->m->arena[n_idx];
 	if (JACL_UNLIKELY(pos >= c->end)) return 0;
 	uint8_t b = (uint8_t)*pos;
-	if (extra && b >= 128) return 0;
 	if (b < 0x80) { if (__jacl_match_fold(b, n->val, c->ic)) return matchfind(c, n->b, pos+1); return 0; }
 	uint32_t cp = __jacl_match_utf8_next(&pos, c->end);
 	if (__jacl_match_fold(cp, n->val, c->ic)) return matchfind(c, n->b, pos);
@@ -683,7 +677,7 @@ static inline match_err_t matchcomp(matcher_t *restrict m, const char *pat, mcom
 	__jacl_match_node(&p, MTOK_END);
 	m->root = __jacl_match_expr(&p);
 	if (p.err) { __jacl_match_free_arena(m); return p.err; }
-	m->m_nsub = p.cap;
+	m->m_nsub = p.cap; m->eflags = p.eflags;
 	if (m->root && m->arena[m->root].type == MTOK_ALT) { m->nlit = 0; }
 	else {
 		m->nlit = 0;
@@ -699,7 +693,7 @@ static inline match_err_t matchexec(const matcher_t *restrict m, const char *s, 
 	__jacl_rep_ws_t rep_buffer;
 	match_ctx_t c = { m, s, end, local_caps, (m->eflags | fl) & MEXEC_ICASE, (m->eflags | fl) & MEXEC_NEWLINE, fl, 0, M_SUCCESS, &rep_buffer };
 	int anchored = (m->root && m->arena[m->root].type == MTOK_BOL);
-	const char *start = anchored ? s : matchgate(m, s, end, c.ic);
+	const char *start = (anchored || (m->eflags & MEXEC_ICASE)) ? s : matchgate(m, s, end, c.ic);
 	if (JACL_UNLIKELY(!start)) { return M_NOMATCH; }
 	for (; start <= end; start++) {
 		for(int i=0; i<MATCH_MAX_GROUPS * 2; i++) c.caps[i] = -1;
