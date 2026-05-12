@@ -737,6 +737,19 @@ TEST(edge_case_nested_duplocale) {
 	freelocale(l1);
 }
 
+TEST(edge_case_languages) {
+	#define X(LANG, name, ...) \
+	if (LANG != LANG_C) ASSERT_STR_EQ(name "_TR.UTF-8" , setlocale(LC_ALL, name "_TR.UTF-8"));
+	X_LANGUAGES
+	#undef X
+}
+
+TEST(edge_case_countries) {
+	#define X(CC, name, ...) \
+	if (CC != CC_NONE) ASSERT_STR_EQ("en_" name ".UTF-8" , setlocale(LC_ALL, "en_" name ".UTF-8"));
+	X_COUNTRIES
+	#undef X
+}
 /* ============================================================================ */
 
 TEST_MAIN()
