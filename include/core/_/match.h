@@ -106,17 +106,17 @@ typedef struct matcher {
 } matcher_t;
 
 typedef struct __jacl_rep_ws {
-    const char *path[MATCH_MAX_BACKTRACK];
-    matchoff_t cpath[MATCH_MAX_BACKTRACK][MATCH_MAX_GROUPS * 2];
+	const char *path[MATCH_MAX_BACKTRACK];
+	matchoff_t cpath[MATCH_MAX_BACKTRACK][MATCH_MAX_GROUPS * 2];
 } __jacl_rep_ws_t;
 
 typedef struct {
-    const matcher_t *m;
-    const char *s, *end;
-    matchoff_t *caps;
-    int ic, nl, ef, depth;
-    match_err_t error;
-    __jacl_rep_ws_t *rep_ws;
+	const matcher_t *m;
+	const char *s, *end;
+	matchoff_t *caps;
+	int ic, nl, ef, depth;
+	match_err_t error;
+	__jacl_rep_ws_t *rep_ws;
 } match_ctx_t;
 
 #define JACL_PARSE_FAIL(p, ERR) do { p->err = ERR; return 0; } while(0)
@@ -147,21 +147,18 @@ static inline uint32_t __jacl_match_node(match_parser_t *p, match_tok_t type) {
 	n->type = type; n->max = 255;
 	return idx;
 }
-
 static inline uint32_t __jacl_match_rep(match_parser_t *p, uint32_t body_idx, int min, int max, int lazy) {
 	uint32_t n = __jacl_match_node(p, MTOK_REP);
 	if (!n) return 0;
 	p->m->arena[n].a = body_idx; p->m->arena[n].min = min; p->m->arena[n].max = (max < 0) ? 255 : (uint8_t)max; p->m->arena[n].lazy = lazy ? 1 : 0; p->m->arena[n].eflags = p->m->arena[body_idx].eflags;
 	return n;
 }
-
 static inline void __jacl_match_free_arena(matcher_t *m) {
 	if (m->arena) free(m->arena);
 	for (int i = 0; i < m->nr; i++) if (m->cname[i]) free(m->cname[i]);
 	for (int i = 0; i < 32; i++) if (m->nsub_names[i]) free(m->nsub_names[i]);
 	memset(m, 0, sizeof(*m));
 }
-
 static inline uint32_t __jacl_match_term(match_parser_t *p) {
 	int stop = p->cflags & MCOMP_ALTERN;
 	uint32_t a = __jacl_match_atom(p), b;
@@ -172,7 +169,6 @@ static inline uint32_t __jacl_match_term(match_parser_t *p) {
 	}
 	return a;
 }
-
 static inline uint32_t __jacl_match_expr(match_parser_t *p) {
 	uint32_t a = __jacl_match_term(p), b;
 	if (!(p->cflags & MCOMP_ALTERN)) return a;
@@ -183,7 +179,6 @@ static inline uint32_t __jacl_match_expr(match_parser_t *p) {
 	}
 	return a;
 }
-
 static inline uint32_t __jacl_match_utf8_next(const char **p, const char *end) {
 	if (*p >= end) return 0xFFFD;
 	uint8_t b = (uint8_t)*(*p)++;
@@ -196,7 +191,6 @@ static inline uint32_t __jacl_match_utf8_next(const char **p, const char *end) {
 	while (len-- && *p < end) { cp = (cp << 6) | ((uint8_t)**p & 0x3F); (*p)++; }
 	return cp;
 }
-
 static inline int __jacl_match_fold(uint32_t cp, uint32_t m, int ic) {
 	if (cp == m) return 1;
 	if (!ic) return 0;
@@ -208,15 +202,13 @@ static inline int __jacl_match_fold(uint32_t cp, uint32_t m, int ic) {
 	}
 	return 0;
 }
-
 static inline int __jacl_match_is_word(uint32_t cp) {
 	if (cp < 128) {
 		return (cp >= 'a' && cp <= 'z') || (cp >= 'A' && cp <= 'Z') ||
-		       (cp >= '0' && cp <= '9') || (cp == '_');
+			   (cp >= '0' && cp <= '9') || (cp == '_');
 	}
 	return iswalnum((wint_t)cp) || cp == '_';
 }
-
 static inline void __jacl_match_add_range(matcher_t *m, uint32_t lo, uint32_t hi, uint8_t cid, uint8_t neg) {
 	if (lo > hi || m->nr >= 32) return;
 	if (lo >= 128) m->has_unicode = 1;
@@ -229,11 +221,9 @@ static inline void __jacl_match_add_range(matcher_t *m, uint32_t lo, uint32_t hi
 	}
 	m->rlo[m->nr] = lo; m->rhi[m->nr] = hi; m->rcid[m->nr] = cid; m->rneg[m->nr] = neg; m->cname[m->nr++] = 0;
 }
-
 static inline void __jacl_match_resolve_cclass(matcher_t *m, const char *nm, uint8_t cid, uint8_t neg) {
 	if (m->nr < 32) { m->rlo[m->nr] = 0; m->rhi[m->nr] = 0; m->rcid[m->nr] = cid; m->rneg[m->nr] = neg; m->cname[m->nr] = strdup(nm); m->nr++; m->has_unicode = 1; }
 }
-
 static inline int __jacl_match_in_class(const matcher_t *m, uint32_t cp, uint8_t cid, int ic) {
 	int found = 0, in_range = 0, neg = 0;
 	for (int i = 0; i < m->nr; i++) {
@@ -259,7 +249,6 @@ static inline int __jacl_parse_collating(match_parser_t *p, uint8_t cid, uint8_t
 	if (name[0] == '\0') JACL_PARSE_FAIL(p, M_ECOLLATE);
 	p->p += 2; __jacl_match_add_range(p->m, (uint8_t)name[0], (uint8_t)name[0], cid, neg); return 0;
 }
-
 static inline int __jacl_parse_equivalence(match_parser_t *p, uint8_t cid, uint8_t neg) {
 	p->p += 2; char name[16] = {0}; int i = 0;
 	while (*p->p && *p->p != '=' && *p->p != ']') { if (i < 15) name[i++] = *p->p; p->p++; }
@@ -267,7 +256,6 @@ static inline int __jacl_parse_equivalence(match_parser_t *p, uint8_t cid, uint8
 	if (name[0] == '\0') JACL_PARSE_FAIL(p, M_ECOLLATE);
 	p->p += 2; __jacl_match_add_range(p->m, (uint8_t)name[0], (uint8_t)name[0], cid, neg); return 0;
 }
-
 static inline int __jacl_parse_posix_class(match_parser_t *p, uint8_t cid, uint8_t neg) {
 	p->p += 2; char nm[16] = {0}; int i = 0;
 	while (*p->p && *p->p != ':' && *p->p != ']') { if (i < 15) nm[i++] = *p->p; p->p++; }
@@ -277,7 +265,11 @@ static inline int __jacl_parse_posix_class(match_parser_t *p, uint8_t cid, uint8
 	if (p->m->nr < 32) { p->m->rlo[p->m->nr] = 0; p->m->rhi[p->m->nr] = 0; p->m->rcid[p->m->nr] = cid; p->m->rneg[p->m->nr] = neg; p->m->cname[p->m->nr] = strdup(nm); p->m->nr++; p->m->has_unicode = 1; }
 	return 0;
 }
-
+static inline uint32_t __jacl_paren_look(match_parser_t *p, int is_lb, int is_neg) {
+	JACL_PARSE_FLAG(p, (is_lb ? MCOMP_LOOKBACK : MCOMP_LOOKFWD));
+	JACL_NODE_FLAGS(n, MTOK_LOOK); p->p += (p->m->arena[n].cap_id = is_lb) ? 2 : 1; p->m->arena[n].neg = is_neg ? 1 : 0; p->m->arena[n].a = __jacl_match_expr(p);
+	JACL_PARSE_PAREN(p); return n;
+}
 static inline uint32_t __jacl_paren_call(match_parser_t *p, int is_named) {
 	p->p++; int id = 0;
 	if (is_named) {
@@ -290,7 +282,6 @@ static inline uint32_t __jacl_paren_call(match_parser_t *p, int is_named) {
 	}
 	JACL_NODE_FLAGS(n, MTOK_CALL); p->m->arena[n].val = id; return n;
 }
-
 static inline uint32_t __jacl_paren_cond(match_parser_t *p) {
 	JACL_PARSE_FLAG(p, MCOMP_COND); p->p++; int cond_id = 0;
 	if (*p->p >= '0' && *p->p <= '9') { while (*p->p >= '0' && *p->p <= '9') cond_id = cond_id * 10 + (*p->p++ - '0'); }
@@ -302,7 +293,6 @@ static inline uint32_t __jacl_paren_cond(match_parser_t *p) {
 	JACL_PARSE_PAREN(p); uint32_t yes = __jacl_match_term(p), no = (*p->p == '|') ? (p->p++, __jacl_match_term(p)) : __jacl_match_node(p, MTOK_END);
 	JACL_NODE_FLAGS(n, MTOK_COND); p->m->arena[n].val = cond_id; p->m->arena[n].a = yes; p->m->arena[n].b = no; p->cap--; p->nsub--; JACL_PARSE_PAREN(p); return n;
 }
-
 static inline uint32_t __jacl_paren_branch_reset(match_parser_t *p) {
 	int reset = --p->cap, max_cap = reset, first = 1;
 	uint32_t head = 0; p->p++;
@@ -315,31 +305,21 @@ static inline uint32_t __jacl_paren_branch_reset(match_parser_t *p) {
 	} while (*p->p == '|' && !p->err && (p->p++));
 	p->cap = max_cap; JACL_PARSE_PAREN(p); return head;
 }
-
 static inline uint32_t __jacl_paren_named_cap(match_parser_t *p, int cap) {
 	JACL_PARSE_FLAG(p, MCOMP_NAMEREF); p->p++; JACL_PARSE_NAME(name, '>'); if (*p->p == '>') p->p++;
 	if (cap < 32) p->m->nsub_names[cap] = strdup(name);
 	JACL_NODE_FLAGS(n, MTOK_CAP); if (cap < 32) p->m->groups[cap] = n;
 	p->m->arena[n].cap_id = cap; p->m->arena[n].a = __jacl_match_expr(p); JACL_PARSE_PAREN(p); return n;
 }
-
-static inline uint32_t __jacl_paren_look(match_parser_t *p, int is_lb, int is_neg) {
-	JACL_PARSE_FLAG(p, (is_lb ? MCOMP_LOOKBACK : MCOMP_LOOKFWD));
-	JACL_NODE_FLAGS(n, MTOK_LOOK); p->p += (p->m->arena[n].cap_id = is_lb) ? 2 : 1; p->m->arena[n].neg = is_neg ? 1 : 0; p->m->arena[n].a = __jacl_match_expr(p);
-	JACL_PARSE_PAREN(p); return n;
-}
-
 static inline uint32_t __jacl_paren_atomic(match_parser_t *p) {
 	JACL_PARSE_FLAG(p, MCOMP_ATOMIC); p->p++; uint32_t inner = __jacl_match_expr(p); if (!inner) return 0;
 	JACL_NODE_FLAGS(n, MTOK_ATOMIC); p->m->arena[n].a = inner; JACL_PARSE_PAREN(p); return n;
 }
-
 static inline uint32_t __jacl_paren_recursion(match_parser_t *p) {
 	JACL_PARSE_FLAG(p, MCOMP_RECURSE);
 	if (p->p[1] == ')' || p->p[1] == '0') p->p += 2; else JACL_PARSE_FAIL(p, M_BADPAT);
 	JACL_NODE_FLAGS(n, MTOK_CALL); p->m->arena[n].val = 0; return n;
 }
-
 static inline uint32_t __jacl_paren_flags(match_parser_t *p) {
 	uint8_t new_flags = p->eflags; int is_scope = 0;
 	while (1) { char c = *p->p;
@@ -354,7 +334,6 @@ static inline uint32_t __jacl_paren_flags(match_parser_t *p) {
 	if (is_scope) { uint8_t saved = p->eflags; p->eflags = new_flags; uint32_t n = __jacl_match_expr(p); if (p->err) { p->eflags = saved; return 0; } p->eflags = saved; JACL_PARSE_PAREN(p); return n; }
 	else { p->eflags = new_flags; JACL_NODE(n, MTOK_END); return n; }
 }
-
 static inline uint32_t __jacl_paren_capture(match_parser_t *p, int cap) {
 	JACL_PARSE_FLAG(p, MCOMP_CAPTURE);
 	JACL_NODE_FLAGS(n, MTOK_CAP); if (cap < 32) p->m->groups[cap] = n;
@@ -379,7 +358,6 @@ static inline uint32_t __jacl_atom_paren(match_parser_t *p) {
 		default: return __jacl_paren_flags(p);
 	}
 }
-
 static inline uint32_t __jacl_atom_escape(match_parser_t *p) {
 	uint32_t n = 0; p->p++;
 	if (*p->p == 'k') {
@@ -432,7 +410,6 @@ static inline uint32_t __jacl_atom_escape(match_parser_t *p) {
 	}
 	n = __jacl_match_node(p, MTOK_CHAR); if (n) { p->m->arena[n].eflags = p->eflags; p->m->arena[n].val = __jacl_match_utf8_next(&p->p, p->end); if (p->m->arena[n].val >= 128) p->m->has_unicode = 1; } return n;
 }
-
 static inline uint32_t __jacl_atom_bracket(match_parser_t *p) {
 	p->p++; int neg = (*p->p == '^'); if (neg) p->p++; uint8_t cid = p->m->nr;
 	while (*p->p && *p->p != ']') {
@@ -454,7 +431,6 @@ static inline uint32_t __jacl_atom_bracket(match_parser_t *p) {
 	if (*p->p == ']') p->p++; else JACL_PARSE_FAIL(p, M_EBRACK);
 	JACL_NODE_FLAGS(n, MTOK_CLASS); p->m->arena[n].val = cid; p->m->arena[n].neg = neg; return n;
 }
-
 static inline uint32_t __jacl_atom_simple(match_parser_t *p) {
 	static const struct { char c; match_tok_t t; mcomp_flag_t flag; } map[] = {
 		{'.', MTOK_ANY, 0}, {'^', MTOK_BOL, MCOMP_ANCHOR}, {'$', MTOK_EOL, MCOMP_ANCHOR}
@@ -481,7 +457,6 @@ static inline void __jacl_match_quant(match_parser_t *p, uint32_t *n) {
 	if (*p->p == '+') { p->p++; uint32_t atomic = __jacl_match_node(p, MTOK_ATOMIC); if (atomic) { p->m->arena[atomic].a = rep; p->m->arena[atomic].eflags = p->m->arena[rep].eflags; *n = atomic; } }
 	else *n = rep;
 }
-
 static inline uint32_t __jacl_match_atom(match_parser_t *p) {
 	uint32_t n = 0;
 	switch (*p->p) {
@@ -499,7 +474,6 @@ static inline uint32_t __jacl_match_atom(match_parser_t *p) {
 /* ===================================================================== */
 
 static inline const char *__jacl_prim_END(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) { (void)n_idx; (void)extra; return pos; }
-
 static inline const char *__jacl_prim_CHAR(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	match_node_t *n = &c->m->arena[n_idx];
 	if (JACL_UNLIKELY(pos >= c->end)) return 0;
@@ -510,7 +484,6 @@ static inline const char *__jacl_prim_CHAR(match_ctx_t *c, uint32_t n_idx, const
 	if (__jacl_match_fold(cp, n->val, c->ic)) return matchfind(c, n->b, pos);
 	return 0;
 }
-
 static inline const char *__jacl_prim_CLASS(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	match_node_t *n = &c->m->arena[n_idx];
 	if (JACL_UNLIKELY(pos >= c->end)) return 0;
@@ -520,7 +493,6 @@ static inline const char *__jacl_prim_CLASS(match_ctx_t *c, uint32_t n_idx, cons
 	if (__jacl_match_in_class(c->m, cp, n->val, c->ic)) return matchfind(c, n->b, next);
 	return 0;
 }
-
 static inline const char *__jacl_prim_ANY(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	match_node_t *n = &c->m->arena[n_idx];
 	(void)extra;
@@ -531,37 +503,33 @@ static inline const char *__jacl_prim_ANY(match_ctx_t *c, uint32_t n_idx, const 
 	while (b >= 0x80 && next < c->end && JACL_UTF8_CONT(next)) next++;
 	return matchfind(c, n->b, next);
 }
-
-#define JACL_PRIM_ANCHOR(name, cond, eflag) static inline const char *__jacl_prim_##name(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) { \
-	(void)n_idx; (void)extra; \
-	if (c->ef & eflag) return 0; \
-	if (cond) return matchfind(c, c->m->arena[n_idx].b, pos); \
-	return 0; \
+static inline const char *__jacl_prim_BOL(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
+	(void)n_idx; (void)extra;
+	if (c->ef & MEXEC_NOTBOL) return 0;
+	return (pos == c->s || (c->nl && pos > c->s && *(pos-1) == '\n')) ? matchfind(c, c->m->arena[n_idx].b, pos) : 0;
 }
-
-JACL_PRIM_ANCHOR(BOL, pos == c->s || (c->nl && pos > c->s && *(pos-1) == '\n'), MEXEC_NOTBOL)
-JACL_PRIM_ANCHOR(EOL, pos == c->end || (c->nl && pos < c->end && *pos == '\n'), MEXEC_NOTEOL)
-
-#define JACL_PRIM_CAP static inline const char *__jacl_prim_CAP(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) { \
-	match_node_t *n = &c->m->arena[n_idx]; \
-	int idx = n->cap_id * 2; \
-	if (idx + 1 >= MATCH_MAX_GROUPS * 2) { c->error = M_EINTERNAL; return 0; } \
-	matchoff_t sv_so = c->caps[idx], sv_eo = c->caps[idx+1]; \
-	c->caps[idx] = pos - c->s; \
-	const char *r = matchfind(c, n->a, pos); \
-	if (JACL_UNLIKELY(c->error != M_SUCCESS || !r)) { c->caps[idx] = sv_so; c->caps[idx+1] = sv_eo; return 0; } \
-	if (r) { \
-		c->caps[idx+1] = r - c->s; \
-		const char *res = matchfind(c, n->b, r); \
-		if (JACL_UNLIKELY(!res)) { c->caps[idx] = sv_so; c->caps[idx+1] = sv_eo; } \
-		return res; \
-	} \
-	c->caps[idx] = sv_so; c->caps[idx+1] = sv_eo; \
-	return 0; \
+static inline const char *__jacl_prim_EOL(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
+	(void)n_idx; (void)extra;
+	if (c->ef & MEXEC_NOTEOL) return 0;
+	return (pos == c->end || (c->nl && pos < c->end && *pos == '\n')) ? matchfind(c, c->m->arena[n_idx].b, pos) : 0;
 }
-
-JACL_PRIM_CAP
-
+static inline const char *__jacl_prim_CAP(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
+	match_node_t *n = &c->m->arena[n_idx];
+	int idx = n->cap_id * 2;
+	if (idx + 1 >= MATCH_MAX_GROUPS * 2) { c->error = M_EINTERNAL; return 0; }
+	matchoff_t sv_so = c->caps[idx], sv_eo = c->caps[idx+1];
+	c->caps[idx] = pos - c->s;
+	const char *r = matchfind(c, n->a, pos);
+	if (JACL_UNLIKELY(c->error != M_SUCCESS || !r)) { c->caps[idx] = sv_so; c->caps[idx+1] = sv_eo; return 0; }
+	if (r) {
+		c->caps[idx+1] = r - c->s;
+		const char *res = matchfind(c, n->b, r);
+		if (JACL_UNLIKELY(!res)) { c->caps[idx] = sv_so; c->caps[idx+1] = sv_eo; }
+		return res;
+	}
+	c->caps[idx] = sv_so; c->caps[idx+1] = sv_eo;
+	return 0;
+}
 static inline const char *__jacl_prim_SEQ(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	(void)extra;
 	while (n_idx && c->m->arena[n_idx].type == MTOK_SEQ) {
@@ -573,7 +541,6 @@ static inline const char *__jacl_prim_SEQ(match_ctx_t *c, uint32_t n_idx, const 
 	}
 	return matchfind(c, n_idx, pos);
 }
-
 static inline const char *__jacl_prim_ALT(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	(void)extra;
 	match_node_t *n = &c->m->arena[n_idx];
@@ -585,12 +552,11 @@ static inline const char *__jacl_prim_ALT(match_ctx_t *c, uint32_t n_idx, const 
 	memcpy(c->caps, sc, sizeof(sc));
 	return matchfind(c, n->b, pos);
 }
-
 static inline const char *__jacl_prim_REP(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	(void)extra;
 	match_node_t *n = &c->m->arena[n_idx];
-    const char **path = c->rep_ws->path;
-    matchoff_t (*cpath)[MATCH_MAX_GROUPS * 2] = c->rep_ws->cpath;
+	const char **path = c->rep_ws->path;
+	matchoff_t (*cpath)[MATCH_MAX_GROUPS * 2] = c->rep_ws->cpath;
 	int k = 0; path[0] = pos; memcpy(cpath[0], c->caps, sizeof(cpath[0]));
 	while (k < MATCH_MAX_BACKTRACK - 1 && (n->max == 255 || k < n->max)) {
 		memcpy(cpath[k+1], c->caps, sizeof(cpath[0]));
@@ -606,7 +572,6 @@ static inline const char *__jacl_prim_REP(match_ctx_t *c, uint32_t n_idx, const 
 	}
 	return 0;
 }
-
 static inline const char *__jacl_prim_LOOK(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	match_node_t *n = &c->m->arena[n_idx];
 	matchoff_t scap[MATCH_MAX_GROUPS * 2]; memcpy(scap, c->caps, sizeof(scap));
@@ -623,7 +588,6 @@ static inline const char *__jacl_prim_LOOK(match_ctx_t *c, uint32_t n_idx, const
 	if ((is_neg ? !found : found)) return matchfind(c, n->b, pos);
 	return 0;
 }
-
 static inline const char *__jacl_prim_BACKREF(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	(void)extra;
 	match_node_t *n = &c->m->arena[n_idx];
@@ -638,7 +602,6 @@ static inline const char *__jacl_prim_BACKREF(match_ctx_t *c, uint32_t n_idx, co
 	if (ref_start != ref_end) return 0;
 	return matchfind(c, n->b, curr);
 }
-
 static inline const char *__jacl_prim_ATOMIC(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	(void)extra;
 	match_node_t *n = &c->m->arena[n_idx];
@@ -647,7 +610,6 @@ static inline const char *__jacl_prim_ATOMIC(match_ctx_t *c, uint32_t n_idx, con
 	if (n->b) return matchfind(c, n->b, r);
 	return r;
 }
-
 static inline const char *__jacl_prim_COND(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	(void)extra;
 	match_node_t *n = &c->m->arena[n_idx];
@@ -656,7 +618,6 @@ static inline const char *__jacl_prim_COND(match_ctx_t *c, uint32_t n_idx, const
 	if (b) return matchfind(c, b, pos);
 	return pos;
 }
-
 static inline const char *__jacl_prim_WB(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	match_node_t *n = &c->m->arena[n_idx];
 	int neg = (int)extra, prev = 0, curr = 0;
@@ -666,15 +627,12 @@ static inline const char *__jacl_prim_WB(match_ctx_t *c, uint32_t n_idx, const c
 	if (neg ? (prev == curr) : (prev != curr)) return matchfind(c, n->b, pos);
 	return 0;
 }
-
 static inline const char *__jacl_prim_NWB(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) { return __jacl_prim_WB(c, n_idx, pos, 1); }
-
 static inline const char *__jacl_prim_FLAGS(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	(void)extra;
 	match_node_t *n = &c->m->arena[n_idx];
 	return matchfind(c, n->a, pos);
 }
-
 static inline const char *__jacl_prim_CALL(match_ctx_t *c, uint32_t n_idx, const char *pos, uint32_t extra) {
 	(void)extra;
 	match_node_t *n = &c->m->arena[n_idx];
@@ -696,7 +654,6 @@ static inline const char *matchfind(match_ctx_t *c, uint32_t n_idx, const char *
 	c->depth--;
 	return 0;
 }
-
 static inline const char *matchgate(const matcher_t *m, const char *s, const char *end, int ic) {
 	if (!m->nlit) return s;
 	if (m->nlit == 1) {
@@ -719,7 +676,6 @@ static inline const char *matchgate(const matcher_t *m, const char *s, const cha
 	}
 	return NULL;
 }
-
 static inline match_err_t matchcomp(matcher_t *restrict m, const char *pat, mcomp_flag_t fl) {
 	memset(m, 0, sizeof(*m));
 	m->cflags = fl;
@@ -738,46 +694,28 @@ static inline match_err_t matchcomp(matcher_t *restrict m, const char *pat, mcom
 	}
 	return M_SUCCESS;
 }
-
 static inline match_err_t matchexec(const matcher_t *restrict m, const char *s, const char *end, match_find_t *pm, size_t nm, mexec_flag_t fl) {
-    matchoff_t local_caps[MATCH_MAX_GROUPS * 2];
-    __jacl_rep_ws_t rep_buffer;
-
-    match_ctx_t c = { .m = m, .s = s, .end = end, .caps = local_caps,
-        .ic = (m->eflags | fl) & MEXEC_ICASE, .nl = (m->eflags | fl) & MEXEC_NEWLINE,
-        .ef = fl, .depth = 0, .error = M_SUCCESS, .rep_ws = &rep_buffer };
-
-    int anchored = (m->root && m->arena[m->root].type == MTOK_BOL);
-    const char *start = anchored ? s : matchgate(m, s, end, c.ic);
-
-    if (JACL_UNLIKELY(!start)) { return M_NOMATCH; }
-
-    for (; start <= end; start++) {
-        for(int i=0; i<MATCH_MAX_GROUPS * 2; i++) c.caps[i] = -1;
-
-        /* FIX #2: Depth check before recursive descent with branch hint */
-        if (JACL_UNLIKELY(c.depth > MATCH_MAX_DEPTH)) {
-            c.error = M_EDEPTH;
-            break;
-        }
-
-        const char *r = matchfind(&c, m->root, start);
-        if (c.error == M_EDEPTH) break;
-        if (JACL_UNLIKELY(!r)) { if (anchored) break; continue; }
-
-        if (pm && nm > 0) {
-            pm[0].rm_so = start - s; pm[0].rm_eo = r - s;
-            for (size_t i = 1; i < nm; i++) { pm[i].rm_so = c.caps[i*2]; pm[i].rm_eo = c.caps[i*2+1]; }
-        }
-        return M_SUCCESS;
-    }
-
-		return c.error != M_SUCCESS ? c.error : M_NOMATCH;
+	matchoff_t local_caps[MATCH_MAX_GROUPS * 2];
+	__jacl_rep_ws_t rep_buffer;
+	match_ctx_t c = { m, s, end, local_caps, (m->eflags | fl) & MEXEC_ICASE, (m->eflags | fl) & MEXEC_NEWLINE, fl, 0, M_SUCCESS, &rep_buffer };
+	int anchored = (m->root && m->arena[m->root].type == MTOK_BOL);
+	const char *start = anchored ? s : matchgate(m, s, end, c.ic);
+	if (JACL_UNLIKELY(!start)) { return M_NOMATCH; }
+	for (; start <= end; start++) {
+		for(int i=0; i<MATCH_MAX_GROUPS * 2; i++) c.caps[i] = -1;
+		if (JACL_UNLIKELY(c.depth > MATCH_MAX_DEPTH)) { c.error = M_EDEPTH; break; }
+		const char *r = matchfind(&c, m->root, start);
+		if (c.error == M_EDEPTH) break;
+		if (JACL_UNLIKELY(!r)) { if (anchored) break; continue; }
+		if (pm && nm > 0) {
+			pm[0].rm_so = start - s; pm[0].rm_eo = r - s;
+			for (size_t i = 1; i < nm; i++) { pm[i].rm_so = c.caps[i*2]; pm[i].rm_eo = c.caps[i*2+1]; }
+		}
+		return M_SUCCESS;
+	}
+	return c.error != M_SUCCESS ? c.error : M_NOMATCH;
 }
-
-static inline void matchfree(matcher_t *restrict m) {
-	__jacl_match_free_arena(m);
-}
+static inline void matchfree(matcher_t *restrict m) { __jacl_match_free_arena(m); }
 
 #ifdef __cplusplus
 }
