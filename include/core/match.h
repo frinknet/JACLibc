@@ -1,123 +1,16 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
-#ifndef _CORE__MATCH_H
-#define _CORE__MATCH_H
+#ifndef _CORE_MATCH_H
+#define _CORE_MATCH_H
 
 #include <config.h>
 #include <wctype.h>
 #include <string.h>
 #include <stdlib.h>
-
-#ifndef MATCH_MAX_GROUPS
-#define MATCH_MAX_GROUPS 32
-#endif
-
-#ifndef MATCH_MAX_DEPTH
-#define MATCH_MAX_DEPTH 2000
-#endif
-
-#ifndef MATCH_MAX_BACKTRACK
-#define MATCH_MAX_BACKTRACK 255
-#endif
+#include <regex.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef long matchoff_t;
-typedef struct matcher matcher_t;
-
-typedef enum {
-	MTOK_END, MTOK_CHAR, MTOK_CLASS, MTOK_ANY, MTOK_BOL, MTOK_EOL, MTOK_CAP, MTOK_ALT, MTOK_SEQ, MTOK_REP,
-	MTOK_LOOK, MTOK_BACKREF, MTOK_WB, MTOK_NWB, MTOK_FLAGS, MTOK_ATOMIC, MTOK_COND, MTOK_CALL
-} match_tok_t;
-
-typedef enum {
-	M_SUCCESS     = 0,    M_NOMATCH     = 1,   M_BADPAT      = 2,   M_EESCAPE     = 5,    M_ESUBMATCH   = 6,
-	M_EBRACK      = 7,    M_EPAREN      = 8,   M_ECOLLATE    = 9,   M_ECTYPE      = 10,   M_BADBR      = 11,
-	M_EBRACE      = 12,   M_ERANGE     = 13,   M_BADRPT     = 14,   M_ESPACE      = 15,   M_EDEPTH     = 16,
-	M_EFLAGS      = 17,   M_EINTERNAL  = 18,   M_EUNSAFE    = 19,   M_ECALL       = 20,   M_ECOND      = 21,
-	M_ELOOK       = 22,   M_EVERB      = 23,   M_LAST       = 24
-} match_err_t;
-
-typedef enum {
-	MCOMP_ANCHOR    = 0x01,    MCOMP_ALTERN    = 0x02,    MCOMP_QUANT      = 0x04,    MCOMP_ESCAPE     = 0x08,
-	MCOMP_BOUNDARY  = 0x10,    MCOMP_ABSOLUTE  = 0x20,    MCOMP_UNGREEDY   = 0x40,    MCOMP_CAPTURE    = 0x100,
-	MCOMP_BACKREF   = 0x200,   MCOMP_NAMEREF   = 0x400,   MCOMP_RECURSE    = 0x800,   MCOMP_LOOKFWD    = 0x1000,
-	MCOMP_LOOKBACK  = 0x2000,  MCOMP_ATOMIC    = 0x4000,  MCOMP_COND       = 0x8000,  MCOMP_CALLOUT    = 0x10000,
-	MCOMP_VERB      = 0x20000,
-} mcomp_flag_t;
-
-typedef enum {
-	MEXEC_DEFAULT   = 0,      MEXEC_ICASE      = 0x01,    MEXEC_NEWLINE    = 0x02,    MEXEC_NOTBOL    = 0x04,
-	MEXEC_NOTEOL    = 0x08,   MEXEC_DOTALL     = 0x10,    MEXEC_MULTILINE  = 0x20,    MEXEC_UNGREEDY  = 0x40,
-	MEXEC_LONGEST   = 0x80,   MEXEC_UTF        = 0x100,   MEXEC_UCP        = 0x200,   MEXEC_NOSUB     = 0x400,
-	MEXEC_ANYCRLF   = 0x800,  MEXEC_PARTSOFT   = 0x1000,  MEXEC_PARTHARD   = 0x2000,  MEXEC_NOOPTIM   = 0x4000,
-	MEXEC_JIT       = 0x8000,
-} mexec_flag_t;
-
-#define MCOMP_RE2        (MCOMP_ANCHOR|MCOMP_ALTERN|MCOMP_QUANT|MCOMP_ESCAPE|MCOMP_BOUNDARY)
-#define MCOMP_BASIC      (MCOMP_RE2|MCOMP_CAPTURE|MCOMP_BACKREF|MCOMP_UNGREEDY)
-#define MCOMP_EXTENDED   (MCOMP_RE2|MCOMP_CAPTURE|MCOMP_UNGREEDY)
-#define MCOMP_PCRE2      (MCOMP_BASIC|MCOMP_NAMEREF|MCOMP_LOOKFWD|MCOMP_LOOKBACK|MCOMP_ATOMIC|MCOMP_COND|MCOMP_RECURSE|MCOMP_VERB)
-#define MEXEC_RE2        (MEXEC_UTF|MEXEC_NOOPTIM)
-#define MEXEC_POSIX      (MEXEC_LONGEST)
-#define MEXEC_PCRE2      (MEXEC_DOTALL|MEXEC_UNGREEDY|MEXEC_UTF|MEXEC_UCP)
-
-typedef struct match_node {
-	match_tok_t type;
-	uint32_t val;
-	uint32_t a, b;
-	uint8_t neg, cap_id, min, max, lazy;
-	mexec_flag_t eflags;
-} match_node_t;
-
-typedef struct match_parser {
-	const char *p, *end;
-	matcher_t *m;
-	int err, cap, nsub;
-	mcomp_flag_t cflags;
-	mexec_flag_t eflags;
-} match_parser_t;
-
-typedef struct match_find {
-	matchoff_t rm_so;
-	matchoff_t rm_eo;
-} match_find_t;
-
-typedef struct matcher {
-	size_t m_nsub;
-	mcomp_flag_t cflags;
-	mexec_flag_t eflags;
-	uint8_t nlit;
-	char lit[32];
-	uint32_t root;
-	int nr;
-	uint32_t rlo[32];
-	uint32_t rhi[32];
-	uint8_t rcid[32];
-	uint8_t rneg[32];
-	char *cname[32];
-	char *nsub_names[32];
-	uint32_t groups[32];
-	uint8_t has_unicode;
-	match_node_t *arena;
-	uint32_t count;
-	uint32_t capacity;
-} matcher_t;
-
-typedef struct __jacl_rep_ws {
-	const char *path[MATCH_MAX_BACKTRACK];
-	matchoff_t cpath[MATCH_MAX_BACKTRACK][MATCH_MAX_GROUPS * 2];
-} __jacl_rep_ws_t;
-
-typedef struct {
-	const matcher_t *m;
-	const char *s, *end;
-	matchoff_t *caps;
-	int ic, nl, ef, depth;
-	match_err_t error;
-	__jacl_rep_ws_t *rep_ws;
-} match_ctx_t;
 
 #define JACL_PARSE_FAIL(p, ERR) do { p->err = ERR; return 0; } while(0)
 #define JACL_PARSE_FLAG(p, FET) if (!(p->cflags & FET)) JACL_PARSE_FAIL(p, M_BADPAT);
@@ -664,7 +557,7 @@ static inline const char *matchgate(const matcher_t *m, const char *s, const cha
 	}
 	return NULL;
 }
-static inline match_err_t matchcomp(matcher_t *restrict m, const char *pat, mcomp_flag_t fl) {
+match_err_t matchcomp(matcher_t *restrict m, const char *pat, mcomp_flag_t fl) {
 	memset(m, 0, sizeof(*m));
 	m->cflags = fl;
 	match_parser_t p = {pat, pat+strlen(pat), m, 0, 0, 0, fl, 0};
@@ -682,7 +575,7 @@ static inline match_err_t matchcomp(matcher_t *restrict m, const char *pat, mcom
 	}
 	return M_SUCCESS;
 }
-static inline match_err_t matchexec(const matcher_t *restrict m, const char *s, const char *end, match_find_t *pm, size_t nm, mexec_flag_t fl) {
+match_err_t matchexec(const matcher_t *restrict m, const char *s, const char *end, match_find_t *pm, size_t nm, mexec_flag_t fl) {
 	matchoff_t local_caps[MATCH_MAX_GROUPS * 2];
 	__jacl_rep_ws_t rep_buffer;
 	match_ctx_t c = { m, s, end, local_caps, (m->eflags | fl) & MEXEC_ICASE, (m->eflags | fl) & MEXEC_NEWLINE, fl, 0, M_SUCCESS, &rep_buffer };
@@ -703,10 +596,10 @@ static inline match_err_t matchexec(const matcher_t *restrict m, const char *s, 
 	}
 	return c.error != M_SUCCESS ? c.error : M_NOMATCH;
 }
-static inline void matchfree(matcher_t *restrict m) { __jacl_match_free_arena(m); }
+void matchfree(matcher_t *restrict m) { __jacl_match_free_arena(m); }
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _CORE__MATCH_H */
+#endif /* _CORE_MATCH_H */
