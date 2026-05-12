@@ -133,6 +133,7 @@ static inline uint32_t __jacl_match_atom(match_parser_t *p);
 static inline const char *matchfind(match_ctx_t *c, uint32_t n_idx, const char *pos);
 static inline const char *matchgate(const matcher_t *m, const char *s, const char *end, int ic);
 
+static inline int __jacl_match_is_word(uint32_t cp) { return iswalnum((wint_t)cp) || cp == '_'; }
 static inline uint32_t __jacl_match_node(match_parser_t *p, match_tok_t type) {
 	if (p->m->count >= p->m->capacity) {
 		uint32_t new_cap = p->m->capacity ? p->m->capacity * 2 : 16;
@@ -196,13 +197,6 @@ static inline int __jacl_match_fold(uint32_t cp, uint32_t m, int ic) {
 	if (!ic) return 0;
 	if (towlower((wint_t)cp) == towlower((wint_t)m)) return 1;
 	return 0;
-}
-static inline int __jacl_match_is_word(uint32_t cp) {
-	if (cp < 128) {
-		return (cp >= 'a' && cp <= 'z') || (cp >= 'A' && cp <= 'Z') ||
-			   (cp >= '0' && cp <= '9') || (cp == '_');
-	}
-	return iswalnum((wint_t)cp) || cp == '_';
 }
 static inline void __jacl_match_add_range(matcher_t *m, uint32_t lo, uint32_t hi, uint8_t cid, uint8_t neg) {
 	if (lo > hi || m->nr >= 32) return;
