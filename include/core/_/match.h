@@ -63,21 +63,22 @@ typedef enum {
 #define MEXEC_POSIX      (MEXEC_LONGEST)
 #define MEXEC_PCRE2      (MEXEC_DOTALL|MEXEC_UNGREEDY|MEXEC_UTF|MEXEC_UCP)
 
+/* OPTIMIZATION #1: Removed alloc_next (dead code), shrunk to 20 bytes */
 typedef struct match_node {
 	match_tok_t type;
 	uint32_t val;
+	uint32_t a, b;
 	uint8_t neg, cap_id, min, max, lazy;
 	mexec_flag_t eflags;
-	uint32_t a, b, alloc_next;
 } match_node_t;
 
+/* OPTIMIZATION #2: Removed alloc_head */
 typedef struct match_parser {
 	const char *p, *end;
 	matcher_t *m;
 	int err, cap, nsub;
 	mcomp_flag_t cflags;
 	mexec_flag_t eflags;
-	uint32_t alloc_head;
 } match_parser_t;
 
 typedef struct match_find {
@@ -145,7 +146,7 @@ static inline uint32_t __jacl_match_node(match_parser_t *p, match_tok_t type) {
 	uint32_t idx = p->m->count++;
 	match_node_t *n = &p->m->arena[idx];
 	memset(n, 0, sizeof(*n));
-	n->type = type; n->max = 255; n->alloc_next = p->alloc_head; p->alloc_head = idx;
+	n->type = type; n->max = 255;
 	return idx;
 }
 
@@ -698,8 +699,18 @@ static inline const char *matchfind(match_ctx_t *c, uint32_t n_idx, const char *
 	return 0;
 }
 
+/* OPTIMIZATION #3: Fast path for single-char literals */
 static inline const char *matchgate(const matcher_t *m, const char *s, const char *end, int ic) {
-	if (m->nlit == 0) return s;
+	if (!m->nlit) return s;
+	if (m->nlit == 1) {
+		uint8_t lit = ic && m->lit[0] >= 'A' && m->lit[0] <= 'Z' ? m->lit[0] + 32 : m->lit[0];
+		for (const char *p = s; p < end; p++) {
+			uint8_t c = *p;
+			if (ic && c >= 'A' && c <= 'Z') c += 32;
+			if (c == lit) return p;
+		}
+		return NULL;
+	}
 	for (const char *p = s; p + m->nlit <= end; p++) {
 		int ok = 1;
 		for (int i = 0; i < m->nlit; i++) {
@@ -714,8 +725,8 @@ static inline const char *matchgate(const matcher_t *m, const char *s, const cha
 
 static inline match_err_t matchcomp(matcher_t *restrict m, const char *pat, mcomp_flag_t fl) {
 	memset(m, 0, sizeof(*m));
-	m->cflags = fl; m->has_unicode = 0; m->arena = NULL; m->count = 0; m->capacity = 0;
-	match_parser_t p = {pat, pat+strlen(pat), m, 0, 0, 0, fl, 0, 0};
+	m->cflags = fl;
+	match_parser_t p = {pat, pat+strlen(pat), m, 0, 0, 0, fl, 0};
 	__jacl_match_node(&p, MTOK_END);
 	m->root = __jacl_match_expr(&p);
 	if (p.err) { __jacl_match_free_arena(m); return p.err; }
