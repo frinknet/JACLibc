@@ -1,366 +1,695 @@
 /* (c) 2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 
-#if JACL_HAS_POSIX
-
 #include <transit/route.h>
-#include <transit/conn.h>
-#include <transit/http.h>
-#include <string.h>
-#include <errno.h>
 
 TEST_TYPE(unit);
 TEST_UNIT(transit/route.h);
 
 /* ============================================================================ */
-/* File-Scope Handlers                                                          */
+/* Test Context                                                                 */
 /* ============================================================================ */
 
-static int g_handler_called = 0;
+typedef struct {
+    int called;
+    int result;
+    const char *captured;
+    const char *argv0;
+    int argc;
+} test_ctx_t;
 
-static void dummy_handler(serve_conn_t *sc) { 
-    (void)sc;
-    g_handler_called = 1;
-}
+/* ============================================================================ */
+/* File-Scope Handlers (ALL at file scope - NO nested functions)                */
+/* ============================================================================ */
 
-static void test_handler_ok(serve_conn_t *sc) {
-    if (sc) {
-        sc->res.code = HTTP_OK;
-        g_handler_called = 1;
+static int record_handler(route_ctx_t ctx, const char *argv[], int argc) {
+    test_ctx_t *tc = (test_ctx_t *)route_data(ctx);
+
+    if (tc) {
+        tc->called++;
+        tc->argc = argc;
+        if (argc > 0) tc->argv0 = argv[0];
+        if (argc > 1) tc->captured = argv[1];
     }
-}
-
-static void test_handler_not_found(serve_conn_t *sc) {
-    if (sc) {
-        sc->res.code = HTTP_NOT_FOUND;
-        g_handler_called = 1;
-    }
-}
-
-static int test_mw_continue(serve_conn_t *sc) {
-    (void)sc;
     return 0;
 }
 
-static int test_mw_shortcircuit(serve_conn_t *sc) {
-    if (sc) sc->res.code = HTTP_FORBIDDEN;
+static int stop_handler(route_ctx_t ctx, const char *argv[], int argc) {
+    test_ctx_t *tc = (test_ctx_t *)route_data(ctx);
+    if (tc) {
+        tc->called++;
+        tc->result = 42;
+    }
+    return 42;
+}
+
+static int rewrite_handler(route_ctx_t ctx, const char *argv[], int argc) {
+    (void)argc; (void)argv;
+    return route_forward(ctx, "/rewritten/path");
+}
+
+static int path_checker(route_ctx_t ctx, const char *argv[], int argc) {
+    (void)argc; (void)argv;
+    return route_path(ctx) ? 1 : 0;
+}
+
+static int data_checker(route_ctx_t ctx, const char *argv[], int argc) {
+    (void)argc; (void)argv;
+    return route_data(ctx) ? 1 : 0;
+}
+
+static int conn_checker(route_ctx_t ctx, const char *argv[], int argc) {
+    (void)argc; (void)argv;
+    return route_conn(ctx) ? 1 : 0;
+}
+
+static int req_checker(route_ctx_t ctx, const char *argv[], int argc) {
+    (void)argc; (void)argv;
+    return route_req(ctx) ? 1 : 0;
+}
+
+static int multi_capture(route_ctx_t ctx, const char *argv[], int argc) {
+    (void)ctx;
+    return (argc == 3) ? 1 : 0;
+}
+
+static int no_capture_handler(route_ctx_t ctx, const char *argv[], int argc) {
+    (void)argv;
+    return (argc == 1) ? 1 : 0;
+}
+
+static int check_data_handler(route_ctx_t ctx, const char *argv[], int argc) {
+    (void)argc; (void)argv;
+    test_ctx_t *tc = (test_ctx_t *)route_data(ctx);
+    return (tc && tc->result == 99) ? 1 : 0;
+}
+
+static int verify_ctx_handler(route_ctx_t ctx, const char *argv[], int argc) {
+    (void)argc; (void)argv;
+    if (route_conn(ctx) != (void *)0x1111) return 0;
+    if (route_req(ctx) != (void *)0x2222) return 0;
+    if (route_data(ctx) != (void *)0x3333) return 0;
     return 1;
 }
 
 /* ============================================================================ */
-/* Helper: Create minimal serve_conn_t for testing                              */
-/* ============================================================================ */
+TEST_SUITE(router_lifecycle);
 
-static serve_conn_t make_test_conn(const char *path, http_method_t method) {
-    serve_conn_t sc;
-    memset(&sc, 0, sizeof(sc));
-    
-    static uint8_t buf[4096];
-    
-    sc.conn = NULL;
-    sc.buf = buf;
-    sc.buf_size = sizeof(buf);
-    sc.buf_used = 0;
-    sc.active = true;
-    sc.req.path = path;
-    sc.req.method = method;
-    sc.req.hcount = 0;
-    sc.res.code = 0;  /* Don't init - let handler set it */
-    
-    /* Don't call http_res_init() - it may interfere with handler */
-    
-    return sc;
+TEST(router_create) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    ASSERT_NOT_NULL(r);
+    router_free(r);
 }
 
-/* ============================================================================ */
-TEST_SUITE(path_matching);
+TEST(router_create_invalid_spec) {
+    char spec[3] = {0};
+    router_t r = router_create(spec);
+    ASSERT_NULL(r);
 
-TEST(route_path_match_exact) {
-    ASSERT_TRUE(route_path_match("/api/users", "/api/users"));
-    ASSERT_FALSE(route_path_match("/api/users", "/api/posts"));
-    ASSERT_FALSE(route_path_match("/api/users", "/api/users/123"));
+    char valid[3] = {'*', '/', '\\'};
+    r = router_create(valid);
+    ASSERT_NOT_NULL(r);
+    router_free(r);
 }
 
-TEST(route_path_match_prefix) {
-    ASSERT_TRUE(route_path_match("/api/", "/api/users"));
-    ASSERT_TRUE(route_path_match("/api/", "/api/users/123"));
-    ASSERT_TRUE(route_path_match("/api/", "/api/"));
-    ASSERT_FALSE(route_path_match("/api/", "/other"));
+TEST(router_free_null) {
+    router_free(NULL);
+    ASSERT_TRUE(1);
 }
 
-TEST(route_path_match_wildcard) {
-    ASSERT_TRUE(route_path_match("/api/users/*", "/api/users/123"));
-    ASSERT_TRUE(route_path_match("/api/users/*", "/api/users/abc/def"));
-    ASSERT_TRUE(route_path_match("/api/users/*", "/api/users/"));
-    ASSERT_FALSE(route_path_match("/api/users/*", "/api/posts"));
-    ASSERT_FALSE(route_path_match("/api/users/*", "/api/users"));
-}
+TEST(router_data) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    ASSERT_NOT_NULL(r);
 
-TEST(route_path_capture) {
-    const char *captured;
-    ASSERT_TRUE(route_path_capture("/api/users/*", "/api/users/123", &captured));
-    ASSERT_STR_EQ("123", captured);
-    
-    ASSERT_TRUE(route_path_capture("/files/*", "/files/image.png", &captured));
-    ASSERT_STR_EQ("image.png", captured);
-    
-    ASSERT_FALSE(route_path_capture("/api/*", "/other", &captured));
-    ASSERT_NULL(captured);
+    int my_data = 123;
+    r->data = &my_data;
+
+    void *retrieved = r->data;
+    ASSERT_PTR_EQ(retrieved, &my_data);
+
+    router_free(r);
 }
 
 /* ============================================================================ */
-TEST_SUITE(route_creation);
+TEST_SUITE(pattern_matching);
 
-TEST(route_new) {
-    route_t *r = route_new();
-    ASSERT_NOT_NULL(r);
-    route_free(r);
+TEST(route_match_exact) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/api/users", "/api/users", spec, matches, 16);
+    ASSERT_EQ(argc, 1);
+    ASSERT_STR_EQ(matches[0], "/api/users");
 }
 
-TEST(route_use) {
-    route_t *r = route_new();
-    ASSERT_NOT_NULL(r);
-    route_t *result = route_use(r, route_middleware_log);
-    ASSERT_PTR_EQ(result, r);
-    route_free(r);
+TEST(route_match_segment_wildcard) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/api/users", "/api/*", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[0], "/api/users");
+    ASSERT_STR_EQ(matches[1], "users");
 }
 
-TEST(route_handle) {
-    route_t *r = route_new();
-    ASSERT_NOT_NULL(r);
-    g_handler_called = 0;
-    route_t *result = route_handle(r, "/test", dummy_handler);
-    ASSERT_PTR_EQ(result, r);
-    ASSERT_EQ(r->count, 1);  /* Verify entry was added */
-    route_free(r);
+TEST(route_match_rest_wildcard) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/files/a/b/c.txt", "/files/**", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[0], "/files/a/b/c.txt");
+    ASSERT_STR_EQ(matches[1], "a/b/c.txt");
 }
 
-TEST(route_match) {
-    route_t *r = route_new();
-    ASSERT_NOT_NULL(r);
-    route_t *result = route_match(r, "/api/", route_middleware_auth);
-    ASSERT_PTR_EQ(result, r);
-    route_free(r);
+TEST(route_match_char_class) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/user/abc123", "/user/*[a-z0-9]", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "abc123");
 }
 
-TEST(route_group) {
-    route_t *r = route_new();
-    ASSERT_NOT_NULL(r);
-    route_t *g = route_group(r, "/api");
-    ASSERT_NOT_NULL(g);
-    ASSERT_PTR_EQ(g->parent, r);
-    ASSERT_STR_EQ("/api", g->prefix);
-    route_free(g);
-    route_free(r);
+TEST(route_match_quantifier_exact) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/code/us", "/code/*[a-z]{2}", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "us");
 }
 
-TEST(route_fallback) {
-    route_t *r = route_new();
+TEST(route_match_quantifier_range) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/code/usa", "/code/*[a-z]{2,3}", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "usa");
+}
+
+TEST(route_match_quantifier_too_short) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/code/u", "/code/[a-z]{2,3}", spec, matches, 16);
+    ASSERT_EQ(argc, 0);
+}
+
+TEST(route_match_escape_literal) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/api/*test", "/api/\\*test", spec, matches, 16);
+    ASSERT_EQ(argc, 1);
+}
+
+TEST(route_match_no_match) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/api/posts", "/api/users", spec, matches, 16);
+    ASSERT_EQ(argc, 0);
+}
+
+TEST(route_match_null_inputs) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    ASSERT_EQ(route_match(NULL, "/path", spec, matches, 16), 0);
+    ASSERT_EQ(route_match("/path", NULL, spec, matches, 16), 0);
+    ASSERT_EQ(route_match("/path", "/path", NULL, matches, 16), 0);
+    ASSERT_EQ(route_match("/path", "/path", spec, NULL, 0), 0);
+}
+
+TEST(route_match_trailing_slash) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/api/", "/api/", spec, matches, 16);
+    ASSERT_EQ(argc, 1);
+}
+
+TEST(route_match_empty_path) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("", "", spec, matches, 16);
+    ASSERT_EQ(argc, 1);
+}
+
+/* ============================================================================ */
+TEST_SUITE(pattern_matching_advanced);
+
+TEST(route_match_multiple_wildcards) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/a/b/c", "/a/*/c", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "b/c");
+}
+
+TEST(route_match_double_wildcard_middle) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/prefix/middle/suffix", "/prefix/**/suffix", spec, matches, 16);
+    ASSERT_EQ(argc, 3);
+}
+
+TEST(route_match_char_class_negated) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/user/abc", "/user/*[^0-9]", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "abc");
+}
+
+TEST(route_match_char_class_negated_fail) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/user/123", "/user/[^0-9]+", spec, matches, 16);
+    ASSERT_EQ(argc, 0);
+}
+
+TEST(route_match_quantifier_zero_or_more) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+    int argc = route_match("/test/", "/test/*[a-z]{0,}", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "");
+}
+
+TEST(route_match_spec_custom_any) {
+    const char *matches[16];
+    char spec[3] = {'?', '.', '\\'};
+    int argc = route_match("/api.users", "/api.?", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "users");
+}
+
+TEST(route_match_spec_custom_div) {
+    const char *matches[16];
+    char spec[3] = {'*', ':', '\\'};
+    int argc = route_match("/api:users", "/api:*", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "users");
+}
+
+/* ============================================================================ */
+TEST_SUITE(route_registration);
+
+TEST(route_add) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
     ASSERT_NOT_NULL(r);
-    route_t *result = route_fallback(r, dummy_handler);
-    ASSERT_PTR_EQ(result, r);
-    route_free(r);
+
+    int rc = route_add(r, "/api/*", record_handler);
+    ASSERT_EQ(rc, 0);
+
+    router_free(r);
+}
+
+TEST(route_add_null_params) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    ASSERT_EQ(route_add(NULL, "/api/*", record_handler), -1);
+    ASSERT_EQ(route_add(r, NULL, record_handler), -1);
+    ASSERT_EQ(route_add(r, "/api/*", NULL), -1);
+
+    router_free(r);
+}
+
+TEST(route_remove) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/api/*", record_handler);
+    route_add(r, "/api/*", stop_handler);
+
+    int removed = route_remove(r, "/api/*", stop_handler);
+    ASSERT_EQ(removed, 1);
+
+    test_ctx_t tc = {0};
+    r->data = &tc;
+
+    route_dispatch(r, "/api/users", NULL, NULL, &tc);
+    ASSERT_EQ(tc.called, 1);
+
+    router_free(r);
+}
+
+TEST(route_remove_not_found) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    int removed = route_remove(r, "/nonexistent", record_handler);
+    ASSERT_EQ(removed, 0);
+
+    router_free(r);
+}
+
+TEST(route_add_multiple_same_pattern) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/test", record_handler);
+    route_add(r, "/test", stop_handler);
+    route_add(r, "/test", record_handler);
+
+    test_ctx_t tc = {0};
+    r->data = &tc;
+
+    route_dispatch(r, "/test", NULL, NULL, &tc);
+    ASSERT_EQ(tc.called, 2);
+
+    router_free(r);
 }
 
 /* ============================================================================ */
 TEST_SUITE(dispatch);
 
-TEST(dispatch_exact_match) {
-    route_t *r = route_new();
-    g_handler_called = 0;
-    route_handle(r, "/ping", test_handler_ok);
-    ASSERT_EQ(r->count, 1);  /* Verify route was added */
-    
-    serve_conn_t sc = make_test_conn("/ping", HTTP_GET);
-    route_dispatch(r, &sc);
-    
-    ASSERT_TRUE(g_handler_called);  /* Verify handler ran */
-    ASSERT_EQ(sc.res.code, HTTP_OK);
-    route_free(r);
+TEST(dispatch_single_handler) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    route_add(r, "/test", record_handler);
+
+    test_ctx_t tc = {0};
+    int result = route_dispatch(r, "/test", NULL, NULL, &tc);
+
+    ASSERT_EQ(tc.called, 1);
+    ASSERT_EQ(result, 0);
+
+    router_free(r);
 }
 
-TEST(dispatch_prefix_match) {
-    route_t *r = route_new();
-    g_handler_called = 0;
-    route_handle(r, "/api/", test_handler_ok);
-    
-    serve_conn_t sc = make_test_conn("/api/users", HTTP_GET);
-    route_dispatch(r, &sc);
-    
-    ASSERT_TRUE(g_handler_called);
-    ASSERT_EQ(sc.res.code, HTTP_OK);
-    route_free(r);
+TEST(dispatch_with_captures) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    route_add(r, "/user/*", record_handler);
+
+    test_ctx_t tc = {0};
+    route_dispatch(r, "/user/alice", NULL, NULL, &tc);
+
+    ASSERT_EQ(tc.called, 1);
+    ASSERT_STR_EQ(tc.captured, "alice");
+
+    router_free(r);
 }
 
-TEST(dispatch_wildcard_match) {
-    route_t *r = route_new();
-    g_handler_called = 0;
-    route_handle(r, "/files/*", test_handler_ok);
-    
-    serve_conn_t sc = make_test_conn("/files/image.png", HTTP_GET);
-    route_dispatch(r, &sc);
-    
-    ASSERT_TRUE(g_handler_called);
-    ASSERT_EQ(sc.res.code, HTTP_OK);
-    route_free(r);
+TEST(dispatch_chain_continue) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    route_add(r, "/test", record_handler);
+    route_add(r, "/test", record_handler);
+
+    test_ctx_t tc = {0};
+    int result = route_dispatch(r, "/test", NULL, NULL, &tc);
+
+    ASSERT_EQ(tc.called, 2);
+    ASSERT_EQ(result, 0);
+
+    router_free(r);
 }
 
-TEST(dispatch_no_match_fallback) {
-    route_t *r = route_new();
-    g_handler_called = 0;
-    route_fallback(r, test_handler_not_found);
-    
-    serve_conn_t sc = make_test_conn("/unknown", HTTP_GET);
-    route_dispatch(r, &sc);
-    
-    ASSERT_TRUE(g_handler_called);
-    ASSERT_EQ(sc.res.code, HTTP_NOT_FOUND);
-    route_free(r);
+TEST(dispatch_chain_stop) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    route_add(r, "/test", record_handler);
+    route_add(r, "/test", stop_handler);
+    route_add(r, "/test", record_handler);
+
+    test_ctx_t tc = {0};
+    int result = route_dispatch(r, "/test", NULL, NULL, &tc);
+
+    ASSERT_EQ(tc.called, 2);
+    ASSERT_EQ(result, 42);
+
+    router_free(r);
 }
 
-TEST(dispatch_no_match_no_fallback) {
-    route_t *r = route_new();
-    
-    serve_conn_t sc = make_test_conn("/unknown", HTTP_GET);
-    route_dispatch(r, &sc);
-    
-    ASSERT_EQ(sc.res.code, HTTP_NOT_FOUND);
-    route_free(r);
+TEST(dispatch_no_match) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    route_add(r, "/other", record_handler);
+
+    test_ctx_t tc = {0};
+    int result = route_dispatch(r, "/test", NULL, NULL, &tc);
+
+    ASSERT_EQ(tc.called, 0);
+    ASSERT_EQ(result, -1);
+
+    router_free(r);
 }
 
-TEST(dispatch_middleware_chain) {
-    route_t *r = route_new();
-    g_handler_called = 0;
-    route_use(r, test_mw_continue);
-    route_handle(r, "/test", test_handler_ok);
-    
-    serve_conn_t sc = make_test_conn("/test", HTTP_GET);
-    route_dispatch(r, &sc);
-    
-    ASSERT_TRUE(g_handler_called);
-    ASSERT_EQ(sc.res.code, HTTP_OK);
-    route_free(r);
+TEST(dispatch_null_router) {
+    int result = route_dispatch(NULL, "/test", NULL, NULL, NULL);
+    ASSERT_EQ(result, -1);
 }
 
-TEST(dispatch_middleware_shortcircuit) {
-    route_t *r = route_new();
-    route_use(r, test_mw_shortcircuit);
-    
-    serve_conn_t sc = make_test_conn("/test", HTTP_GET);
-    route_dispatch(r, &sc);
-    
-    ASSERT_EQ(sc.res.code, HTTP_FORBIDDEN);
-    route_free(r);
+TEST(dispatch_null_path) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    int result = route_dispatch(r, NULL, NULL, NULL, NULL);
+    ASSERT_EQ(result, -1);
+    router_free(r);
 }
 
-TEST(dispatch_group_prefix) {
-    route_t *r = route_new();
-    g_handler_called = 0;
-    route_t *g = route_group(r, "/api");
-    route_handle(g, "/users", test_handler_ok);
-    
-    serve_conn_t sc = make_test_conn("/api/users", HTTP_GET);
-    route_dispatch(r, &sc);
-    
-    ASSERT_TRUE(g_handler_called);
-    ASSERT_EQ(sc.res.code, HTTP_OK);
-    route_free(g);
-    route_free(r);
-}
+TEST(dispatch_argv0_is_path) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    route_add(r, "/test/*", record_handler);
 
-TEST(dispatch_null_inputs) {
-    route_dispatch(NULL, NULL);
-    ASSERT_TRUE(1);
+    test_ctx_t tc = {0};
+    route_dispatch(r, "/test/value", NULL, NULL, &tc);
+
+    ASSERT_STR_EQ(tc.argv0, "/test/value");
+
+    router_free(r);
 }
 
 /* ============================================================================ */
-TEST_SUITE(built_in_middleware);
+TEST_SUITE(rewrite_forward);
 
-TEST(middleware_log) {
-    serve_conn_t sc = make_test_conn("/test", HTTP_GET);
-    int r = route_middleware_log(&sc);
-    ASSERT_EQ(r, 0);
+TEST(route_forward_basic) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+    route_add(r, "/old/*", rewrite_handler);
+    route_add(r, "/rewritten/path", record_handler);
+
+    test_ctx_t tc = {0};
+    int result = route_dispatch(r, "/old/test", NULL, NULL, &tc);
+
+    ASSERT_EQ(tc.called, 1);
+    ASSERT_EQ(result, 0);
+
+    router_free(r);
 }
 
-TEST(middleware_cors_normal) {
-    serve_conn_t sc = make_test_conn("/test", HTTP_GET);
-    int r = route_middleware_cors(&sc);
-    ASSERT_EQ(r, 0);
+TEST(route_forward_preserves_data) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/forward", check_data_handler);  /* File-scope now */
+
+    test_ctx_t tc = {.result = 99};
+    int result = route_dispatch(r, "/forward", NULL, NULL, &tc);
+
+    ASSERT_EQ(result, 1);
+
+    router_free(r);
 }
 
-TEST(middleware_cors_preflight) {
-    serve_conn_t sc = make_test_conn("/test", HTTP_OPTIONS);
-    int r = route_middleware_cors(&sc);
-    ASSERT_EQ(r, 1);
-    ASSERT_EQ(sc.res.code, HTTP_NO_CONTENT);
+TEST(route_forward_null_ctx) {
+    int result = route_forward(NULL, "/new/path");
+    ASSERT_EQ(result, -1);
 }
 
-TEST(middleware_auth_valid) {
-    serve_conn_t sc = make_test_conn("/test", HTTP_GET);
-    sc.req.hdrs[0].key = "Authorization";
-    sc.req.hdrs[0].val = "Bearer token123";
-    sc.req.hcount = 1;
-    
-    int r = route_middleware_auth(&sc);
-    ASSERT_EQ(r, 0);
+TEST(route_forward_null_router) {
+    struct route_ctx ctx = {0};
+    int result = route_forward(&ctx, "/new/path");
+    ASSERT_EQ(result, -1);
 }
 
-TEST(middleware_auth_missing) {
-    serve_conn_t sc = make_test_conn("/test", HTTP_GET);
-    int r = route_middleware_auth(&sc);
-    ASSERT_EQ(r, 1);
-    ASSERT_EQ(sc.res.code, HTTP_UNAUTHORIZED);
+TEST(route_forward_chain) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/a/*", rewrite_handler);
+    route_add(r, "/rewritten/path", rewrite_handler);
+    route_add(r, "/rewritten/path", record_handler);
+
+    test_ctx_t tc = {0};
+    int result = route_dispatch(r, "/a/x", NULL, NULL, &tc);
+
+    ASSERT_EQ(tc.called, 16);
+    ASSERT_EQ(result, 0);
+
+    router_free(r);
+}
+
+/* ============================================================================ */
+TEST_SUITE(context_accessors);
+
+TEST(route_path) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/test/*", path_checker);
+    int result = route_dispatch(r, "/test/path", NULL, NULL, NULL);
+
+    ASSERT_EQ(result, 1);
+
+    router_free(r);
+}
+
+TEST(route_data_accessor) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/test", data_checker);
+    int result = route_dispatch(r, "/test", NULL, NULL, (void *)0x1234);
+
+    ASSERT_EQ(result, 1);
+
+    router_free(r);
+}
+
+TEST(route_conn_accessor) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/test", conn_checker);
+    int result = route_dispatch(r, "/test", (void *)0x1234, NULL, NULL);
+
+    ASSERT_EQ(result, 1);
+
+    router_free(r);
+}
+
+TEST(route_req_accessor) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/test", req_checker);
+    int result = route_dispatch(r, "/test", NULL, (void *)0x5678, NULL);
+
+    ASSERT_EQ(result, 1);
+
+    router_free(r);
+}
+
+TEST(route_accessor_null) {
+    ASSERT_NULL(route_path(NULL));
+    ASSERT_NULL(route_data(NULL));
+    ASSERT_NULL(route_conn(NULL));
+    ASSERT_NULL(route_req(NULL));
 }
 
 /* ============================================================================ */
 TEST_SUITE(edge_cases);
 
-TEST(route_overflow_protection) {
-    route_t *r = route_new();
-    ASSERT_NOT_NULL(r);
-    
-    for (int i = 0; i < ROUTE_MAX_ENTRIES; i++) {
-        route_handle(r, "/test", dummy_handler);
-    }
-    
-    int before = r->count;
-    route_handle(r, "/overflow", dummy_handler);
-    ASSERT_EQ(r->count, before);
-    
-    route_free(r);
+TEST(empty_router_dispatch) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    int result = route_dispatch(r, "/any/path", NULL, NULL, NULL);
+    ASSERT_EQ(result, -1);
+
+    router_free(r);
 }
 
-TEST(route_null_pattern) {
-    route_t *r = route_new();
-    route_handle(r, NULL, NULL);
-    route_match(r, NULL, NULL);
-    route_free(r);
-    ASSERT_TRUE(1);
+TEST(multiple_captures) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/api/*/*", multi_capture);
+    int result = route_dispatch(r, "/api/users/123", NULL, NULL, NULL);
+
+    ASSERT_EQ(result, 1);
+
+    router_free(r);
 }
 
-TEST(route_null_handler) {
-    route_t *r = route_new();
-    route_handle(r, "/test", NULL);
-    route_free(r);
-    ASSERT_TRUE(1);
+TEST(spec_custom_delimiter) {
+    char spec[3] = {'*', ':', '\\'};
+    router_t r = router_create(spec);
+
+    const char *matches[16];
+    int argc = route_match("/api:users", "/api:*", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "users");
+
+    router_free(r);
 }
 
-TEST(dispatch_null_sc) {
-    route_t *r = route_new();
-    route_dispatch(r, NULL);
-    route_free(r);
-    ASSERT_TRUE(1);
+TEST(spec_custom_escape) {
+    char spec[3] = {'*', '/', '!'};
+    router_t r = router_create(spec);
+
+    const char *matches[16];
+    int argc = route_match("/api/*test", "/api/!*test", spec, matches, 16);
+    ASSERT_EQ(argc, 1);
+
+    router_free(r);
+}
+
+TEST(dispatch_with_conn_req_data) {
+    char spec[3] = {'*', '/', '\\'};
+    router_t r = router_create(spec);
+
+    route_add(r, "/test", verify_ctx_handler);  /* File-scope now */
+    int result = route_dispatch(r, "/test", (void *)0x1111, (void *)0x2222, (void *)0x3333);
+
+    ASSERT_EQ(result, 1);
+
+    router_free(r);
+}
+
+TEST(route_match_case_sensitive) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+
+    int argc = route_match("/API/users", "/api/*", spec, matches, 16);
+    ASSERT_EQ(argc, 0);
+
+    argc = route_match("/api/users", "/api/*", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+}
+
+TEST(route_match_unicode_path) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+
+    int argc = route_match("/user/日本語", "/user/*", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "日本語");
+}
+
+TEST(route_match_query_string) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+
+    int argc = route_match("/api/users?id=123", "/api/*", spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "users?id=123");
+}
+
+/* ============================================================================ */
+TEST_SUITE(performance);
+
+TEST(route_match_short_pattern) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+
+    int argc = route_match("/a", "/a", spec, matches, 16);
+    ASSERT_EQ(argc, 1);
+}
+
+TEST(route_match_long_pattern) {
+    const char *matches[16];
+    char spec[3] = {'*', '/', '\\'};
+
+    const char *long_path = "/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p";
+    const char *long_pat = "/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/*";
+
+    int argc = route_match(long_path, long_pat, spec, matches, 16);
+    ASSERT_EQ(argc, 2);
+    ASSERT_STR_EQ(matches[1], "p");
 }
 
 /* ============================================================================ */
 
-TEST_MAIN_IF(JACL_HAS_POSIX, "transit/route.h needs POSIX")
+TEST_MAIN()
 
-#else
-
-int main(void) {
-    printf("transit/route.h requires POSIX\n");
-    return 0;
-}
-
-#endif

@@ -4,660 +4,432 @@
 #pragma once
 
 /**
- * HTTP Client (Header-Only)
+ * Client Session Layer (Protocol-Agnostic, Header-Only)
  *
  * DESIGN PHILOSOPHY:
- * - Simple HTTP: One-liners for GET/POST (90% of cases)
- * - Pluggable transport: TCP, UDP, Unix, TLS, QUIC (10% of cases)
- * - Reusable connections: client_t for keep-alive, connection pools
- * - Header-only: All functions static inline. No .c file.
- * - Memory: Library allocates (malloc) in client_create, frees in client_free.
- * - Lazy Connection: conn_t created in client_connect(), not client_create()
+ * - Mirror of serve.h for outbound connections
+ * - Buffer owned by session, not transport
+ * - Proto handlers drive lifecycle (client_open, client_in, client_out, client_close)
+ * - Return codes control flow (OK, DONE, CLOSE, ERROR, UPGRADE)
+ * - Bidirectional error tracking (read/write independent)
+ * - Zero HTTP assumptions - works for SMTP, WebSocket, MQTT, etc.
  */
 
 #include <config.h>
 #include <transit/conn.h>
-#include <transit/http.h>
-#include <string.h>
+#include <transit/proto.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* ======================================================================== */
-/* Client Structure                                                         */
+/* Configuration                                                            */
+/* ======================================================================== */
+
+#define CLIENT_BUF_SIZE     8192
+#define CLIENT_MAX_HOPS     16
+#define CLIENT_MAX_REQUESTS 1000
+
+/* ======================================================================== */
+/* Return Codes (Proto handlers return these)                               */
+/* ======================================================================== */
+
+#define CLIENT_OK        0   /* Continue, more data expected */
+#define CLIENT_DONE      1   /* Message handled, ready for next */
+#define CLIENT_UPGRADE   2   /* Protocol switch requested */
+#define CLIENT_CLOSE    -1   /* Close connection */
+#define CLIENT_ERROR    -2   /* Error occurred */
+
+/* ======================================================================== */
+/* Client Connection (Per-Session State)                                    */
+/* ======================================================================== */
+
+/**
+ * Client session wrapper
+ *
+ * MEMORY OWNERSHIP:
+ * - client_conn_create(): Allocates session + buffer
+ * - client_conn_free(): Frees session + buffer + closes conn
+ * - User NEVER calls free() on client_conn_t directly
+ *
+ * BUFFER: Owned by session (not conn_t). Protocol decides how to parse.
+ * - buf, buf_size, buf_used: Read buffer
+ * - buf_consumed: Bytes consumed by proto handler (for shifting)
+ *
+ * STATE: Bidirectional tracking (read/write independent)
+ * - read_eof, read_blocked: Read side state
+ * - write_blocked: Write side state
+ *
+ * ERROR: Per-session (not per-FD) for scalability
+ * - last_error, error_op: Last error details
+ */
+typedef struct client_conn {
+    conn_t *conn;                 /* Transport (from conn.h) */
+    const proto_t *proto;         /* Current protocol (from proto.h) */
+    
+    /* Buffer (session-owned) */
+    uint8_t *buf;
+    size_t buf_size;
+    size_t buf_used;
+    size_t buf_consumed;          /* Bytes consumed by proto handler */
+    
+    /* Write buffer (for outbound data) */
+    uint8_t *write_buf;
+    size_t write_size;
+    size_t write_used;
+    size_t write_sent;
+    
+    /* Read/Write state (bidirectional) */
+    bool read_eof;
+    bool read_blocked;
+    bool write_blocked;
+    
+    /* Session state */
+    bool active;
+    int hops;                     /* Upgrade hop counter */
+    int request_count;            /* For max_requests limit */
+    int last_error;
+    char error_op[16];
+    
+    /* User data */
+    void *data;
+} client_conn_t;
+
+/* ======================================================================== */
+/* Client                                                                   */
 /* ======================================================================== */
 
 typedef struct client {
-    conn_t *conn;
-    int domain;       /* Store for later conn_create */
-    int type;         /* Store for later conn_create */
-    int protocol;     /* Store for later conn_create */
-    char *host;
-    char *port;
-    int timeout_ms;
-    bool connected;
-    bool keep_alive;
+    proto_list_t protos;
+    void *data;                   /* Shared across all connections */
 } client_t;
 
 /* ======================================================================== */
-/* Simple HTTP One-Liners (90% of Cases)                                    */
+/* Client Lifecycle                                                         */
 /* ======================================================================== */
 
-static inline int http_get(const char *host, const char *port, const char *path,
-                           http_res_t *res_out, uint8_t *body_buf, size_t body_buf_size) {
-    if (!host || !port || !path || !res_out || !body_buf || body_buf_size == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    conn_t *c = conn_create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (!c) return -1;
-
-    if (conn_connect(c, host, port) < 0) {
-        conn_close(c);
-        return -1;
-    }
-
-    char req[1024];
-    int len = snprintf(req, sizeof(req),
-                       "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n",
-                       path, host);
-    if (len < 0 || (size_t)len >= sizeof(req)) {
-        conn_close(c);
-        return -1;
-    }
-
-    if (conn_write(c, req, (size_t)len) < 0) {
-        conn_close(c);
-        return -1;
-    }
-
-    ssize_t n = conn_read(c, body_buf, body_buf_size - 1);
-    conn_close(c);
-
-    if (n <= 0) return -1;
-    body_buf[n] = '\0';
-
-    char *sp = strchr((char *)body_buf, ' ');
-    if (!sp) return -1;
-    res_out->code = (http_code_t)atoi(sp + 1);
-
-    char *body_start = strstr((char *)body_buf, "\r\n\r\n");
-    if (!body_start) return -1;
-    body_start += 4;
-
-    size_t body_len = (size_t)(n - (body_start - (char *)body_buf));
-    if (body_len >= body_buf_size) body_len = body_buf_size - 1;
-    memmove(body_buf, body_start, body_len);
-    body_buf[body_len] = '\0';
-
-    return 0;
-}
-
-static inline int http_post(const char *host, const char *port, const char *path,
-                            const uint8_t *body, size_t body_len,
-                            http_res_t *res_out, uint8_t *resp_body_buf, size_t resp_body_buf_size) {
-    if (!host || !port || !path || !body || !res_out || !resp_body_buf || resp_body_buf_size == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    conn_t *c = conn_create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (!c) return -1;
-
-    if (conn_connect(c, host, port) < 0) {
-        conn_close(c);
-        return -1;
-    }
-
-    char req[2048];
-    int len = snprintf(req, sizeof(req),
-                       "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
-                       path, host, body_len);
-    if (len < 0 || (size_t)len >= sizeof(req)) {
-        conn_close(c);
-        return -1;
-    }
-
-    if (conn_write(c, req, (size_t)len) < 0 || conn_write(c, body, body_len) < 0) {
-        conn_close(c);
-        return -1;
-    }
-
-    ssize_t n = conn_read(c, resp_body_buf, resp_body_buf_size - 1);
-    conn_close(c);
-
-    if (n <= 0) return -1;
-    resp_body_buf[n] = '\0';
-
-    char *sp = strchr((char *)resp_body_buf, ' ');
-    if (!sp) return -1;
-    res_out->code = (http_code_t)atoi(sp + 1);
-
-    char *body_start = strstr((char *)resp_body_buf, "\r\n\r\n");
-    if (!body_start) return -1;
-    body_start += 4;
-
-    size_t resp_len = (size_t)(n - (body_start - (char *)resp_body_buf));
-    if (resp_len >= resp_body_buf_size) resp_len = resp_body_buf_size - 1;
-    memmove(resp_body_buf, body_start, resp_len);
-    resp_body_buf[resp_len] = '\0';
-
-    return 0;
-}
-
-static inline int http_put(const char *host, const char *port, const char *path,
-                           const uint8_t *body, size_t body_len,
-                           http_res_t *res_out, uint8_t *resp_body_buf, size_t resp_body_buf_size) {
-    if (!host || !port || !path || !body || !res_out || !resp_body_buf || resp_body_buf_size == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    conn_t *c = conn_create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (!c) return -1;
-
-    if (conn_connect(c, host, port) < 0) {
-        conn_close(c);
-        return -1;
-    }
-
-    char req[2048];
-    int len = snprintf(req, sizeof(req),
-                       "PUT %s HTTP/1.1\r\nHost: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
-                       path, host, body_len);
-    if (len < 0 || (size_t)len >= sizeof(req)) {
-        conn_close(c);
-        return -1;
-    }
-
-    if (conn_write(c, req, (size_t)len) < 0 || conn_write(c, body, body_len) < 0) {
-        conn_close(c);
-        return -1;
-    }
-
-    ssize_t n = conn_read(c, resp_body_buf, resp_body_buf_size - 1);
-    conn_close(c);
-    if (n <= 0) return -1;
-    resp_body_buf[n] = '\0';
-
-    char *sp = strchr((char *)resp_body_buf, ' ');
-    if (!sp) return -1;
-    res_out->code = (http_code_t)atoi(sp + 1);
-
-    char *body_start = strstr((char *)resp_body_buf, "\r\n\r\n");
-    if (!body_start) return -1;
-    body_start += 4;
-    size_t resp_len = (size_t)(n - (body_start - (char *)resp_body_buf));
-    if (resp_len >= resp_body_buf_size) resp_len = resp_body_buf_size - 1;
-    memmove(resp_body_buf, body_start, resp_len);
-    resp_body_buf[resp_len] = '\0';
-
-    return 0;
-}
-
-static inline int http_delete(const char *host, const char *port, const char *path,
-                              http_res_t *res_out, uint8_t *resp_body_buf, size_t resp_body_buf_size) {
-    if (!host || !port || !path || !res_out || !resp_body_buf || resp_body_buf_size == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    conn_t *c = conn_create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (!c) return -1;
-
-    if (conn_connect(c, host, port) < 0) {
-        conn_close(c);
-        return -1;
-    }
-
-    char req[1024];
-    int len = snprintf(req, sizeof(req),
-                       "DELETE %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n",
-                       path, host);
-    if (len < 0 || (size_t)len >= sizeof(req)) {
-        conn_close(c);
-        return -1;
-    }
-
-    if (conn_write(c, req, (size_t)len) < 0) {
-        conn_close(c);
-        return -1;
-    }
-
-    ssize_t n = conn_read(c, resp_body_buf, resp_body_buf_size - 1);
-    conn_close(c);
-    if (n <= 0) return -1;
-    resp_body_buf[n] = '\0';
-
-    char *sp = strchr((char *)resp_body_buf, ' ');
-    if (!sp) return -1;
-    res_out->code = (http_code_t)atoi(sp + 1);
-
-    char *body_start = strstr((char *)resp_body_buf, "\r\n\r\n");
-    if (!body_start) return -1;
-    body_start += 4;
-    size_t resp_len = (size_t)(n - (body_start - (char *)resp_body_buf));
-    if (resp_len >= resp_body_buf_size) resp_len = resp_body_buf_size - 1;
-    memmove(resp_body_buf, body_start, resp_len);
-    resp_body_buf[resp_len] = '\0';
-
-    return 0;
-}
-
-/* ======================================================================== */
-/* Reusable Client (10% of Cases)                                           */
-/* ======================================================================== */
-
-static inline client_t *client_create(int domain, int type, int protocol) {
-    client_t *c = (client_t *)malloc(sizeof(client_t));
+static inline client_t *client_create(proto_list_t protos) {
+    if (!protos) return NULL;
+    
+    client_t *c = (client_t *)calloc(1, sizeof(client_t));
     if (!c) return NULL;
-
-    /* Don't create conn yet - defer to client_connect() */
-    c->conn = NULL;
-    c->domain = domain;
-    c->type = type;
-    c->protocol = protocol;
-    c->host = NULL;
-    c->port = NULL;
-    c->timeout_ms = -1;
-    c->connected = false;
-    c->keep_alive = false;
-
+    
+    c->protos = protos;
+    c->data = NULL;
+    
     return c;
-}
-
-static inline client_t *client_from_conn(conn_t *conn) {
-    if (!conn) return NULL;
-
-    client_t *c = (client_t *)malloc(sizeof(client_t));
-    if (!c) return NULL;
-
-    c->conn = conn;
-    c->domain = conn->domain;
-    c->type = conn->socktype;
-    c->protocol = conn->protocol;
-    c->host = NULL;
-    c->port = NULL;
-    c->timeout_ms = -1;
-    c->connected = true;
-    c->keep_alive = false;
-
-    return c;
-}
-
-static inline int client_connect(client_t *c, const char *host, const char *port) {
-    if (!c || !host || !port) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    /* Create connection now (lazy initialization) */
-    if (!c->conn) {
-        c->conn = conn_create(c->domain, c->type, c->protocol);
-        if (!c->conn) return -1;
-    }
-
-    int r = conn_connect(c->conn, host, port);
-    if (r == 0) {
-        c->connected = true;
-        c->host = strdup(host);
-        c->port = strdup(port);
-    }
-    return r;
-}
-
-static inline int client_connect_path(client_t *c, const char *path) {
-    if (!c || !path) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    /* Create connection now (lazy initialization) */
-    if (!c->conn) {
-        c->conn = conn_create(c->domain, c->type, c->protocol);
-        if (!c->conn) return -1;
-    }
-
-    if (c->conn->domain != AF_UNIX) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    int r = conn_connect_path(c->conn, path);
-    if (r == 0) c->connected = true;
-    return r;
-}
-
-static inline void client_disconnect(client_t *c) {
-    if (!c) return;
-    if (c->conn) {
-        conn_close(c->conn);
-        c->conn = NULL;
-    }
-    c->connected = false;
-    free(c->host);
-    free(c->port);
-    c->host = c->port = NULL;
 }
 
 static inline void client_free(client_t *c) {
     if (!c) return;
-    if (c->conn) conn_close(c->conn);
-    free(c->host);
-    free(c->port);
     free(c);
 }
 
-static inline int client_set_timeout(client_t *c, int timeout_ms) {
-    if (!c || !c->conn) {
-        errno = EINVAL;
-        return -1;
-    }
-    c->timeout_ms = timeout_ms;
-    return conn_set_timeout(c->conn, timeout_ms);
-}
-
-static inline void client_set_keepalive(client_t *c, bool keep_alive) {
-    if (c) c->keep_alive = keep_alive;
-}
-
-static inline ssize_t client_send(client_t *c, const void *buf, size_t len) {
-    if (!c || !c->conn) { errno = EBADF; return -1; }
-    return conn_write(c->conn, buf, len);
-}
-
-static inline ssize_t client_recv(client_t *c, void *buf, size_t len) {
-    if (!c || !c->conn) { errno = EBADF; return -1; }
-    return conn_read(c->conn, buf, len);
-}
-
 /* ======================================================================== */
-/* HTTP Methods (Reusable Connection)                                       */
+/* Connection Lifecycle                                                     */
 /* ======================================================================== */
 
-static inline int client_get(client_t *c, const char *path,
-                             http_res_t *res_out, uint8_t *body_buf, size_t body_buf_size) {
-    if (!c || !c->conn || !c->connected || !path || !res_out || !body_buf || body_buf_size == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    char req[1024];
-    int len = snprintf(req, sizeof(req),
-                       "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: %s\r\n\r\n",
-                       path, c->host ? c->host : "localhost",
-                       c->keep_alive ? "keep-alive" : "close");
-    if (len < 0 || (size_t)len >= sizeof(req)) return -1;
-
-    if (conn_write(c->conn, req, (size_t)len) < 0) return -1;
-
-    ssize_t n = conn_read(c->conn, body_buf, body_buf_size - 1);
-    if (n <= 0) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    body_buf[n] = '\0';
-
-    char *sp = strchr((char *)body_buf, ' ');
-    if (!sp) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    res_out->code = (http_code_t)atoi(sp + 1);
-
-    char *body_start = strstr((char *)body_buf, "\r\n\r\n");
-    if (!body_start) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    body_start += 4;
-
-    size_t body_len = (size_t)(n - (body_start - (char *)body_buf));
-    if (body_len >= body_buf_size) body_len = body_buf_size - 1;
-    memmove(body_buf, body_start, body_len);
-    body_buf[body_len] = '\0';
-
-    if (!c->keep_alive) client_disconnect(c);
-    return 0;
-}
-
-static inline int client_post(client_t *c, const char *path,
-                              const uint8_t *body, size_t body_len,
-                              http_res_t *res_out, uint8_t *resp_body_buf, size_t resp_body_buf_size) {
-    if (!c || !c->conn || !c->connected || !path || !body || !res_out || !resp_body_buf || resp_body_buf_size == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    char req[2048];
-    int len = snprintf(req, sizeof(req),
-                       "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Length: %zu\r\nConnection: %s\r\n\r\n",
-                       path, c->host ? c->host : "localhost", body_len,
-                       c->keep_alive ? "keep-alive" : "close");
-    if (len < 0 || (size_t)len >= sizeof(req)) return -1;
-
-    if (conn_write(c->conn, req, (size_t)len) < 0 || conn_write(c->conn, body, body_len) < 0) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-
-    ssize_t n = conn_read(c->conn, resp_body_buf, resp_body_buf_size - 1);
-    if (n <= 0) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    resp_body_buf[n] = '\0';
-
-    char *sp = strchr((char *)resp_body_buf, ' ');
-    if (!sp) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    res_out->code = (http_code_t)atoi(sp + 1);
-
-    char *body_start = strstr((char *)resp_body_buf, "\r\n\r\n");
-    if (!body_start) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    body_start += 4;
-    size_t resp_len = (size_t)(n - (body_start - (char *)resp_body_buf));
-    if (resp_len >= resp_body_buf_size) resp_len = resp_body_buf_size - 1;
-    memmove(resp_body_buf, body_start, resp_len);
-    resp_body_buf[resp_len] = '\0';
-
-    if (!c->keep_alive) client_disconnect(c);
-    return 0;
-}
-
-static inline int client_put(client_t *c, const char *path,
-                             const uint8_t *body, size_t body_len,
-                             http_res_t *res_out, uint8_t *resp_body_buf, size_t resp_body_buf_size) {
-    if (!c || !c->conn || !c->connected || !path || !body || !res_out || !resp_body_buf || resp_body_buf_size == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    char req[2048];
-    int len = snprintf(req, sizeof(req),
-                       "PUT %s HTTP/1.1\r\nHost: %s\r\nContent-Length: %zu\r\nConnection: %s\r\n\r\n",
-                       path, c->host ? c->host : "localhost", body_len,
-                       c->keep_alive ? "keep-alive" : "close");
-    if (len < 0 || (size_t)len >= sizeof(req)) return -1;
-
-    if (conn_write(c->conn, req, (size_t)len) < 0 || conn_write(c->conn, body, body_len) < 0) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-
-    ssize_t n = conn_read(c->conn, resp_body_buf, resp_body_buf_size - 1);
-    if (n <= 0) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    resp_body_buf[n] = '\0';
-
-    char *sp = strchr((char *)resp_body_buf, ' ');
-    if (!sp) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    res_out->code = (http_code_t)atoi(sp + 1);
-
-    char *body_start = strstr((char *)resp_body_buf, "\r\n\r\n");
-    if (!body_start) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    body_start += 4;
-    size_t resp_len = (size_t)(n - (body_start - (char *)resp_body_buf));
-    if (resp_len >= resp_body_buf_size) resp_len = resp_body_buf_size - 1;
-    memmove(resp_body_buf, body_start, resp_len);
-    resp_body_buf[resp_len] = '\0';
-
-    if (!c->keep_alive) client_disconnect(c);
-    return 0;
-}
-
-static inline int client_delete(client_t *c, const char *path,
-                                http_res_t *res_out, uint8_t *resp_body_buf, size_t resp_body_buf_size) {
-    if (!c || !c->conn || !c->connected || !path || !res_out || !resp_body_buf || resp_body_buf_size == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    char req[1024];
-    int len = snprintf(req, sizeof(req),
-                       "DELETE %s HTTP/1.1\r\nHost: %s\r\nConnection: %s\r\n\r\n",
-                       path, c->host ? c->host : "localhost",
-                       c->keep_alive ? "keep-alive" : "close");
-    if (len < 0 || (size_t)len >= sizeof(req)) return -1;
-
-    if (conn_write(c->conn, req, (size_t)len) < 0) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-
-    ssize_t n = conn_read(c->conn, resp_body_buf, resp_body_buf_size - 1);
-    if (n <= 0) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    resp_body_buf[n] = '\0';
-
-    char *sp = strchr((char *)resp_body_buf, ' ');
-    if (!sp) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    res_out->code = (http_code_t)atoi(sp + 1);
-
-    char *body_start = strstr((char *)resp_body_buf, "\r\n\r\n");
-    if (!body_start) {
-        if (!c->keep_alive) client_disconnect(c);
-        return -1;
-    }
-    body_start += 4;
-    size_t resp_len = (size_t)(n - (body_start - (char *)resp_body_buf));
-    if (resp_len >= resp_body_buf_size) resp_len = resp_body_buf_size - 1;
-    memmove(resp_body_buf, body_start, resp_len);
-    resp_body_buf[resp_len] = '\0';
-
-    if (!c->keep_alive) client_disconnect(c);
-    return 0;
-}
-
-static inline int client_request(client_t *c, const char *method, const char *path,
-                                 const char **headers,
-                                 const uint8_t *body, size_t body_len,
-                                 http_res_t *res_out, uint8_t *resp_body_buf, size_t resp_body_buf_size) {
-    if (!c || !c->conn || !c->connected || !method || !path || !res_out || !resp_body_buf || resp_body_buf_size == 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    char req[4096];
-    int len = snprintf(req, sizeof(req), "%s %s HTTP/1.1\r\nHost: %s\r\n",
-                       method, path, c->host ? c->host : "localhost");
-    if (len < 0 || (size_t)len >= sizeof(req)) return -1;
-
-    if (headers) {
-        for (int i = 0; headers[i]; i++) {
-            int hlen = snprintf(req + len, sizeof(req) - (size_t)len, "%s\r\n", headers[i]);
-            if (hlen < 0 || (size_t)(len + hlen) >= sizeof(req)) return -1;
-            len += hlen;
+static inline client_conn_t *client_conn_create(conn_t *c, client_t *client) {
+    if (!c || !client) return NULL;
+    
+    client_conn_t *cc = (client_conn_t *)calloc(1, sizeof(client_conn_t));
+    if (!cc) return NULL;
+    
+    cc->conn = c;
+    cc->proto = proto_main(client->protos);
+    cc->buf = (uint8_t *)malloc(CLIENT_BUF_SIZE);
+    cc->buf_size = cc->buf ? CLIENT_BUF_SIZE : 0;
+    cc->buf_used = 0;
+    cc->buf_consumed = 0;
+    cc->write_buf = (uint8_t *)malloc(CLIENT_BUF_SIZE);
+    cc->write_size = cc->write_buf ? CLIENT_BUF_SIZE : 0;
+    cc->write_used = 0;
+    cc->write_sent = 0;
+    cc->active = true;
+    cc->hops = 0;
+    cc->request_count = 0;
+    cc->last_error = 0;
+    cc->read_eof = false;
+    cc->read_blocked = false;
+    cc->write_blocked = false;
+    
+    /* Call protocol open hook */
+    if (cc->proto && cc->proto->client_open) {
+        int r = cc->proto->client_open(cc);
+        if (r == CLIENT_CLOSE || r == CLIENT_ERROR) {
+            client_conn_free(cc);
+            return NULL;
         }
     }
+    
+    return cc;
+}
 
-    if (body && body_len > 0) {
-        int hlen = snprintf(req + len, sizeof(req) - (size_t)len, "Content-Length: %zu\r\n\r\n", body_len);
-        if (hlen < 0 || (size_t)(len + hlen) >= sizeof(req)) return -1;
-        len += hlen;
-    } else {
-        int hlen = snprintf(req + len, sizeof(req) - (size_t)len, "\r\n");
-        if (hlen < 0 || (size_t)(len + hlen) >= sizeof(req)) return -1;
-        len += hlen;
+static inline void client_conn_free(client_conn_t *cc) {
+    if (!cc) return;
+    
+    /* Call protocol close hook */
+    if (cc->proto && cc->proto->client_close) {
+        cc->proto->client_close(cc);
     }
-
-    if (conn_write(c->conn, req, (size_t)len) < 0) return -1;
-    if (body && body_len > 0 && conn_write(c->conn, body, body_len) < 0) return -1;
-
-    ssize_t n = conn_read(c->conn, resp_body_buf, resp_body_buf_size - 1);
-    if (n <= 0) return -1;
-    resp_body_buf[n] = '\0';
-
-    char *sp = strchr((char *)resp_body_buf, ' ');
-    if (!sp) return -1;
-    res_out->code = (http_code_t)atoi(sp + 1);
-
-    char *body_start = strstr((char *)resp_body_buf, "\r\n\r\n");
-    if (!body_start) return -1;
-    body_start += 4;
-    size_t resp_len = (size_t)(n - (body_start - (char *)resp_body_buf));
-    if (resp_len >= resp_body_buf_size) resp_len = resp_body_buf_size - 1;
-    memmove(resp_body_buf, body_start, resp_len);
-    resp_body_buf[resp_len] = '\0';
-
-    return 0;
+    
+    if (cc->conn) conn_close(cc->conn);
+    if (cc->buf) free(cc->buf);
+    if (cc->write_buf) free(cc->write_buf);
+    free(cc);
 }
 
 /* ======================================================================== */
-/* Response Parsing                                                         */
+/* Upgrade (Protocol Switch)                                                */
 /* ======================================================================== */
 
-static inline int http_response_parse(http_res_t *res, uint8_t *buf, size_t len, size_t *consumed) {
-    if (!res || !buf || !consumed || len == 0) {
-        errno = EINVAL;
-        return -1;
+static inline int client_upgrade(client_conn_t *cc, proto_def next_fn) {
+    if (!cc || !next_fn || !cc->proto) return CLIENT_ERROR;
+    if (cc->hops++ > CLIENT_MAX_HOPS) return CLIENT_ERROR;
+    
+    /* Get new proto */
+    const proto_t *next = next_fn();
+    if (!next) return CLIENT_ERROR;
+    
+    /* Verify upgrade path exists */
+    proto_list_t list = proto_list();
+    const proto_t *valid = proto_upgrade(list, (proto_t)cc->proto, next->name);
+    if (!valid) return CLIENT_ERROR;
+    
+    /* Close old protocol */
+    if (cc->proto->client_close) {
+        cc->proto->client_close(cc);
     }
+    
+    /* Switch to new protocol */
+    cc->proto = next;
+    
+    /* Open new protocol */
+    if (cc->proto->client_open) {
+        int r = cc->proto->client_open(cc);
+        if (r == CLIENT_CLOSE || r == CLIENT_ERROR) return CLIENT_ERROR;
+    }
+    
+    return CLIENT_UPGRADE;
+}
 
-    char *headers_end = strstr((char *)buf, "\r\n\r\n");
-    if (!headers_end) return -1;
+/* ======================================================================== */
+/* Connection Step (Process One Read/Write Cycle)                           */
+/* ======================================================================== */
 
-    char *sp = strchr((char *)buf, ' ');
-    if (!sp) return -1;
-    res->code = (http_code_t)atoi(sp + 1);
-
-    char *rp = strchr(sp + 1, ' ');
-    if (rp) {
-        char *eol = strchr(rp, '\r');
-        if (eol) {
-            *eol = '\0';
-            res->reason = rp + 1;
+static inline int client_step(client_conn_t *cc) {
+    if (!cc || !cc->active || !cc->conn || !cc->proto) {
+        return CLIENT_ERROR;
+    }
+    
+    /* ========== WRITE SIDE (Client usually writes first) ========== */
+    if (!cc->write_blocked && cc->write_used > cc->write_sent) {
+        ssize_t n = conn_write(cc->conn, 
+                               cc->write_buf + cc->write_sent, 
+                               cc->write_used - cc->write_sent);
+        
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                cc->write_blocked = true;
+                return CLIENT_OK;
+            }
+            cc->last_error = errno;
+            strncpy(cc->error_op, "write", sizeof(cc->error_op) - 1);
+            return CLIENT_CLOSE;
+        }
+        
+        cc->write_sent += (size_t)n;
+        cc->write_blocked = false;
+        
+        /* Write complete? */
+        if (cc->write_sent >= cc->write_used) {
+            cc->write_used = 0;
+            cc->write_sent = 0;
         }
     }
-
-    *consumed = (size_t)((headers_end + 4) - (char *)buf);
-    return 0;
+    
+    /* ========== READ SIDE ========== */
+    if (!cc->read_eof && !cc->read_blocked && cc->buf_used < cc->buf_size) {
+        ssize_t n = conn_read(cc->conn, cc->buf + cc->buf_used, 
+                              cc->buf_size - cc->buf_used);
+        
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                cc->read_blocked = true;
+                return CLIENT_OK;
+            }
+            cc->last_error = errno;
+            strncpy(cc->error_op, "read", sizeof(cc->error_op) - 1);
+            return CLIENT_CLOSE;
+        }
+        
+        if (n == 0) {
+            cc->read_eof = true;  /* EOF */
+        } else {
+            cc->buf_used += (size_t)n;
+            cc->read_blocked = false;
+        }
+    }
+    
+    /* ========== PROTOCOL INBOUND ========== */
+    if (cc->proto->client_in && cc->buf_used > cc->buf_consumed) {
+        int r = cc->proto->client_in(cc);
+        
+        if (r == CLIENT_UPGRADE) {
+            return CLIENT_UPGRADE;
+        }
+        if (r == CLIENT_CLOSE || r == CLIENT_ERROR) {
+            cc->last_error = -r;
+            strncpy(cc->error_op, "proto_in", sizeof(cc->error_op) - 1);
+            return r;
+        }
+        
+        /* Shift buffer if proto consumed bytes */
+        if (cc->buf_consumed > 0 && cc->buf_consumed < cc->buf_used) {
+            memmove(cc->buf, cc->buf + cc->buf_consumed, 
+                    cc->buf_used - cc->buf_consumed);
+            cc->buf_used -= cc->buf_consumed;
+            cc->buf_consumed = 0;
+        } else if (cc->buf_consumed >= cc->buf_used) {
+            cc->buf_used = 0;
+            cc->buf_consumed = 0;
+        }
+        
+        if (r == CLIENT_DONE) {
+            cc->request_count++;
+            if (cc->request_count >= CLIENT_MAX_REQUESTS) {
+                return CLIENT_CLOSE;
+            }
+        }
+    }
+    
+    /* ========== PROTOCOL OUTBOUND ========== */
+    if (cc->proto->client_out && !cc->write_blocked) {
+        int r = cc->proto->client_out(cc);
+        
+        if (r == CLIENT_CLOSE || r == CLIENT_ERROR) {
+            cc->last_error = -r;
+            strncpy(cc->error_op, "proto_out", sizeof(cc->error_op) - 1);
+            return r;
+        }
+        
+        if (r == CLIENT_UPGRADE) {
+            return CLIENT_UPGRADE;
+        }
+    }
+    
+    /* ========== EOF HANDLING ========== */
+    if (cc->read_eof && cc->buf_used == 0 && cc->write_used == 0) {
+        return CLIENT_CLOSE;  /* Done */
+    }
+    
+    return CLIENT_OK;
 }
+
+/* ======================================================================== */
+/* Client Connect & Run (Blocking)                                          */
+/* ======================================================================== */
+
+static inline client_conn_t *client_connect(client_t *c, const char *host, const char *port) {
+    if (!c || !host || !port) return NULL;
+    
+    /* Create TCP connection */
+    conn_t *conn = conn_create(AF_INET, SOCK_STREAM, 0);
+    if (!conn) return NULL;
+    
+    if (conn_connect(conn, host, port) < 0) {
+        conn_close(conn);
+        return NULL;
+    }
+    
+    /* Wrap in client session */
+    client_conn_t *cc = client_conn_create(conn, c);
+    if (!cc) {
+        conn_close(conn);
+        return NULL;
+    }
+    
+    return cc;
+}
+
+static inline int client_run(client_conn_t *cc) {
+    if (!cc) return CLIENT_ERROR;
+    
+    while (cc->active) {
+        int r = client_step(cc);
+        if (r == CLIENT_CLOSE || r == CLIENT_ERROR) {
+            break;
+        }
+        /* CLIENT_UPGRADE continues loop with new proto */
+    }
+    
+    return (cc->last_error == 0) ? CLIENT_OK : CLIENT_ERROR;
+}
+
+static inline void client_close(client_conn_t *cc) {
+    if (cc) cc->active = false;
+}
+
+/* ======================================================================== */
+/* Write Helper (Queue data for outbound)                                   */
+/* ======================================================================== */
+
+static inline int client_write(client_conn_t *cc, const uint8_t *data, size_t len) {
+    if (!cc || !data || !len) return CLIENT_ERROR;
+    
+    /* Check buffer space */
+    if (cc->write_used + len > cc->write_size) {
+        /* Resize write buffer */
+        size_t new_size = cc->write_size * 2;
+        while (new_size < cc->write_used + len) {
+            new_size *= 2;
+        }
+        
+        uint8_t *new_buf = (uint8_t *)realloc(cc->write_buf, new_size);
+        if (!new_buf) return CLIENT_ERROR;
+        
+        cc->write_buf = new_buf;
+        cc->write_size = new_size;
+    }
+    
+    /* Queue data */
+    memcpy(cc->write_buf + cc->write_used, data, len);
+    cc->write_used += len;
+    
+    return CLIENT_OK;
+}
+
+/* ======================================================================== */
+/* Accessors                                                                */
+/* ======================================================================== */
+
+static inline conn_t *client_conn_conn(client_conn_t *cc) 
+    { return cc ? cc->conn : NULL; }
+
+static inline const proto_t *client_conn_proto(client_conn_t *cc) 
+    { return cc ? cc->proto : NULL; }
+
+static inline void *client_conn_data(client_conn_t *cc) 
+    { return cc ? cc->data : NULL; }
+
+static inline void client_conn_set_data(client_conn_t *cc, void *data) 
+    { if (cc) cc->data = data; }
+
+static inline void *client_data(client_t *c) 
+    { return c ? c->data : NULL; }
+
+static inline void client_set_data(client_t *c, void *data) 
+    { if (c) c->data = data; }
+
+static inline proto_list_t client_protos(client_t *c) 
+    { return c ? c->protos : NULL; }
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* _TRANSIT_CLIENT_H */
