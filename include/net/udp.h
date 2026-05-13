@@ -10,10 +10,10 @@
  *   - <netinet/udp_var.h> (UDP variables, PCB helpers)
  *   - <netinet/udpip.h> (UDP-in-IP encapsulation helpers)
  *
- * We unify these into a single header here at <net/udp.h> for maintenance
+ * We unify these into a single header at <net/udp.h> for ease of maintenance
  * and clarity with hopes that one day C Standards or POSIX may revamp layout
- * for sanity's sake so that we can remove the abstraction libraries that cause
- * so many security bugs because the coders don't see how things really work.
+ * for sanity's sake so that we can remove the abstraction of legacy cruft that
+ * cause so many security bugs because the coders don't see how things work.
  *
  * There has to be a better way!!!
  *

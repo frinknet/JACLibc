@@ -102,6 +102,12 @@ struct arpreq {
 /* Inline Helpers                                                           */
 /* ======================================================================== */
 
+/**
+ * NOTE: These helpers operate on in-memory structs in HOST byte order.
+ * For wire parsing (raw sockets), convert with ntohs() first.
+ * For ioctl results (SIOCGARP), use directly (kernel converts).
+ */
+
 static inline int arphdr_is_arp(const struct arphdr *h) {
 	return h && (h->ar_op == ARPOP_REQUEST || h->ar_op == ARPOP_REPLY);
 }
@@ -113,4 +119,5 @@ static inline int arphdr_is_valid(const struct arphdr *h) {
 #ifdef __cplusplus
 }
 #endif
+
 #endif /* _NET_IF_ARP_H */

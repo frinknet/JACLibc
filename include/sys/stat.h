@@ -9,6 +9,20 @@
 #include <stdio.h>
 #include <errno.h>
 
+/**
+ * NOTE: This consolidates functionality traditionally found in:
+ *
+ *   - <sys/stat.h>
+ *   - <sys/statvfs.h>
+ *
+ * We unify these into a single header at <sys/stat.h> for ease of maintenance
+ * and clarity with hopes that one day C Standards or POSIX may revamp layout
+ * for sanity's sake so that we can remove the abstraction of legacy cruft that
+ * cause so many security bugs because the coders don't see how things work.
+ *
+ * There has to be a better way!!!
+ */
+
 #ifdef __cplusplus
 	extern "C" {
 #endif

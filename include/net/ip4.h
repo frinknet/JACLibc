@@ -9,7 +9,12 @@
  *   - <netinet/ip.h> (Raw IPv4 Headers - BSD & Linux)
  *   - <netinet/in_systm.h> (Legacy Types)
  *
- * We unify these into <net/ip4.h> for clarity.
+ * We unify these into a single header at <net/ip6.h> for ease of maintenance
+ * and clarity with hopes that one day C Standards or POSIX may revamp layout
+ * for sanity's sake so that we can remove the abstraction of legacy cruft that
+ * cause so many security bugs because the coders don't see how things work.
+ *
+ * There has to be a better way!!!
  *
  * COMPATIBILITY:
  * - struct ipv4_hdr: Linux-style naming (saddr, daddr)

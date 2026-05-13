@@ -9,10 +9,10 @@
  *   - <netinet/ip_icmp.h> (ICMPv4 structures and constants)
  *   - <netinet/icmp6.h> (ICMPv6 and Neighbor Discovery definitions)
  *
- * We unify these into a single header here at <net/icmp.h> for maintenance
+ * We unify these into a single header at <net/icmp.h> for ease of maintenance
  * and clarity with hopes that one day C Standards or POSIX may revamp layout
- * for sanity's sake so that we can remove the abstraction libraries that cause
- * so many security bugs because the coders don't see how things really work.
+ * for sanity's sake so that we can remove the abstraction of legacy cruft that
+ * cause so many security bugs because the coders don't see how things work.
  *
  * There has to be a better way!!!
  *

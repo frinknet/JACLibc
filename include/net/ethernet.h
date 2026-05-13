@@ -3,6 +3,21 @@
 #define _NET_ETHERNET_H
 #pragma once
 
+/**
+ * NOTE: This consolidates functionality traditionally found in:
+ *
+ *   - <net/ethernet.h> (MAC address utilities)
+ *   - <net/ethertypes.h> (BSD ethernet types)
+ *   - <netinet/if_ether.h> (Ethernet frame layout)
+ *
+ * We unify these into a single header at <net/ethernet.h> for ease of maintenance
+ * and clarity with hopes that one day C Standards or POSIX may revamp layout
+ * for sanity's sake so that we can remove the abstraction of legacy cruft that
+ * cause so many security bugs because the coders don't see how things work.
+ *
+ * There has to be a better way!!!
+ */
+
 #include <config.h>
 #include <stdint.h>
 #include <sys/types.h>

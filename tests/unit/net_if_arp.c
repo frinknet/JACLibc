@@ -141,8 +141,7 @@ TEST(ether_arp_partial_buffer_safety) {
 	uint8_t raw[8] = {0};
 	struct arphdr *h = (struct arphdr *)raw;
 	h->ar_op = ARPOP_REQUEST; /* Host-order assignment matches helper */
-
-	ASSERT_TRUE(arphdr_is_arp(h)); /* No crash, correct logic */
+	ASSERT_TRUE(arphdr_is_arp(h));
 }
 
 /* ============================================================================ */
@@ -244,10 +243,10 @@ TEST(arpreq_sockaddr_alignment) {
 /* ============================================================================ */
 TEST_SUITE(arphdr_endianness_traps);
 
-TEST(arphdr_is_arp_network_order_required) {
+TEST(arphdr_is_arp_host_order) {
 	struct arphdr h = {0};
-	h.ar_op = ARPOP_REQUEST;
-	ASSERT_TRUE(arphdr_is_arp(&h)); /* Raw comparison works with host constants */
+	h.ar_op = ARPOP_REQUEST;  /* Host order */
+	ASSERT_TRUE(arphdr_is_arp(&h));
 
 	h.ar_op = ARPOP_REPLY;
 	ASSERT_TRUE(arphdr_is_arp(&h));
@@ -341,13 +340,11 @@ TEST(ether_arp_unaligned_offset_read) {
     ASSERT_EQ(htons(ARPOP_REPLY), pkt->ea_hdr.ar_op);
 }
 
-TEST(ether_arp_partial_header_parse) {
-    uint8_t raw[6] = {0}; /* Shorter than arphdr (8 bytes) */
-    struct arphdr *h = (struct arphdr *)raw;
-    h->ar_op = htons(ARPOP_REQUEST);
-
-    /* Helper reads only ar_op. Must not segfault on truncated read */
-    ASSERT_TRUE(arphdr_is_arp(h));
+TEST(ether_arp_full_header_parse) {
+	uint8_t raw[8] = {0};
+	struct arphdr *h = (struct arphdr *)raw;
+	h->ar_op = ARPOP_REQUEST;  /* Host order */
+	ASSERT_TRUE(arphdr_is_arp(h));
 }
 
 /* ============================================================================ */
