@@ -1,5 +1,5 @@
 /**
- * FREEBSD SIGNALS IMPORTED  //  last updated: 2026-03-04 00:58:10 UTC
+ * FREEBSD SIGNALS IMPORTED  //  last updated: 2026-05-12 08:25:02 UTC
  * https://cgit.freebsd.org/src/plain/sys/sys/signal.h
  */
 
@@ -104,7 +104,9 @@
 #define SIGNAL_SEGV_CODES(X) \
 	X(SEGV_MAPERR, 1) \
 	X(SEGV_ACCERR, 2) \
-	X(SEGV_PKUERR, 100)
+	X(SEGV_MTEAERR, 100) \
+	X(SEGV_PKUERR, 100) \
+	X(SEGV_MTESERR, 101)
 
 /* Signal detail codes (BUS_*) */
 #define SIGNAL_BUS_CODES(X) \

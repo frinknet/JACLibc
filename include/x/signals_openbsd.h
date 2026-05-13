@@ -1,5 +1,5 @@
 /**
- * OPENBSD SIGNALS IMPORTED  //  last updated: 2026-03-04 00:58:15 UTC
+ * OPENBSD SIGNALS IMPORTED  //  last updated: 2026-05-12 08:25:09 UTC
  * https://cvsweb.openbsd.org/checkout/src/sys/sys/signal.h
  * https://cvsweb.openbsd.org/checkout/src/sys/sys/siginfo.h
  */

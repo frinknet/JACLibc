@@ -1,5 +1,5 @@
 /**
- * DRAGONFLY SIGNALS IMPORTED  //  last updated: 2026-03-04 00:58:17 UTC
+ * DRAGONFLY SIGNALS IMPORTED  //  last updated: 2026-05-12 08:25:11 UTC
  * https://gitweb.dragonflybsd.org/dragonfly.git/blob_plain/master:/sys/sys/signal.h
  */
 

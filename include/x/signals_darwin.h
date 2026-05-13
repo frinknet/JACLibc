@@ -1,5 +1,5 @@
 /**
- * DARWIN SIGNALS IMPORTED  //  last updated: 2026-03-04 00:58:09 UTC
+ * DARWIN SIGNALS IMPORTED  //  last updated: 2026-05-12 08:25:00 UTC
  * https://raw.githubusercontent.com/apple-oss-distributions/xnu/main/bsd/sys/signal.h
  */
 

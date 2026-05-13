@@ -1,5 +1,5 @@
 /**
- * NETBSD SIGNALS IMPORTED  //  last updated: 2026-03-04 00:58:13 UTC
+ * NETBSD SIGNALS IMPORTED  //  last updated: 2026-05-12 08:25:04 UTC
  * http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/sys/signal.h?rev=HEAD&content-type=text/plain
  */
 
