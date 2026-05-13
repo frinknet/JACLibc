@@ -9,6 +9,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <stdatomic.h>
 #include <pthread.h>
 
