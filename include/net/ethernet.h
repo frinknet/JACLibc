@@ -149,6 +149,12 @@ struct vlan_ethhdr {
 	uint16_t h_vlan_encapsulated_proto;
 } JACL_PACK;
 
+_Static_assert(sizeof(struct ethhdr) == 14, "ethhdr wire format broken");
+_Static_assert(sizeof(struct ether_addr) == 6, "MAC address length wrong");
+_Static_assert(sizeof(struct ether_header) == 14, "ether_header alias broken");
+_Static_assert(sizeof(struct vlan_hdr) == 4, "VLAN header size mismatch");
+_Static_assert(sizeof(struct vlan_ethhdr) == 18, "VLAN eth header size mismatch");
+
 #define VLAN_PRIO_MASK		0xe000
 #define VLAN_PRIO_SHIFT		13
 #define VLAN_CFI_MASK		0x1000
@@ -202,4 +208,5 @@ int ether_hostton(const char *hostname, struct ether_addr *addr);
 #ifdef __cplusplus
 }
 #endif
+
 #endif /* _NET_ETHERNET_H */
