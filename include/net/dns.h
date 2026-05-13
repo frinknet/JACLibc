@@ -150,6 +150,10 @@ static inline void dns_put32(uint8_t *ptr, uint32_t val) {
 #define ns_get32(p) dns_get32((const uint8_t *)(p))
 #define ns_put32(s, p) dns_put32((uint8_t *)(p), (s))
 
+_Static_assert(sizeof(struct dns_hdr) == 12, "dns header size wrong");
+_Static_assert(sizeof(struct dns_q) == 4, "dns question section size wrong");
+_Static_assert(sizeof(struct dns_rr) == 10, "dns resource record size wrong");
+
 /* ======================================================================== */
 /* Name Compression & Expansion (from resolv.h)                             */
 /* ======================================================================== */

@@ -141,6 +141,11 @@ struct ip6_rthdr {
 #define IPV6_ADDR_V4MAPPED     5
 #define IPV6_ADDR_V4COMPAT     6
 
+_Static_assert(sizeof(struct ipv6_hdr) == 40, "ipv6_hdr size wrong");
+_Static_assert(sizeof(struct in6_addr) == 16, "in6_addr size wrong");
+_Static_assert(sizeof(struct ip6_frag) == 8, "ip6_frag size wrong");
+_Static_assert(sizeof(struct ip6_rthdr) == 4, "ip6_rthdr size wrong");
+
 #ifdef __cplusplus
 }
 #endif

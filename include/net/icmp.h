@@ -297,6 +297,9 @@ struct nd_opt_mtu {
 #define ND_OPT_PI_FLAG_AUTO         0x40
 #define ND_OPT_PI_FLAG_RADDR        0x20
 
+_Static_assert(sizeof(struct icmp) == 8, "ICMPv4 header size wrong");
+_Static_assert(sizeof(struct icmp6_hdr) == 8, "ICMPv6 header size wrong");
+
 /* ======================================================================== */
 /* ICMPv4 Pseudo-Header (for documentation - ICMPv4 has no pseudo-header)   */
 /* ======================================================================== */

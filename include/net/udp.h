@@ -103,6 +103,10 @@ struct udppseudo6 {
 #define UDP_SEGMENT     		103 /* GSO/UDP segmentation */
 #endif
 
+_Static_assert(sizeof(struct udphdr) == 8, "udp header size wrong");
+_Static_assert(sizeof(struct udppseudo) == 12, "udp pseudo-header size wrong");
+_Static_assert(sizeof(struct udppseudo6) == 40, "udp IPv6 pseudo-header size wrong");
+
 /* ======================================================================== */
 /* Checksum Helpers (RFC 768 Pseudo-Header)                                 */
 /* ======================================================================== */

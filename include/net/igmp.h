@@ -119,6 +119,10 @@ struct igmpv3_report {
 	/* Followed by num_grps struct igmpv3_grec[] */
 } JACL_PACK;
 
+_Static_assert(sizeof(struct igmp) == 8, "IGMPv1/v2 header size wrong");
+_Static_assert(sizeof(struct igmpv3_query) == 12, "IGMPv3 query size wrong");
+_Static_assert(sizeof(struct igmpv3_grec) == 8, "IGMPv3 group record size wrong");
+
 /* ======================================================================== */
 /* Checksum Helper (Standard Internet Checksum)                             */
 /* Byte-wise access prevents unaligned faults on RISC/ARM.                  */

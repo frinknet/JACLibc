@@ -149,6 +149,8 @@ typedef struct tcphdr tcp_hdr;
 #define TCP_HDR_LEN       20
 #define TCP_DATA_OFFSET(th) (TH_OFF(th) * 4) /* Offset in bytes */
 
+_Static_assert(sizeof(struct tcphdr) == 20, "tcp header size wrong");
+
 /* ======================================================================== */
 /* Checksum Helpers (RFC 793 / RFC 2460 Pseudo-Header)                      */
 /* ======================================================================== */

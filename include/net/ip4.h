@@ -193,6 +193,10 @@ typedef struct ipv4_hdr iphdr;
 #define IPV4_VERSION(b)      IP_VERSION(b)
 #define IPV4_IHL(b)          IP_HL(b)
 
+_Static_assert(sizeof(struct ipv4_hdr) == 20, "ipv4_hdr size wrong");
+_Static_assert(sizeof(struct in_addr) == 4, "in_addr size wrong");
+_Static_assert(sizeof(struct ip) == 20, "BSD ip struct size mismatch");
+
 /* ======================================================================== */
 /* Helper: Calculate IPv4 Header Checksum                                   */
 /* ======================================================================== */
