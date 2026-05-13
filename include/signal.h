@@ -37,7 +37,7 @@ typedef void (*sig_t)(int);		/* Generic fallback */
 
 #include JACL_X_SIGNALS
 #define X_ENUM(name, val) name = (val),
-enum { SIGNAL_NUMBERS(X_ENUM) };
+enum { SIGNAL_NUMBERS(X_ENUM) NSIG };
 enum { SIGNAL_ACTION_FLAGS(X_ENUM) };
 enum { SIGNAL_MASK_OPS(X_ENUM) };
 enum { SIGNAL_INFO_CODES(X_ENUM) };
