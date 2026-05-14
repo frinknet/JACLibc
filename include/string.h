@@ -370,14 +370,6 @@ static inline size_t strlcat(char*  restrict dest, const char* src, size_t n) {
 }
 #endif
 
-/* POSIX basename simple no-alloc */
-#if JACL_HAS_POSIX
-static inline const char* basename(const char* path) {
-		const char* p = strrchr(path, '/');
-		return p ? p + 1 : path;
-}
-#endif
-
 #ifdef __cplusplus
 }
 #endif
