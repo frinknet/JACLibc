@@ -303,6 +303,10 @@ static inline ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags) {
 	return syscall(SYS_recvmsg, sockfd, msg, flags);
 }
 
+static inline int socketpair(int domain, int type, int protocol, int sv[]) {
+	return (int)syscall(SYS_socketpair, domain, type, protocol, sv);
+}
+
 #else /* !JACL_HAS_POSIX */
 
 static inline int socket(int d, int t, int p) { (void)d;(void)t;(void)p; errno=ENOSYS; return -1; }
@@ -319,6 +323,7 @@ static inline int getsockopt(int s, int l, int o, void *v, socklen_t *n) { (void
 static inline int shutdown(int s, int h) { (void)s;(void)h; errno=ENOSYS; return -1; }
 static inline ssize_t sendmsg(int s, const struct msghdr *m, int f) { (void)s;(void)m;(void)f; errno=ENOSYS; return -1; }
 static inline ssize_t recvmsg(int s, struct msghdr *m, int f) { (void)s;(void)m;(void)f; errno=ENOSYS; return -1; }
+static inline int socketpair(int d, int t, int p, int sv[]) { (void)d;(void)t;(void)p;(void)sv; errno=ENOSYS; return -1; }
 
 #endif /* JACL_HAS_POSIX */
 

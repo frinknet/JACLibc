@@ -364,6 +364,7 @@ static inline sig_t signal(int sig, sig_t func) {
 
 	return SIG_ERR;
 }
+
 #endif
 
 /* — C11+ Thread Safety Extensions — */
@@ -375,11 +376,10 @@ static inline sig_t signal(int sig, sig_t func) {
 /* — C99+ inline signal set helpers — */
 #if JACL_HAS_C99 && JACL_HAS_POSIX
 
-static inline int __sigisemptyset(const sigset_t *set) { return set ? (set->__bits[0] == 0 && set->__bits[1] == 0) : 0; }
-static inline void __sigemptyset_fast(sigset_t *set) { if (set) { set->__bits[0] = 0; set->__bits[1] = 0; } }
-static inline void __sigfillset_fast(sigset_t *set) { if (set) { set->__bits[0] = ~0UL; set->__bits[1] = ~0UL; } }
-static inline int __sigaddset_fast(sigset_t *set, int sig) { return sigaddset(set, sig); }
-static inline int __sigdelset_fast(sigset_t *set, int sig) { return sigdelset(set, sig); }
+static inline int sigisemptyset(const sigset_t *set) {
+	if (!set) { errno = EINVAL; return -1; }
+	return (set->__bits[0] == 0 && set->__bits[1] == 0) ? 1 : 0;
+}
 
 #endif /* C99+ inline optimizations */
 

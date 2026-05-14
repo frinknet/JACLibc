@@ -13,11 +13,13 @@
  * - Return codes control flow (OK, DONE, CLOSE, ERROR, UPGRADE)
  * - Bidirectional error tracking (read/write independent)
  * - Zero HTTP assumptions - works for SMTP, WebSocket, MQTT, etc.
+ * - ASYNC RETROFIT: Driven by AIO completions, not blocking syscalls
  */
 
 #include <config.h>
 #include <transit/conn.h>
 #include <transit/proto.h>
+#include <aio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -49,25 +51,6 @@ extern "C" {
 /* Client Connection (Per-Session State)                                    */
 /* ======================================================================== */
 
-/**
- * Client session wrapper
- *
- * MEMORY OWNERSHIP:
- * - client_conn_create(): Allocates session + buffer
- * - client_conn_free(): Frees session + buffer + closes conn
- * - User NEVER calls free() on client_conn_t directly
- *
- * BUFFER: Owned by session (not conn_t). Protocol decides how to parse.
- * - buf, buf_size, buf_used: Read buffer
- * - buf_consumed: Bytes consumed by proto handler (for shifting)
- *
- * STATE: Bidirectional tracking (read/write independent)
- * - read_eof, read_blocked: Read side state
- * - write_blocked: Write side state
- *
- * ERROR: Per-session (not per-FD) for scalability
- * - last_error, error_op: Last error details
- */
 typedef struct client_conn {
     conn_t *conn;                 /* Transport (from conn.h) */
     const proto_t *proto;         /* Current protocol (from proto.h) */
@@ -84,17 +67,18 @@ typedef struct client_conn {
     size_t write_used;
     size_t write_sent;
     
-    /* Read/Write state (bidirectional) */
-    bool read_eof;
-    bool read_blocked;
-    bool write_blocked;
-    
     /* Session state */
     bool active;
     int hops;                     /* Upgrade hop counter */
     int request_count;            /* For max_requests limit */
     int last_error;
     char error_op[16];
+    bool read_eof;
+    
+    /* AIO state – embedded, no heap alloc per op */
+    struct aiocb __aio_cb;
+    enum { __AIO_IDLE = 0, __AIO_READ, __AIO_WRITE } __aio_state;
+    size_t __write_remaining;     /* Track remaining bytes for current write op */
     
     /* User data */
     void *data;
@@ -155,8 +139,8 @@ static inline client_conn_t *client_conn_create(conn_t *c, client_t *client) {
     cc->request_count = 0;
     cc->last_error = 0;
     cc->read_eof = false;
-    cc->read_blocked = false;
-    cc->write_blocked = false;
+    cc->__aio_state = __AIO_IDLE;
+    cc->__write_remaining = 0;
     
     /* Call protocol open hook */
     if (cc->proto && cc->proto->client_open) {
@@ -227,62 +211,124 @@ static inline int client_step(client_conn_t *cc) {
         return CLIENT_ERROR;
     }
     
-    /* ========== WRITE SIDE (Client usually writes first) ========== */
-    if (!cc->write_blocked && cc->write_used > cc->write_sent) {
-        ssize_t n = conn_write(cc->conn, 
-                               cc->write_buf + cc->write_sent, 
-                               cc->write_used - cc->write_sent);
-        
-        if (n < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                cc->write_blocked = true;
-                return CLIENT_OK;
+    /* ==================== PHASE 1: REAP COMPLETIONS ==================== */
+    __jacl_aio_reap_cq();
+    
+    /* Check read completion */
+    if (cc->__aio_state == __AIO_READ) {
+        int err = aio_error(&cc->__aio_cb);
+        if (err != EINPROGRESS) {
+            ssize_t n = aio_return(&cc->__aio_cb);
+            cc->__aio_state = __AIO_IDLE;
+            
+            if (n > 0) {
+                cc->buf_used += (size_t)n;
+            } else if (n == 0) {
+                cc->read_eof = true;
+            } else {
+                cc->last_error = errno;
+                strncpy(cc->error_op, "aio_read", sizeof(cc->error_op) - 1);
+                return CLIENT_CLOSE;
             }
-            cc->last_error = errno;
-            strncpy(cc->error_op, "write", sizeof(cc->error_op) - 1);
-            return CLIENT_CLOSE;
-        }
-        
-        cc->write_sent += (size_t)n;
-        cc->write_blocked = false;
-        
-        /* Write complete? */
-        if (cc->write_sent >= cc->write_used) {
-            cc->write_used = 0;
-            cc->write_sent = 0;
         }
     }
     
-    /* ========== READ SIDE ========== */
-    if (!cc->read_eof && !cc->read_blocked && cc->buf_used < cc->buf_size) {
-        ssize_t n = conn_read(cc->conn, cc->buf + cc->buf_used, 
-                              cc->buf_size - cc->buf_used);
-        
-        if (n < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                cc->read_blocked = true;
-                return CLIENT_OK;
+    /* Check write completion */
+    if (cc->__aio_state == __AIO_WRITE) {
+        int err = aio_error(&cc->__aio_cb);
+        if (err != EINPROGRESS) {
+            ssize_t n = aio_return(&cc->__aio_cb);
+            cc->__aio_state = __AIO_IDLE;
+            
+            if (n > 0 && (size_t)n < cc->__write_remaining) {
+                /* Partial write – advance cursor */
+                cc->write_sent += (size_t)n;
+                cc->__write_remaining -= (size_t)n;
+            } else {
+                /* Complete or error */
+                if (n > 0) cc->write_sent += (size_t)n;
+                
+                if (cc->write_sent >= cc->write_used) {
+                    cc->write_used = 0;
+                    cc->write_sent = 0;
+                }
+                cc->__write_remaining = 0;
+                
+                if (n < 0) {
+                    cc->last_error = errno;
+                    strncpy(cc->error_op, "aio_write", sizeof(cc->error_op) - 1);
+                    return CLIENT_CLOSE;
+                }
             }
-            cc->last_error = errno;
-            strncpy(cc->error_op, "read", sizeof(cc->error_op) - 1);
-            return CLIENT_CLOSE;
         }
+    }
+    
+    /* ==================== PHASE 2: SUBMIT NEW OPS ==================== */
+    
+    /* Submit write first (client usually speaks first) */
+    if (cc->__aio_state == __AIO_IDLE && cc->write_used > cc->write_sent) {
+        size_t len = cc->write_used - cc->write_sent;
+        cc->__aio_cb = (struct aiocb){
+            .aio_fildes = cc->conn->fd,
+            .aio_buf = cc->write_buf + cc->write_sent,
+            .aio_nbytes = len,
+            .aio_offset = 0,
+            .aio_sigevent.sigev_notify = SIGEV_NONE
+        };
+        cc->__write_remaining = len;
         
-        if (n == 0) {
-            cc->read_eof = true;  /* EOF */
+        if (aio_write(&cc->__aio_cb) != 0) {
+            /* Fallback to blocking write */
+            ssize_t n = write(cc->conn->fd, cc->write_buf + cc->write_sent, len);
+            if (n > 0) {
+                cc->write_sent += (size_t)n;
+                if (cc->write_sent >= cc->write_used) {
+                    cc->write_used = 0;
+                    cc->write_sent = 0;
+                }
+            } else {
+                cc->last_error = errno;
+                strncpy(cc->error_op, "write", sizeof(cc->error_op) - 1);
+                return CLIENT_CLOSE;
+            }
         } else {
-            cc->buf_used += (size_t)n;
-            cc->read_blocked = false;
+            cc->__aio_state = __AIO_WRITE;
         }
     }
     
-    /* ========== PROTOCOL INBOUND ========== */
+    /* Submit read if idle and buffer has space */
+    if (cc->__aio_state == __AIO_IDLE && !cc->read_eof && cc->buf_used < cc->buf_size) {
+        cc->__aio_cb = (struct aiocb){
+            .aio_fildes = cc->conn->fd,
+            .aio_buf = cc->buf + cc->buf_used,
+            .aio_nbytes = cc->buf_size - cc->buf_used,
+            .aio_offset = 0,
+            .aio_sigevent.sigev_notify = SIGEV_NONE
+        };
+        if (aio_read(&cc->__aio_cb) != 0) {
+            /* Fallback to blocking read */
+            ssize_t n = read(cc->conn->fd, cc->buf + cc->buf_used, cc->buf_size - cc->buf_used);
+            if (n > 0) {
+                cc->buf_used += (size_t)n;
+            } else if (n == 0) {
+                cc->read_eof = true;
+            } else {
+                cc->last_error = errno;
+                strncpy(cc->error_op, "read", sizeof(cc->error_op) - 1);
+                return CLIENT_CLOSE;
+            }
+        } else {
+            cc->__aio_state = __AIO_READ;
+        }
+    }
+    
+    /* ==================== PHASE 3: PROTOCOL DISPATCH ==================== */
+    
+    /* Inbound */
     if (cc->proto->client_in && cc->buf_used > cc->buf_consumed) {
         int r = cc->proto->client_in(cc);
         
-        if (r == CLIENT_UPGRADE) {
-            return CLIENT_UPGRADE;
-        }
+        if (r == CLIENT_UPGRADE) return CLIENT_UPGRADE;
         if (r == CLIENT_CLOSE || r == CLIENT_ERROR) {
             cc->last_error = -r;
             strncpy(cc->error_op, "proto_in", sizeof(cc->error_op) - 1);
@@ -308,8 +354,8 @@ static inline int client_step(client_conn_t *cc) {
         }
     }
     
-    /* ========== PROTOCOL OUTBOUND ========== */
-    if (cc->proto->client_out && !cc->write_blocked) {
+    /* Outbound */
+    if (cc->proto->client_out && cc->__aio_state == __AIO_IDLE) {
         int r = cc->proto->client_out(cc);
         
         if (r == CLIENT_CLOSE || r == CLIENT_ERROR) {
@@ -318,14 +364,12 @@ static inline int client_step(client_conn_t *cc) {
             return r;
         }
         
-        if (r == CLIENT_UPGRADE) {
-            return CLIENT_UPGRADE;
-        }
+        if (r == CLIENT_UPGRADE) return CLIENT_UPGRADE;
     }
     
-    /* ========== EOF HANDLING ========== */
-    if (cc->read_eof && cc->buf_used == 0 && cc->write_used == 0) {
-        return CLIENT_CLOSE;  /* Done */
+    /* EOF Handling */
+    if (cc->read_eof && cc->buf_used == 0 && cc->write_used == 0 && cc->__aio_state == __AIO_IDLE) {
+        return CLIENT_CLOSE;
     }
     
     return CLIENT_OK;
