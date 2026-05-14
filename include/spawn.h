@@ -131,7 +131,6 @@ static inline int posix_spawnattr_setsigdefault(posix_spawnattr_t *restrict attr
 	return 0;
 }
 
-/* Stubs for sched policies/params as they are complex and often optional */
 static inline int posix_spawnattr_getschedparam(const posix_spawnattr_t *restrict attr, struct sched_param *restrict param) {
 	if (!attr || !param) return EINVAL;
 	*param = attr->spawn_schedparam;
@@ -198,14 +197,14 @@ static inline int posix_spawn_file_actions_addopen(posix_spawn_file_actions_t *r
 	if (!file_actions || !path) return EINVAL;
 	int r = __jacl_spawn_action_add(file_actions, POSIX_SPAWN_OPEN);
 	if (r) return r;
-
+	
 	int idx = file_actions->used - 1;
 	file_actions->actions[idx].data.fd = fd;
 	file_actions->actions[idx].data.open.oflag = oflag;
 	file_actions->actions[idx].data.open.mode = mode;
 	file_actions->actions[idx].data.open.path = strdup(path);
 	if (!file_actions->actions[idx].data.open.path) {
-		file_actions->used--; /* Rollback */
+		file_actions->used--; 
 		return ENOMEM;
 	}
 	return 0;
@@ -247,15 +246,23 @@ static inline int posix_spawnp(pid_t *pid, const char *file, const posix_spawn_f
 #else /* POSIX */
 
 static inline int posix_spawn(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *attrp, char *const argv[], char *const envp[]) {
-	if (!path || !argv) return EINVAL; /* Basic validation in parent */
+	if (!path || !argv) return EINVAL;
 
-	pid_t p = fork();
+	pid_t p;
+
+	/* Use vfork for performance if available and not Darwin (where vfork==fork) */
+	#if defined(SYS_vfork) && !defined(JACL_OS_DARWIN)
+		p = vfork();
+	#else
+		p = fork();
+	#endif
+
 	if (p < 0) return errno;
 
 	if (p == 0) {
-		/* Child */
-
-		/* Handle attributes */
+		/* Child Process - CRITICAL: No malloc/free/printf */
+		
+		/* 1. Handle Attributes */
 		if (attrp) {
 			if (attrp->flags & POSIX_SPAWN_SETSIGMASK) {
 				sigprocmask(SIG_SETMASK, &attrp->sigmask, NULL);
@@ -275,13 +282,13 @@ static inline int posix_spawn(pid_t *pid, const char *path, const posix_spawn_fi
 			}
 		}
 
-		/* Handle file actions */
+		/* 2. Handle File Actions */
 		if (file_actions) {
 			for (int i = 0; i < file_actions->used; i++) {
 				switch (file_actions->actions[i].action) {
 					case POSIX_SPAWN_OPEN: {
-						int fd = open(file_actions->actions[i].data.open.path,
-						              file_actions->actions[i].data.open.oflag,
+						int fd = open(file_actions->actions[i].data.open.path, 
+						              file_actions->actions[i].data.open.oflag, 
 						              file_actions->actions[i].data.open.mode);
 						if (fd >= 0) {
 							if (fd != file_actions->actions[i].data.fd) {
@@ -301,11 +308,14 @@ static inline int posix_spawn(pid_t *pid, const char *path, const posix_spawn_fi
 			}
 		}
 
+		/* 3. Exec */
 		execve(path, argv, envp);
+		
+		/* If exec fails, exit immediately. Do not return. */
 		_exit(127);
 	}
 
-	/* Parent */
+	/* Parent Process resumes here */
 	if (pid) *pid = p;
 	return 0;
 }
@@ -323,7 +333,7 @@ static inline int posix_spawnp(pid_t *pid, const char *file, const posix_spawn_f
 	while (*p) {
 		const char *end = strchr(p, ':');
 		if (!end) end = p + strlen(p);
-
+		
 		size_t len = end - p;
 		if (len + 1 + strlen(file) + 1 > sizeof(buf)) {
 			p = *end ? end + 1 : end;
