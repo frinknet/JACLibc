@@ -1,4 +1,4 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 #ifndef _STDIO_H
 #define _STDIO_H
 #pragma once

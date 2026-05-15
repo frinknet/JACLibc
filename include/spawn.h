@@ -1,4 +1,4 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2026 FRINKnet & Friends – MIT licence */
 #ifndef _SPAWN_H
 #define _SPAWN_H
 
@@ -197,14 +197,14 @@ static inline int posix_spawn_file_actions_addopen(posix_spawn_file_actions_t *r
 	if (!file_actions || !path) return EINVAL;
 	int r = __jacl_spawn_action_add(file_actions, POSIX_SPAWN_OPEN);
 	if (r) return r;
-	
+
 	int idx = file_actions->used - 1;
 	file_actions->actions[idx].data.fd = fd;
 	file_actions->actions[idx].data.open.oflag = oflag;
 	file_actions->actions[idx].data.open.mode = mode;
 	file_actions->actions[idx].data.open.path = strdup(path);
 	if (!file_actions->actions[idx].data.open.path) {
-		file_actions->used--; 
+		file_actions->used--;
 		return ENOMEM;
 	}
 	return 0;
@@ -231,7 +231,126 @@ static inline int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t *f
 /* Spawn Functions                                                              */
 /* ============================================================================ */
 
-#if defined(JACL_OS_WINDOWS) || defined(JACL_ARCH_WASM)
+#if defined(JACL_OS_WINDOWS)
+
+#include <windows.h>
+#include <process.h>
+
+static inline wchar_t* __jacl_win_env_from_posix(char *const envp[]) {
+    if (!envp) return NULL;
+    size_t len = 0;
+    for (int i = 0; envp[i]; i++) len += strlen(envp[i]) + 1;
+    len++;
+
+    wchar_t *block = (wchar_t *)malloc(len * sizeof(wchar_t));
+    if (!block) return NULL;
+
+    wchar_t *p = block;
+    for (int i = 0; envp[i]; i++) {
+        int wlen = MultiByteToWideChar(CP_UTF8, 0, envp[i], -1, p, (int)(len - (p - block)));
+        if (wlen == 0) { free(block); return NULL; }
+        p += wlen;
+    }
+    *p = L'\0';
+    return block;
+}
+
+static inline int posix_spawn(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *attrp, char *const argv[], char *const envp[]) {
+    if (!path || !argv) return EINVAL;
+
+    STARTUPINFOW si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    if (file_actions) {
+        si.dwFlags |= STARTF_USESTDHANDLES;
+        si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+        si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+        si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+
+        for (int i = 0; i < file_actions->used; i++) {
+            if (file_actions->actions[i].action == POSIX_SPAWN_DUP2) {
+                int fd = file_actions->actions[i].data.fd;
+                int newfd = file_actions->actions[i].data.newfd;
+                HANDLE h = (HANDLE)_get_osfhandle(fd);
+                if (h != INVALID_HANDLE_VALUE) {
+                    SetHandleInformation(h, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+                    if (newfd == 0) si.hStdInput = h;
+                    else if (newfd == 1) si.hStdOutput = h;
+                    else if (newfd == 2) si.hStdError = h;
+                }
+            }
+        }
+    }
+
+    size_t cmd_len = 1;
+    for (int i = 0; argv[i]; i++) cmd_len += strlen(argv[i]) + 3;
+    char *cmd_buf = (char *)malloc(cmd_len);
+    if (!cmd_buf) return ENOMEM;
+
+    char *p = cmd_buf;
+    for (int i = 0; argv[i]; i++) {
+        if (i > 0) *p++ = ' ';
+        *p++ = '"'; strcpy(p, argv[i]); p += strlen(argv[i]); *p++ = '"';
+    }
+    *p = '\0';
+
+    int wcmd_len = (int)strlen(cmd_buf) + 1;
+    wchar_t *wcmd = (wchar_t *)malloc(wcmd_len * sizeof(wchar_t));
+    if (!wcmd) { free(cmd_buf); return ENOMEM; }
+    MultiByteToWideChar(CP_UTF8, 0, cmd_buf, -1, wcmd, wcmd_len);
+    free(cmd_buf);
+
+    wchar_t *wenv = __jacl_win_env_from_posix(envp);
+    wchar_t *wpath = (wchar_t *)malloc((strlen(path) + 1) * sizeof(wchar_t));
+    MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, (int)strlen(path) + 1);
+
+    BOOL success = CreateProcessW(wpath, wcmd, NULL, NULL, TRUE, CREATE_UNICODE_ENVIRONMENT, wenv, NULL, &si, &pi);
+
+    free(wcmd); free(wpath); if (wenv) free(wenv);
+
+    if (!success) return GetLastError();
+
+    CloseHandle(pi.hThread);
+    if (pid) *pid = (pid_t)pi.hProcess;
+    else CloseHandle(pi.hProcess);
+
+    return 0;
+}
+
+static inline int posix_spawnp(pid_t *pid, const char *file, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *attrp, char *const argv[], char *const envp[]) {
+    if (strchr(file, '/') || strchr(file, '\\') || strchr(file, ':'))
+        return posix_spawn(pid, file, file_actions, attrp, argv, envp);
+
+    char path_buf[MAX_PATH];
+    const char *ext = strrchr(file, '.');
+    if (!ext) snprintf(path_buf, sizeof(path_buf), "%s.exe", file);
+    else strncpy(path_buf, file, sizeof(path_buf) - 1);
+
+    const char *path_env = getenv("PATH");
+    if (!path_env) path_env = ".";
+
+    char *path_copy = strdup(path_env);
+    if (!path_copy) return ENOMEM;
+
+    char *token = strtok(path_copy, ";");
+    int ret = ENOENT;
+    while (token) {
+        char full_path[MAX_PATH];
+        snprintf(full_path, sizeof(full_path), "%s\\%s", token, path_buf);
+        if (GetFileAttributesA(full_path) != INVALID_FILE_ATTRIBUTES) {
+            ret = posix_spawn(pid, full_path, file_actions, attrp, argv, envp);
+            if (ret == 0) break;
+        }
+        token = strtok(NULL, ";");
+    }
+    free(path_copy);
+    return ret;
+}
+
+#elif defined(JACL_ARCH_WASM)
 
 static inline int posix_spawn(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *attrp, char *const argv[], char *const envp[]) {
 	(void)pid; (void)path; (void)file_actions; (void)attrp; (void)argv; (void)envp;
@@ -261,7 +380,7 @@ static inline int posix_spawn(pid_t *pid, const char *path, const posix_spawn_fi
 
 	if (p == 0) {
 		/* Child Process - CRITICAL: No malloc/free/printf */
-		
+
 		/* 1. Handle Attributes */
 		if (attrp) {
 			if (attrp->flags & POSIX_SPAWN_SETSIGMASK) {
@@ -287,8 +406,8 @@ static inline int posix_spawn(pid_t *pid, const char *path, const posix_spawn_fi
 			for (int i = 0; i < file_actions->used; i++) {
 				switch (file_actions->actions[i].action) {
 					case POSIX_SPAWN_OPEN: {
-						int fd = open(file_actions->actions[i].data.open.path, 
-						              file_actions->actions[i].data.open.oflag, 
+						int fd = open(file_actions->actions[i].data.open.path,
+						              file_actions->actions[i].data.open.oflag,
 						              file_actions->actions[i].data.open.mode);
 						if (fd >= 0) {
 							if (fd != file_actions->actions[i].data.fd) {
@@ -310,7 +429,7 @@ static inline int posix_spawn(pid_t *pid, const char *path, const posix_spawn_fi
 
 		/* 3. Exec */
 		execve(path, argv, envp);
-		
+
 		/* If exec fails, exit immediately. Do not return. */
 		_exit(127);
 	}
@@ -333,7 +452,7 @@ static inline int posix_spawnp(pid_t *pid, const char *file, const posix_spawn_f
 	while (*p) {
 		const char *end = strchr(p, ':');
 		if (!end) end = p + strlen(p);
-		
+
 		size_t len = end - p;
 		if (len + 1 + strlen(file) + 1 > sizeof(buf)) {
 			p = *end ? end + 1 : end;

@@ -80,8 +80,8 @@ static inline int chdir(const char *path) { return (int)syscall(SYS_chdir, path)
 static inline char *getcwd(char *buf, size_t size) { return (char*)syscall(SYS_getcwd, buf, size); }
 
 /* Process execution */
-static inline int execve(const char *pathname, char *const argv[], char *const envp[]) { return (int)syscall(SYS_execve, pathname, argv, envp); }
-static inline int execv(const char *pathname, char *const argv[]) { return execve(pathname, argv, environ); }
+static inline int execve(const char *pathname, char *const argv[], char *const envp[]) { return (int)syscall(SYS_execve, pathname, argv, envp ? envp : environ); }
+static inline int execv(const char *pathname, char *const argv[]) { return execve(pathname, argv, NULL); }
 static inline int execvp(const char *file, char *const argv[]) {
 	const char* p = file;
 	const char* env_path = NULL;
@@ -89,7 +89,7 @@ static inline int execvp(const char *file, char *const argv[]) {
 
 	while (*p && *p != '/') p++;
 
-	if (*p) return (int)syscall(SYS_execve, file, argv, environ);
+	if (*p) return execve(file, argv, environ);
 
 	for (char **env = environ; *env; ++env) {
 		if (!strncmp(*env, "PATH=", path_len + 1)) {
@@ -141,7 +141,7 @@ static inline int execvp(const char *file, char *const argv[]) {
 
 			full_path[i] = '\0';
 
-			int res = (int)syscall(SYS_execve, full_path, argv, environ);
+			int res = execve(full_path, argv, environ);
 
 			if (res == 0 || errno != ENOENT) return res;
 		}

@@ -1,4 +1,4 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 
 #if defined(JACL_OS)
 	#include JACL_HEADER(os, JACL_OS)
@@ -24,5 +24,13 @@
 	#define JACL_OS none
 		#include <os/none.h>
 #else /* unknown */
-	#error "JACLibc - Unsupported Operating System"
+	#error "Unsupported Operating System"
 #endif /* os check */
+
+/**
+ * Haiku
+ * FreeDOS
+ * Solaris
+ * Android
+ * and others
+ */
