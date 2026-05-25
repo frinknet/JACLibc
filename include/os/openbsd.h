@@ -40,6 +40,8 @@
 #endif
 
 #ifdef __OS_INIT
+	#include <dlfcn.h>
+
 	/* dispatch table */
 	struct __openbsd_libc {
 	#define X(SYS, num, fn, rettype, params, ...) \
@@ -60,45 +62,44 @@
 	#include JACL_X_SYSCALL
 	#undef X
 	}
-
 #undef __OS_INIT
 #endif
 
 #ifdef __OS_STAT
-/* OpenBSD kernel stat structure (POSIX-compliant naming) */
-struct __openbsd_stat {
-	dev_t     st_dev;
-	ino_t     st_ino;
-	mode_t    st_mode;
-	nlink_t   st_nlink;
-	uid_t     st_uid;
-	gid_t     st_gid;
-	dev_t     st_rdev;
-	struct timespec st_atim;
-	struct timespec st_mtim;
-	struct timespec st_ctim;
-	off_t     st_size;
-	blkcnt_t  st_blocks;
-	blksize_t st_blksize;
-	uint32_t  st_flags;
-	uint32_t  st_gen;
-};
+	/* OpenBSD kernel stat structure (POSIX-compliant naming) */
+	struct __openbsd_stat {
+		dev_t     st_dev;
+		ino_t     st_ino;
+		mode_t    st_mode;
+		nlink_t   st_nlink;
+		uid_t     st_uid;
+		gid_t     st_gid;
+		dev_t     st_rdev;
+		struct timespec st_atim;
+		struct timespec st_mtim;
+		struct timespec st_ctim;
+		off_t     st_size;
+		blkcnt_t  st_blocks;
+		blksize_t st_blksize;
+		uint32_t  st_flags;
+		uint32_t  st_gen;
+	};
 
-/* Convert OpenBSD kernel stat to POSIX stat */
-static inline void __openbsd_statnorm(const struct __openbsd_stat *kbuf, struct stat *statbuf) {
-	statbuf->st_dev     = kbuf->st_dev;
-	statbuf->st_ino     = kbuf->st_ino;
-	statbuf->st_mode    = kbuf->st_mode;
-	statbuf->st_nlink   = kbuf->st_nlink;
-	statbuf->st_uid     = kbuf->st_uid;
-	statbuf->st_gid     = kbuf->st_gid;
-	statbuf->st_rdev    = kbuf->st_rdev;
-	statbuf->st_size    = kbuf->st_size;
-	statbuf->st_blocks  = kbuf->st_blocks;
-	statbuf->st_blksize = kbuf->st_blksize;
-	statbuf->st_atim    = kbuf->st_atim;
-	statbuf->st_mtim    = kbuf->st_mtim;
-	statbuf->st_ctim    = kbuf->st_ctim;
-}
+	/* Convert OpenBSD kernel stat to POSIX stat */
+	static inline void __openbsd_statnorm(const struct __openbsd_stat *kbuf, struct stat *statbuf) {
+		statbuf->st_dev     = kbuf->st_dev;
+		statbuf->st_ino     = kbuf->st_ino;
+		statbuf->st_mode    = kbuf->st_mode;
+		statbuf->st_nlink   = kbuf->st_nlink;
+		statbuf->st_uid     = kbuf->st_uid;
+		statbuf->st_gid     = kbuf->st_gid;
+		statbuf->st_rdev    = kbuf->st_rdev;
+		statbuf->st_size    = kbuf->st_size;
+		statbuf->st_blocks  = kbuf->st_blocks;
+		statbuf->st_blksize = kbuf->st_blksize;
+		statbuf->st_atim    = kbuf->st_atim;
+		statbuf->st_mtim    = kbuf->st_mtim;
+		statbuf->st_ctim    = kbuf->st_ctim;
+	}
 #undef __OS_STAT
 #endif
