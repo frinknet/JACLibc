@@ -1,30 +1,65 @@
-/* (c) 2025 FRINKnet & Friends - MIT licence */
+/* (c) 2026 FRINKnet & Friends - MIT licence */
 #ifndef _UNISTD_H
 #define _UNISTD_H
 #pragma once
 
 #include <config.h>
-#include <errno.h>        // errno, ENOSYS
-#include <stddef.h>       // size_t
-#include <stdarg.h>       // va_list, va_start(), va_end(), va_arg()
-#include <stdnoreturn.h>  // noreturn
+#include <errno.h>
+#include <stddef.h>
+#include <stdarg.h>
+#include <stdnoreturn.h>
 #include <string.h>
-#include <sys/types.h>    // pid_t, uid_t, gid_t, ssize_t, off_t
-#include <sys/syscall.h>  // syscall()
-#include <sys/ioctl.h>    // winsize, TIOCGWINSZ
-#include <time.h>         // timespec
+#include <sys/types.h>
+#include <sys/syscall.h>
+#include <sys/ioctl.h>
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern char **environ;
+/* ============================================================================ */
+/* POSIX Version Macros (Issue 8)                                               */
+/* ============================================================================ */
+#define _POSIX_VERSION      202405L
+#define _POSIX2_VERSION     202405L
+#define _XOPEN_VERSION      800
 
-#if JACL_16BIT || JACL_8BIT
-	typedef unsigned long useconds_t;
-#else
-	typedef unsigned int useconds_t;
-#endif
+/* ============================================================================ */
+/* sysconf() Constants (_SC_*)                                                  */
+/* ============================================================================ */
+#define _SC_VERSION                    1
+#define _SC_PAGESIZE                   2
+#define _SC_PAGE_SIZE                  _SC_PAGESIZE  /* Alias */
+#define _SC_CLK_TCK                    3
+#define _SC_ARG_MAX                    4
+#define _SC_CHILD_MAX                  5
+#define _SC_OPEN_MAX                   6
+#define _SC_NGROUPS_MAX                7
+#define _SC_JOB_CONTROL                8
+#define _SC_SAVED_IDS                  9
+#define _SC_STREAM_MAX                 10
+#define _SC_TZNAME_MAX                 11
+#define _SC_HOST_NAME_MAX              12
+
+/* ============================================================================ */
+/* pathconf() Constants (_PC_*)                                                 */
+/* ============================================================================ */
+#define _PC_LINK_MAX                   1
+#define _PC_MAX_CANON                  2
+#define _PC_MAX_INPUT                  3
+#define _PC_NAME_MAX                   4
+#define _PC_PATH_MAX                   5
+#define _PC_PIPE_BUF                   6
+#define _PC_CHOWN_RESTRICTED           7
+#define _PC_NO_TRUNC                   8
+#define _PC_VDISABLE                   9
+
+/* ============================================================================ */
+/* confstr() Constants (_CS_*)                                                  */
+/* ============================================================================ */
+#define _CS_PATH                       1
+#define _CS_V8_ENV                     2
 
 #define STDIN_FILENO    0
 #define STDOUT_FILENO   1
@@ -37,10 +72,28 @@ extern char **environ;
 
 #define HOST_NAME_MAX 256
 
+extern char **environ;
+
+static inline char *getenv(const char *name) {
+	if (name == NULL) return NULL;
+
+	size_t len = strlen(name);
+
+	for (char **env = environ; *env; ++env) {
+		if (!strncmp(*env, name, len) && (*env)[len] == '=') return &((*env)[len+1]);
+	}
+
+	return NULL;
+}
+
 #if JACL_HAS_POSIX
 
 /* Process control */
+#if JACL_HASSYS(exit_group)
+noreturn static inline void _exit(int status) { syscall(SYS_exit_group, status); while(1); }
+#else
 noreturn static inline void _exit(int status) { syscall(SYS_exit, status); while(1); }
+#endif
 static inline pid_t getpid(void) { return (pid_t)syscall(SYS_getpid); }
 static inline pid_t getppid(void) { return (pid_t)syscall(SYS_getppid); }
 pid_t fork(void);
@@ -77,7 +130,16 @@ static inline int truncate(const char *path, off_t length) { return (int)syscall
 
 /* Directory operations */
 static inline int chdir(const char *path) { return (int)syscall(SYS_chdir, path); }
-static inline char *getcwd(char *buf, size_t size) { return (char*)syscall(SYS_getcwd, buf, size); }
+static inline char *getcwd(char *buf, size_t size) {
+	if (size == 0) { errno = EINVAL; return NULL; }
+	if (buf == NULL) { errno = EINVAL; return NULL; }
+
+	long res = syscall(SYS_getcwd, buf, size);
+
+	if (res == -1) return NULL;
+
+	return buf;
+}
 
 /* Process execution */
 static inline int execve(const char *pathname, char *const argv[], char *const envp[]) { return (int)syscall(SYS_execve, pathname, argv, envp ? envp : environ); }
@@ -85,108 +147,62 @@ static inline int execv(const char *pathname, char *const argv[]) { return execv
 static inline int execvp(const char *file, char *const argv[]) {
 	const char* p = file;
 	const char* env_path = NULL;
-	size_t path_len = 4; // strlen("PATH")
-
+	size_t path_len = 4;
 	while (*p && *p != '/') p++;
-
 	if (*p) return execve(file, argv, environ);
-
 	for (char **env = environ; *env; ++env) {
-		if (!strncmp(*env, "PATH=", path_len + 1)) {
-			env_path = &((*env)[path_len + 1]);
-
-			break;
-		}
+		if (!strncmp(*env, "PATH=", path_len + 1)) { env_path = &((*env)[path_len + 1]); break; }
 	}
-
 	if (!env_path) env_path = "/bin:/usr/bin";
-
 	char path_copy[4096];
 	size_t env_len = 0;
-
-	while (env_path[env_len] && env_len < sizeof(path_copy) - 1) {
-		path_copy[env_len] = env_path[env_len];
-		env_len++;
-	}
-
+	while (env_path[env_len] && env_len < sizeof(path_copy) - 1) { path_copy[env_len] = env_path[env_len]; env_len++; }
 	path_copy[env_len] = '\0';
-
 	const char* start = path_copy;
-
 	while (1) {
 		const char* end = start;
-
 		while (*end && *end != ':') end++;
-
 		if (end > start) {
 			size_t dir_len = end - start;
 			size_t file_len = 0;
 			size_t i = 0;
 			const char* temp = file;
 			char full_path[4096];
-
 			while (temp[file_len]) file_len++;
-
-			if (dir_len + 1 + file_len + 1 > sizeof(full_path)) {
-				errno = ENAMETOOLONG;
-
-				continue;
-			}
-
+			if (dir_len + 1 + file_len + 1 > sizeof(full_path)) { errno = ENAMETOOLONG; continue; }
 			for (size_t j = 0; j < dir_len; j++) full_path[i++] = start[j];
-
 			full_path[i++] = '/';
-
 			for (size_t j = 0; j < file_len; j++) full_path[i++] = file[j];
-
 			full_path[i] = '\0';
-
 			int res = execve(full_path, argv, environ);
-
 			if (res == 0 || errno != ENOENT) return res;
 		}
-
 		if (!*end) break;
-
 		start = end + 1;
 	}
-
 	errno = ENOENT;
-
 	return -1;
 }
 static inline int execl(const char *pathname, const char *arg, ...) {
 	const char *argv[256];
 	va_list ap;
 	int i = 0;
-
 	argv[i++] = arg;
-
 	va_start(ap, arg);
-
 	while (i < 255 && (argv[i] = va_arg(ap, const char*)) != NULL) i++;
-
 	va_end(ap);
-
 	argv[i] = NULL;
-
 	return execve(pathname, (char *const*)argv, environ);
 }
 static inline int execlp(const char *file, const char *arg, ...) {
 	const char *argv[256];
 	va_list ap;
 	int i = 0;
-
 	argv[i++] = arg;
-
 	va_start(ap, arg);
-
 	while (i < 255 && (argv[i] = va_arg(ap, const char*)) != NULL) i++;
-
 	va_end(ap);
-
 	argv[i] = NULL;
-
 	return execvp(file, (char *const*)argv);
 }
 static inline int execle(const char *pathname, const char *arg, ...) {
@@ -194,14 +210,12 @@ static inline int execle(const char *pathname, const char *arg, ...) {
 	char *const *envp;
 	va_list ap;
 	int i = 0;
-
 	argv[i++] = arg;
 	va_start(ap, arg);
 	while (i < 255 && (argv[i] = va_arg(ap, const char*)) != NULL) i++;
 	envp = va_arg(ap, char *const*);
 	va_end(ap);
 	argv[i] = NULL;
-
 	return execve(pathname, (char *const*)argv, envp);
 }
 
@@ -221,21 +235,25 @@ static inline pid_t setsid(void) { return (pid_t)syscall(SYS_setsid); }
 
 /* Hostname */
 static inline int gethostname(char *name, size_t len) {
-	#if JACL_HASSYS(gethostname)
-		return (int)syscall(SYS_gethostname, name, len);
-	#else
-		errno = ENOSYS;
+	if (name == NULL) { errno = EFAULT; return -1; }
 
-		return -1;
+	#if JACL_HASSYS(gethostname)
+	  int r = (int)syscall(SYS_gethostname, name, len);
+
+		if (r == 0) return 0;
+	#else
+		if (len > 9) { strcpy(name, "localhost"); return 0; }
+
+		errno = EINVAL;
 	#endif
+
+	return -1;
 }
 static inline int sethostname(const char *name, size_t len) {
 	#if JACL_HASSYS(sethostname)
 		return (int)syscall(SYS_sethostname, name, len);
 	#else
-		errno = ENOSYS;
-
-		return -1;
+		errno = ENOSYS; return -1;
 	#endif
 }
 
@@ -245,8 +263,7 @@ static inline int isatty(int fd) {
 		struct winsize ws;
 		return syscall(SYS_ioctl, fd, TIOCGWINSZ, &ws) + 1;
 	#else
-		errno = ENOSYS;
-		return 0;
+		errno = ENOSYS; return 0;
 	#endif
 }
 
@@ -270,16 +287,11 @@ static inline int fdatasync(int fd) {
 /* Sleep/alarm */
 static inline unsigned int sleep(unsigned int seconds) {
 	struct timespec req = {seconds, 0}, rem = {0, 0};
-
-	if (nanosleep(&req, &rem) == -1) {
-		return (unsigned int)rem.tv_sec + (rem.tv_nsec > 0 ? 1 : 0);
-	}
-
+	if (nanosleep(&req, &rem) == -1) return (unsigned int)rem.tv_sec + (rem.tv_nsec > 0 ? 1 : 0);
 	return 0;
 }
 static inline int usleep(useconds_t usec) {
 	struct timespec req = {usec / 1000000, (usec % 1000000) * 1000};
-
 	return (int)nanosleep(&req, NULL);
 }
 static inline unsigned int alarm(unsigned int seconds) {
@@ -298,34 +310,117 @@ static inline int pause(void) {
 }
 
 #if JACL_OS_LINUX
-static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-	return syscall(SYS_pread64, fd, buf, count, offset);
-}
-static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
-	return syscall(SYS_pwrite64, fd, buf, count, offset);
-}
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) { return syscall(SYS_pread64, fd, buf, count, offset); }
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) { return syscall(SYS_pwrite64, fd, buf, count, offset); }
 #elif JACL_OS_DRAGONFLY
-static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-	return syscall(SYS_extpread, fd, buf, count, 0, offset);
-}
-static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
-	return syscall(SYS_extpwrite, fd, buf, count, 0, offset);
-}
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) { return syscall(SYS_extpread, fd, buf, count, 0, offset); }
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) { return syscall(SYS_extpwrite, fd, buf, count, 0, offset); }
 #elif JACL_OS_FREEBSD || JACL_OS_NETBSD || JACL_OS_OPENBSD
-static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-	return syscall(SYS_pread, fd, buf, count, offset);
-}
-static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
-	return syscall(SYS_pwrite, fd, buf, count, offset);
-}
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) { return syscall(SYS_pread, fd, buf, count, offset); }
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) { return syscall(SYS_pwrite, fd, buf, count, offset); }
 #elif JACL_OS_DARWIN
-static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-	return syscall(SYS_pread, fd, buf, count, offset);
-}
-static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
-	return syscall(SYS_pwrite, fd, buf, count, offset);
-}
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) { return syscall(SYS_pread, fd, buf, count, offset); }
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) { return syscall(SYS_pwrite, fd, buf, count, offset); }
 #endif
+
+/* POSIX Function Implementations */
+
+static inline long sysconf(int name) {
+    switch (name) {
+        case _SC_PAGESIZE:
+            /* _SC_PAGE_SIZE is an alias, no separate case needed */
+            return 4096;
+        case _SC_CLK_TCK: return 100;
+        case _SC_ARG_MAX: return 2097152;
+        case _SC_CHILD_MAX: return 25;
+        case _SC_OPEN_MAX: return 256;
+        case _SC_VERSION: return _POSIX_VERSION;
+        default: errno = EINVAL; return -1;
+    }
+}
+
+static inline long pathconf(const char *path, int name) {
+	if (path == NULL) { errno = EFAULT; return -1; }
+	 if (path[0] == '\0') { errno = ENOENT; return -1; }
+	if (access(path, F_OK) != 0) return -1;
+
+	switch (name) {
+		case _PC_NAME_MAX: return 255;
+		case _PC_PATH_MAX: return 4096;
+		case _PC_PIPE_BUF: return 512;
+		case _PC_CHOWN_RESTRICTED: return 1;
+		case _PC_NO_TRUNC: return 1;
+		case _PC_VDISABLE: return 0;
+		default:
+			errno = EINVAL;
+
+			return -1;
+	}
+}
+
+extern char *getenv(const char *name);
+
+static inline size_t confstr(int name, char *buf, size_t len) {
+	const char *val = getenv("PATH");
+	if (val == NULL) val = "/bin:/usr/bin";
+	if (name != _CS_PATH) { errno = EINVAL; return 0; }
+
+	size_t required = strlen(val) + 1;
+
+	if (buf != NULL && len > 0) {
+		size_t copy = (len < required) ? len : required;
+
+		memcpy(buf, val, copy);
+
+		buf[copy - 1] = '\0';
+	}
+	return required;
+}
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
+static inline int getopt(int argc, char *const argv[], const char *optstring) {
+	static int optpos = 1;
+	const char *opt;
+	if (optind == 0) optind = 1, optpos = 1;
+	if (optind >= argc || argv[optind][0] != '-') return -1;
+	if (argv[optind][1] == '\0' || (argv[optind][1] == '-' && argv[optind][2] == '\0')) {
+		optind++; return -1; /* -- ends options per POSIX */
+	}
+	opt = strchr(optstring, argv[optind][optpos]);
+	if (!opt || *opt == ':') {
+		if (opterr) {
+			write(STDERR_FILENO, argv[0], strlen(argv[0]));
+			write(STDERR_FILENO, ": illegal option -- ", 20);
+			write(STDERR_FILENO, &argv[optind][optpos], 1);
+			write(STDERR_FILENO, "\n", 1);
+		}
+		optpos++;
+		if (argv[optind][optpos] == '\0') optind++, optpos = 1;
+		return '?';
+	}
+	optarg = NULL;
+	if (opt[1] == ':') {
+		if (argv[optind][optpos+1]) {
+			optarg = &argv[optind][optpos+1]; optind++; optpos = 1;
+		} else if (++optind < argc) {
+			optarg = argv[optind++]; optpos = 1;
+		} else {
+			if (opterr) {
+				write(STDERR_FILENO, argv[0], strlen(argv[0]));
+				write(STDERR_FILENO, ": option requires an argument -- ", 33);
+				write(STDERR_FILENO, &argv[optind][optpos], 1);
+				write(STDERR_FILENO, "\n", 1);
+			}
+			return optstring[0] == ':' ? ':' : '?';
+		}
+	} else {
+		optpos++;
+		if (argv[optind][optpos] == '\0') { optind++; optpos = 1; }
+	}
+	return *opt;
+}
 
 #else /* !JACL_HAS_POSIX */
 
@@ -382,45 +477,33 @@ static inline int getgroups(int size, gid_t list[]) { (void)size; (void)list; er
 static inline pid_t getpgrp(void) { return 1; }
 static inline int setpgid(pid_t pid, pid_t pgid) { (void)pid; (void)pgid; errno = ENOSYS; return -1; }
 static inline pid_t setsid(void) { errno = ENOSYS; return -1; }
-
 static inline int gethostname(char *name, size_t len) { (void)name; (void)len; errno = ENOSYS; return -1; }
 static inline int sethostname(const char *name, size_t len) { (void)name; (void)len; errno = ENOSYS; return -1; }
-
-/* File properties */
 static inline int isatty(int fd) { (void)fd; errno = ENOSYS; return 0; }
-
-/* File ownership */
 static inline int chown(const char *pathname, uid_t owner, gid_t group) { (void)pathname; (void)owner; (void)group; errno = ENOSYS; return -1; }
 static inline int fchown(int fd, uid_t owner, gid_t group) { (void)fd; (void)owner; (void)group; errno = ENOSYS; return -1; }
 static inline int lchown(const char *pathname, uid_t owner, gid_t group) { (void)pathname; (void)owner; (void)group; errno = ENOSYS; return -1; }
 static inline int fchdir(int fd) { (void)fd; errno = ENOSYS; return -1; }
-
-/* File synchronization */
 static inline void sync(void) { /* noop */ }
 static inline int fsync(int fd) { (void)fd; errno = ENOSYS; return -1; }
 static inline int fdatasync(int fd) { (void)fd; errno = ENOSYS; return -1; }
-
-/* Sleep/alarm */
 static inline unsigned int sleep(unsigned int seconds) { return seconds; }
 static inline int usleep(useconds_t usec) { (void)usec; errno = ENOSYS; return -1; }
 static inline unsigned int alarm(unsigned int seconds) { (void)seconds; errno = ENOSYS; return 0; }
 static inline int pause(void) { errno = ENOSYS; return -1; }
 
-static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-}
-static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
-}
-/* Thread-safe pread/pwrite stubs */
-static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-	(void)fd; (void)buf; (void)count; (void)offset; errno = ENOSYS; return -1;
-}
-static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
-	(void)fd; (void)buf; (void)count; (void)offset; errno = ENOSYS; return -1;
-}
+static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset) { (void)fd; (void)buf; (void)count; (void)offset; errno = ENOSYS; return -1; }
+static inline ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) { (void)fd; (void)buf; (void)count; (void)offset; errno = ENOSYS; return -1; }
+
+/* Non-POSIX stubs */
+static inline long sysconf(int name) { (void)name; errno = ENOSYS; return -1; }
+static inline long pathconf(const char *path, int name) { (void)path; (void)name; errno = ENOSYS; return -1; }
+static inline size_t confstr(int name, char *buf, size_t len) { (void)name; (void)buf; (void)len; errno = ENOSYS; return 0; }
+static inline int getopt(int argc, char *const argv[], const char *optstring) { (void)argc; (void)argv; (void)optstring; errno = ENOSYS; return -1; }
+
 #endif /* JACL_HAS_POSIX */
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* _UNISTD_H */
