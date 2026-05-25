@@ -12,8 +12,9 @@
   #pragma GCC diagnostic ignored "-Wincompatible-library-redeclaration"
 #endif /* __GNUC__ || __clang__ */
 
+
 // useful macros
-#define JACL_QUOTE(x) #x
+#define JACL_QUOTE(...) #__VA_ARGS__
 #define JACL_EXPAND(x) x
 #define JACL_CONCAT(a, b, spacer) a##spacer##b
 #define JACL_CONCAT_EXPAND(a, b, spacer) JACL_CONCAT(a,b,spacer)
@@ -30,6 +31,9 @@
 #define JACL_X_SYSCALL JACL_HEADER(x, JACL_OS_ARCH)
 #define JACL_X_SIGNALS JACL_HEADER(x, JACL_CONCAT_EXPAND(signals,JACL_OS,_))
 #define JACL_X_FCNTL JACL_HEADER(x, JACL_CONCAT_EXPAND(fcntl,JACL_OS_ARCH,_))
+
+#define JACL_NARGS_X(a,b,c,d,e,f,g,h,i,j,n,...) n
+#define JACL_NARGS(...) JACL_NARGS_X(__VA_ARGS__+0,10,9,8,7,6,5,4,3,2,1)
 
 // error number variables
 #define errno __jacl_errno
@@ -107,6 +111,8 @@
 #if !JACL_HAS_C99
 	#if defined(__GNUC__) || defined(__clang__)
 		#define inline __inline__
+	#elif defined(_MSC_VER)
+    #define inline __inline
 	#else
 		#define inline
 	#endif
@@ -391,6 +397,44 @@ static inline void* __jacl_frame_address(int level) {
 #else
   #define JACL_WEAK
 #endif
+
+/* ============================================================ */
+/* Vectorization Hints                                          */
+/* ============================================================ */
+
+#ifdef __clang__
+  #define JACL_VECTORIZE _Pragma("clang loop vectorize(enable)")
+  #define JACL_VECTOR_WIDTH(w) _Pragma(JACL_QUOTE(clang loop vectorize_width(w)))
+  #define JACL_UNROLL(n) _Pragma(JACL_QUOTE(clang loop unroll_count(n)))
+#elif defined(__GNUC__)
+  #define JACL_VECTORIZE _Pragma("GCC ivdep")
+  #define JACL_VECTOR_WIDTH(w)
+  #define JACL_UNROLL(n) _Pragma(JACL_QUOTE(GCC unroll n))
+#elif defined(__INTEL_COMPILER)
+  #define JACL_VECTORIZE _Pragma("vector always")
+  #define JACL_VECTOR_WIDTH(w) _Pragma(JACL_QUOTE(vector vectorlength(w)))
+  #define JACL_UNROLL(n) _Pragma(JACL_QUOTE(unroll(n)))
+#else /* no vector helpers */
+  #define JACL_VECTORIZE
+  #define JACL_VECTOR_WIDTH(w)
+  #define JACL_UNROLL(n)
+#endif /* compiler check */
+
+/* ============================================================ */
+/* Vectorization Reporting                                      */
+/* ============================================================ */
+
+#ifdef JACL_VECTOR_REPORT
+  #if defined(__clang__)
+    #pragma clang diagnostic warning "-Rpass=loop-vectorize"
+    #pragma clang diagnostic warning "-Rpass-missed=loop-vectorize"
+    #pragma clang diagnostic warning "-Rpass-analysis=loop-vectorize"
+  #elif defined(__GNUC__)
+    #pragma GCC push_options
+    #pragma GCC optimize("ftree-vectorize")
+    #pragma message "GCC vectorization enabled - compile with -fopt-info-vec to see details"
+  #endif /* compiler check */
+#endif /* JACL_VECTOR_REPORT */
 
 /* ============================================================= */
 /* Speed Optimizations                                           */
