@@ -1,75 +1,82 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 #ifndef _LIBGEN_H
 #define _LIBGEN_H
-
 #pragma once
 
 #include <config.h>
 #include <stddef.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 static inline int splitname(char *path, char **dir, char **base) {
-    if (!path || !dir || !base) return -1;
+	if (!path || !dir || !base) return -1;
 
-    char *p = path;
-    char *end = p;
-    while (*end) end++;
+	char *p = path;
+	size_t len = strlen(p);
 
-    if (end == p) {
-        *dir = ".";
-        *base = ".";
-        return 0;
-    }
+	/* Empty string */
+	if (len == 0) {
+		*dir = ".";
+		*base = ".";
 
-    char *last = end - 1;
-    while (last >= p && *last == '/')
-        last--;
+		return 0;
+	}
 
-    if (last < p) {
-        *dir = "/";
-        *base = "/";
-        return 0;
-    }
+	/* Strip trailing slashes */
+	while (len > 1 && p[len - 1] == '/') len--;
 
-    char *sep = last;
-    while (sep > p && sep[-1] != '/')
-        sep--;
+	p[len] = '\0';
 
-    if (sep > p && sep[-1] == '/') {
-        sep[-1] = '\0';
-        *(last + 1) = '\0';
-        *base = sep;
-        *dir = p;
+	/* All slashes -> root */
+	if (len == 1 && p[0] == '/') {
+		*dir = "/";
+		*base = "/";
 
-        char *k = sep - 1;
-        while (k > p && *(k - 1) == '/')
-            k--;
-        
-        *k = '\0';
-        
-        if (*p == '\0') *dir = "/";
+		return 0;
+	}
 
-    } else {
-        *(last + 1) = '\0';
-        *dir = ".";
-        *base = p;
-    }
-    return 0;
+	/* Find last slash */
+	char *slash = p + len;
+
+	while (slash > p && *(slash - 1) != '/') slash--;
+
+	if (slash == p) {
+		/* No slash found */
+		*dir = ".";
+		*base = p;
+	} else {
+		*base = slash;
+
+		/* Walk backwards past consecutive slashes to find true dir end */
+		char *dir_end = slash - 1;
+
+		while (dir_end > p && *(dir_end - 1) == '/') dir_end--;
+
+		/* If we walked all the way back to start, dirname is "/" */
+		if (dir_end <= p) {
+			*dir = "/";
+		} else {
+			*dir_end = '\0';
+			*dir = p;
+		}
+	}
+
+	return 0;
 }
 
-char *dirname(char *path) {
-    char *dir, *base;
-    if (splitname(path, &dir, &base) < 0) return ".";
-    return dir;
+static inline char *basename(char *path) {
+	char *dir, *base;
+	if (splitname(path, &dir, &base) < 0) return ".";
+	return base;
 }
 
-char *basename(char *path) {
-    char *dir, *base;
-    if (splitname(path, &dir, &base) < 0) return ".";
-    return base;
+static inline char *dirname(char *path) {
+	char *dir, *base;
+	if (splitname(path, &dir, &base) < 0) return ".";
+	return dir;
 }
 
 #ifdef __cplusplus

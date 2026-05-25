@@ -54,13 +54,6 @@ extern "C" {
 #define IFTODT(mode)    (((mode) & 0170000) >> 12)
 #define DTTOIF(dirtype) ((dirtype) << 12)
 
-/* ================================================================ */
-/* Types and Structures                                             */
-/* ================================================================ */
-
-/* Type definitions */
-typedef unsigned short reclen_t;
-
 #if DIRENT_WIN32
 /* ================================================================ */
 /* Windows implementation with Unicode support                     */
