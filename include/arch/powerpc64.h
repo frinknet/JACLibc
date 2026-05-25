@@ -12,8 +12,12 @@
 	#define __jacl_arch_tls_set __powerpc64_set_tp_register
 	#define __jacl_arch_tls_get __powerpc64_get_tp_register
 	#define __jacl_arch_clone_thread __powerpc64_clone_thread
+	#define __jacl_arch_setjmp        __powerpc64_setjmp
+	#define __jacl_arch_longjmp       __powerpc64_longjmp
+	#define __jacl_arch_jmpbuf        __powerpc64_jmpbuf
 	#define JACL_BITS 64
 	#define JACL_ORDER 1234
+	#define JACL_SIGSIZ 8
 #undef __ARCH_CONFIG
 #endif
 
@@ -41,7 +45,7 @@
 
 #ifdef __ARCH_START
 	__asm__(
-		".global _start\n"
+		".globl _start\n"
 		"_start:\n"
 		"li 31, 0\n"
 		"mr 3, 1\n"
@@ -77,13 +81,13 @@
 #undef __ARCH_TLS
 #endif
 
-#ifdef __ARCH_CLONE && JACL_OS_LINUX
+#ifdef __ARCH_CLONE
 	static inline pid_t __powerpc64_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
 		char *stack_top = (char *)stack + stack_size;
-		stack_top = (char *)((uintptr_t)stack_top & ~15UL) - 112;  // ABI red zone
+		stack_top = (char *)((uintptr_t)stack_top & ~15UL) - 112;
 
 		int flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD;
-		long ret;
+		register long ret __asm__("r3");
 
 		__asm__ volatile(
 			"mr 3, %2\n\t"
@@ -105,13 +109,156 @@
 
 			"1:\n\t"
 			: "=r"(ret)
-			: "r"((long)120), "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
-			: "r0", "r3", "r4", "r5", "r6", "r7", "ctr", "memory"
+			: "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
+			: "r0", "r4", "r5", "r6", "r7", "ctr", "memory"
 		);
 
-		return ret;
+		return (pid_t)ret;
 	}
 #undef __ARCH_CLONE
+#endif
+
+#ifdef __ARCH_JUMP
+
+typedef unsigned long __powerpc64_jmpbuf[64] __attribute__((__aligned__(16)));
+
+__asm__(
+	".text\n"
+	".weak __powerpc64_setjmp\n"
+	".type __powerpc64_setjmp, @function\n"
+	"__powerpc64_setjmp:\n"
+	"mr 5, 2\n"
+	"mflr 0\n"
+	"std 0, 0*8(3)\n"
+	"mfcr 0\n"
+	"std 0, 1*8(3)\n"
+	"std 1, 2*8(3)\n"
+	"std 5, 3*8(3)\n"
+	"std 14, 4*8(3)\n"
+	"std 15, 5*8(3)\n"
+	"std 16, 6*8(3)\n"
+	"std 17, 7*8(3)\n"
+	"std 18, 8*8(3)\n"
+	"std 19, 9*8(3)\n"
+	"std 20, 10*8(3)\n"
+	"std 21, 11*8(3)\n"
+	"std 22, 12*8(3)\n"
+	"std 23, 13*8(3)\n"
+	"std 24, 14*8(3)\n"
+	"std 25, 15*8(3)\n"
+	"std 26, 16*8(3)\n"
+	"std 27, 17*8(3)\n"
+	"std 28, 18*8(3)\n"
+	"std 29, 19*8(3)\n"
+	"std 30, 20*8(3)\n"
+	"std 31, 21*8(3)\n"
+	"stfd 14, 22*8(3)\n"
+	"stfd 15, 23*8(3)\n"
+	"stfd 16, 24*8(3)\n"
+	"stfd 17, 25*8(3)\n"
+	"stfd 18, 26*8(3)\n"
+	"stfd 19, 27*8(3)\n"
+	"stfd 20, 28*8(3)\n"
+	"stfd 21, 29*8(3)\n"
+	"stfd 22, 30*8(3)\n"
+	"stfd 23, 31*8(3)\n"
+	"stfd 24, 32*8(3)\n"
+	"stfd 25, 33*8(3)\n"
+	"stfd 26, 34*8(3)\n"
+	"stfd 27, 35*8(3)\n"
+	"stfd 28, 36*8(3)\n"
+	"stfd 29, 37*8(3)\n"
+	"stfd 30, 38*8(3)\n"
+	"stfd 31, 39*8(3)\n"
+	"addi 3, 3, 40*8\n"
+	"stvx 20, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 21, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 22, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 23, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 24, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 25, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 26, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 27, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 28, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 29, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 30, 0, 3 ; addi 3, 3, 16\n"
+	"stvx 31, 0, 3\n"
+	"li 3, 0\n"
+	"blr\n"
+	".size __powerpc64_setjmp, .-__powerpc64_setjmp\n"
+);
+
+__asm__(
+	".text\n"
+	".weak __powerpc64_longjmp\n"
+	".type __powerpc64_longjmp, @function\n"
+	"__powerpc64_longjmp:\n"
+	"ld 0, 0*8(3)\n"
+	"mtlr 0\n"
+	"ld 0, 1*8(3)\n"
+	"mtcr 0\n"
+	"ld 1, 2*8(3)\n"
+	"ld 2, 3*8(3)\n"
+	"std 2, 24(1)\n"
+	"ld 14, 4*8(3)\n"
+	"ld 15, 5*8(3)\n"
+	"ld 16, 6*8(3)\n"
+	"ld 17, 7*8(3)\n"
+	"ld 18, 8*8(3)\n"
+	"ld 19, 9*8(3)\n"
+	"ld 20, 10*8(3)\n"
+	"ld 21, 11*8(3)\n"
+	"ld 22, 12*8(3)\n"
+	"ld 23, 13*8(3)\n"
+	"ld 24, 14*8(3)\n"
+	"ld 25, 15*8(3)\n"
+	"ld 26, 16*8(3)\n"
+	"ld 27, 17*8(3)\n"
+	"ld 28, 18*8(3)\n"
+	"ld 29, 19*8(3)\n"
+	"ld 30, 20*8(3)\n"
+	"ld 31, 21*8(3)\n"
+	"lfd 14, 22*8(3)\n"
+	"lfd 15, 23*8(3)\n"
+	"lfd 16, 24*8(3)\n"
+	"lfd 17, 25*8(3)\n"
+	"lfd 18, 26*8(3)\n"
+	"lfd 19, 27*8(3)\n"
+	"lfd 20, 28*8(3)\n"
+	"lfd 21, 29*8(3)\n"
+	"lfd 22, 30*8(3)\n"
+	"lfd 23, 31*8(3)\n"
+	"lfd 24, 32*8(3)\n"
+	"lfd 25, 33*8(3)\n"
+	"lfd 26, 34*8(3)\n"
+	"lfd 27, 35*8(3)\n"
+	"lfd 28, 36*8(3)\n"
+	"lfd 29, 37*8(3)\n"
+	"lfd 30, 38*8(3)\n"
+	"lfd 31, 39*8(3)\n"
+	"addi 3, 3, 40*8\n"
+	"lvx 20, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 21, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 22, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 23, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 24, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 25, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 26, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 27, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 28, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 29, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 30, 0, 3 ; addi 3, 3, 16\n"
+	"lvx 31, 0, 3\n"
+	"mr 3, 4\n"
+	"cmpwi cr7, 4, 0\n"
+	"bne cr7, 1f\n"
+	"li 3, 1\n"
+	"1:\n"
+	"blr\n"
+	".size __powerpc64_longjmp, .-__powerpc64_longjmp\n"
+);
+
+#undef __ARCH_JUMP
 #endif
 
 #ifdef __cplusplus

@@ -16,7 +16,9 @@
 	#include <arch/riscv32.h>
 #elif defined(__loongarch__) && __loongarch_grlen == 64
 	#include <arch/loongarch64.h>
-#elif defined(__mips__) && defined(__mips64)
+#elif defined(__mips__) && defined(_ABIN32)
+	#include <arch/mipsn32.h>
+#elif defined(__mips__) && (__mips == 64 || defined(__mips64))
 	#include <arch/mips64.h>
 #elif defined(__mips__)
 	#include <arch/mips32.h>
@@ -38,8 +40,10 @@
 	#include <arch/alpha.h>
 #elif defined(__m68k__)
 	#include <arch/m68k.h>
+#elif defined(__kvx__)
+	#include <arch/kvx.h>
 #elif defined(__sh__)
-	#include <arch/sh4.h>
+	#include <arch/sh.h>
 #elif defined(__or1k__)
 	#include <arch/or1k.h>
 #elif defined(__nios2__)
@@ -56,7 +60,7 @@
 	#include <arch/vax.h>
 #elif defined(__microblaze__)
 	#include <arch/microblaze.h>
-#elif defined(__wasm__)
+#elif defined(__wasm) || defined(__wasm32__) || defined(__wasm64__)
 	#include <arch/wasm.h>
 #else
 	#error "Unsupported Architecture"

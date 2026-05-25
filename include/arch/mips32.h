@@ -12,8 +12,12 @@
 	#define __jacl_arch_tls_set __mips32_set_tp_register
 	#define __jacl_arch_tls_get __mips32_get_tp_register
 	#define __jacl_arch_clone_thread __mips32_clone_thread
+	#define __jacl_arch_setjmp        __mips32_setjmp
+	#define __jacl_arch_longjmp       __mips32_longjmp
+	#define __jacl_arch_jmpbuf        __mips32_jmpbuf
 	#define JACL_BITS 32
 	#define JACL_ORDER 1234
+	#define JACL_SIGSIZ 8
 #undef __ARCH_CONFIG
 #endif
 
@@ -43,7 +47,7 @@
 
 #ifdef __ARCH_START
 	__asm__(
-		".global _start\n"
+		".globl _start\n"
 		"_start:\n"
 		"move $fp, $0\n"
 		"move $a0, $sp\n"
@@ -80,10 +84,10 @@
 #undef __ARCH_TLS
 #endif
 
-#ifdef __ARCH_CLONE && JACL_OS_LINUX
-	static inline pid_t __mips64_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
+#ifdef __ARCH_CLONE
+	static inline pid_t __mips32_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
 		char *stack_top = (char *)stack + stack_size;
-		stack_top = (char *)((uintptr_t)stack_top & ~15UL) - 16;
+		stack_top = (char *)((uintptr_t)stack_top & ~7UL) - 8;
 
 		int flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD;
 		long ret;
@@ -93,26 +97,99 @@
 			"move $a1, %3\n\t"
 			"move $a2, $zero\n\t"
 			"move $a3, $zero\n\t"
-			"move $a4, $zero\n\t"
-			"li $v0, 5055\n\t"
+			"li $v0, 4120\n\t"
 			"syscall\n\t"
 			"bnez $v0, 1f\n\t"
 
 			"move $fp, $zero\n\t"
 			"move $a0, %5\n\t"
 			"jalr %4\n\t"
-			"li $v0, 5058\n\t"
+			"li $v0, 4001\n\t"
 			"syscall\n\t"
 
 			"1:\n\t"
+			"move %0, $v0\n\t"
 			: "=r"(ret)
-			: "r"((long)5055), "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
-			: "$v0", "$a0", "$a1", "$a2", "$a3", "$a4", "memory"
+			: "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
+			: "$v0", "$a0", "$a1", "$a2", "$a3", "memory"
 		);
 
 		return ret;
 	}
 #undef __ARCH_CLONE
+#endif
+
+#ifdef __ARCH_JUMP
+
+typedef unsigned long __mips32_jmpbuf[24];
+
+__asm__(
+	".set noreorder\n"
+	".text\n"
+	".weak __mips32_setjmp\n"
+	".type __mips32_setjmp, @function\n"
+	"__mips32_setjmp:\n"
+	"sw $ra, 0($4)\n"
+	"sw $sp, 4($4)\n"
+	"sw $16, 8($4)\n"
+	"sw $17, 12($4)\n"
+	"sw $18, 16($4)\n"
+	"sw $19, 20($4)\n"
+	"sw $20, 24($4)\n"
+	"sw $21, 28($4)\n"
+	"sw $22, 32($4)\n"
+	"sw $23, 36($4)\n"
+	"sw $30, 40($4)\n"
+	"sw $28, 44($4)\n"
+#ifndef __mips_soft_float
+	"s.d $f20, 56($4)\n"
+	"s.d $f22, 64($4)\n"
+	"s.d $f24, 72($4)\n"
+	"s.d $f26, 80($4)\n"
+	"s.d $f28, 88($4)\n"
+	"s.d $f30, 96($4)\n"
+#endif
+	"jr $ra\n"
+	"li $2, 0\n"
+	".size __mips32_setjmp, .-__mips32_setjmp\n"
+);
+
+__asm__(
+	".set noreorder\n"
+	".text\n"
+	".weak __mips32_longjmp\n"
+	".type __mips32_longjmp, @function\n"
+	"__mips32_longjmp:\n"
+	"move $2, $5\n"
+	"bne $2, $0, 1f\n"
+	"nop\n"
+	"addu $2, $2, 1\n"
+	"1:\n"
+#ifndef __mips_soft_float
+	"l.d $f20, 56($4)\n"
+	"l.d $f22, 64($4)\n"
+	"l.d $f24, 72($4)\n"
+	"l.d $f26, 80($4)\n"
+	"l.d $f28, 88($4)\n"
+	"l.d $f30, 96($4)\n"
+#endif
+	"lw $ra, 0($4)\n"
+	"lw $sp, 4($4)\n"
+	"lw $16, 8($4)\n"
+	"lw $17, 12($4)\n"
+	"lw $18, 16($4)\n"
+	"lw $19, 20($4)\n"
+	"lw $20, 24($4)\n"
+	"lw $21, 28($4)\n"
+	"lw $22, 32($4)\n"
+	"lw $23, 36($4)\n"
+	"lw $30, 40($4)\n"
+	"jr $ra\n"
+	"lw $28, 44($4)\n"
+	".size __mips32_longjmp, .-__mips32_longjmp\n"
+);
+
+#undef __ARCH_JUMP
 #endif
 
 #ifdef __cplusplus

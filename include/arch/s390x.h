@@ -12,8 +12,12 @@
 	#define __jacl_arch_tls_set __s390x_set_tp_register
 	#define __jacl_arch_tls_get __s390x_get_tp_register
 	#define __jacl_arch_clone_thread __s390x_clone_thread
+	#define __jacl_arch_setjmp        __s390x_setjmp
+	#define __jacl_arch_longjmp       __s390x_longjmp
+	#define __jacl_arch_jmpbuf        __s390x_jmpbuf
 	#define JACL_BITS 64
 	#define JACL_ORDER 4321
+	#define JACL_SIGSIZ 8
 #undef __ARCH_CONFIG
 #endif
 
@@ -42,7 +46,7 @@
 
 #ifdef __ARCH_START
 	__asm__(
-		".global _start\n"
+		".globl _start\n"
 		"_start:\n"
 		"lghi %r11, 0\n"
 		"lgr %r2, %r15\n"
@@ -79,17 +83,17 @@
 #undef __ARCH_TLS
 #endif
 
-#ifdef __ARCH_CLONE && JACL_OS_LINUX
+#ifdef __ARCH_CLONE
 	static inline pid_t __s390x_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
 		char *stack_top = (char *)stack + stack_size;
-		stack_top = (char *)((uintptr_t)stack_top & ~7UL) - 160;  // s390x ABI
+		stack_top = (char *)((uintptr_t)stack_top & ~7UL) - 160;
 
 		int flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD;
-		long ret;
+		register long r2 __asm__("2");
 
 		__asm__ volatile(
-			"lgr %%r2, %2\n\t"
-			"lgr %%r3, %3\n\t"
+			"lgr %%r2, %1\n\t"
+			"lgr %%r3, %2\n\t"
 			"lghi %%r4, 0\n\t"
 			"lghi %%r5, 0\n\t"
 			"lghi %%r6, 0\n\t"
@@ -98,19 +102,66 @@
 			"jne 1f\n\t"
 
 			"lghi %%r11, 0\n\t"
-			"lgr %%r2, %5\n\t"
-			"basr %%r14, %4\n\t"
+			"lgr %%r2, %4\n\t"
+			"basr %%r14, %3\n\t"
 			"svc 1\n\t"
 
 			"1:\n\t"
-			: "=r"(ret)
-			: "r"((long)120), "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
-			: "r2", "r3", "r4", "r5", "r6", "r14", "memory"
+			: "=r"(r2)
+			: "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
+			: "r3", "r4", "r5", "r6", "memory"
 		);
 
-		return ret;
+		return (pid_t)r2;
 	}
 #undef __ARCH_CLONE
+#endif
+
+#ifdef __ARCH_JUMP
+
+typedef unsigned long __s390x_jmpbuf[18];
+
+__asm__(
+	".text\n"
+	".weak __s390x_setjmp\n"
+	".type __s390x_setjmp, @function\n"
+	"__s390x_setjmp:\n"
+	"stmg %r6, %r15, 0(%r2)\n"
+	"std %f8, 10*8(%r2)\n"
+	"std %f9, 11*8(%r2)\n"
+	"std %f10, 12*8(%r2)\n"
+	"std %f11, 13*8(%r2)\n"
+	"std %f12, 14*8(%r2)\n"
+	"std %f13, 15*8(%r2)\n"
+	"std %f14, 16*8(%r2)\n"
+	"std %f15, 17*8(%r2)\n"
+	"lghi %r2, 0\n"
+	"br %r14\n"
+	".size __s390x_setjmp, .-__s390x_setjmp\n"
+);
+
+__asm__(
+	".text\n"
+	".weak __s390x_longjmp\n"
+	".type __s390x_longjmp, @function\n"
+	"__s390x_longjmp:\n"
+	"lmg %r6, %r15, 0(%r2)\n"
+	"ld %f8, 10*8(%r2)\n"
+	"ld %f9, 11*8(%r2)\n"
+	"ld %f10, 12*8(%r2)\n"
+	"ld %f11, 13*8(%r2)\n"
+	"ld %f12, 14*8(%r2)\n"
+	"ld %f13, 15*8(%r2)\n"
+	"ld %f14, 16*8(%r2)\n"
+	"ld %f15, 17*8(%r2)\n"
+	"ltgr %r2, %r3\n"
+	"bnzr %r14\n"
+	"lhi %r2, 1\n"
+	"br %r14\n"
+	".size __s390x_longjmp, .-__s390x_longjmp\n"
+);
+
+#undef __ARCH_JUMP
 #endif
 
 #ifdef __cplusplus

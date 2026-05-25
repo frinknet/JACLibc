@@ -12,8 +12,12 @@
 	#define __jacl_arch_tls_set __m68k_set_tp_register
 	#define __jacl_arch_tls_get __m68k_get_tp_register
 	#define __jacl_arch_clone_thread __m68k_clone_thread
+	#define __jacl_arch_setjmp        __m68k_setjmp
+	#define __jacl_arch_longjmp       __m68k_longjmp
+	#define __jacl_arch_jmpbuf        __m68k_jmpbuf
 	#define JACL_BITS 32
 	#define JACL_ORDER 4321
+	#define JACL_SIGSIZ 8
 #undef __ARCH_CONFIG
 #endif
 
@@ -30,7 +34,7 @@
 
 		__asm__ volatile ("trap #0"
 			: "=r"(d0)
-			: "r"(d0), "r"(d1), "r"(d2), "r"(d3), "r"(d4), "r"(d5), "r"(a0)
+			: "r"(d0), "r"(d1), "r"(d2), "r"(d3), "r"(d4), "r"(d5), "a"(a0)
 			: "memory");
 
 		result = d0;
@@ -42,7 +46,7 @@
 
 #ifdef __ARCH_START
 	__asm__(
-		".global _start\n"
+		".globl _start\n"
 		"_start:\n"
 		"move.l #0, %fp\n"
 		"move.l %sp, %d0\n"
@@ -66,13 +70,13 @@
 
 #ifdef __ARCH_TLS
 	static inline void __m68k_set_tp_register(void* addr) {
-		__asm__ volatile("move.l %0, %%a6" : : "r"(addr) : "memory");
+		__asm__ volatile("move.l %0, %%a5" : : "r"(addr) : "memory");
 	}
 
 	static inline void* __m68k_get_tp_register(void) {
 		void* result;
 
-		__asm__("move.l %%a6, %0" : "=r"(result));
+		__asm__("move.l %%a5, %0" : "=r"(result));
 
 		return result;
 	}
@@ -85,34 +89,77 @@
 		stack_top = (char *)((uintptr_t)stack_top & ~3UL) - 4;
 
 		int flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD;
-		long ret;
+
+		register long d0_sys __asm__("d0") = 120; /* SYS_clone */
+		register long d1_sys __asm__("d1") = flags;
+		register long d2_sys __asm__("d2") = (long)stack_top;
+		register long d3_sys __asm__("d3") = 0;
+		register long d4_sys __asm__("d4") = 0;
+		register long d5_sys __asm__("d5") = 0;
 
 		__asm__ volatile(
-			"move.l %2, %%d1\n\t"
-			"move.l %3, %%d2\n\t"
-			"moveq #0, %%d3\n\t"
-			"moveq #0, %%d4\n\t"
-			"moveq #0, %%d5\n\t"
-			"move.l #120, %%d0\n\t"
 			"trap #0\n\t"
 			"tst.l %%d0\n\t"
 			"bne 1f\n\t"
 
+			/* Child Runtime Trail */
 			"suba.l %%a6, %%a6\n\t"
-			"move.l %5, %%d0\n\t"
-			"jsr (%4)\n\t"
-			"move.l #1, %%d0\n\t"
+			"move.l %2, %%d0\n\t"
+			"jsr (%1)\n\t"
+			"move.l #1, %%d0\n\t"     /* SYS_exit */
 			"trap #0\n\t"
 
 			"1:\n\t"
-			: "=r"(ret)
-			: "r"((long)120), "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
-			: "d0", "d1", "d2", "d3", "d4", "d5", "a6", "memory"
+			: "+r"(d0_sys)
+			: "a"(fn), "g"(arg), "r"(d1_sys), "r"(d2_sys), "r"(d3_sys), "r"(d4_sys), "r"(d5_sys)
+			: "a6", "memory"
 		);
 
-		return ret;
+		return (pid_t)d0_sys;
 	}
 #undef __ARCH_CLONE
+#endif
+
+#ifdef __ARCH_JUMP
+
+typedef unsigned long __m68k_jmpbuf[32];
+
+__asm__(
+	".text\n"
+	".weak __m68k_setjmp\n"
+	".type __m68k_setjmp, @function\n"
+	"__m68k_setjmp:\n"
+	"movea.l 4(%sp), %a0\n"
+	"movem.l %d2-%d7/%a2-%a7, (%a0)\n"
+	"move.l (%sp), 48(%a0)\n"
+#if !defined(__mcoldfire__) && !defined(__m68k_soft_float__)
+	"fmovem.x %fp2-%fp7, 52(%a0)\n"
+#endif
+	"clr.l %d0\n"
+	"rts\n"
+	".size __m68k_setjmp, .-__m68k_setjmp\n"
+);
+
+__asm__(
+	".text\n"
+	".weak __m68k_longjmp\n"
+	".type __m68k_longjmp, @function\n"
+	"__m68k_longjmp:\n"
+	"movea.l 4(%sp), %a0\n"
+	"move.l 8(%sp), %d0\n"
+	"bne 1f\n"
+	"move.l #1, %d0\n"
+	"1:\n"
+	"movem.l (%a0), %d2-%d7/%a2-%a7\n"
+#if !defined(__mcoldfire__) && !defined(__m68k_soft_float__)
+	"fmovem.x 52(%a0), %fp2-%fp7\n"
+#endif
+	"move.l 48(%a0), (%sp)\n"
+	"rts\n"
+	".size __m68k_longjmp, .-__m68k_longjmp\n"
+);
+
+#undef __ARCH_JUMP
 #endif
 
 #ifdef __cplusplus

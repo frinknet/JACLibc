@@ -12,8 +12,12 @@
 	#define __jacl_arch_tls_set __arm64_set_tp_register
 	#define __jacl_arch_tls_get __arm64_get_tp_register
 	#define __jacl_arch_clone_thread __arm64_clone_thread
+	#define __jacl_arch_setjmp        __arm64_setjmp
+	#define __jacl_arch_longjmp       __arm64_longjmp
+	#define __jacl_arch_jmpbuf        __arm64_jmpbuf
 	#define JACL_BITS 64
 	#define JACL_ORDER 1234
+	#define JACL_SIGSIZ 8
 #undef __ARCH_CONFIG
 #endif
 
@@ -42,7 +46,7 @@
 
 #ifdef __ARCH_START
 	__asm__(
-		".global _start\n"
+		".globl _start\n"
 		"_start:\n"
 		"mov x29, #0\n"
 		"mov x30, #0\n"
@@ -77,7 +81,7 @@
 #undef __ARCH_TLS
 #endif
 
-#ifdef __ARCH_CLONE && JACL_OS_LINUX
+#ifdef __ARCH_CLONE
 	static inline pid_t __arm64_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
 		char *stack_top = (char *)stack + stack_size;
 		stack_top = (char *)((uintptr_t)stack_top & ~15UL) - 16;
@@ -110,6 +114,58 @@
 		return ret;
 	}
 #undef __ARCH_CLONE
+#endif
+
+#ifdef __ARCH_JUMP
+
+typedef unsigned long __arm64_jmpbuf[24];
+
+__asm__(
+	".text\n"
+	".weak __arm64_setjmp\n"
+	".type __arm64_setjmp, @function\n"
+	"__arm64_setjmp:\n"
+	"stp x19, x20, [x0, #0]\n"
+	"stp x21, x22, [x0, #16]\n"
+	"stp x23, x24, [x0, #32]\n"
+	"stp x25, x26, [x0, #48]\n"
+	"stp x27, x28, [x0, #64]\n"
+	"stp x29, x30, [x0, #80]\n"
+	"mov x2, sp\n"
+	"str x2, [x0, #104]\n"
+	"stp d8, d9, [x0, #112]\n"
+	"stp d10, d11, [x0, #128]\n"
+	"stp d12, d13, [x0, #144]\n"
+	"stp d14, d15, [x0, #160]\n"
+	"mov x0, #0\n"
+	"ret\n"
+	".size __arm64_setjmp, .-__arm64_setjmp\n"
+);
+
+__asm__(
+	".text\n"
+	".weak __arm64_longjmp\n"
+	".type __arm64_longjmp, @function\n"
+	"__arm64_longjmp:\n"
+	"ldp x19, x20, [x0, #0]\n"
+	"ldp x21, x22, [x0, #16]\n"
+	"ldp x23, x24, [x0, #32]\n"
+	"ldp x25, x26, [x0, #48]\n"
+	"ldp x27, x28, [x0, #64]\n"
+	"ldp x29, x30, [x0, #80]\n"
+	"ldr x2, [x0, #104]\n"
+	"mov sp, x2\n"
+	"ldp d8, d9, [x0, #112]\n"
+	"ldp d10, d11, [x0, #128]\n"
+	"ldp d12, d13, [x0, #144]\n"
+	"ldp d14, d15, [x0, #160]\n"
+	"cmp w1, #0\n"
+	"csinc w0, w1, wzr, ne\n"
+	"br x30\n"
+	".size __arm64_longjmp, .-__arm64_longjmp\n"
+);
+
+#undef __ARCH_JUMP
 #endif
 
 #ifdef __cplusplus

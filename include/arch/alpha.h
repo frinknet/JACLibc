@@ -12,8 +12,12 @@
 	#define __jacl_arch_tls_set __alpha_set_tp_register
 	#define __jacl_arch_tls_get __alpha_get_tp_register
 	#define __jacl_arch_clone_thread __alpha_clone_thread
+	#define __jacl_arch_setjmp        __alpha_setjmp
+	#define __jacl_arch_longjmp       __alpha_longjmp
+	#define __jacl_arch_jmpbuf        __alpha_jmpbuf
 	#define JACL_BITS 64
 	#define JACL_ORDER 1234
+	#define JACL_SIGSIZ 8
 #undef __ARCH_CONFIG
 #endif
 
@@ -42,7 +46,7 @@
 
 #ifdef __ARCH_START
 	__asm__(
-		".global _start\n"
+		".globl _start\n"
 		"_start:\n"
 		"mov $31, $15\n"
 		"mov $30, $16\n"
@@ -78,7 +82,7 @@
 #undef __ARCH_TLS
 #endif
 
-#ifdef __ARCH_CLONE && JACL_OS_LINUX
+#ifdef __ARCH_CLONE
 	static inline pid_t __alpha_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
 		char *stack_top = (char *)stack + stack_size;
 		stack_top = (char *)((uintptr_t)stack_top & ~15UL) - 16;
@@ -92,7 +96,7 @@
 			"clr $18\n\t"
 			"clr $19\n\t"
 			"clr $20\n\t"
-			"lda $0, 312\n\t"
+			"lda $0, 120\n\t"
 			"call_pal 0x83\n\t"
 			"bne $0, 1f\n\t"
 
@@ -104,13 +108,75 @@
 
 			"1:\n\t"
 			: "=r"(ret)
-			: "r"((long)312), "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
+			: "r"((long)120), "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
 			: "$0", "$16", "$17", "$18", "$19", "$20", "$26", "memory"
 		);
 
 		return ret;
 	}
 #undef __ARCH_CLONE
+#endif
+
+#ifdef __ARCH_JUMP
+
+typedef unsigned long __alpha_jmpbuf[32];
+
+__asm__(
+	".text\n"
+	".weak __alpha_setjmp\n"
+	".type __alpha_setjmp, @function\n"
+	"__alpha_setjmp:\n"
+	"stq $s0, 0*8($16)\n"
+	"stq $s1, 1*8($16)\n"
+	"stq $s2, 2*8($16)\n"
+	"stq $s3, 3*8($16)\n"
+	"stq $s4, 4*8($16)\n"
+	"stq $s5, 5*8($16)\n"
+	"stq $ra, 6*8($16)\n"
+	"stq $sp, 7*8($16)\n"
+	"stq $fp, 8*8($16)\n"
+	"stt $f2, 9*8($16)\n"
+	"stt $f3, 10*8($16)\n"
+	"stt $f4, 11*8($16)\n"
+	"stt $f5, 12*8($16)\n"
+	"stt $f6, 13*8($16)\n"
+	"stt $f7, 14*8($16)\n"
+	"stt $f8, 15*8($16)\n"
+	"stt $f9, 16*8($16)\n"
+	"bis $31, $31, $0\n"
+	"ret\n"
+	".size __alpha_setjmp, .-__alpha_setjmp\n"
+);
+
+__asm__(
+	".text\n"
+	".weak __alpha_longjmp\n"
+	".type __alpha_longjmp, @function\n"
+	"__alpha_longjmp:\n"
+	"ldq $s0, 0*8($16)\n"
+	"ldq $s1, 1*8($16)\n"
+	"ldq $s2, 2*8($16)\n"
+	"ldq $s3, 3*8($16)\n"
+	"ldq $s4, 4*8($16)\n"
+	"ldq $s5, 5*8($16)\n"
+	"ldq $ra, 6*8($16)\n"
+	"ldq $sp, 7*8($16)\n"
+	"ldq $fp, 8*8($16)\n"
+	"ldt $f2, 9*8($16)\n"
+	"ldt $f3, 10*8($16)\n"
+	"ldt $f4, 11*8($16)\n"
+	"ldt $f5, 12*8($16)\n"
+	"ldt $f6, 13*8($16)\n"
+	"ldt $f7, 14*8($16)\n"
+	"ldt $f8, 15*8($16)\n"
+	"ldt $f9, 16*8($16)\n"
+	"cmpeq $17, 0, $1\n"
+	"addl $17, $1, $0\n"
+	"ret\n"
+	".size __alpha_longjmp, .-__alpha_longjmp\n"
+);
+
+#undef __ARCH_JUMP
 #endif
 
 #ifdef __cplusplus

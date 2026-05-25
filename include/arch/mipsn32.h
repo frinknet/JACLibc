@@ -1,28 +1,31 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
+#ifndef _ARCH_MIPSN32_H
+#define _ARCH_MIPSN32_H
+#pragma once
 
 #ifdef __cplusplus
 	extern "C" {
 #endif
 
 #ifdef __ARCH_CONFIG
-	#undef mips64
-	#define JACL_ARCH mips64
-	#define JACL_ARCH_MIPS64 1
-	#define __jacl_arch_syscall __mips64_syscall
-	#define __jacl_arch_tls_set __mips64_set_tp_register
-	#define __jacl_arch_tls_get __mips64_get_tp_register
-	#define __jacl_arch_clone_thread __mips64_clone_thread
-	#define __jacl_arch_setjmp        __mips64_setjmp
-	#define __jacl_arch_longjmp       __mips64_longjmp
-	#define __jacl_arch_jmpbuf        __mips64_jmpbuf
-	#define JACL_BITS 64
+	#undef mipsn32
+	#define JACL_ARCH mipsn32
+	#define JACL_ARCH_MIPSN32 1
+	#define __jacl_arch_syscall __mipsn32_syscall
+	#define __jacl_arch_tls_set __mipsn32_set_tp_register
+	#define __jacl_arch_tls_get __mipsn32_get_tp_register
+	#define __jacl_arch_clone_thread __mipsn32_clone_thread
+	#define __jacl_arch_setjmp        __mipsn32_setjmp
+	#define __jacl_arch_longjmp       __mipsn32_longjmp
+	#define __jacl_arch_jmpbuf        __mipsn32_jmpbuf
+	#define JACL_BITS 32
 	#define JACL_ORDER 1234
 	#define JACL_SIGSIZ 8
 #undef __ARCH_CONFIG
 #endif
 
 #ifdef __ARCH_SYSCALL
-	static inline long __mips64_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+	static inline long __mipsn32_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
 		long result;
 		register long v0 __asm__("$2") = num;
 		register long a0 __asm__("$4") = a1;
@@ -61,7 +64,7 @@
 			".type __restore_rt,@function\n"
 			"__restore_rt:\n"
 			".set noreorder\n"
-			"li $v0, 5211\n"
+			"li $v0, 6211\n"
 			"syscall\n"
 		);
 	#endif
@@ -69,11 +72,11 @@
 #endif
 
 #ifdef __ARCH_TLS
-	static inline void __mips64_set_tp_register(void* addr) {
+	static inline void __mipsn32_set_tp_register(void* addr) {
 		__asm__ volatile("move $3, %0" : : "r"(addr) : "memory");
 	}
 
-	static inline void* __mips64_get_tp_register(void) {
+	static inline void* __mipsn32_get_tp_register(void) {
 		void* result;
 
 		__asm__("move %0, $3" : "=r"(result));
@@ -83,8 +86,8 @@
 #undef __ARCH_TLS
 #endif
 
-#ifdef __ARCH_CLONE
-	static inline pid_t __mips64_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
+#ifdef __ARCH_CLONE && JACL_OS_LINUX
+	static inline pid_t __mipsn32_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
 		char *stack_top = (char *)stack + stack_size;
 		stack_top = (char *)((uintptr_t)stack_top & ~15UL) - 16;
 
@@ -97,20 +100,20 @@
 			"move $a2, $zero\n\t"
 			"move $a3, $zero\n\t"
 			"move $a4, $zero\n\t"
-			"li $v0, 5055\n\t"
+			"li $v0, 6055\n\t"
 			"syscall\n\t"
 			"bnez $v0, 1f\n\t"
 
 			"move $fp, $zero\n\t"
 			"move $a0, %5\n\t"
 			"jalr %4\n\t"
-			"li $v0, 5058\n\t"
+			"li $v0, 6058\n\t"
 			"syscall\n\t"
 
 			"1:\n\t"
 			"move %0, $v0\n\t"
 			: "=r"(ret)
-			: "r"((long)5055), "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
+			: "r"((long)6055), "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
 			: "$v0", "$a0", "$a1", "$a2", "$a3", "$a4", "memory"
 		);
 
@@ -121,14 +124,14 @@
 
 #ifdef __ARCH_JUMP
 
-typedef unsigned long __mips64_jmpbuf[20];
+typedef unsigned long long __mipsn32_jmpbuf[20];
 
 __asm__(
 	".set noreorder\n"
 	".text\n"
-	".weak __mips64_setjmp\n"
-	".type __mips64_setjmp, @function\n"
-	"__mips64_setjmp:\n"
+	".weak __mipsn32_setjmp\n"
+	".type __mipsn32_setjmp, @function\n"
+	"__mipsn32_setjmp:\n"
 	"sd $ra, 0($4)\n"
 	"sd $sp, 8($4)\n"
 	"sd $gp, 16($4)\n"
@@ -153,19 +156,19 @@ __asm__(
 #endif
 	"jr $ra\n"
 	"li $2, 0\n"
-	".size __mips64_setjmp, .-__mips64_setjmp\n"
+	".size __mipsn32_setjmp, .-__mipsn32_setjmp\n"
 );
 
 __asm__(
 	".set noreorder\n"
 	".text\n"
-	".weak __mips64_longjmp\n"
-	".type __mips64_longjmp, @function\n"
-	"__mips64_longjmp:\n"
+	".weak __mipsn32_longjmp\n"
+	".type __mipsn32_longjmp, @function\n"
+	"__mipsn32_longjmp:\n"
 	"move $2, $5\n"
 	"bne $2, $0, 1f\n"
 	"nop\n"
-	"daddu $2, $2, 1\n"
+	"addu $2, $2, 1\n"
 	"1:\n"
 #ifndef __mips_soft_float
 	"ldc1 $24, 96($4)\n"
@@ -191,7 +194,7 @@ __asm__(
 	"ld $30, 88($4)\n"
 	"jr $ra\n"
 	"nop\n"
-	".size __mips64_longjmp, .-__mips64_longjmp\n"
+	".size __mipsn32_longjmp, .-__mipsn32_longjmp\n"
 );
 
 #undef __ARCH_JUMP
@@ -200,3 +203,5 @@ __asm__(
 #ifdef __cplusplus
 	}
 #endif
+
+#endif /* _ARCH_MIPSN32_H */

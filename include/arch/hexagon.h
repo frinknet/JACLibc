@@ -12,8 +12,12 @@
 	#define __jacl_arch_tls_set __hexagon_set_tp_register
 	#define __jacl_arch_tls_get __hexagon_get_tp_register
 	#define __jacl_arch_clone_thread __hexagon_clone_thread
+	#define __jacl_arch_setjmp        __hexagon_setjmp
+	#define __jacl_arch_longjmp       __hexagon_longjmp
+	#define __jacl_arch_jmpbuf        __hexagon_jmpbuf
 	#define JACL_BITS 32
 	#define JACL_ORDER 1234
+	#define JACL_SIGSIZ 8
 #undef __ARCH_CONFIG
 #endif
 
@@ -42,7 +46,7 @@
 
 #ifdef __ARCH_START
 	__asm__(
-		".global _start\n"
+		".globl _start\n"
 		"_start:\n"
 		"r29 = #0\n"
 		"r0 = r29\n"
@@ -78,17 +82,17 @@
 #undef __ARCH_TLS
 #endif
 
-#ifdef __ARCH_CLONE && JACL_OS_LINUX
+#ifdef __ARCH_CLONE
 	static inline pid_t __hexagon_clone_thread(void *stack, size_t stack_size, int (*fn)(void *), void *arg) {
 		char *stack_top = (char *)stack + stack_size;
 		stack_top = (char *)((uintptr_t)stack_top & ~7UL) - 8;
 
 		int flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD;
-		long ret;
+		register long r0 __asm__("r0");
 
 		__asm__ volatile(
-			"r0 = %2\n\t"
-			"r1 = %3\n\t"
+			"r0 = %1\n\t"
+			"r1 = %2\n\t"
 			"r2 = #0\n\t"
 			"r3 = #0\n\t"
 			"r4 = #0\n\t"
@@ -98,20 +102,63 @@
 			"if (!p0) jump 1f\n\t"
 
 			"r29 = #0\n\t"
-			"r0 = %5\n\t"
-			"callr %4\n\t"
+			"r0 = %4\n\t"
+			"callr %3\n\t"
 			"r6 = #93\n\t"
 			"trap0(#1)\n\t"
 
 			"1:\n\t"
-			: "=r"(ret)
-			: "r"((long)220), "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
-			: "r0", "r1", "r2", "r3", "r4", "r6", "r29", "memory"
+			: "=r"(r0)
+			: "r"((long)flags), "r"(stack_top), "r"(fn), "r"(arg)
+			: "r1", "r2", "r3", "r4", "r6", "r29", "memory"
 		);
 
-		return ret;
+		return (pid_t)r0;
 	}
 #undef __ARCH_CLONE
+#endif
+
+#ifdef __ARCH_JUMP
+
+typedef unsigned long __hexagon_jmpbuf[16];
+
+__asm__(
+	".text\n"
+	".weak __hexagon_setjmp\n"
+	".type __hexagon_setjmp, @function\n"
+	"__hexagon_setjmp:\n"
+	"memd(r0 + #0)  = r17:16\n"
+	"memd(r0 + #8)  = r19:18\n"
+	"memd(r0 + #16) = r21:20\n"
+	"memd(r0 + #24) = r23:22\n"
+	"memd(r0 + #32) = r25:24\n"
+	"memd(r0 + #40) = r27:26\n"
+	"memd(r0 + #48) = r31:29\n" /* Saves LR (r31) and FP (r29) */
+	"r0 = #0\n"
+	"jumpr r31\n"
+	".size __hexagon_setjmp, .-__hexagon_setjmp\n"
+);
+
+__asm__(
+	".text\n"
+	".weak __hexagon_longjmp\n"
+	".type __hexagon_longjmp, @function\n"
+	"__hexagon_longjmp:\n"
+	"r17:16 = memd(r0 + #0)\n"
+	"r19:18 = memd(r0 + #8)\n"
+	"r21:20 = memd(r0 + #16)\n"
+	"r23:22 = memd(r0 + #24)\n"
+	"r25:24 = memd(r0 + #32)\n"
+	"r27:26 = memd(r0 + #40)\n"
+	"r31:29 = memd(r0 + #48)\n"
+	"p0 = cmp.eq(r1, #0)\n"
+	"if (p0) r1 = #1\n"
+	"r0 = r1\n"
+	"jumpr r31\n"
+	".size __hexagon_longjmp, .-__hexagon_longjmp\n"
+);
+
+#undef __ARCH_JUMP
 #endif
 
 #ifdef __cplusplus

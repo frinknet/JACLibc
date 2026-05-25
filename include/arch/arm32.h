@@ -1,7 +1,7 @@
 /* (c) 2025 FRINKnet & Friends – MIT licence */
 
 #ifdef __cplusplus
-	extern "C" {
+extern "C" {
 #endif
 
 #ifdef __ARCH_CONFIG
@@ -12,8 +12,12 @@
 	#define __jacl_arch_tls_set __arm32_set_tp_register
 	#define __jacl_arch_tls_get __arm32_get_tp_register
 	#define __jacl_arch_clone_thread __arm32_clone_thread
+	#define __jacl_arch_setjmp        __arm32_setjmp
+	#define __jacl_arch_longjmp       __arm32_longjmp
+	#define __jacl_arch_jmpbuf        __arm32_jmpbuf
 	#define JACL_BITS 32
 	#define JACL_ORDER 1234
+	#define JACL_SIGSIZ 8
 #undef __ARCH_CONFIG
 #endif
 
@@ -42,7 +46,7 @@
 
 #ifdef __ARCH_START
 	__asm__(
-		".global _start\n"
+		".globl _start\n"
 		"_start:\n"
 		"mov fp, #0\n"
 		"mov lr, #0\n"
@@ -113,6 +117,50 @@
 #undef __ARCH_CLONE
 #endif
 
+#ifdef __ARCH_JUMP
+
+typedef unsigned long __arm32_jmpbuf[32];
+
+__asm__(
+	".syntax unified\n"
+	".text\n"
+	".weak __arm32_setjmp\n"
+	".type __arm32_setjmp, %function\n"
+	"__arm32_setjmp:\n"
+	"mov ip, r0\n"
+	"stmia ip!, {v1-v6, sl, fp}\n"
+	"mov r2, sp\n"
+	"stmia ip!, {r2, lr}\n"
+#if defined(__ARM_PCS_VFP) || (defined(__ARM_FP) && (__ARM_FP > 0))
+	"vstmia ip!, {d8-d15}\n"
+#endif
+	"mov r0, #0\n"
+	"bx lr\n"
+	".size __arm32_setjmp, .-__arm32_setjmp\n"
+);
+
+__asm__(
+	".syntax unified\n"
+	".text\n"
+	".weak __arm32_longjmp\n"
+	".type __arm32_longjmp, %function\n"
+	"__arm32_longjmp:\n"
+	"mov ip, r0\n"
+	"movs r0, r1\n"
+	"moveq r0, #1\n"
+	"ldmia ip!, {v1-v6, sl, fp}\n"
+	"ldmia ip!, {r2, lr}\n"
+	"mov sp, r2\n"
+#if defined(__ARM_PCS_VFP) || (defined(__ARM_FP) && (__ARM_FP > 0))
+	"vldmia ip!, {d8-d15}\n"
+#endif
+	"bx lr\n"
+	".size __arm32_longjmp, .-__arm32_longjmp\n"
+);
+
+#undef __ARCH_JUMP
+#endif
+
 #ifdef __cplusplus
-	}
+}
 #endif
