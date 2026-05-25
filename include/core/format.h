@@ -670,10 +670,8 @@ static inline int __jacl_input_int(FILE *stream, const char **in, size_t *read, 
 
 	__jacl_read_next(ch, stream, in, read);
 
-	if (JACL_FMT_HAS(FLAG, spec, sign)) {
-		if (ch == '-') { neg = 1; __jacl_read_next(ch, stream, in, pos); }
-		else if (ch == '+') { __jacl_read_next(ch, stream, in, pos); }
-	}
+	if (ch == '-') { neg = 1; __jacl_read_next(ch, stream, in, pos); }
+	else if (ch == '+') { __jacl_read_next(ch, stream, in, pos); }
 
 	if (base == 0) {
 		if (ch == '0') {
