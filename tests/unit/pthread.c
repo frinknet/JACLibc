@@ -1444,4 +1444,326 @@ TEST(pthread_sigmask_returns_einval_on_invalid_how) {
 
 /* ============================================================================ */
 
+/* ============================================================================ */
+
+TEST_SUITE(pthread_mutexattr_setpshared);
+
+TEST(pthread_mutexattr_setpshared_returns_zero_on_private) {
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE));
+	pthread_mutexattr_destroy(&attr);
+}
+
+TEST(pthread_mutexattr_setpshared_returns_zero_on_shared) {
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED));
+	pthread_mutexattr_destroy(&attr);
+}
+
+TEST(pthread_mutexattr_setpshared_returns_einval_on_null_attr) {
+	ASSERT_INT_EQ(EINVAL, pthread_mutexattr_setpshared(NULL, PTHREAD_PROCESS_PRIVATE));
+}
+
+TEST(pthread_mutexattr_setpshared_returns_einval_on_invalid_pshared) {
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_mutexattr_setpshared(&attr, 999));
+	pthread_mutexattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(pthread_mutexattr_getpshared);
+
+TEST(pthread_mutexattr_getpshared_returns_private_by_default) {
+	pthread_mutexattr_t attr;
+	int pshared;
+	pthread_mutexattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_mutexattr_getpshared(&attr, &pshared));
+	ASSERT_INT_EQ(PTHREAD_PROCESS_PRIVATE, pshared);
+	pthread_mutexattr_destroy(&attr);
+}
+
+TEST(pthread_mutexattr_getpshared_returns_what_was_set) {
+	pthread_mutexattr_t attr;
+	int pshared;
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	ASSERT_INT_EQ(0, pthread_mutexattr_getpshared(&attr, &pshared));
+	ASSERT_INT_EQ(PTHREAD_PROCESS_SHARED, pshared);
+	pthread_mutexattr_destroy(&attr);
+}
+
+TEST(pthread_mutexattr_getpshared_returns_einval_on_null_attr) {
+	int pshared;
+	ASSERT_INT_EQ(EINVAL, pthread_mutexattr_getpshared(NULL, &pshared));
+}
+
+TEST(pthread_mutexattr_getpshared_returns_einval_on_null_pshared) {
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_mutexattr_getpshared(&attr, NULL));
+	pthread_mutexattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(pthread_condattr_setpshared);
+
+TEST(pthread_condattr_setpshared_returns_zero_on_private) {
+	pthread_condattr_t attr;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_condattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE));
+	pthread_condattr_destroy(&attr);
+}
+
+TEST(pthread_condattr_setpshared_returns_zero_on_shared) {
+	pthread_condattr_t attr;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_condattr_setpshared(&attr, PTHREAD_PROCESS_SHARED));
+	pthread_condattr_destroy(&attr);
+}
+
+TEST(pthread_condattr_setpshared_returns_einval_on_null_attr) {
+	ASSERT_INT_EQ(EINVAL, pthread_condattr_setpshared(NULL, PTHREAD_PROCESS_PRIVATE));
+}
+
+TEST(pthread_condattr_setpshared_returns_einval_on_invalid_pshared) {
+	pthread_condattr_t attr;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_condattr_setpshared(&attr, 999));
+	pthread_condattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(pthread_condattr_getpshared);
+
+TEST(pthread_condattr_getpshared_returns_private_by_default) {
+	pthread_condattr_t attr;
+	int pshared;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_condattr_getpshared(&attr, &pshared));
+	ASSERT_INT_EQ(PTHREAD_PROCESS_PRIVATE, pshared);
+	pthread_condattr_destroy(&attr);
+}
+
+TEST(pthread_condattr_getpshared_returns_what_was_set) {
+	pthread_condattr_t attr;
+	int pshared;
+	pthread_condattr_init(&attr);
+	pthread_condattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	ASSERT_INT_EQ(0, pthread_condattr_getpshared(&attr, &pshared));
+	ASSERT_INT_EQ(PTHREAD_PROCESS_SHARED, pshared);
+	pthread_condattr_destroy(&attr);
+}
+
+TEST(pthread_condattr_getpshared_returns_einval_on_null_attr) {
+	int pshared;
+	ASSERT_INT_EQ(EINVAL, pthread_condattr_getpshared(NULL, &pshared));
+}
+
+TEST(pthread_condattr_getpshared_returns_einval_on_null_pshared) {
+	pthread_condattr_t attr;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_condattr_getpshared(&attr, NULL));
+	pthread_condattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(pthread_condattr_setclock);
+
+TEST(pthread_condattr_setclock_returns_zero_on_realtime) {
+	pthread_condattr_t attr;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_condattr_setclock(&attr, CLOCK_REALTIME));
+	pthread_condattr_destroy(&attr);
+}
+
+TEST(pthread_condattr_setclock_returns_zero_on_monotonic) {
+	pthread_condattr_t attr;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_condattr_setclock(&attr, CLOCK_MONOTONIC));
+	pthread_condattr_destroy(&attr);
+}
+
+TEST(pthread_condattr_setclock_returns_einval_on_null_attr) {
+	ASSERT_INT_EQ(EINVAL, pthread_condattr_setclock(NULL, CLOCK_REALTIME));
+}
+
+TEST(pthread_condattr_setclock_returns_einval_on_invalid_clock) {
+	pthread_condattr_t attr;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_condattr_setclock(&attr, 999));
+	pthread_condattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(pthread_condattr_getclock);
+
+TEST(pthread_condattr_getclock_returns_realtime_by_default) {
+	pthread_condattr_t attr;
+	clockid_t clock_id;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_condattr_getclock(&attr, &clock_id));
+	ASSERT_INT_EQ(CLOCK_REALTIME, clock_id);
+	pthread_condattr_destroy(&attr);
+}
+
+TEST(pthread_condattr_getclock_returns_what_was_set) {
+	pthread_condattr_t attr;
+	clockid_t clock_id;
+	pthread_condattr_init(&attr);
+	pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+	ASSERT_INT_EQ(0, pthread_condattr_getclock(&attr, &clock_id));
+	ASSERT_INT_EQ(CLOCK_MONOTONIC, clock_id);
+	pthread_condattr_destroy(&attr);
+}
+
+TEST(pthread_condattr_getclock_returns_einval_on_null_attr) {
+	clockid_t clock_id;
+	ASSERT_INT_EQ(EINVAL, pthread_condattr_getclock(NULL, &clock_id));
+}
+
+TEST(pthread_condattr_getclock_returns_einval_on_null_clock) {
+	pthread_condattr_t attr;
+	pthread_condattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_condattr_getclock(&attr, NULL));
+	pthread_condattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(pthread_rwlockattr_setpshared);
+
+TEST(pthread_rwlockattr_setpshared_returns_zero_on_private) {
+	pthread_rwlockattr_t attr;
+	pthread_rwlockattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE));
+	pthread_rwlockattr_destroy(&attr);
+}
+
+TEST(pthread_rwlockattr_setpshared_returns_zero_on_shared) {
+	pthread_rwlockattr_t attr;
+	pthread_rwlockattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED));
+	pthread_rwlockattr_destroy(&attr);
+}
+
+TEST(pthread_rwlockattr_setpshared_returns_einval_on_null_attr) {
+	ASSERT_INT_EQ(EINVAL, pthread_rwlockattr_setpshared(NULL, PTHREAD_PROCESS_PRIVATE));
+}
+
+TEST(pthread_rwlockattr_setpshared_returns_einval_on_invalid_pshared) {
+	pthread_rwlockattr_t attr;
+	pthread_rwlockattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_rwlockattr_setpshared(&attr, 999));
+	pthread_rwlockattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(pthread_rwlockattr_getpshared);
+
+TEST(pthread_rwlockattr_getpshared_returns_private_by_default) {
+	pthread_rwlockattr_t attr;
+	int pshared;
+	pthread_rwlockattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_rwlockattr_getpshared(&attr, &pshared));
+	ASSERT_INT_EQ(PTHREAD_PROCESS_PRIVATE, pshared);
+	pthread_rwlockattr_destroy(&attr);
+}
+
+TEST(pthread_rwlockattr_getpshared_returns_what_was_set) {
+	pthread_rwlockattr_t attr;
+	int pshared;
+	pthread_rwlockattr_init(&attr);
+	pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	ASSERT_INT_EQ(0, pthread_rwlockattr_getpshared(&attr, &pshared));
+	ASSERT_INT_EQ(PTHREAD_PROCESS_SHARED, pshared);
+	pthread_rwlockattr_destroy(&attr);
+}
+
+TEST(pthread_rwlockattr_getpshared_returns_einval_on_null_attr) {
+	int pshared;
+	ASSERT_INT_EQ(EINVAL, pthread_rwlockattr_getpshared(NULL, &pshared));
+}
+
+TEST(pthread_rwlockattr_getpshared_returns_einval_on_null_pshared) {
+	pthread_rwlockattr_t attr;
+	pthread_rwlockattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_rwlockattr_getpshared(&attr, NULL));
+	pthread_rwlockattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(pthread_barrierattr_setpshared);
+
+TEST(pthread_barrierattr_setpshared_returns_zero_on_private) {
+	pthread_barrierattr_t attr;
+	pthread_barrierattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE));
+	pthread_barrierattr_destroy(&attr);
+}
+
+TEST(pthread_barrierattr_setpshared_returns_zero_on_shared) {
+	pthread_barrierattr_t attr;
+	pthread_barrierattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED));
+	pthread_barrierattr_destroy(&attr);
+}
+
+TEST(pthread_barrierattr_setpshared_returns_einval_on_null_attr) {
+	ASSERT_INT_EQ(EINVAL, pthread_barrierattr_setpshared(NULL, PTHREAD_PROCESS_PRIVATE));
+}
+
+TEST(pthread_barrierattr_setpshared_returns_einval_on_invalid_pshared) {
+	pthread_barrierattr_t attr;
+	pthread_barrierattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_barrierattr_setpshared(&attr, 999));
+	pthread_barrierattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(pthread_barrierattr_getpshared);
+
+TEST(pthread_barrierattr_getpshared_returns_private_by_default) {
+	pthread_barrierattr_t attr;
+	int pshared;
+	pthread_barrierattr_init(&attr);
+	ASSERT_INT_EQ(0, pthread_barrierattr_getpshared(&attr, &pshared));
+	ASSERT_INT_EQ(PTHREAD_PROCESS_PRIVATE, pshared);
+	pthread_barrierattr_destroy(&attr);
+}
+
+TEST(pthread_barrierattr_getpshared_returns_what_was_set) {
+	pthread_barrierattr_t attr;
+	int pshared;
+	pthread_barrierattr_init(&attr);
+	pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	ASSERT_INT_EQ(0, pthread_barrierattr_getpshared(&attr, &pshared));
+	ASSERT_INT_EQ(PTHREAD_PROCESS_SHARED, pshared);
+	pthread_barrierattr_destroy(&attr);
+}
+
+TEST(pthread_barrierattr_getpshared_returns_einval_on_null_attr) {
+	int pshared;
+	ASSERT_INT_EQ(EINVAL, pthread_barrierattr_getpshared(NULL, &pshared));
+}
+
+TEST(pthread_barrierattr_getpshared_returns_einval_on_null_pshared) {
+	pthread_barrierattr_t attr;
+	pthread_barrierattr_init(&attr);
+	ASSERT_INT_EQ(EINVAL, pthread_barrierattr_getpshared(&attr, NULL));
+	pthread_barrierattr_destroy(&attr);
+}
+
+/* ============================================================================ */
+
 TEST_MAIN()
