@@ -3,10 +3,9 @@
 #define _SYS_TYPES_H
 #pragma once
 
-/* Include basic types */
 #include <config.h>
 #include <stdint.h>
-#include <limits.h> /* Base limit macros */
+#include <limits.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,11 +16,11 @@ extern "C" {
 /* ============================================================= */
 
 #if JACL_HAS_C99
-  typedef long long time_t;            /* Time type */
-  typedef long long clock_t;           /* Clock ticks type */
+	typedef long long time_t;            /* Time type */
+	typedef long long clock_t;           /* Clock ticks type */
 #else
-  typedef long time_t;                 /* Time type */
-  typedef long clock_t;                /* Clock ticks type */
+	typedef long time_t;                 /* Time type */
+	typedef long clock_t;                /* Clock ticks type */
 #endif
 
 /* File offset type - always 64-bit for large file support */
@@ -51,10 +50,21 @@ typedef long            blksize_t;     /* Block size */
 typedef unsigned long   fsblkcnt_t;    /* File system block count */
 typedef unsigned long   fsfilcnt_t;    /* File system file count */
 
+/* Dirent types */
+typedef unsigned short  reclen_t;
+
 /* Timing types */
+typedef int timer_t;
+
+#if JACL_BITS < 32
+typedef long             clockid_t;     /* Clock identifier */
+typedef unsigned long    useconds_t;    /* Microseconds (0 to 1000000) */
+typedef long             suseconds_t;   /* Signed microseconds */
+#else
 typedef int             clockid_t;     /* Clock identifier */
 typedef unsigned int    useconds_t;    /* Microseconds (0 to 1000000) */
 typedef int             suseconds_t;   /* Signed microseconds */
+#endif
 
 /* Internet types */
 typedef unsigned int    socklen_t;     /* Socket address length */
@@ -69,11 +79,8 @@ typedef long long       off64_t;       /* 64-bit file offset */
 typedef long long       blkcnt64_t;    /* 64-bit block count */
 #endif
 
-#if JACL_64BIT
-typedef long            ssize_t;
-#else
-typedef int             ssize_t;
-#endif
+/* size_t  in <limits.h> for SIZE_MAX */
+/* ssize_t in <limits.h> to mirror size_t */
 
 /* ============================================================= */
 /* Type Limits (Zero-Overhead, Architecture-Aware)               */
@@ -173,15 +180,121 @@ typedef int             ssize_t;
   #endif
 #endif
 
-#ifndef SSIZE_MAX
-  #if JACL_64BIT
-    #define SSIZE_MAX LONG_MAX
-    #define SSIZE_MIN LONG_MIN
-  #else
-    #define SSIZE_MAX INT_MAX
-    #define SSIZE_MIN INT_MIN
-  #endif
+/* ============================================================= */
+/* Pthread types - operating system aware                        */
+/* ============================================================= */
+
+struct __jacl_cleanup_node;
+struct __jacl_pthread;
+
+typedef struct __jacl_cleanup_node {
+	void (*routine)(void *);
+	void *arg;
+	struct __jacl_cleanup_node *next;
+} __jacl_cleanup_node_t;
+
+/* Pthread types - Platform Specific */
+#if JACL_OS_WINDOWS
+	typedef struct { void *handle; unsigned int id; void *result; } pthread_t;
+	typedef struct { void *cs; int type; } pthread_mutex_t;
+	typedef struct { void *cv; } pthread_cond_t;
+	typedef unsigned long pthread_key_t;
+	typedef struct { int dummy; } pthread_spinlock_t;
+	typedef struct { int dummy; } pthread_rwlock_t;
+	typedef struct { int dummy; } pthread_barrier_t;
+	typedef struct { int pshared; } pthread_barrierattr_t;
+	typedef struct { int pshared; } pthread_rwlockattr_t;
+#elif JACL_HAS_PTHREADS
+	struct __jacl_pthread {
+		pid_t tid;
+		void *stack;
+		size_t stack_size;
+		int stack_is_mmap;
+		void *result;
+		_Atomic int finished;
+		_Atomic int detached;
+		_Atomic int joined;
+		_Atomic int cancel_state;
+		_Atomic int cancel_type;
+		_Atomic int canceled;
+		__jacl_cleanup_node_t *cleanup_stack;
+	};
+
+	typedef struct __jacl_pthread *pthread_t;
+
+	typedef struct {
+		_Atomic int futex;
+		pid_t owner;
+		int type;
+		int recursive_count;
+	} pthread_mutex_t;
+
+	typedef struct {
+		_Atomic int futex;
+		_Atomic int waiters;
+	} pthread_cond_t;
+
+	typedef unsigned int pthread_key_t;
+
+	typedef struct {
+		_Atomic int lock;
+	} pthread_spinlock_t;
+
+	typedef struct {
+		_Atomic int readers;
+		_Atomic int writers;
+		_Atomic int write_waiters;
+		pid_t       writer_tid;
+	} pthread_rwlock_t;
+
+	typedef struct {
+		_Atomic int count;
+		_Atomic int phase;
+		unsigned    limit;
+		_Atomic int waiters;
+	} pthread_barrier_t;
+
+	typedef struct {
+		int pshared;
+	} pthread_barrierattr_t;
+
+	typedef struct {
+		int pshared;
+	} pthread_rwlockattr_t;
+#else /* dummy threads */
+	typedef struct { int dummy; } pthread_t;
+	typedef struct { int dummy; } pthread_mutex_t;
+	typedef struct { int dummy; } pthread_cond_t;
+	typedef struct { int dummy; } pthread_spinlock_t;
+	typedef struct { int dummy; } pthread_rwlock_t;
+	typedef struct { int dummy; } pthread_barrier_t;
+	typedef struct { int dummy; } pthread_barrierattr_t;
+	typedef struct { int dummy; } pthread_rwlockattr_t;
+	typedef int pthread_key_t;
 #endif
+
+/* Common Pthread Attributes */
+typedef struct {
+	int detached;
+	size_t stack_size;
+	void *stack_addr;
+} pthread_attr_t;
+
+typedef struct {
+	int type;
+	int robust;
+	int pshared;
+} pthread_mutexattr_t;
+
+typedef struct {
+	int pshared;
+	clockid_t clock_id;
+} pthread_condattr_t;
+
+typedef struct {
+	_Atomic int done;
+} pthread_once_t;
+
 
 #ifdef __cplusplus
 }

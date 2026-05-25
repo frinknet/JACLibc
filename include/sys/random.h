@@ -17,7 +17,13 @@ extern "C" {
 #if JACL_HAS_POSIX
 
 #include <fcntl.h>
+#include <sys/syscall.h>
+
 static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
+    /* POSIX contract: NULL buffer with positive length is EINVAL */
+    if (!buf && buflen > 0) { errno = EINVAL; return -1; }
+    if (buflen == 0) return 0;
+
 	const char *dev = (flags & GRND_RANDOM) ? "/dev/random" : "/dev/urandom";
 	int fd = syscall(SYS_open, dev, O_RDONLY, 0);
 	if(fd < 0) return -1;
@@ -52,15 +58,7 @@ static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
 	return __wasi_random_get(buf, buflen) == 0 ? (ssize_t)buflen : -1;
 }
 
-#elif JACL_OS_JSRUN
-
-static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
-	(void)buf; (void)buflen; (void)flags;
-	errno = ENOSYS;
-	return -1;
-}
-
-#elif JACL_OS_NONE
+#elif JACL_OS_JSRUN || JACL_OS_NONE
 
 static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
 	(void)buf; (void)buflen; (void)flags;

@@ -1,0 +1,892 @@
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
+#ifndef _SYS_SEM_H
+#define _SYS_SEM_H
+#pragma once
+
+/**
+ * NOTE: This consolidates functionality traditionally found in:
+ *
+ *   - <semaphore.h>
+ *   - <sys/sem.h>
+ *
+ * We unify these into a single header at <sys/sem.h> for ease of maintenance
+ * and clarity with hopes that one day C Standards or POSIX may revamp layout
+ * for sanity's sake so that we can remove the abstraction of legacy cruft that
+ * cause so many security bugs because the coders don't see how things work.
+ *
+ * There has to be a better way!!!
+ */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <config.h>
+#include <pthread.h>
+#include <time.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <stdatomic.h>
+#include <limits.h>
+
+#if JACL_OS_WINDOWS
+	#define SEM_WIN32 1
+	#include <windows.h>
+#elif JACL_ARCH_WASM
+	#define SEM_DUMMY 1
+#else
+	#define SEM_POSIX 1
+#endif
+
+/* ============================================================================ */
+/* Internal Core Primitive                                                      */
+/* ============================================================================ */
+
+typedef struct {
+	unsigned int value;
+	pid_t		last_pid;
+	unsigned int ncnt;
+	unsigned int zcnt;
+	int		  pshared;
+	int		  anonymous;
+	clockid_t	clock_id;
+	pthread_mutex_t lock;
+	pthread_cond_t  cond;
+} __jacl_sem_primitive_t;
+
+typedef struct {
+	int active;
+	__jacl_sem_primitive_t p;
+} __jacl_sem_slot_t;
+
+#define __JACL_SEM_SLOT_MAX 1024
+static __jacl_sem_slot_t __jacl_sem_slots[__JACL_SEM_SLOT_MAX];
+static pthread_mutex_t __jacl_sem_slot_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static inline int __jacl_sem_slot_alloc(unsigned int val, int pshared, int anonymous, clockid_t cid) {
+	pthread_mutex_lock(&__jacl_sem_slot_lock);
+	for (int i = 0; i < __JACL_SEM_SLOT_MAX; i++) {
+		if (!__jacl_sem_slots[i].active) {
+			__jacl_sem_slots[i].active = 1;
+			__jacl_sem_primitive_t *p = &__jacl_sem_slots[i].p;
+			p->value = val;
+			p->last_pid = 0;
+			p->ncnt = 0;
+			p->zcnt = 0;
+			p->pshared = pshared;
+			p->anonymous = anonymous;
+			p->clock_id = cid;
+
+			pthread_mutexattr_t mattr;
+			pthread_mutexattr_init(&mattr);
+			if (pshared) pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
+			pthread_mutex_init(&p->lock, &mattr);
+			pthread_mutexattr_destroy(&mattr);
+
+			pthread_condattr_t cattr;
+			pthread_condattr_init(&cattr);
+			if (pshared) pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_SHARED);
+			pthread_condattr_setclock(&cattr, cid);
+			pthread_cond_init(&p->cond, &cattr);
+			pthread_condattr_destroy(&cattr);
+
+			pthread_mutex_unlock(&__jacl_sem_slot_lock);
+			return i;
+		}
+	}
+	pthread_mutex_unlock(&__jacl_sem_slot_lock);
+	return -1;
+}
+
+static inline void __jacl_sem_slot_free(int idx) {
+	if (idx < 0 || idx >= __JACL_SEM_SLOT_MAX) return;
+	pthread_mutex_lock(&__jacl_sem_slot_lock);
+	if (__jacl_sem_slots[idx].active) {
+		__jacl_sem_primitive_t *p = &__jacl_sem_slots[idx].p;
+		pthread_mutex_destroy(&p->lock);
+		pthread_cond_destroy(&p->cond);
+		__jacl_sem_slots[idx].active = 0;
+	}
+	pthread_mutex_unlock(&__jacl_sem_slot_lock);
+}
+
+/* ============================================================================ */
+/* Internal Named Semaphore Registry                                            */
+/* ============================================================================ */
+
+#define __JACL_SEM_NAMED_MAX 64
+
+typedef struct {
+	int active;
+	char name[256];
+	int unlinked;
+	int refcount;
+	int slot_idx;
+} __jacl_sem_named_t;
+
+static __jacl_sem_named_t __jacl_sem_named[__JACL_SEM_NAMED_MAX];
+static pthread_mutex_t __jacl_sem_named_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* ============================================================================ */
+/* Internal Undo Log (System V SEM_UNDO)                                        */
+/* ============================================================================ */
+
+#define __JACL_SEM_UNDO_MAX 4096
+
+typedef struct {
+	pid_t pid;
+	int slot_idx;
+	int adjust;
+} __jacl_sem_undo_entry_t;
+
+static __jacl_sem_undo_entry_t __jacl_sem_undo_entries[__JACL_SEM_UNDO_MAX];
+static pthread_mutex_t __jacl_sem_undo_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_once_t __jacl_sem_undo_once = PTHREAD_ONCE_INIT;
+
+static inline void __jacl_sem_undo_cleanup(void) {
+	pid_t me = getpid();
+	pthread_mutex_lock(&__jacl_sem_undo_lock);
+	for (int i = 0; i < __JACL_SEM_UNDO_MAX; i++) {
+		if (__jacl_sem_undo_entries[i].pid == me && __jacl_sem_undo_entries[i].slot_idx >= 0) {
+			int idx = __jacl_sem_undo_entries[i].slot_idx;
+			if (__jacl_sem_slots[idx].active) {
+				__jacl_sem_primitive_t *p = &__jacl_sem_slots[idx].p;
+				pthread_mutex_lock(&p->lock);
+				p->value += (unsigned int)(-__jacl_sem_undo_entries[i].adjust);
+				pthread_cond_broadcast(&p->cond);
+				pthread_mutex_unlock(&p->lock);
+			}
+			__jacl_sem_undo_entries[i].pid = 0;
+			__jacl_sem_undo_entries[i].slot_idx = -1;
+			__jacl_sem_undo_entries[i].adjust = 0;
+		}
+	}
+	pthread_mutex_unlock(&__jacl_sem_undo_lock);
+}
+
+static inline void __jacl_sem_undo_init(void) {
+	for (int i = 0; i < __JACL_SEM_UNDO_MAX; i++) {
+		__jacl_sem_undo_entries[i].pid = 0;
+		__jacl_sem_undo_entries[i].slot_idx = -1;
+		__jacl_sem_undo_entries[i].adjust = 0;
+	}
+	atexit(__jacl_sem_undo_cleanup);
+}
+
+static inline void __jacl_sem_undo_add(int slot_idx, int op) {
+	if (op == 0) return;
+	pid_t me = getpid();
+	pthread_mutex_lock(&__jacl_sem_undo_lock);
+	int found = -1;
+	for (int i = 0; i < __JACL_SEM_UNDO_MAX; i++) {
+		if (__jacl_sem_undo_entries[i].pid == me && __jacl_sem_undo_entries[i].slot_idx == slot_idx) {
+			found = i;
+			break;
+		}
+		if (found == -1 && __jacl_sem_undo_entries[i].pid == 0) found = i;
+	}
+	if (found >= 0) {
+		__jacl_sem_undo_entries[found].pid = me;
+		__jacl_sem_undo_entries[found].slot_idx = slot_idx;
+		__jacl_sem_undo_entries[found].adjust += op;
+	}
+	pthread_mutex_unlock(&__jacl_sem_undo_lock);
+}
+
+/* ============================================================================ */
+/* POSIX Public ABI (<semaphore.h>)                                             */
+/* ============================================================================ */
+
+typedef int sem_t;
+#define SEM_FAILED ((sem_t)-1)
+
+static inline __jacl_sem_primitive_t *__jacl_sem_resolve(sem_t *sem) {
+	if (!sem || *sem < 0 || *sem >= __JACL_SEM_SLOT_MAX) return NULL;
+	if (!__jacl_sem_slots[*sem].active) return NULL;
+	return &__jacl_sem_slots[*sem].p;
+}
+
+#if SEM_POSIX
+
+static inline int sem_init(sem_t *sem, int pshared, unsigned int value) {
+	if (!sem) { errno = EINVAL; return -1; }
+	int idx = __jacl_sem_slot_alloc(value, pshared, 1, CLOCK_REALTIME);
+	if (idx < 0) { errno = ENOSPC; return -1; }
+	*sem = (sem_t)idx;
+	return 0;
+}
+
+static inline int sem_destroy(sem_t *sem) {
+	__jacl_sem_primitive_t *p = __jacl_sem_resolve(sem);
+	if (!p) { errno = EINVAL; return -1; }
+	if (!p->anonymous) { errno = EINVAL; return -1; }
+	__jacl_sem_slot_free(*sem);
+	return 0;
+}
+
+static inline sem_t sem_open(const char *name, int oflag, ...) {
+	if (!name || name[0] != '/' || name[1] == '\0') { errno = EINVAL; return SEM_FAILED; }
+	if ((oflag & O_EXCL) && !(oflag & O_CREAT)) { errno = EINVAL; return SEM_FAILED; }
+
+	unsigned int value = 0;
+	if (oflag & O_CREAT) {
+		va_list ap;
+		va_start(ap, oflag);
+		(void)va_arg(ap, int);
+		value = (unsigned int)va_arg(ap, unsigned int);
+		va_end(ap);
+	}
+
+	pthread_mutex_lock(&__jacl_sem_named_lock);
+	int found = -1;
+	for (int i = 0; i < __JACL_SEM_NAMED_MAX; i++) {
+		if (__jacl_sem_named[i].active && strcmp(__jacl_sem_named[i].name, name) == 0) {
+			found = i;
+			break;
+		}
+	}
+
+	if (found >= 0) {
+		if ((oflag & O_CREAT) && (oflag & O_EXCL)) {
+			pthread_mutex_unlock(&__jacl_sem_named_lock);
+			errno = EEXIST;
+			return SEM_FAILED;
+		}
+		__jacl_sem_named[found].refcount++;
+		sem_t result = (sem_t)__jacl_sem_named[found].slot_idx;
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		return result;
+	}
+
+	if (!(oflag & O_CREAT)) {
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		errno = ENOENT;
+		return SEM_FAILED;
+	}
+
+	int free_name = -1;
+	for (int i = 0; i < __JACL_SEM_NAMED_MAX; i++) {
+		if (!__jacl_sem_named[i].active) { free_name = i; break; }
+	}
+	if (free_name < 0) {
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		errno = ENFILE;
+		return SEM_FAILED;
+	}
+
+	int prim_idx = __jacl_sem_slot_alloc(value, 0, 0, CLOCK_REALTIME);
+	if (prim_idx < 0) {
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		errno = ENOSPC;
+		return SEM_FAILED;
+	}
+
+	__jacl_sem_named[free_name].active = 1;
+	strncpy(__jacl_sem_named[free_name].name, name, 255);
+	__jacl_sem_named[free_name].name[255] = '\0';
+	__jacl_sem_named[free_name].unlinked = 0;
+	__jacl_sem_named[free_name].refcount = 1;
+	__jacl_sem_named[free_name].slot_idx = prim_idx;
+
+	pthread_mutex_unlock(&__jacl_sem_named_lock);
+	return (sem_t)prim_idx;
+}
+
+static inline int sem_close(sem_t sem) {
+	if (sem < 0 || sem >= __JACL_SEM_SLOT_MAX) { errno = EINVAL; return -1; }
+
+	pthread_mutex_lock(&__jacl_sem_named_lock);
+	int found = -1;
+	for (int i = 0; i < __JACL_SEM_NAMED_MAX; i++) {
+		if (__jacl_sem_named[i].active && __jacl_sem_named[i].slot_idx == (int)sem) {
+			found = i;
+			break;
+		}
+	}
+
+	if (found < 0) {
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (__jacl_sem_named[found].refcount <= 0) {
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		errno = EINVAL;
+		return -1;
+	}
+
+	__jacl_sem_named[found].refcount--;
+	if (__jacl_sem_named[found].refcount == 0 && __jacl_sem_named[found].unlinked) {
+		int prim_idx = __jacl_sem_named[found].slot_idx;
+		__jacl_sem_named[found].active = 0;
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		__jacl_sem_slot_free(prim_idx);
+		return 0;
+	}
+	pthread_mutex_unlock(&__jacl_sem_named_lock);
+	return 0;
+}
+
+static inline int sem_unlink(const char *name) {
+	if (!name) { errno = EINVAL; return -1; }
+
+	pthread_mutex_lock(&__jacl_sem_named_lock);
+	int found = -1;
+	for (int i = 0; i < __JACL_SEM_NAMED_MAX; i++) {
+		if (__jacl_sem_named[i].active && strcmp(__jacl_sem_named[i].name, name) == 0) {
+			found = i;
+			break;
+		}
+	}
+	if (found < 0) {
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		errno = ENOENT;
+		return -1;
+	}
+
+	if (__jacl_sem_named[found].unlinked) {
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		errno = ENOENT;
+		return -1;
+	}
+
+	__jacl_sem_named[found].unlinked = 1;
+	if (__jacl_sem_named[found].refcount == 0) {
+		int prim_idx = __jacl_sem_named[found].slot_idx;
+		__jacl_sem_named[found].active = 0;
+		pthread_mutex_unlock(&__jacl_sem_named_lock);
+		__jacl_sem_slot_free(prim_idx);
+		return 0;
+	}
+	pthread_mutex_unlock(&__jacl_sem_named_lock);
+	return 0;
+}
+
+static inline int sem_wait(sem_t *sem) {
+	__jacl_sem_primitive_t *p = __jacl_sem_resolve(sem);
+	if (!p) { errno = EINVAL; return -1; }
+
+	pthread_mutex_lock(&p->lock);
+	p->last_pid = getpid();
+	while (p->value == 0) {
+		p->ncnt++;
+		pthread_cond_wait(&p->cond, &p->lock);
+		p->ncnt--;
+	}
+	p->value--;
+	pthread_mutex_unlock(&p->lock);
+	return 0;
+}
+
+static inline int sem_trywait(sem_t *sem) {
+	__jacl_sem_primitive_t *p = __jacl_sem_resolve(sem);
+	if (!p) { errno = EINVAL; return -1; }
+
+	pthread_mutex_lock(&p->lock);
+	p->last_pid = getpid();
+	if (p->value == 0) {
+		pthread_mutex_unlock(&p->lock);
+		errno = EAGAIN;
+		return -1;
+	}
+	p->value--;
+	pthread_mutex_unlock(&p->lock);
+	return 0;
+}
+
+static inline int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout) {
+	__jacl_sem_primitive_t *p = __jacl_sem_resolve(sem);
+	if (!p || !abs_timeout) { errno = EINVAL; return -1; }
+	if (abs_timeout->tv_nsec < 0 || abs_timeout->tv_nsec >= 1000000000L) { errno = EINVAL; return -1; }
+
+	pthread_mutex_lock(&p->lock);
+	p->last_pid = getpid();
+	while (p->value == 0) {
+		p->ncnt++;
+		int rc = pthread_cond_timedwait(&p->cond, &p->lock, abs_timeout);
+		p->ncnt--;
+		if (rc == ETIMEDOUT) {
+			pthread_mutex_unlock(&p->lock);
+			errno = ETIMEDOUT;
+			return -1;
+		}
+	}
+	p->value--;
+	pthread_mutex_unlock(&p->lock);
+	return 0;
+}
+
+static inline int sem_clockwait(sem_t *sem, clockid_t clock_id, const struct timespec *abs_timeout) {
+	(void)clock_id;
+	return sem_timedwait(sem, abs_timeout);
+}
+
+static inline int sem_post(sem_t *sem) {
+	__jacl_sem_primitive_t *p = __jacl_sem_resolve(sem);
+	if (!p) { errno = EINVAL; return -1; }
+
+	pthread_mutex_lock(&p->lock);
+	p->last_pid = getpid();
+	p->value++;
+	pthread_cond_broadcast(&p->cond);
+	pthread_mutex_unlock(&p->lock);
+	return 0;
+}
+
+static inline int sem_getvalue(sem_t *sem, int *sval) {
+	__jacl_sem_primitive_t *p = __jacl_sem_resolve(sem);
+	if (!p || !sval) { errno = EINVAL; return -1; }
+
+	pthread_mutex_lock(&p->lock);
+	*sval = (int)p->value;
+	pthread_mutex_unlock(&p->lock);
+	return 0;
+}
+
+#else /* !SEM_POSIX (Windows/WASM stubs) */
+
+static inline int sem_init(sem_t *sem, int pshared, unsigned int value) {
+	(void)sem; (void)pshared; (void)value;
+	errno = ENOSYS; return -1;
+}
+static inline int sem_destroy(sem_t *sem) {
+	(void)sem; errno = ENOSYS; return -1;
+}
+static inline sem_t sem_open(const char *name, int oflag, ...) {
+	(void)name; (void)oflag; errno = ENOSYS; return SEM_FAILED;
+}
+static inline int sem_close(sem_t sem) {
+	(void)sem; errno = ENOSYS; return -1;
+}
+static inline int sem_unlink(const char *name) {
+	(void)name; errno = ENOSYS; return -1;
+}
+static inline int sem_wait(sem_t *sem) {
+	(void)sem; errno = ENOSYS; return -1;
+}
+static inline int sem_trywait(sem_t *sem) {
+	(void)sem; errno = ENOSYS; return -1;
+}
+static inline int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout) {
+	(void)sem; (void)abs_timeout; errno = ENOSYS; return -1;
+}
+static inline int sem_clockwait(sem_t *sem, clockid_t clock_id, const struct timespec *abs_timeout) {
+	(void)sem; (void)clock_id; (void)abs_timeout; errno = ENOSYS; return -1;
+}
+static inline int sem_post(sem_t *sem) {
+	(void)sem; errno = ENOSYS; return -1;
+}
+static inline int sem_getvalue(sem_t *sem, int *sval) {
+	(void)sem; (void)sval; errno = ENOSYS; return -1;
+}
+
+#endif
+
+/* ============================================================================ */
+/* System V Public ABI (<sys/sem.h>)                                            */
+/* ============================================================================ */
+
+#ifndef IPC_CREAT
+#define IPC_CREAT  01000
+#define IPC_EXCL   02000
+#define IPC_NOWAIT 04000
+#define IPC_RMID   0
+#define IPC_SET	1
+#define IPC_STAT   2
+#define IPC_PRIVATE ((key_t)0)
+#endif
+
+#ifndef SEM_UNDO
+#define SEM_UNDO 0x1000
+#endif
+
+#define GETVAL   12
+#define SETVAL   16
+#define GETALL   13
+#define SETALL   17
+#define GETPID   11
+#define GETNCNT  14
+#define GETZCNT  15
+
+#ifndef _IPC_PERM_DEFINED
+#define _IPC_PERM_DEFINED
+struct ipc_perm {
+	uid_t  uid;
+	gid_t  gid;
+	uid_t  cuid;
+	gid_t  cgid;
+	mode_t mode;
+};
+#endif
+
+struct semid_ds {
+	struct ipc_perm sem_perm;
+	unsigned short  sem_nsems;
+	time_t		  sem_otime;
+	time_t		  sem_ctime;
+};
+
+struct sembuf {
+	unsigned short sem_num;
+	short		  sem_op;
+	short		  sem_flg;
+};
+
+union semun {
+	int			  val;
+	struct semid_ds *buf;
+	unsigned short  *array;
+};
+
+#define __JACL_SYSV_SEMSET_MAX 64
+#define __JACL_SYSV_MAX_SEMS   256
+
+typedef struct {
+	int active;
+	key_t key;
+	struct semid_ds ds;
+	int slot_indices[__JACL_SYSV_MAX_SEMS];
+} __jacl_sysv_semset_t;
+
+static __jacl_sysv_semset_t __jacl_sysv_semsets[__JACL_SYSV_SEMSET_MAX];
+static pthread_mutex_t __jacl_sysv_lock = PTHREAD_MUTEX_INITIALIZER;
+
+#if SEM_POSIX
+
+static inline int semget(key_t key, int nsems, int semflg) {
+	if (nsems < 0 || nsems > __JACL_SYSV_MAX_SEMS) { errno = EINVAL; return -1; }
+
+	pthread_once(&__jacl_sem_undo_once, __jacl_sem_undo_init);
+
+	pthread_mutex_lock(&__jacl_sysv_lock);
+	int found = -1;
+	if (key != IPC_PRIVATE) {
+		for (int i = 0; i < __JACL_SYSV_SEMSET_MAX; i++) {
+			if (__jacl_sysv_semsets[i].active && __jacl_sysv_semsets[i].key == key) {
+				found = i;
+				break;
+			}
+		}
+	}
+
+	if (found >= 0) {
+		if ((semflg & IPC_CREAT) && (semflg & IPC_EXCL)) {
+			pthread_mutex_unlock(&__jacl_sysv_lock);
+			errno = EEXIST;
+			return -1;
+		}
+		pthread_mutex_unlock(&__jacl_sysv_lock);
+		return found;
+	}
+
+	if (!(semflg & IPC_CREAT) && key != IPC_PRIVATE) {
+		pthread_mutex_unlock(&__jacl_sysv_lock);
+		errno = ENOENT;
+		return -1;
+	}
+
+	int free_set = -1;
+	for (int i = 0; i < __JACL_SYSV_SEMSET_MAX; i++) {
+		if (!__jacl_sysv_semsets[i].active) { free_set = i; break; }
+	}
+	if (free_set < 0) {
+		pthread_mutex_unlock(&__jacl_sysv_lock);
+		errno = ENOSPC;
+		return -1;
+	}
+
+	__jacl_sysv_semsets[free_set].active = 1;
+	__jacl_sysv_semsets[free_set].key = key;
+	__jacl_sysv_semsets[free_set].ds.sem_nsems = (unsigned short)nsems;
+	__jacl_sysv_semsets[free_set].ds.sem_otime = 0;
+	__jacl_sysv_semsets[free_set].ds.sem_ctime = time(NULL);
+	__jacl_sysv_semsets[free_set].ds.sem_perm.uid = getuid();
+	__jacl_sysv_semsets[free_set].ds.sem_perm.gid = getgid();
+	__jacl_sysv_semsets[free_set].ds.sem_perm.cuid = getuid();
+	__jacl_sysv_semsets[free_set].ds.sem_perm.cgid = getgid();
+	__jacl_sysv_semsets[free_set].ds.sem_perm.mode = semflg & 0777;
+
+	for (int i = 0; i < nsems; i++) {
+		int prim_idx = __jacl_sem_slot_alloc(0, 0, 0, CLOCK_REALTIME);
+		if (prim_idx < 0) {
+			for (int j = 0; j < i; j++) __jacl_sem_slot_free(__jacl_sysv_semsets[free_set].slot_indices[j]);
+			__jacl_sysv_semsets[free_set].active = 0;
+			pthread_mutex_unlock(&__jacl_sysv_lock);
+			errno = ENOSPC;
+			return -1;
+		}
+		__jacl_sysv_semsets[free_set].slot_indices[i] = prim_idx;
+	}
+
+	pthread_mutex_unlock(&__jacl_sysv_lock);
+	return free_set;
+}
+
+static inline int semop(int semid, struct sembuf *sops, size_t nsops) {
+	if (semid < 0 || semid >= __JACL_SYSV_SEMSET_MAX || !__jacl_sysv_semsets[semid].active || !sops || nsops == 0) {
+		errno = EINVAL; return -1;
+	}
+
+	pthread_once(&__jacl_sem_undo_once, __jacl_sem_undo_init);
+
+	while (1) {
+		int locked[__JACL_SEM_SLOT_MAX];
+		memset(locked, 0, sizeof(locked));
+
+		int sorted_indices[__JACL_SYSV_MAX_SEMS];
+		for (size_t i = 0; i < nsops; i++)
+			sorted_indices[i] = __jacl_sysv_semsets[semid].slot_indices[sops[i].sem_num];
+		for (size_t i = 0; i < nsops; i++)
+			for (size_t j = i + 1; j < nsops; j++)
+				if (sorted_indices[j] < sorted_indices[i]) {
+					int tmp = sorted_indices[i]; sorted_indices[i] = sorted_indices[j]; sorted_indices[j] = tmp;
+				}
+
+		for (size_t i = 0; i < nsops; i++) {
+			int idx = sorted_indices[i];
+			if (!locked[idx]) {
+				pthread_mutex_lock(&__jacl_sem_slots[idx].p.lock);
+				locked[idx] = 1;
+			}
+		}
+
+		int would_block = 0;
+		int block_idx = -1;
+		int block_op_positive = 0;
+		for (size_t i = 0; i < nsops; i++) {
+			int idx = __jacl_sysv_semsets[semid].slot_indices[sops[i].sem_num];
+			__jacl_sem_primitive_t *p = &__jacl_sem_slots[idx].p;
+
+			if (sops[i].sem_op < 0) {
+				if (p->value < (unsigned int)(-sops[i].sem_op)) {
+					would_block = 1;
+					block_idx = idx;
+					block_op_positive = 0;
+					break;
+				}
+			} else if (sops[i].sem_op == 0) {
+				if (p->value != 0) {
+					would_block = 1;
+					block_idx = idx;
+					block_op_positive = 1;
+					break;
+				}
+			}
+		}
+
+		if (would_block) {
+			for (int i = 0; i < __JACL_SEM_SLOT_MAX; i++)
+				if (locked[i]) pthread_mutex_unlock(&__jacl_sem_slots[i].p.lock);
+
+			int has_nowait = 0;
+			for (size_t i = 0; i < nsops; i++)
+				if (sops[i].sem_flg & IPC_NOWAIT) { has_nowait = 1; break; }
+
+			if (has_nowait) { errno = EAGAIN; return -1; }
+
+			__jacl_sem_primitive_t *bp = &__jacl_sem_slots[block_idx].p;
+			pthread_mutex_lock(&bp->lock);
+			if (block_op_positive) bp->zcnt++; else bp->ncnt++;
+			pthread_cond_wait(&bp->cond, &bp->lock);
+			if (block_op_positive) bp->zcnt--; else bp->ncnt--;
+			pthread_mutex_unlock(&bp->lock);
+
+			continue;
+		}
+
+		for (size_t i = 0; i < nsops; i++) {
+			int idx = __jacl_sysv_semsets[semid].slot_indices[sops[i].sem_num];
+			__jacl_sem_primitive_t *p = &__jacl_sem_slots[idx].p;
+
+			if (sops[i].sem_op < 0) {
+				p->value -= (unsigned int)(-sops[i].sem_op);
+				if (sops[i].sem_flg & SEM_UNDO) __jacl_sem_undo_add(idx, sops[i].sem_op);
+			} else if (sops[i].sem_op > 0) {
+				p->value += (unsigned int)sops[i].sem_op;
+				if (sops[i].sem_flg & SEM_UNDO) __jacl_sem_undo_add(idx, sops[i].sem_op);
+				pthread_cond_broadcast(&p->cond);
+			}
+			p->last_pid = getpid();
+		}
+		__jacl_sysv_semsets[semid].ds.sem_otime = time(NULL);
+
+		for (int i = 0; i < __JACL_SEM_SLOT_MAX; i++)
+			if (locked[i]) pthread_mutex_unlock(&__jacl_sem_slots[i].p.lock);
+
+		return 0;
+	}
+}
+
+static inline int semctl(int semid, int semnum, int cmd, ...) {
+	if (semid < 0 || semid >= __JACL_SYSV_SEMSET_MAX || !__jacl_sysv_semsets[semid].active) { errno = EINVAL; return -1; }
+
+	va_list ap;
+	va_start(ap, cmd);
+	union semun arg = va_arg(ap, union semun);
+	va_end(ap);
+
+	__jacl_sysv_semset_t *set = &__jacl_sysv_semsets[semid];
+
+	switch (cmd) {
+		case IPC_RMID:
+			pthread_mutex_lock(&__jacl_sysv_lock);
+			for (int i = 0; i < set->ds.sem_nsems; i++)
+				__jacl_sem_slot_free(set->slot_indices[i]);
+			set->active = 0;
+			pthread_mutex_unlock(&__jacl_sysv_lock);
+			return 0;
+
+		case IPC_STAT:
+			if (!arg.buf) { errno = EFAULT; return -1; }
+			pthread_mutex_lock(&__jacl_sysv_lock);
+			*arg.buf = set->ds;
+			pthread_mutex_unlock(&__jacl_sysv_lock);
+			return 0;
+
+		case IPC_SET:
+			if (!arg.buf) { errno = EFAULT; return -1; }
+			pthread_mutex_lock(&__jacl_sysv_lock);
+			set->ds.sem_perm.uid = arg.buf->sem_perm.uid;
+			set->ds.sem_perm.gid = arg.buf->sem_perm.gid;
+			set->ds.sem_perm.mode = arg.buf->sem_perm.mode;
+			set->ds.sem_ctime = time(NULL);
+			pthread_mutex_unlock(&__jacl_sysv_lock);
+			return 0;
+
+		case GETVAL:
+			if (semnum < 0 || semnum >= set->ds.sem_nsems) { errno = EINVAL; return -1; }
+			return (int)__jacl_sem_slots[set->slot_indices[semnum]].p.value;
+
+		case SETVAL:
+			if (semnum < 0 || semnum >= set->ds.sem_nsems) { errno = EINVAL; return -1; }
+			pthread_mutex_lock(&__jacl_sem_slots[set->slot_indices[semnum]].p.lock);
+			__jacl_sem_slots[set->slot_indices[semnum]].p.value = (unsigned int)arg.val;
+			pthread_cond_broadcast(&__jacl_sem_slots[set->slot_indices[semnum]].p.cond);
+			pthread_mutex_unlock(&__jacl_sem_slots[set->slot_indices[semnum]].p.lock);
+			return 0;
+
+		case GETALL:
+			if (!arg.array) { errno = EFAULT; return -1; }
+			for (int i = 0; i < set->ds.sem_nsems; i++)
+				arg.array[i] = (unsigned short)__jacl_sem_slots[set->slot_indices[i]].p.value;
+			return 0;
+
+		case SETALL:
+			if (!arg.array) { errno = EFAULT; return -1; }
+			for (int i = 0; i < set->ds.sem_nsems; i++) {
+				pthread_mutex_lock(&__jacl_sem_slots[set->slot_indices[i]].p.lock);
+				__jacl_sem_slots[set->slot_indices[i]].p.value = arg.array[i];
+				pthread_cond_broadcast(&__jacl_sem_slots[set->slot_indices[i]].p.cond);
+				pthread_mutex_unlock(&__jacl_sem_slots[set->slot_indices[i]].p.lock);
+			}
+			return 0;
+
+		case GETPID:
+			if (semnum < 0 || semnum >= set->ds.sem_nsems) { errno = EINVAL; return -1; }
+			return (int)__jacl_sem_slots[set->slot_indices[semnum]].p.last_pid;
+
+		case GETNCNT:
+			if (semnum < 0 || semnum >= set->ds.sem_nsems) { errno = EINVAL; return -1; }
+			return (int)__jacl_sem_slots[set->slot_indices[semnum]].p.ncnt;
+
+		case GETZCNT:
+			if (semnum < 0 || semnum >= set->ds.sem_nsems) { errno = EINVAL; return -1; }
+			return (int)__jacl_sem_slots[set->slot_indices[semnum]].p.zcnt;
+
+		default:
+			errno = EINVAL;
+			return -1;
+	}
+}
+
+#else /* !SEM_POSIX (Windows/WASM stubs) */
+
+static inline int semget(key_t key, int nsems, int semflg) {
+	(void)key; (void)nsems; (void)semflg; errno = ENOSYS; return -1;
+}
+static inline int semop(int semid, struct sembuf *sops, size_t nsops) {
+	(void)semid; (void)sops; (void)nsops; errno = ENOSYS; return -1;
+}
+static inline int semctl(int semid, int semnum, int cmd, ...) {
+	(void)semid; (void)semnum; (void)cmd; errno = ENOSYS; return -1;
+}
+
+#endif
+
+/* ============================================================================ */
+/* Utility Functions                                                            */
+/* ============================================================================ */
+
+static inline void sem_init_struct(sem_t *sem) {
+	if (sem) *sem = SEM_FAILED;
+}
+
+static inline int sem_is_valid(sem_t *sem) {
+	return __jacl_sem_resolve(sem) != NULL;
+}
+
+static inline int sem_is_anonymous(sem_t *sem) {
+	__jacl_sem_primitive_t *p = __jacl_sem_resolve(sem);
+	return p && p->anonymous;
+}
+
+static inline int sem_is_named(sem_t *sem) {
+	__jacl_sem_primitive_t *p = __jacl_sem_resolve(sem);
+	return p && !p->anonymous;
+}
+
+static inline int sem_is_unlinked(sem_t *sem) {
+	if (!sem_is_named(sem)) return 0;
+	pthread_mutex_lock(&__jacl_sem_named_lock);
+	int result = 0;
+	for (int i = 0; i < __JACL_SEM_NAMED_MAX; i++) {
+		if (__jacl_sem_named[i].active && __jacl_sem_named[i].slot_idx == (int)*sem) {
+			result = __jacl_sem_named[i].unlinked;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&__jacl_sem_named_lock);
+	return result;
+}
+
+static inline const char *sem_get_name(sem_t *sem) {
+	if (!sem_is_named(sem)) return NULL;
+	pthread_mutex_lock(&__jacl_sem_named_lock);
+	const char *result = NULL;
+	for (int i = 0; i < __JACL_SEM_NAMED_MAX; i++) {
+		if (__jacl_sem_named[i].active && __jacl_sem_named[i].slot_idx == (int)*sem) {
+			result = __jacl_sem_named[i].name;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&__jacl_sem_named_lock);
+	return result;
+}
+
+static inline int sem_get_refcount(sem_t *sem) {
+	if (!sem || *sem < 0 || *sem >= __JACL_SEM_SLOT_MAX) return -1;
+	if (!__jacl_sem_slots[*sem].active) return -1;
+	if (__jacl_sem_slots[*sem].p.anonymous) return 1;
+	pthread_mutex_lock(&__jacl_sem_named_lock);
+	int result = -1;
+	for (int i = 0; i < __JACL_SEM_NAMED_MAX; i++) {
+		if (__jacl_sem_named[i].active && __jacl_sem_named[i].slot_idx == (int)*sem) {
+			result = __jacl_sem_named[i].refcount;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&__jacl_sem_named_lock);
+	return result;
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _SYS_SEM_H */

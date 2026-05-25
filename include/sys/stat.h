@@ -4,10 +4,8 @@
 #pragma once
 
 #include <config.h>
-#include <sys/types.h>
 #include <time.h>
-#include <stdio.h>
-#include <errno.h>
+#include <fcntl.h>
 
 /**
  * NOTE: This consolidates functionality traditionally found in:
@@ -94,26 +92,6 @@
 
 #define UTIME_NOW  ((1l << 30) - 1l)
 #define UTIME_OMIT ((1l << 30) - 2l)
-
-/* ================================================================ */
-/* AT_* constants for *at() functions                               */
-/* ================================================================ */
-
-#if JACL_OS_NETBSD
-	#define AT_FDCWD             -100
-	#define AT_SYMLINK_NOFOLLOW  0x100
-	#define AT_REMOVEDIR         0x200
-	#define AT_EACCESS           0x80
-	#define AT_SYMLINK_FOLLOW    0x400
-	#define AT_EMPTY_PATH        0x1000
-#else
-	#define AT_FDCWD             -100
-	#define AT_SYMLINK_NOFOLLOW  0x100
-	#define AT_REMOVEDIR         0x200
-	#define AT_EACCESS           0x200
-	#define AT_SYMLINK_FOLLOW    0x400
-	#define AT_EMPTY_PATH        0x1000
-#endif
 
 /* ================================================================ */
 /* Structures                                                       */
@@ -415,10 +393,6 @@ static inline int mkdir(const char *pathname, mode_t mode) {
 static inline int fchmod(int fd, mode_t mode) {
 	#if JACL_HASSYS(fchmod)
 		return (int)syscall(SYS_fchmod, fd, mode);
-	#elif JACL_OS_LINUX && JACL_HASSYS(fchmodat)
-		char path[32];
-		snprintf(path, sizeof(path), "/proc/self/fd/%d", fd);
-		return (int)syscall(SYS_fchmodat, AT_FDCWD, path, mode, 0);
 	#else
 		(void)fd; (void)mode;
 		errno = ENOSYS;
