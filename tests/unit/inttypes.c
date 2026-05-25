@@ -325,9 +325,10 @@ TEST(strtoumax_octal) {
     ASSERT_EQ(63u, x);
 }
 TEST(strtoumax_neg) {
-    char *e = NULL; errno = 0;
-    uintmax_t x = strtoumax("-5", &e, 10);
-    ASSERT_EQ(0u, x);
+	char *e = NULL;
+	errno = 0;
+	uintmax_t x = strtoumax("-5", &e, 10);
+	ASSERT_EQ(x, UINTMAX_MAX - 4);
 }
 TEST(strtoumax_junk) {
     char *e = NULL;

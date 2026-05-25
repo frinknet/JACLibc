@@ -1475,17 +1475,17 @@ TEST(scanf_u_large) {
 }
 
 TEST(scanf_u_negative) {
-	unsigned int v = 1234;
+	unsigned int v = 0;
 	int n = sscanf("-42", "%u", &v);
-	ASSERT_EQ(n, EOF);
-	ASSERT_EQ(v, 1234);
+	ASSERT_INT_EQ(n, 1);
+	ASSERT_INT_EQ(v, UINT_MAX - 41);
 }
 
-TEST(scanf_u_plus_sign) {
-	unsigned int v = 1234;
+TEST(scanf_u_positive) {
+	unsigned int v = 0;
 	int n = sscanf("+42", "%u", &v);
-	ASSERT_EQ(n, EOF);
-	ASSERT_EQ(v, 1234);
+	ASSERT_INT_EQ(n, 1);
+	ASSERT_INT_EQ(v, 42);
 }
 
 /* ============= Scanf: %x, %X (hexadecimal) ============= */
