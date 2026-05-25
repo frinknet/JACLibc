@@ -65,7 +65,7 @@ xfiles() {
     done
     echo " */"
     echo ""
-    awk -varch="$arch" -f "$ROOT/utils/get_syscalls_${os}.awk" "$tmp" | sort -u
+    awk -varch="$arch" -f "$ROOT/utils/get_syscalls_${os}.awk" "$tmp" #| sort -u
   } > "$gen"
 
   if [ ! -s "$gen" ]; then
@@ -191,6 +191,8 @@ xstubs  dragonfly  x86
 xstubs  windows    x64
 xstubs  windows    x86
 xstubs  windows    arm64
+
+echo "dude"
 
 # Config
 grep -R "if JACL_HASSYS" "$ROOT" \
