@@ -295,6 +295,13 @@ typedef struct {
 	_Atomic int done;
 } pthread_once_t;
 
+/* Window size structure for terminal ioctls */
+struct winsize {
+	unsigned short ws_row;      /* Rows, in characters */
+	unsigned short ws_col;      /* Columns, in characters */
+	unsigned short ws_xpixel;   /* Horizontal size, pixels */
+	unsigned short ws_ypixel;   /* Vertical size, pixels */
+};
 
 #ifdef __cplusplus
 }

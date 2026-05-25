@@ -11,14 +11,6 @@
 
 #include <sys/syscall.h> // syscall()
 
-/* Window size structure for terminal ioctls */
-struct winsize {
-	unsigned short ws_row;      /* rows, in characters */
-	unsigned short ws_col;      /* columns, in characters */
-	unsigned short ws_xpixel;   /* horizontal size, pixels */
-	unsigned short ws_ypixel;   /* vertical size, pixels */
-};
-
 /* Terminal window size ioctls */
 #if JACL_OS_LINUX || JACL_ARCH_WASM
   #define TIOCGWINSZ  0x5413
