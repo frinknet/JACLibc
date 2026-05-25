@@ -97,22 +97,22 @@
  *
  * Organizing the test is the most important thing to create a complete and effective test
  * suite. For best test coverage make a single TEST_SUITE(constants) and then add tests for
- * each group of constants. Followed by a a suite for each struct and each function. Name
- * the suites after the thing they are testing and prefix the tests with the test suite name.
+ * each group of constants. Followed by a a suite for each struct and each function using
+ * their EXACT name as both the test suite name and the prefix for each test.
  *
- * AVOID testing for multiple return codes. While this makes things simpler it does not create
- * acurate testing framework. This often means you need to think more about the contract of
- * of the ABI you are verifying. This takes finecesse and practice - but a good test suite
- * saves hundreds of hours in debugging so it it totally worth it!!!
+ * AVOID testing for multiple return codes at once. While this makes things simpler it does
+ * not create an accurate testing surface. This often means you need to think more about the
+ * contract of of the ABI you are verifying. This takes finesse and practice - but a good test
+ * suite saves hundreds of hours in debugging so it it totally worth it!!!
  *
  * NEVER delete tests even simple ones. They provide consumer confidence. However, if you write
  * a better, more accurate test or split an old test into two that is acceptable to delete the
- * old test since it has been depricated beyond use.
+ * old test since it has been deprecated beyond use.
  *
  * FOCUS on testing happy paths before sad paths since sad paths will be the major focus of
  * your testing efforts. The more you can write failure tests the better.
  *
- * SKIP unimplimented tests by marking them TEST_SKIP("not implimented") so as you go you
+ * SKIP unimplemented tests by marking them TEST_SKIP("not implemented") so as you go you
  * can uncomment the skips and test those fresh as you go. Also if you find a segfault you can
  * mark that test with TEST_SKIP("causes segfault") so that you can log failures but continue
  * the rest of the test.
