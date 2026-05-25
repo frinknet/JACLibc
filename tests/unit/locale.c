@@ -739,7 +739,7 @@ TEST(edge_case_nested_duplocale) {
 
 TEST(edge_case_languages) {
 	#define X(LANG, name, ...) \
-	if (LANG != LANG_C) ASSERT_STR_EQ(name "_TR.UTF-8" , setlocale(LC_ALL, name "_TR.UTF-8"));
+	if (LANG != LANG_C) ASSERT_STR_EQ(name "_US.UTF-8" , setlocale(LC_ALL, name "_US.UTF-8"));
 	X_LANGUAGES
 	#undef X
 }
