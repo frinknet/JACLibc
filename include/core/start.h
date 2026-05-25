@@ -5,6 +5,7 @@
 
 #include <config.h>
 #include <stdlib.h>
+#include <setjmp.h>
 
 /* Get TLS functions from format */
 #define __BIN_INIT
@@ -24,7 +25,20 @@ extern int main();
 #define __OS_INIT
 #include JACL_OS_FILE
 
-/* Convergence Start */
+/* Futex fallback state */
+#if JACL_HAS_POSIX && !JACL_OS_LINUX && !JACL_OS_NETBSD
+#include <pthread.h>
+pthread_mutex_t __futex_locks[__FUTEX_BUCKETS] = { [0 ... __FUTEX_BUCKETS-1] = PTHREAD_MUTEX_INITIALIZER };
+pthread_cond_t  __futex_conds[__FUTEX_BUCKETS] = { [0 ... __FUTEX_BUCKETS-1] = PTHREAD_COND_INITIALIZER };
+#endif
+
+/* Stuff for for getopt */
+char *optarg = NULL;
+int optind = 1;
+int opterr = 1;
+int optopt = 0;
+
+/* Real Start */
 void _start_main(long *p) {
 	int   argc = (int)p[0];
 	char **argv = (char **)(p + 1);
