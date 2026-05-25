@@ -11,11 +11,12 @@
 #include <stddef.h>
 #include <string.h>
 #include <signal.h>
-#include <sys/mman.h>
 #include <unistd.h>
 #include <time.h>
 #include <fcntl.h>
 #include <sched.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 
 #if JACL_HAS_C23
@@ -93,7 +94,10 @@ long double strtold(const char *nptr, char **endptr);
 /* Absolute Value & Division                                     */
 /* ============================================================= */
 static inline int abs(int n) { return n < 0 ? -n : n; }
-static inline div_t div(int n, int d) { return (n == INT_MIN && d == -1) ? (div_t){ INT_MIN, 0 } : (div_t){ n/d, n%d }; }
+static inline div_t div(int n, int d) {
+	if (d == 0) { errno = EDOM; return (div_t){0, 0}; }
+	return (n == INT_MIN && d == -1) ? (div_t){ INT_MIN, 0 } : (div_t){ n/d, n%d };
+}
 static inline long labs(long n) { return n < 0 ? -n : n; }
 static inline ldiv_t ldiv(long n, long d) { return (n == LONG_MIN && d == -1) ? (ldiv_t){ LONG_MIN, 0 } : (ldiv_t){ n/d, n%d }; }
 
@@ -156,16 +160,6 @@ static inline void abort(void) {
 /* Environment & System                                          */
 /* ============================================================= */
 
-static inline char* getenv(const char* name) {
-	extern char **environ;
-	size_t len = strlen(name);
-
-	for (char **env = environ; *env; ++env) {
-		if (!strncmp(*env, name, len) && (*env)[len] == '=') return &((*env)[len+1]);
-	}
-
-	return NULL;
-}
 static inline int system(const char* command) {
 	#if JACL_OS_WINDOWS
 		return _spawnlp(_P_WAIT, "cmd.exe", "cmd.exe", "/C", command, NULL);
@@ -230,6 +224,7 @@ static inline int putenv(char *string) {
 }
 static inline int setenv(const char *name, const char *value, int overwrite) {
 	if (!name || !*name || strchr(name, '=')) { errno = EINVAL; return -1; }
+	if (!value) { errno = EINVAL; return -1; }
 	if (!overwrite && getenv(name)) return 0;
 
 	size_t nlen = strlen(name);
@@ -275,19 +270,27 @@ static inline int unsetenv(const char *name) {
 /* String Duplication                                            */
 /* ============================================================= */
 
-static inline char *strdup(const char *s) { size_t n = strlen(s) + 1; char *p = (char *)malloc(n); return p ? (char *)memcpy(p, s, n) : NULL; }
+static inline char *strdup(const char *s) {
+	if (!s) { errno = EINVAL; return NULL; }
+	size_t n = strlen(s) + 1;
+	char *p = (char *)malloc(n);
+	return p ? (char *)memcpy(p, s, n) : NULL;
+}
 
 #if JACL_HAS_C99
 static inline char *strndup(const char *s, size_t n) {
-		size_t len = strnlen(s, n);
-		char *p = (char *)malloc(len + 1);
+	if (!s) { errno = EINVAL; return NULL; }
 
-		if (!p) return NULL;
+	size_t len = strnlen(s, n);
+	char *p = (char *)malloc(len + 1);
 
-		memcpy(p, s, len);
-		p[len] = '\0';
+	if (!p) return NULL;
 
-		return p;
+	memcpy(p, s, len);
+
+	p[len] = '\0';
+
+	return p;
 }
 #endif
 
@@ -343,6 +346,40 @@ static inline int mkstemp(char *template) {
 
 	errno = EEXIST;
 	return -1;
+}
+
+static inline char *mkdtemp(char *template) {
+	if (!template) { errno = EINVAL; return NULL; }
+
+	size_t len = strlen(template);
+	if (len < 6) { errno = EINVAL; return NULL; }
+
+	char *suffix = template + len - 6;
+	if (strcmp(suffix, "XXXXXX") != 0) { errno = EINVAL; return NULL; }
+
+	static unsigned int counter = 0;
+	unsigned int attempts = 0;
+
+	while (attempts++ < TMP_MAX) {
+		unsigned int seed = (unsigned int)time(NULL)
+		                  ^ (unsigned int)getpid()
+		                  ^ __jacl_seed
+		                  ^ __sync_fetch_and_add(&counter, 1);
+
+		for (int i = 0; i < 6; i++) {
+			seed = seed * 1103515245u + 12345u;
+			int r = (seed >> 16) % 62;
+			if (r < 10) suffix[i] = '0' + r;
+			else if (r < 36) suffix[i] = 'A' + (r - 10);
+			else suffix[i] = 'a' + (r - 36);
+		}
+
+		if (mkdir(template, 0700) == 0) return template;
+		if (errno != EEXIST) return NULL;
+	}
+
+	errno = EEXIST;
+	return NULL;
 }
 
 #endif /* JACL_HAS_POSIX */
