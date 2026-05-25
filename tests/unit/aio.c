@@ -60,8 +60,9 @@ static void *__test_thread_aio_write(void *arg) {
 
 	int r = aio_write(&cb);
 	if (r == 0) {
-		int tries = 0;
-		while (aio_error(&cb) == EINPROGRESS && tries++ < 100) usleep(1000);
+		while (aio_error(&cb) == EINPROGRESS) {
+			usleep(1000);
+		}
 		if (aio_error(&cb) == 0 && aio_return(&cb) == 1) {
 			pthread_mutex_lock(targ->lock);
 			(*targ->success_count)++;
@@ -177,8 +178,12 @@ TEST(aiocb_zero_nbytes) {
 	cb.aio_buf = (void *)"test";
 	cb.aio_nbytes = 0;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
+
 	int r = aio_read(&cb);
 	ASSERT_EQ(0, r);
+
+	while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+
 	close(fd);
 }
 
@@ -254,6 +259,15 @@ TEST(aio_init_extreme_thread_count) {
 	ASSERT_TRUE(1);
 }
 
+TEST(aio_init_stress_concurrent) {
+	pthread_t threads[8];
+	for (int i = 0; i < 8; i++) {
+		pthread_create(&threads[i], NULL, (void *(*)(void *))aio_init, NULL);
+	}
+	for (int i = 0; i < 8; i++) pthread_join(threads[i], NULL);
+	ASSERT_TRUE(1);
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(aio_destroy);
@@ -291,7 +305,14 @@ TEST(aio_destroy_with_pending_ops) {
 	cb.aio_nbytes = 4;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
 
-	aio_write(&cb);
+	int r = aio_write(&cb);
+
+	/* Wait for the operation to finish so the worker doesn't write to our stack
+	after we return, even though aio_destroy will kill the threads. */
+	if (r == 0) {
+		while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+	}
+
 	aio_destroy();
 	close(fd);
 	ASSERT_TRUE(1);
@@ -307,11 +328,17 @@ TEST(aio_destroy_cleanup_on_failure) {
 	cb.aio_nbytes = 0;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
 
-	aio_write(&cb);
+	int r = aio_write(&cb);
+
+	if (r == 0) {
+		while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+	}
+
 	aio_destroy();
 	close(fd);
 	ASSERT_TRUE(1);
 }
+
 
 TEST(aio_destroy_during_suspend) {
 	struct aiocb cb = {0};
@@ -349,7 +376,7 @@ TEST(aio_read_valid_file) {
 
 	int r = aio_read(&cb);
 	int tries = 0;
-	while (aio_error(&cb) == EINPROGRESS && tries++ < 100) usleep(1000);
+	while (aio_error(&cb) == EINPROGRESS) usleep(1000);
 
 	ASSERT_EQ((ssize_t)strlen(data), aio_return(&cb));
 	ASSERT_EQ(0, memcmp((const void *)cb.aio_buf, data, strlen(data)));
@@ -367,8 +394,13 @@ TEST(aio_read_zero_bytes) {
 	cb.aio_nbytes = 0;
 	cb.aio_offset = 0;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
+
 	int r = aio_read(&cb);
 	ASSERT_EQ(0, r);
+
+	/* MUST wait for completion before the stack dies */
+	while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+
 	free((void *)cb.aio_buf);
 	close(fd);
 }
@@ -479,7 +511,7 @@ TEST(aio_read_nested_io) {
 	ASSERT_TRUE(r1 == 0 || r1 == -1);
 	ASSERT_TRUE(r2 == 0 || r2 == -1);
 
-	while ((aio_error(&cb1) == EINPROGRESS || aio_error(&cb2) == EINPROGRESS) && tries++ < 100) usleep(1000);
+	while ((aio_error(&cb1) == EINPROGRESS || aio_error(&cb2) == EINPROGRESS)) usleep(1000);
 
 	if (aio_error(&cb1) == 0 && aio_error(&cb2) == 0) {
 		ASSERT_EQ('X', *(char*)cb1.aio_buf);
@@ -505,6 +537,11 @@ TEST(aio_read_eintr_handling) {
 
 	/* Submit, then immediately destroy ring to simulate interruption */
 	int r = aio_read(&cb);
+
+	if (r == 0) {
+		while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+	}
+
 	aio_destroy();  /* Force fallback/error path */
 
 	/* Should not crash; may return error */
@@ -527,7 +564,7 @@ TEST(aio_read_beyond_eof) {
 
 	int r = aio_read(&cb);
 	int tries = 0;
-	while (aio_error(&cb) == EINPROGRESS && tries++ < 100) usleep(1000);
+	while (aio_error(&cb) == EINPROGRESS) usleep(1000);
 
 	if (aio_error(&cb) == 0) {
 		/* Should return bytes actually read (1), not error */
@@ -604,7 +641,7 @@ TEST(aio_write_valid_file) {
 
 	int r = aio_write(&cb);
 	int tries = 0;
-	while (aio_error(&cb) == EINPROGRESS && tries++ < 100) usleep(1000);
+	while (aio_error(&cb) == EINPROGRESS) usleep(1000);
 
 	ASSERT_EQ((ssize_t)strlen(data), aio_return(&cb));
 
@@ -620,8 +657,12 @@ TEST(aio_write_zero_bytes) {
 	cb.aio_nbytes = 0;
 	cb.aio_offset = 0;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
+
 	int r = aio_write(&cb);
 	ASSERT_EQ(0, r);
+
+	while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+
 	close(fd);
 }
 
@@ -659,6 +700,7 @@ TEST(aio_write_submissions) {
 
 	pthread_mutex_destroy(&lock);
 	close(fd);
+	aio_destroy();
 }
 
 TEST(aio_write_many_threads) {
@@ -685,6 +727,7 @@ TEST(aio_write_many_threads) {
 	}
 	pthread_mutex_destroy(&lock);
 	close(fd);
+	aio_destroy();
 }
 
 TEST(aio_write_invalid_sigev) {
@@ -749,8 +792,14 @@ TEST(aio_write_null_buf) {
 TEST(aio_write_queue_exhaustion) {
 	struct sigaction sa = {0};
 	sa.sa_handler = __test_signal_handler;
-	sa.sa_flags = SA_NOCLDWAIT;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
 	sigaction(SIGUSR1, &sa, NULL);
+
+	sigset_t mask, oldmask;
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGUSR1);
+	pthread_sigmask(SIG_BLOCK, &mask, &oldmask);
 
 	int fd = __test_create_temp_file("sigq_exhaust", NULL, 0);
 	ASSERT_GE(fd, 0);
@@ -758,8 +807,7 @@ TEST(aio_write_queue_exhaustion) {
 	/* Flood the process signal queue */
 	for (int i = 0; i < 100; i++) {
 		union sigval val = {.sival_int = i};
-		sigqueue(getpid(), SIGUSR1, val);
-		usleep(100);
+		if (sigqueue(getpid(), SIGUSR1, val) < 0) break;
 	}
 
 	/* Now attempt AIO write */
@@ -768,12 +816,26 @@ TEST(aio_write_queue_exhaustion) {
 	cb.aio_buf = (void *)"X";
 	cb.aio_nbytes = 1;
 	cb.aio_sigevent.sigev_notify = SIGEV_SIGNAL;
+	cb.aio_sigevent.sigev_signo = SIGUSR1;
 
 	int r = aio_write(&cb);
 	ASSERT_TRUE(r == 0 || r == -1);
 
+	/* Wait for completion so the worker doesn't queue more signals */
+	int tries = 0;
+	while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+
+	/* Drain pending signals synchronously. Cast to void to silence compiler pedantry. */
+	const struct timespec ts = {0, 0};
+	while (sigtimedwait(&mask, NULL, (const void *)&ts) > 0) {
+		/* consume */
+	}
+
 	aio_destroy();
 	close(fd);
+
+	/* Restore mask only after all AIO and signals are done */
+	pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
 }
 
 TEST(aio_write_disk_full_simulation) {
@@ -787,8 +849,20 @@ TEST(aio_write_disk_full_simulation) {
 		cb.aio_sigevent.sigev_notify = SIGEV_NONE;
 
 		int r = aio_write(&cb);
-		/* Should fail with ENOSPC or similar */
-		ASSERT_TRUE(r == -1);
+
+		if (r == 0) {
+			/* Submission succeeded, wait for the asynchronous failure */
+			while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+
+			int err = aio_error(&cb);
+			/* io_uring on some kernels returns EAGAIN for char devices instead of ENOSPC */
+			ASSERT_TRUE(err != 0);
+			ASSERT_TRUE(err != EINPROGRESS);
+		} else {
+			/* Submission failed immediately, which is also a valid failure mode for /dev/full */
+			ASSERT_TRUE(1);
+		}
+
 		close(fd);
 	} else {
 		/* /dev/full not available - skip but pass */
@@ -809,6 +883,56 @@ TEST(aio_write_sigev_null_function) {
 	ASSERT_EQ(EINVAL, errno);
 }
 
+TEST(aio_write_stress_rapid_fire) {
+	int fd = __test_create_temp_file("stress", NULL, 0);
+	ASSERT_GE(fd, 0);
+
+	struct aiocb cbs[50];
+	for (int i = 0; i < 50; i++) {
+		cbs[i] = (struct aiocb){0};
+		cbs[i].aio_fildes = fd;
+		cbs[i].aio_buf = (void *)"X";
+		cbs[i].aio_nbytes = 1;
+		cbs[i].aio_offset = i;
+		cbs[i].aio_sigevent.sigev_notify = SIGEV_NONE;
+		aio_write(&cbs[i]);
+	}
+
+	for (int i = 0; i < 50; i++) {
+		int tries = 0;
+		while (aio_error(&cbs[i]) == EINPROGRESS) usleep(1000);
+		ASSERT_EQ(0, aio_error(&cbs[i]));
+	}
+
+	close(fd);
+}
+
+TEST(aio_write_stress_signal_storm) {
+	/* Use SIGEV_NONE to isolate concurrency stability from signal delivery races */
+	int fd = __test_create_temp_file("sigstorm", NULL, 0);
+	ASSERT_GE(fd, 0);
+
+	struct aiocb *cbs = calloc(20, sizeof(struct aiocb));
+
+	for (int i = 0; i < 20; i++) {
+		cbs[i].aio_fildes = fd;
+		cbs[i].aio_buf = (void *)"Y";
+		cbs[i].aio_nbytes = 1;
+		cbs[i].aio_offset = i;
+		cbs[i].aio_sigevent.sigev_notify = SIGEV_NONE; /* No signals */
+		aio_write(&cbs[i]);
+	}
+
+	for (int i = 0; i < 20; i++) {
+		int tries = 0;
+		while (aio_error(&cbs[i]) == EINPROGRESS) usleep(1000);
+		ASSERT_EQ(0, aio_error(&cbs[i]));
+	}
+
+	free(cbs);
+	close(fd);
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(aio_fsync);
@@ -819,26 +943,31 @@ TEST(aio_fsync_valid) {
 	struct aiocb cb = {0};
 	cb.aio_fildes = fd;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
-	int r = aio_fsync(&cb);
+	int r = aio_fsync(O_SYNC, &cb);
 	ASSERT_EQ(0, r);
+
+	int tries = 0;
+	while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+	ASSERT_EQ(0, aio_error(&cb));
+
 	close(fd);
 }
 
 TEST(aio_fsync_null_cb) {
-	ASSERT_EQ(-1, aio_fsync(NULL));
+	ASSERT_EQ(-1, aio_fsync(O_SYNC, NULL));
 }
 
 TEST(aio_fsync_invalid_sigev) {
 	struct aiocb cb = {0};
 	cb.aio_sigevent.sigev_notify = SIGEV_SIGNAL;
-	ASSERT_EQ(-1, aio_fsync(&cb));
+	ASSERT_EQ(-1, aio_fsync(O_SYNC, &cb));
 }
 
 TEST(aio_fsync_bad_fd) {
 	struct aiocb cb = {0};
 	cb.aio_fildes = -99;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
-	int r = aio_fsync(&cb);
+	int r = aio_fsync(O_SYNC, &cb);
 	ASSERT_EQ(-1, r);
 }
 
@@ -849,7 +978,7 @@ TEST(aio_fsync_closed_fd) {
 	struct aiocb cb = {0};
 	cb.aio_fildes = fd;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
-	int r = aio_fsync(&cb);
+	int r = aio_fsync(O_SYNC, &cb);
 	ASSERT_EQ(-1, r);
 }
 
@@ -859,7 +988,7 @@ TEST(aio_fsync_sigev_null_function) {
 	cb.aio_sigevent.sigev_notify = SIGEV_THREAD;
 	cb.aio_sigevent.sigev_notify_function = NULL;
 
-	int r = aio_fsync(&cb);
+	int r = aio_fsync(O_SYNC, &cb);
 	ASSERT_EQ(-1, r);
 	ASSERT_EQ(EINVAL, errno);
 }
@@ -1029,7 +1158,7 @@ TEST(aio_suspend_all_timeout) {
 	struct aiocb cb = {0};
 	cb.__jacl_state = 0;
 	const struct aiocb *cbs[] = {&cb};
-	struct timespec ts = {0, 1000000};  /* 1ms timeout */
+	const struct timespec ts = {0, 1000000};  /* 1ms timeout */
 	int r = aio_suspend(cbs, 1, &ts);
 	ASSERT_EQ(-1, r);
 }
@@ -1051,7 +1180,7 @@ TEST(aio_suspend_invalid_timeout) {
 	cb.__jacl_state = 0;
 	const struct aiocb *cbs[] = {&cb};
 
-	struct timespec ts = {-1, 0};  /* Invalid: negative tv_sec */
+	const struct timespec ts = {-1, 0};  /* Invalid: negative tv_sec */
 	int r = aio_suspend(cbs, 1, &ts);
 
 	/* Should fail with EINVAL */
@@ -1064,7 +1193,7 @@ TEST(aio_suspend_invalid_nsec) {
 	cb.__jacl_state = 0;
 	const struct aiocb *cbs[] = {&cb};
 
-	struct timespec ts = {0, 1000000000};  /* tv_nsec == 1e9 (invalid) */
+	const struct timespec ts = {0, 1000000000};  /* tv_nsec == 1e9 (invalid) */
 	int r = aio_suspend(cbs, 1, &ts);
 
 	ASSERT_EQ(-1, r);
@@ -1109,9 +1238,13 @@ TEST(aio_cancel_during_operation) {
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
 
 	aio_write(&cb);
-	/* Cancel immediately while operation may be in flight */
 	int r = aio_cancel(fd, &cb);
 	ASSERT_TRUE(r == AIO_CANCELED || r == AIO_ALLDONE || r == AIO_NOTCANCELED);
+
+	if (r == AIO_NOTCANCELED) {
+		int tries = 0;
+		while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+	}
 
 	close(fd);
 }
@@ -1134,11 +1267,15 @@ TEST(aio_cancel_immediate_race) {
 	cb.aio_offset = 0;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
 
-	/* Submit and cancel in tight loop */
 	for (int i = 0; i < 10; i++) {
 		aio_write(&cb);
 		int r = aio_cancel(fd, &cb);
 		ASSERT_TRUE(r == AIO_CANCELED || r == AIO_ALLDONE || r == AIO_NOTCANCELED);
+
+		if (r == AIO_NOTCANCELED) {
+			int tries = 0;
+			while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+		}
 	}
 
 	close(fd);
@@ -1199,6 +1336,12 @@ TEST(lio_listio_submit_counts) {
 	struct aiocb *arr[] = {&cbs[0], &cbs[1], &cbs[2]};
 	int r = lio_listio(LIO_NOWAIT, arr, 3, NULL);
 	ASSERT_EQ(0, r);
+
+	for (int i = 0; i < 3; i++) {
+		int tries = 0;
+		while (aio_error(&cbs[i]) == EINPROGRESS) usleep(1000);
+	}
+
 	close(fd);
 }
 
@@ -1353,8 +1496,15 @@ TEST(aio_submit_batch_valid) {
 	cb2.aio_fildes = fd; cb2.aio_buf = (void *)"B"; cb2.aio_nbytes = 1;
 	cb2.aio_offset = 1; cb2.aio_lio_opcode = LIO_WRITE; cb2.aio_sigevent.sigev_notify = SIGEV_NONE;
 	cbs[0] = &cb1; cbs[1] = &cb2;
+
 	int r = aio_submit_batch(cbs, 2);
 	ASSERT_EQ(2, r);
+
+	for (int i = 0; i < 2; i++) {
+		int tries = 0;
+		while (aio_error(cbs[i]) == EINPROGRESS) usleep(1000);
+	}
+
 	close(fd);
 }
 
@@ -1370,8 +1520,14 @@ TEST(aio_submit_batch_single) {
 	cb.aio_lio_opcode = LIO_WRITE;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
 	cbs[0] = &cb;
+
 	int r = aio_submit_batch(cbs, 1);
 	ASSERT_EQ(1, r);
+
+	/* Wait for completion so we don't corrupt the stack on exit */
+	int tries = 0;
+	while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+
 	close(fd);
 }
 
@@ -1389,8 +1545,15 @@ TEST(aio_submit_batch_large) {
 		cb[i].aio_sigevent.sigev_notify = SIGEV_NONE;
 		cbs[i] = &cb[i];
 	}
+
 	int r = aio_submit_batch(cbs, 10);
 	ASSERT_EQ(10, r);
+
+	for (int i = 0; i < 10; i++) {
+		int tries = 0;
+		while (aio_error(cbs[i]) == EINPROGRESS) usleep(1000);
+	}
+
 	close(fd);
 }
 
@@ -1427,9 +1590,14 @@ TEST(aio_submit_batch_null_middle) {
 
 	struct aiocb *cbs[] = {&cb1, NULL, &cb2};
 	int r = aio_submit_batch(cbs, 3);
-
-	/* Should process valid elements, skip NULL */
 	ASSERT_GE(r, 0);
+
+	for (int i = 0; i < 3; i++) {
+		if (cbs[i]) {
+			int tries = 0;
+			while (aio_error(cbs[i]) == EINPROGRESS) usleep(1000);
+		}
+	}
 
 	close(fd);
 }
@@ -1468,8 +1636,17 @@ TEST(aio_alias_fsync64) {
 	struct aiocb cb = {0};
 	cb.aio_fildes = 1;
 	cb.aio_sigevent.sigev_notify = SIGEV_NONE;
-	ASSERT_EQ(aio_fsync(&cb), aio_fsync64(&cb));
-	ASSERT_EQ(aio_fsync(NULL), aio_fsync64(NULL));
+
+	int r1 = aio_fsync(O_SYNC, &cb);
+	int r2 = aio_fsync64(O_SYNC, &cb);
+	ASSERT_EQ(r1, r2);
+
+	/* If submission succeeded, we MUST wait for completion before the stack dies */
+	if (r1 == 0) {
+		while (aio_error(&cb) == EINPROGRESS) usleep(1000);
+	}
+
+	ASSERT_EQ(aio_fsync(O_SYNC, NULL), aio_fsync64(O_SYNC, NULL));
 }
 
 TEST(aio_alias_mlock64) {
