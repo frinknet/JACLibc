@@ -398,31 +398,31 @@ static_assert(PTRDIFF_MAX >=  65535, "POSIX: PTRDIFF_MAX must be ≥ 65535");
 /* Integer Constant Macros                                       */
 /* ============================================================= */
 
-#define INT8_C(c)          c
-#define UINT8_C(c)         c##U
+#define INT8_C(c)       c
+#define UINT8_C(c)      c##U
 
-#define INT16_C(c)         c
-#define UINT16_C(c)        c##U
+#define INT16_C(c)      c
+#define UINT16_C(c)     c##U
 
 #if JACL_HAS_INT32
-	#define INT32_C(c)         c
-	#define UINT32_C(c)        c##U
+	#define INT32_C(c)    c
+	#define UINT32_C(c)   c##U
 #endif
 
 #if JACL_HAS_INT64
-	#define INT64_C(c)         c##LL
-	#define UINT64_C(c)        c##ULL
+	#define INT64_C(c)    c##LL
+	#define UINT64_C(c)   c##ULL
 #endif
 
 #if JACL_HAS_INT64
-	#define INTMAX_C(c)        c##LL
-	#define UINTMAX_C(c)       c##ULL
+	#define INTMAX_C(c)   c##LL
+	#define UINTMAX_C(c)  c##ULL
 #elif JACL_HAS_INT32
-	#define INTMAX_C(c)        c
-	#define UINTMAX_C(c)       c##U
+	#define INTMAX_C(c)   c
+	#define UINTMAX_C(c)  c##U
 #else
-	#define INTMAX_C(c)        c
-	#define UINTMAX_C(c)       c##U
+	#define INTMAX_C(c)   c
+	#define UINTMAX_C(c)  c##U
 #endif
 
 #ifdef __cplusplus

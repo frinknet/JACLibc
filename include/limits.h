@@ -233,11 +233,14 @@
 #if JACL_64BIT
 	#if defined(_WIN64) || defined(__LLP64__)
 		typedef unsigned long long size_t;
+		typedef long long          ssize_t;
 	#else
-		typedef unsigned long size_t;
+		typedef unsigned long      size_t;
+		typedef long               ssize_t;
 	#endif
 #else
-	typedef unsigned int size_t;
+	typedef unsigned int         size_t;
+	typedef int                  ssize_t;
 #endif
 
 #ifndef SIZE_MAX
@@ -252,7 +255,7 @@
 	#if defined(__SSIZE_MAX__)
 		#define SSIZE_MAX __SSIZE_MAX__
 	#else
-		#define SSIZE_MAX (SIZE_MAX / 2)
+		#define SSIZE_MAX ((ssize_t)(SIZE_MAX / 2))
 	#endif
 #endif
 
@@ -269,105 +272,104 @@
 /* ============================================================= */
 
 /* Minimums for asynchronous I/O operations */
-#define _POSIX_AIO_LISTIO_MAX        2   /* number of I/O ops in a list I/O call */
-#define _POSIX_AIO_MAX               1   /* number of outstanding async I/O ops */
-#define _POSIX_AIO_PRIO_DELTA_MAX    0   /* max decrease of async I/O priority */
+#define _POSIX_AIO_LISTIO_MAX                 2   /* number of I/O ops in a list I/O call */
+#define _POSIX_AIO_MAX                        1   /* number of outstanding async I/O ops */
+#define _POSIX_AIO_PRIO_DELTA_MAX             0   /* max decrease of async I/O priority */
 
 /* arg max for exec / environment data length */
-#define _POSIX_ARG_MAX            4096   /* maximum length of exec args + env */
+#define _POSIX_ARG_MAX                     4096   /* maximum length of exec args + env */
 
 /* Processes and timers */
-#define _POSIX_CHILD_MAX            25   /* max simultaneous processes per real UID */
-#define _POSIX_DELAYTIMER_MAX       32   /* timer expiration overruns */
-#define _POSIX_TIMER_MAX            32   /* per‑process number of timers */
+#define _POSIX_CHILD_MAX                     25   /* max simultaneous processes per real UID */
+#define _POSIX_DELAYTIMER_MAX                32   /* timer expiration overruns */
+#define _POSIX_TIMER_MAX                     32   /* per‑process number of timers */
+#define _POSIX_CLOCKRES_MIN            20000000   /* CLOCK_REALTIME/MONOTONIC resolution (ns) */
 
 /* Network and host‑name limits */
-#define _POSIX_HOST_NAME_MAX       255   /* max bytes in host name (w/o null) */
+#define _POSIX_HOST_NAME_MAX                255   /* max bytes in host name (w/o null) */
 
 /* File and link characteristics */
-#define _POSIX_LINK_MAX              8   /* max number of hard links to a file */
-#define _POSIX_SYMLINK_MAX         255   /* bytes in a symbolic link */
-#define _POSIX_SYMLOOP_MAX           8   /* max symlinks traversed (no loop) */
+#define _POSIX_LINK_MAX                       8   /* max number of hard links to a file */
+#define _POSIX_SYMLINK_MAX                  255   /* bytes in a symbolic link */
+#define _POSIX_SYMLOOP_MAX                    8   /* max symlinks traversed (no loop) */
 
 /* Terminal input limits */
-#define _POSIX_MAX_CANON           255   /* max bytes in a terminal canonical input queue */
-#define _POSIX_MAX_INPUT           255   /* max bytes in a terminal input queue */
+#define _POSIX_MAX_CANON                    255   /* max bytes in a terminal canonical input queue */
+#define _POSIX_MAX_INPUT                    255   /* max bytes in a terminal input queue */
 
 /* File pathname / name limits */
-#define _POSIX_NAME_MAX             14   /* max bytes in a filename (w/o null) */
-#define _POSIX_PATH_MAX            256   /* min bytes the system accepts for pathname length */
+#define _POSIX_NAME_MAX                      14   /* max bytes in a filename (w/o null) */
+#define _POSIX_PATH_MAX                     256   /* min bytes the system accepts for pathname length */
 
 /* POSIX‑style I/O properties */
-#define _POSIX_OPEN_MAX             20   /* one greater than max new file descriptor number */
-#define _POSIX_PIPE_BUF            512   /* max bytes guaranteed atomic when writing to a pipe */
+#define _POSIX_OPEN_MAX                      20   /* one greater than max new file descriptor number */
+#define _POSIX_PIPE_BUF                     512   /* max bytes guaranteed atomic when writing to a pipe */
+
+	/* Supplementary groups */
+#define _POSIX_NGROUPS_MAX                 8   /* max supplementary group IDs per process */
 
 /* POSIX‑style software limits */
-#define _POSIX_RE_DUP_MAX          255   /* max repeated occurrences in a BRE {\(m,n\)} */
-#define _POSIX2_EXPR_NEST_MAX       32   /* max nested expressions in an expr(1) parentheses chain */
-#define _POSIX2_LINE_MAX          2048   /* max bytes in a line for POSIX utilities (incl \n) */
-#define _POSIX2_CHARCLASS_NAME_MAX  14   /* max bytes in a character class name */
-#define _POSIX2_COLL_WEIGHTS_MAX     2   /* max weights per LC_COLLATE order entry */
-#define _POSIX2_RE_DUP_MAX         255   /* max repeated occurrences in a regex {\(m,n\)} */
-
-/* bc(1) utility limits */
-#define _POSIX2_BC_BASE_MAX         99   /* max obase value for bc(1) */
-#define _POSIX2_BC_DIM_MAX        2048   /* max number of elements in an array for bc(1) */
-#define _POSIX2_BC_SCALE_MAX        99   /* max scale value for bc(1) */
-#define _POSIX2_BC_STRING_MAX     1000   /* max length of a string constant in bc(1) */
+#define _POSIX_RE_DUP_MAX                   255   /* max repeated occurrences in a BRE {\(m,n\)} */
+#define _POSIX2_EXPR_NEST_MAX                32   /* max nested expressions in an expr(1) parentheses chain */
+#define _POSIX2_LINE_MAX                   2048   /* max bytes in a line for POSIX utilities (incl \n) */
+#define _POSIX2_CHARCLASS_NAME_MAX           14   /* max bytes in a character class name */
+#define _POSIX2_COLL_WEIGHTS_MAX              2   /* max weights per LC_COLLATE order entry */
+#define _POSIX2_RE_DUP_MAX                  255   /* max repeated occurrences in a regex {\(m,n\)} */
 
 /* Time‑zone and terminal name storage */
-#define _POSIX_TZNAME_MAX            6   /* max bytes for a timezone name (TZ var excluded) */
-#define _POSIX_TTY_NAME_MAX          9   /* bytes required to store a terminal device name (incl null) */
+#define _POSIX_TZNAME_MAX                     6   /* max bytes for a timezone name (TZ var excluded) */
+#define _POSIX_TTY_NAME_MAX                   9   /* bytes required to store a terminal device name (incl null) */
 
 /* Threads and thread‑specific data */
-#define _POSIX_THREAD_DESTRUCTOR_ITERATIONS 4   /* attempts to destroy thread‑specific data on exit */
-#define _POSIX_THREAD_KEYS_MAX     128   /* data keys per process (TSD keys) */
-#define _POSIX_THREAD_THREADS_MAX   64   /* max threads per process */
+#define _POSIX_THREAD_DESTRUCTOR_ITERATIONS   4   /* attempts to destroy thread‑specific data on exit */
+#define _POSIX_THREAD_KEYS_MAX              128   /* data keys per process (TSD keys) */
+#define _POSIX_THREAD_THREADS_MAX            64   /* max threads per process */
 
 /* POSIX‑style user‑visible SS/trace/string limits (rationale labels) */
-#define _POSIX_SS_REPL_MAX           4   /* replenishment ops pending for a sporadic server scheduler */
-#define _POSIX_TRACE_EVENT_NAME_MAX 30   /* length of a trace event name (w/o null) */
-#define _POSIX_TRACE_NAME_MAX        8   /* length of a trace generation/stream name (w/o null) */
-#define _POSIX_TRACE_SYS_MAX         8   /* max simultaneously existing trace streams */
-#define _POSIX_TRACE_USER_EVENT_MAX 32   /* max user trace event type IDs in a process */
+#define _POSIX_SS_REPL_MAX                    4   /* replenishment ops pending for a sporadic server scheduler */
+#define _POSIX_TRACE_EVENT_NAME_MAX          30   /* length of a trace event name (w/o null) */
+#define _POSIX_TRACE_NAME_MAX                 8   /* length of a trace generation/stream name (w/o null) */
+#define _POSIX_TRACE_SYS_MAX                  8   /* max simultaneously existing trace streams */
+#define _POSIX_TRACE_USER_EVENT_MAX          32   /* max user trace event type IDs in a process */
 
 /* POSIX system size constants (ssize_t) */
-#define _POSIX_SSIZE_MAX         32767   /* max value that can be stored in an ssize_t */
+#define _POSIX_SSIZE_MAX                  32767   /* max value that can be stored in an ssize_t */
 
 /* POSIX stream limits */
-#define _POSIX_STREAM_MAX            8   /* max streams one process can have open */
+#define _POSIX_STREAM_MAX                     8   /* max streams one process can have open */
 
 /* POSIX login‑name limit */
-#define _POSIX_LOGIN_NAME_MAX        9   /* bytes required for a login name (incl null) */
+#define _POSIX_LOGIN_NAME_MAX                 9   /* bytes required for a login name (incl null) */
 
 /* POSIX semaphore limits */
-#define _POSIX_SEM_NSEMS_MAX       256   /* max semaphores a process may have */
-#define _POSIX_SEM_VALUE_MAX     32767   /* max value a semaphore may have */
+#define _POSIX_SEM_NSEMS_MAX                256   /* max semaphores a process may have */
+#define _POSIX_SEM_VALUE_MAX              32767   /* max value a semaphore may have */
 
 /* POSIX signal‑queue and realtime‑signal limits */
-#define _POSIX_SIGQUEUE_MAX         32   /* max queued signals pending at receiver(s) */
-#define _POSIX_RTSIG_MAX             8   /* realtime signal numbers reserved for application use */
+#define _POSIX_SIGQUEUE_MAX                  32   /* max queued signals pending at receiver(s) */
+#define _POSIX_RTSIG_MAX                      8   /* realtime signal numbers reserved for application use */
 
 /* POSIX message‑queue limits */
-#define _POSIX_MQ_OPEN_MAX           8   /* max message queues that can be open per process */
-#define _POSIX_MQ_PRIO_MAX          32   /* max number of message priorities supported */
+#define _POSIX_MQ_OPEN_MAX                    8   /* max message queues that can be open per process */
+#define _POSIX_MQ_PRIO_MAX                   32   /* max number of message priorities supported */
 
 /* POSIX‑2‑style mailbox / utility mailbox limits */
-#define _POSIX2_BC_DIM_MAX        2048   /* array size for bc(1) (same as above) */
-#define _POSIX2_BC_SCALE_MAX        99   /* scale for bc(1) (same as above) */
-#define _POSIX2_BC_STRING_MAX     1000   /* string length for bc(1) (same as above) */
-#define _POSIX2_EXPR_NEST_MAX       32   /* expressions nested in parentheses for expr(1) (same as above) */
-#define _POSIX2_LINE_MAX          2048   /* input line length for POSIX utilities (same as above) */
-#define _POSIX2_RE_DUP_MAX         255   /* repeated occurrences in a regex {\(m,n\)} (same as above) */
+#define _POSIX2_BC_DIM_MAX                 2048   /* array size for bc(1) (same as above) */
+#define _POSIX2_BC_BASE_MAX                  99   /* max obase value for bc(1) */
+#define _POSIX2_BC_SCALE_MAX                 99   /* scale for bc(1) (same as above) */
+#define _POSIX2_BC_STRING_MAX              1000   /* string length for bc(1) (same as above) */
+#define _POSIX2_EXPR_NEST_MAX                32   /* expressions nested in parentheses for expr(1) (same as above) */
+#define _POSIX2_LINE_MAX                   2048   /* input line length for POSIX utilities (same as above) */
+#define _POSIX2_RE_DUP_MAX                  255   /* repeated occurrences in a regex {\(m,n\)} (same as above) */
 
 /* X/Open / XSI‑style aliases (if you want to expose XSI) */
-#define _XOPEN_IOV_MAX              16   /* max iovec structures for readv/writev */
-#define _XOPEN_NAME_MAX            255   /* max bytes in a filename (XSI variant of NAME_MAX) */
-#define _XOPEN_PATH_MAX           1024   /* min bytes the system accepts for pathname length (XSI variant) */
+#define _XOPEN_IOV_MAX                       16   /* max iovec structures for readv/writev */
+#define _XOPEN_NAME_MAX                     255   /* max bytes in a filename (XSI variant of NAME_MAX) */
+#define _XOPEN_PATH_MAX                    1024   /* min bytes the system accepts for pathname length (XSI variant) */
 
 /* Missing minimums added by JACLibc for consistency */
-#define _MINIMUM_PASS_MAX           32
-#define _MINIMUM_ATEXIT_MAX         32
+#define _MINIMUM_PASS_MAX                    32
+#define _MINIMUM_ATEXIT_MAX                  32
 
 /* ============================================================= */
 /* Resource Limits (POSIX‑enforced)                              */
@@ -471,6 +473,55 @@
 	#define RTSIG_MAX _POSIX_RTSIG_MAX
 #endif
 
+#ifndef HOST_NAME_MAX
+		#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#elif HOST_NAME_MAX < _POSIX_HOST_NAME_MAX
+		#undef HOST_NAME_MAX
+		#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#endif
+
+#ifndef TIMER_MAX
+		#define TIMER_MAX _POSIX_TIMER_MAX
+#elif TIMER_MAX < _POSIX_TIMER_MAX
+		#undef TIMER_MAX
+		#define TIMER_MAX _POSIX_TIMER_MAX
+#endif
+
+#ifndef TTY_NAME_MAX
+		#define TTY_NAME_MAX _POSIX_TTY_NAME_MAX
+#elif TTY_NAME_MAX < _POSIX_TTY_NAME_MAX
+		#undef TTY_NAME_MAX
+		#define TTY_NAME_MAX _POSIX_TTY_NAME_MAX
+#endif
+
+#ifndef BC_BASE_MAX
+		#define BC_BASE_MAX _POSIX2_BC_BASE_MAX
+#endif
+
+#ifndef BC_DIM_MAX
+		#define BC_DIM_MAX _POSIX2_BC_DIM_MAX
+#endif
+
+#ifndef BC_SCALE_MAX
+		#define BC_SCALE_MAX _POSIX2_BC_SCALE_MAX
+#endif
+
+#ifndef BC_STRING_MAX
+		#define BC_STRING_MAX _POSIX2_BC_STRING_MAX
+#endif
+
+#ifndef CHARCLASS_NAME_MAX
+		#define CHARCLASS_NAME_MAX _POSIX2_CHARCLASS_NAME_MAX
+#endif
+
+#ifndef COLL_WEIGHTS_MAX
+		#define COLL_WEIGHTS_MAX _POSIX2_COLL_WEIGHTS_MAX
+#endif
+
+#ifndef EXPR_NEST_MAX
+		#define EXPR_NEST_MAX _POSIX2_EXPR_NEST_MAX
+#endif
+
 #ifndef MQ_OPEN_MAX
 	#define MQ_OPEN_MAX 128
 #elif MQ_OPEN_MAX < _POSIX_MQ_OPEN_MAX
@@ -508,6 +559,24 @@
 #elif PATH_MAX < _POSIX_PATH_MAX
 	#undef PATH_MAX
 	#define PATH_MAX _POSIX_PATH_MAX
+#endif
+
+#ifndef FILESIZEBITS
+	#define FILESIZEBITS 32
+#endif
+
+#ifndef SYMLINK_MAX
+	#define SYMLINK_MAX _POSIX_SYMLINK_MAX
+#elif SYMLINK_MAX < _POSIX_SYMLINK_MAX
+	#undef SYMLINK_MAX
+	#define SYMLINK_MAX _POSIX_SYMLINK_MAX
+#endif
+
+#ifndef SYMLOOP_MAX
+	#define SYMLOOP_MAX _POSIX_SYMLOOP_MAX
+#elif SYMLOOP_MAX < _POSIX_SYMLOOP_MAX
+	#undef SYMLOOP_MAX
+	#define SYMLOOP_MAX _POSIX_SYMLOOP_MAX
 #endif
 
 #ifndef FILENAME_MAX
@@ -587,5 +656,37 @@
 #define NL_SETMAX                 255   /* max set number */
 #define NL_TEXTMAX   _POSIX2_LINE_MAX   /* max bytes in a message string */
 #define NZERO                      20   /* default process priority (nice(2) baseline) */
+
+/* Issue 8 invariant values (Austin Group Defects 741, 1122, 1134) */
+#define GETENTROPY_MAX               256   /* max length arg to getentropy() */
+#define TEXTDOMAIN_MAX  (_POSIX_NAME_MAX - 3)  /* max text domain name length (w/o null) */
+
+/* Issue 8: NSIG_MAX (Defect 741) - signals representable by sigset_t */
+#ifndef NSIG_MAX
+	#define NSIG_MAX 64
+#endif
+
+/* Threading limits (POSIX.1-2024) */
+#ifndef PTHREAD_DESTRUCTOR_ITERATIONS
+	#define PTHREAD_DESTRUCTOR_ITERATIONS _POSIX_THREAD_DESTRUCTOR_ITERATIONS
+#endif
+#ifndef PTHREAD_KEYS_MAX
+	#define PTHREAD_KEYS_MAX _POSIX_THREAD_KEYS_MAX
+#endif
+#ifndef PTHREAD_STACK_MIN
+	#define PTHREAD_STACK_MIN 0
+#endif
+#ifndef PTHREAD_THREADS_MAX
+	#define PTHREAD_THREADS_MAX _POSIX_THREAD_THREADS_MAX
+#endif
+
+/* Page size (XSI: PAGESIZE and PAGE_SIZE must be equivalent) */
+#ifndef PAGESIZE
+	#define PAGESIZE 4096
+#endif
+
+#ifndef PAGE_SIZE
+	#define PAGE_SIZE PAGESIZE
+#endif
 
 #endif /* _LIMITS_H */

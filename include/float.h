@@ -870,6 +870,7 @@ static inline long double __jacl_payloadset_LDBL(DBL_UTYPE payload, int signalin
 #endif
 
 static const double POW10[] = { 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15 };
+static const long double POW10_EXP2[] = { 1e1L, 1e2L, 1e4L, 1e8L, 1e16L, 1e32L, 1e64L, 1e128L, 1e256L, 1e512L, 1e1024L, 1e2048L, 1e4096L };
 
 typedef struct {
 	char digits[40];   // 40 bytes - ASCII digits '0'-'9' (forward order)
@@ -893,7 +894,24 @@ static inline __jacl_fdigits_t __jacl_fdigits(long double val, int prec, int sig
 	if (val != val) { fdigits.digits[0] = 'n'; return fdigits; }
 	if ((val - val) != (val - val)) { fdigits.digits[0] = 'i'; return fdigits; }
 
-	// Normalize exponent
+	// O(log N) normalization for extreme exponents
+	if (val >= 10.0L) {
+		for (int i = 12; i >= 0; i--) {
+			while (val >= POW10_EXP2[i]) {
+				val /= POW10_EXP2[i];
+				fdigits.exp += (1 << i);
+			}
+		}
+	} else if (val > 0.0L && val < 1.0L) {
+		for (int i = 12; i >= 0; i--) {
+			while (val * POW10_EXP2[i] < 1.0L) {
+				val *= POW10_EXP2[i];
+				fdigits.exp -= (1 << i);
+			}
+		}
+	}
+
+	// 1-step correction for FPU drift
 	while (val >= 10.0L) { val /= 10.0L; fdigits.exp++; }
 	while (val < 1.0L && val > 0.0L) { val *= 10.0L; fdigits.exp--; }
 
@@ -901,40 +919,32 @@ static inline __jacl_fdigits_t __jacl_fdigits(long double val, int prec, int sig
 	if (sig > 0) {
 		needed = sig;
 	} else {
-		// For %f: need (integer_digits + decimal_places)
 		if (fdigits.exp >= 0) {
 			needed = (fdigits.exp + 1) + prec;
 		} else {
-			// For small numbers, check if rounds to zero
 			int round_pos = -(prec + 1);
 
 			if (fdigits.exp < round_pos) {
 				fdigits.digits[0] = '0';
 				fdigits.end = 1;
 				fdigits.exp = 0;
-
 				return fdigits;
 			} else if (fdigits.exp == round_pos) {
 				if ((int)val >= 5) {
 					fdigits.digits[0] = '1';
 					fdigits.end = 1;
 					fdigits.exp = -prec;
-
 					return fdigits;
 				}
-
 				fdigits.digits[0] = '0';
 				fdigits.end = 1;
-
 				return fdigits;
 			}
-
 			needed = (-fdigits.exp) + prec;
 		}
 	}
 
-	// Clamp to capacity
-  if (needed > max) needed = max;
+	if (needed > max) needed = max;
 	if (needed < 1) needed = 1;
 
 	exp = needed - 1;
@@ -944,7 +954,6 @@ static inline __jacl_fdigits_t __jacl_fdigits(long double val, int prec, int sig
 
 	scaled = (JACL_LDBL_INT)(val * scale + 0.5L);
 
-	// Check for overflow from rounding
 	if (scaled >= (JACL_LDBL_INT)(scale * 10.0L)) { scaled /= 10; fdigits.exp++; }
 	if (scaled == 0) fdigits.digits[pos--] = '0';
 	else while (scaled > 0 && pos >= 0) { fdigits.digits[pos--] = '0' + (scaled % 10); scaled /= 10; }
