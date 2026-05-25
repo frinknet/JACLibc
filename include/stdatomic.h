@@ -177,6 +177,8 @@ static inline void atomic_signal_fence(memory_order mo) {
 
 #elif JACL_ARCH_ARM32 || JACL_ARCH_ARM64
 
+#elif JACL_ARCH_ARM32 || JACL_ARCH_ARM64
+
 // ARM with LDREX/STREX
 #define JACL_ATOMIC_SIZES \
 	JACL_ATOMIC_BUNDLE(8,  uint8_t,  "ldrexb", "strexb") \
@@ -187,8 +189,34 @@ static inline void atomic_signal_fence(memory_order mo) {
 	static inline type __jacl_atomic_load_##bits(volatile type *ptr, memory_order mo) {atomic_thread_fence(mo);return *ptr;} \
 	static inline void __jacl_atomic_store_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);*ptr=val;} \
 	static inline type __jacl_atomic_exchange_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);type old;unsigned s;do{__asm__ volatile(ldr" %0,[%2]\n"str" %1,%3,[%2]\n":"=&r"(old),"=&r"(s):"r"(ptr),"r"(val):"memory");}while(s);return old;} \
-	static inline type __jacl_atomic_fetch_add_##bits(volatile type *ptr, type val, memory_order mo) {atomic_thread_fence(mo);type old;unsigned s;do{__asm__ volatile(ldr" %0,[%2]\nadd %0,%0,%3\n"str" %1,%0,[%2]\n":"=&r"(old),"=&r"(s):"r"(ptr),"r"(val):"memory");}while(s);return old;} \
-	static inline bool __jacl_atomic_cmpxchg_##bits(volatile type *ptr, type *expected, type desired, memory_order mo) {atomic_thread_fence(mo);type old;unsigned s;bool ok=false;do{__asm__ volatile(ldr" %0,[%2]\n":"=&r"(old):"m"(*ptr),"r"(ptr):"memory");if(old==*expected){__asm__ volatile(str" %1,%3,[%2]\n":"=&r"(s):"r"(ptr),"r"(desired):"memory");ok=(s==0);break;}}while(0);if(ok)return true;*expected=old;return false;}
+	static inline type __jacl_atomic_fetch_add_##bits(volatile type *ptr, type val, memory_order mo) { \
+		atomic_thread_fence(mo); \
+		type old, tmp; unsigned s; \
+		do { \
+			__asm__ volatile( \
+				ldr " %0, [%3]\n" \
+				"add %1, %0, %4\n" \
+				str " %2, %1, [%3]\n" \
+				: "=&r"(old), "=&r"(tmp), "=&r"(s) \
+				: "r"(ptr), "r"(val) \
+				: "memory"); \
+		} while(s); \
+		return old; \
+	} \
+	static inline bool __jacl_atomic_cmpxchg_##bits(volatile type *ptr, type *expected, type desired, memory_order mo) { \
+		atomic_thread_fence(mo); \
+		type old; unsigned s; \
+		do { \
+			__asm__ volatile(ldr " %0, [%2]\n" : "=&r"(old) : "m"(*ptr), "r"(ptr) : "memory"); \
+			if (old != *expected) { \
+				__asm__ volatile("clrex" ::: "memory"); \
+				*expected = old; \
+				return false; \
+			} \
+			__asm__ volatile(str " %0, %2, [%1]\n" : "=&r"(s) : "r"(ptr), "r"(desired) : "memory"); \
+		} while (s); \
+		return true; \
+	}
 
 #else
 

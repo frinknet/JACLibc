@@ -1,4 +1,4 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 #ifndef _ELF_H
 #define _ELF_H
 
@@ -233,6 +233,10 @@ typedef struct {
 #define ELFMAG "\177ELF"
 #endif
 
+#ifndef SELFMAG
+#define SELFMAG 4
+#endif
+
 /* Section Header Special Indices */
 #ifndef SHN_UNDEF
 #define SHN_UNDEF     0
@@ -243,6 +247,11 @@ typedef struct {
 #define SHN_ABS       0xfff1
 #define SHN_COMMON    0xfff2
 #define SHN_HIRESERVE 0xffff
+#endif
+
+/* Symbol Table Special Indices */
+#ifndef STN_UNDEF
+#define STN_UNDEF 0
 #endif
 
 /* Symbol Binding/Type/Visibility Macros */
@@ -376,6 +385,13 @@ typedef struct {
 #define EV_NONE    0
 #define EV_CURRENT 1
 #define EV_NUM     2
+#endif
+
+/* ELF width macro */
+#if JACL_64BIT
+#define ElfW(type) Elf64_##type
+#else
+#define ElfW(type) Elf32_##type
 #endif
 
 #ifdef __cplusplus

@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <signal.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,6 +27,16 @@ extern "C" {
 #define TIME_MONOTONIC     2
 #define TIME_ACTIVE        3
 #define TIME_THREAD_ACTIVE 4
+
+/* POSIX clock IDs (Linux-compatible core subset) */
+#define CLOCK_REALTIME           0
+#define CLOCK_MONOTONIC          1
+#define CLOCK_PROCESS_CPUTIME_ID 2
+#define CLOCK_THREAD_CPUTIME_ID  3
+
+/* ================================================================ */
+/* Time Structures                                                  */
+/* ================================================================ */
 
 /* POSIX timespec structure */
 typedef struct timespec {
@@ -46,11 +57,11 @@ typedef struct tm {
 	int tm_isdst;  /* Daylight saving time flag */
 } tm;
 
-/* POSIX clock IDs (Linux-compatible core subset) */
-#define CLOCK_REALTIME           0
-#define CLOCK_MONOTONIC          1
-#define CLOCK_PROCESS_CPUTIME_ID 2
-#define CLOCK_THREAD_CPUTIME_ID  3
+/* POSIX timer structure */
+typedef struct itimerspec {
+	struct timespec it_interval;
+	struct timespec it_value;
+} itimerspec;
 
 /* ================================================================ */
 /* Helper routines (calendar math, string helpers)                  */
@@ -691,6 +702,97 @@ static inline int timespec_getres(struct timespec *ts, int base) {
 	return 0;
 }
 #endif /* C23 */
+
+/* ================================================================ */
+/* POSIX Timers                                                     */
+/* ================================================================ */
+
+#if JACL_OS_LINUX
+
+#ifndef SYS_timer_create
+#define SYS_timer_create 222
+#endif
+#ifndef SYS_timer_settime
+#define SYS_timer_settime 223
+#endif
+#ifndef SYS_timer_gettime
+#define SYS_timer_gettime 224
+#endif
+#ifndef SYS_timer_getoverrun
+#define SYS_timer_getoverrun 225
+#endif
+#ifndef SYS_timer_delete
+#define SYS_timer_delete 226
+#endif
+
+static inline int timer_create(clockid_t clockid, struct sigevent *evp, timer_t *timerid) {
+	if (!timerid) { errno = EINVAL; return -1; }
+	long r = syscall(SYS_timer_create, (long)clockid, (long)evp, (long)timerid);
+	if (r < 0) { errno = (int)-r; return -1; }
+	return 0;
+}
+
+static inline int timer_settime(timer_t timerid, int flags, const struct itimerspec *value, struct itimerspec *ovalue) {
+	if (!timerid || !value) { errno = EINVAL; return -1; }
+	long r = syscall(SYS_timer_settime, (long)timerid, (long)flags, (long)value, (long)ovalue);
+	if (r < 0) { errno = (int)-r; return -1; }
+	return 0;
+}
+
+static inline int timer_gettime(timer_t timerid, struct itimerspec *value) {
+	if (!timerid || !value) { errno = EINVAL; return -1; }
+	long r = syscall(SYS_timer_gettime, (long)timerid, (long)value);
+	if (r < 0) { errno = (int)-r; return -1; }
+	return 0;
+}
+
+static inline int timer_getoverrun(timer_t timerid) {
+	if (!timerid) { errno = EINVAL; return -1; }
+	long r = syscall(SYS_timer_getoverrun, (long)timerid);
+	if (r < 0) { errno = (int)-r; return -1; }
+	return (int)r;
+}
+
+static inline int timer_delete(timer_t timerid) {
+	if (!timerid) { errno = EINVAL; return -1; }
+	long r = syscall(SYS_timer_delete, (long)timerid);
+	if (r < 0) { errno = (int)-r; return -1; }
+	return 0;
+}
+
+#else /* Non-Linux (BSD, Darwin, Windows, WASM) */
+
+static inline int timer_create(clockid_t clockid, struct sigevent *evp, timer_t *timerid) {
+	(void)clockid; (void)evp; (void)timerid;
+	errno = ENOSYS;
+	return -1;
+}
+
+static inline int timer_settime(timer_t timerid, int flags, const struct itimerspec *value, struct itimerspec *ovalue) {
+	(void)timerid; (void)flags; (void)value; (void)ovalue;
+	errno = ENOSYS;
+	return -1;
+}
+
+static inline int timer_gettime(timer_t timerid, struct itimerspec *value) {
+	(void)timerid; (void)value;
+	errno = ENOSYS;
+	return -1;
+}
+
+static inline int timer_getoverrun(timer_t timerid) {
+	(void)timerid;
+	errno = ENOSYS;
+	return -1;
+}
+
+static inline int timer_delete(timer_t timerid) {
+	(void)timerid;
+	errno = ENOSYS;
+	return -1;
+}
+
+#endif
 
 #ifdef __cplusplus
 }
