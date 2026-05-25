@@ -705,6 +705,7 @@ void* realloc(void* ptr, size_t size) {
 
 	if (size <= old_data) return ptr;
 
+	/*
 	if (h->flags & JACL_HDR_ARENA) {
 		size_t new_total = __jacl_alloc_need(size);
 		uint32_t top = atomic_load_explicit(&__jacl_tls_cursor, memory_order_acquire);
@@ -716,6 +717,21 @@ void* realloc(void* ptr, size_t size) {
 				h->size = new_total;
 
 				atomic_fetch_add_explicit(&__jacl_tls_cursor, (uint32_t)growth, memory_order_release);
+
+				return ptr;
+			}
+		}
+	}
+	*/
+	if (h->flags & JACL_HDR_ARENA) {
+		size_t new_total = __jacl_alloc_need(size);
+
+		if ((uint8_t*)h + old_total == __jacl_static_heap + __jacl_tls_off) {
+			size_t growth = new_total - old_total;
+
+			if (__jacl_tls_off + growth <= __jacl_tls_end) {
+				h->size = new_total;
+				__jacl_tls_off += (uint32_t)growth;
 
 				return ptr;
 			}
