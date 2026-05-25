@@ -6,8 +6,6 @@ TEST_TYPE(unit);
 TEST_UNIT(signal.h);
 
 /* ============================================================================ */
-/* ISO C CONSTANTS & TYPES (Always Available)                                   */
-/* ============================================================================ */
 
 TEST_SUITE(constants);
 
@@ -84,8 +82,6 @@ TEST(constants_mask_operations) {
 #endif
 
 /* ============================================================================ */
-/* sig_atomic_t                                                                 */
-/* ============================================================================ */
 
 TEST_SUITE(sig_atomic_t);
 
@@ -123,12 +119,7 @@ TEST(sig_atomic_t_load) {
 #endif
 
 /* ============================================================================ */
-/* POSIX TYPE DEFINITIONS                                                       */
-/* ============================================================================ */
 
-#if JACL_HAS_POSIX
-
-/* --- sighandler_t --- */
 TEST_SUITE(sighandler_t);
 
 TEST(sighandler_t_default_assignment) {
@@ -141,7 +132,8 @@ TEST(sighandler_t_ignore_assignment) {
 	ASSERT_NE(SIG_DFL, handler);
 }
 
-/* --- sig_t --- */
+/* ============================================================================ */
+
 TEST_SUITE(sig_t);
 
 TEST(sig_t_default_assignment) {
@@ -154,7 +146,8 @@ TEST(sig_t_ignore_assignment) {
 	ASSERT_NE(SIG_DFL, handler);
 }
 
-/* --- sigset_t --- */
+/* ============================================================================ */
+
 TEST_SUITE(sigset_t);
 
 TEST(sigset_t_size_requirements) {
@@ -170,7 +163,8 @@ TEST(sigset_t_manipulation) {
 	ASSERT_TRUE(copy.__bits[0] == 0 && copy.__bits[1] == 0);
 }
 
-/* --- sigval --- */
+/* ============================================================================ */
+
 TEST_SUITE(sigval);
 
 TEST(sigval_int_field) {
@@ -186,7 +180,8 @@ TEST(sigval_ptr_field) {
 	ASSERT_EQ(&dummy, val.sival_ptr);
 }
 
-/* --- siginfo_t --- */
+/* ============================================================================ */
+
 TEST_SUITE(siginfo_t);
 
 TEST(siginfo_t_standard_fields) {
@@ -196,7 +191,7 @@ TEST(siginfo_t_standard_fields) {
 	info.si_value.sival_int = 42;
 	info.si_pid = 1234;
 	info.si_uid = 5678;
-	
+
 	ASSERT_EQ(SIGINT, info.si_signo);
 	ASSERT_EQ(SI_USER, info.si_code);
 	ASSERT_EQ(42, info.si_value.sival_int);
@@ -204,7 +199,8 @@ TEST(siginfo_t_standard_fields) {
 	ASSERT_EQ(5678, info.si_uid);
 }
 
-/* --- sigaction struct --- */
+/* ============================================================================ */
+
 TEST_SUITE(sigaction_struct);
 
 TEST(sigaction_struct_basic) {
@@ -212,17 +208,15 @@ TEST(sigaction_struct_basic) {
 	act.sa_handler = SIG_DFL;
 	act.sa_flags = 0;
 	sigemptyset(&act.sa_mask);
-	
+
 	ASSERT_EQ(SIG_DFL, act.sa_handler);
 	ASSERT_EQ(0, act.sa_flags);
-	
+
 	/* Verify mask is empty */
 	sigset_t set = act.sa_mask;
 	ASSERT_TRUE(set.__bits[0] == 0 && set.__bits[1] == 0);
 }
 
-/* ============================================================================ */
-/* FUNCTIONAL TESTS: raise & signal                                             */
 /* ============================================================================ */
 
 TEST_SUITE(raise);
@@ -258,6 +252,8 @@ TEST(raise_multiple_different) {
 	signal(SIGUSR2, old2);
 }
 
+/* ============================================================================ */
+
 TEST_SUITE(signal);
 
 static volatile sig_atomic_t signal_received = 0;
@@ -289,8 +285,6 @@ TEST(signal_restore_handler) {
 }
 
 /* ============================================================================ */
-/* FUNCTIONAL TESTS: sigset_t Operations                                        */
-/* ============================================================================ */
 
 TEST_SUITE(sigemptyset);
 
@@ -315,6 +309,8 @@ TEST(sigemptyset_clears_all) {
 	ASSERT_FALSE(sigismember(&set, SIGTERM));
 }
 
+/* ============================================================================ */
+
 TEST_SUITE(sigfillset);
 
 TEST(sigfillset_basic) {
@@ -337,6 +333,8 @@ TEST(sigfillset_null_pointer) {
 	ASSERT_EQ(-1, sigfillset(NULL));
 	ASSERT_EQ(EINVAL, errno);
 }
+
+/* ============================================================================ */
 
 TEST_SUITE(sigaddset);
 
@@ -422,6 +420,8 @@ TEST(sigaddset_bit_isolation) {
 	if (SIGINT < JACL_SIGSET_MAX) ASSERT_FALSE(sigismember(&set, SIGINT + 1));
 }
 
+/* ============================================================================ */
+
 TEST_SUITE(sigdelset);
 
 TEST(sigdelset_basic) {
@@ -459,6 +459,8 @@ TEST(sigdelset_invalid_high) {
 	ASSERT_EQ(-1, sigdelset(&set, JACL_SIGSET_MAX + 1));
 	ASSERT_EQ(EINVAL, errno);
 }
+
+/* ============================================================================ */
 
 TEST_SUITE(sigismember);
 
@@ -507,8 +509,6 @@ TEST(sigismember_invalid_high) {
 }
 
 /* ============================================================================ */
-/* FUNCTIONAL TESTS: sigaction & Integrity                                      */
-/* ============================================================================ */
 
 TEST_SUITE(sigaction);
 
@@ -539,6 +539,8 @@ TEST(sigaction_mask_operations) {
 	ASSERT_TRUE(sigismember(&act.sa_mask, SIGINT));
 	ASSERT_TRUE(sigismember(&act.sa_mask, SIGTERM));
 }
+
+/* ============================================================================ */
 
 TEST_SUITE(sigset_integrity);
 
@@ -577,6 +579,8 @@ TEST(sigset_integrity_isempty_helper) {
 	ASSERT_FALSE(set.__bits[0] == 0 && set.__bits[1] == 0);
 }
 
+/* ============================================================================ */
+
 TEST_SUITE(sigisemptyset);
 
 TEST(sigisemptyset_empty_returns_nonzero) {
@@ -601,8 +605,18 @@ TEST(sigisemptyset_null_returns_error) {
 
 TEST(sigisemptyset_after_fill_and_del_all) {
 	sigset_t set;
-	sigfillset(&set);
-	for (int sig = 1; sig <= JACL_SIGSET_MAX; sig++) sigdelset(&set, sig);
+
+	/* Only operate on kernel-supported signals (1-64) */
+	sigemptyset(&set);
+	for (int sig = 1; sig <= 64 && sig <= JACL_SIGSET_MAX; sig++) {
+		sigaddset(&set, sig);
+	}
+
+	/* Now delete them */
+	for (int sig = 1; sig <= 64 && sig <= JACL_SIGSET_MAX; sig++) {
+		ASSERT_EQ(0, sigdelset(&set, sig));
+	}
+
 	ASSERT_TRUE(sigisemptyset(&set) != 0);
 }
 
@@ -623,6 +637,111 @@ TEST(sigisemptyset_does_not_modify_set) {
 	ASSERT_EQ(original.__bits[1], copy.__bits[1]);
 }
 
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+
+TEST_SUITE(sigpending);
+
+TEST(sigpending_basic) {
+    sigset_t pending;
+    ASSERT_EQ(0, sigpending(&pending));
+}
+
+TEST(signal_queue_clean) {
+	siginfo_t info; \
+	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0 }; \
+	while (sigtimedwait(NULL, &info, &ts) >= 0) {} \
+}
+
+TEST(sigpending_null_pointer_error) {
+    errno = 0;
+    ASSERT_EQ(-1, sigpending(NULL));
+    ASSERT_EQ(EINVAL, errno);
+}
+
 #endif /* JACL_HAS_POSIX */
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+
+TEST_SUITE(sigsuspend);
+
+TEST(sigsuspend_wakes_on_signal) {
+	pid_t pid = fork();
+	ASSERT_NE(pid, -1);
+
+	if (pid == 0) {
+		/* Child path */
+		sigset_t empty_mask;
+		sigemptyset(&empty_mask);
+
+		int r = sigprocmask(SIG_SETMASK, &empty_mask, NULL);
+		ASSERT_EQ(0, r);
+
+		/* Block forever waiting for SIGUSR1 */
+		sigsuspend((const sigset_t *)0);
+
+		exit(0);  /* Only reached if signal arrives */
+	}
+
+	/* Parent path */
+	usleep(100 * 1000);  /* Give child time to block */
+	kill(pid, SIGUSR1);  /* Wake the child */
+
+	int status;
+	waitpid(pid, &status, 0);
+	ASSERT_TRUE(WIFEXITED(status));
+}
+
+/* Timeout handler for sigsuspend tests */
+static void alarm_handler(int sig) { exit(124); }
+
+TEST(sigsuspend_timeout_guard) {
+	struct sigaction old_action;
+	struct sigaction new_action;
+
+	/* Setup alarm handler */
+	memset(&new_action, 0, sizeof(new_action));
+	new_action.sa_handler = alarm_handler;
+	sigaction(SIGALRM, &new_action, &old_action);
+
+	alarm(5);  /* Kill test after 5 seconds */
+
+	/* This should never return unless signal arrives */
+	sigsuspend((const sigset_t *)0);
+
+	alarm(0);  /* Cancel alarm if we somehow get here */
+}
+
+#endif /* JACL_HAS_POSIX */
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+
+TEST_SUITE(sigaltstack);
+
+TEST(sigaltstack_set_flags_invalid) {
+	stack_t ss;
+	ss.ss_sp = NULL;
+	ss.ss_size = 0;
+	ss.ss_flags = 1;
+	errno = 0;
+	int r = sigaltstack(&ss, NULL);
+	ASSERT_EQ(-1, r);
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(sigaltstack_null_pointer_error) {
+	errno = 0;
+	ASSERT_EQ(-1, sigaltstack(NULL, NULL));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+#endif /* JACL_HAS_POSIX */
+
+/* ============================================================================ */
 
 TEST_MAIN()
