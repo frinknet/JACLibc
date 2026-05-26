@@ -3,20 +3,23 @@
 #define _SYS_IOCTL_H
 
 #include <config.h>
-#include <stdarg.h> // va_start(), va_arg(), va_end()
-#include <errno.h> // ENOSYS
-#include <sys/types.h> // POSIX
+#include <stdarg.h> /* va_start(), va_arg(), va_end() */
+#include <errno.h>  /* ENOSYS */
+#include <sys/types.h> /* POSIX */
 
 #if JACL_HAS_POSIX
 
-#include <sys/syscall.h> // syscall()
+#include <sys/syscall.h> /* syscall() */
 
-/* Terminal window size ioctls */
+/* Terminal window size & PTY ioctls */
 #if JACL_OS_LINUX || JACL_ARCH_WASM
   #define TIOCGWINSZ  0x5413
   #define TIOCSWINSZ  0x5414
   #define TIOCGPGRP   0x540F
   #define TIOCSPGRP   0x5410
+  /* PTY management ioctls (XSI extension) */
+  #define TIOCSPTLCK  0x40045448  /* Lock/unlock PTY slave */
+  #define TIOCGPTN    0x80045447  /* Get PTY slave number */
   #define FIONREAD    0x541B
   #define FIONBIO     0x5421
   #define FIONCLEX    0x5450
@@ -47,7 +50,6 @@ static inline int ioctl(int fd, unsigned long request, ...) {
 	return (int)syscall(SYS_ioctl, fd, request, arg);
 #else
 	errno = ENOSYS;
-
 	return -1;
 #endif
 }

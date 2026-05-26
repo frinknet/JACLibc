@@ -10,6 +10,7 @@ extern "C" {
 #include <config.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <stdarg.h>
 #include JACL_X_FCNTL
 
@@ -19,7 +20,6 @@ extern "C" {
 	#include <io.h>
 #else
 	#define FCNTL_POSIX 1
-	#include <sys/syscall.h>
 #endif
 
 #define X(name, value) name = value,
@@ -544,7 +544,7 @@ static inline int fcntl_dupfd_cloexec(int fd, int min_fd) {
 	if (new_fd == -1) return -1;
 
 	if (fcntl_set_cloexec(new_fd) == -1) {
-		close(new_fd);
+		syscall(SYS_close, new_fd);
 
 		return -1;
 	}
