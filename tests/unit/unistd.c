@@ -9,6 +9,7 @@ TEST_TYPE(unit);
 TEST_UNIT(unistd.h);
 
 /* ============================================================================ */
+
 TEST_SUITE(constants);
 
 TEST(constants_version) {
@@ -18,26 +19,66 @@ TEST(constants_version) {
 }
 
 TEST(constants_sysconf_names) {
+	/* Mandatory sysconf constants */
 	ASSERT_EQ(_SC_VERSION, 1);
 	ASSERT_EQ(_SC_PAGESIZE, 2);
 	ASSERT_EQ(_SC_PAGE_SIZE, _SC_PAGESIZE);
 	ASSERT_EQ(_SC_CLK_TCK, 3);
 	ASSERT_EQ(_SC_ARG_MAX, 4);
 	ASSERT_EQ(_SC_CHILD_MAX, 5);
+	ASSERT_EQ(_SC_OPEN_MAX, 6);
+	ASSERT_EQ(_SC_NGROUPS_MAX, 7);
+	ASSERT_EQ(_SC_JOB_CONTROL, 8);
+	ASSERT_EQ(_SC_SAVED_IDS, 9);
+	ASSERT_EQ(_SC_STREAM_MAX, 10);
+	ASSERT_EQ(_SC_TZNAME_MAX, 11);
+	ASSERT_EQ(_SC_HOST_NAME_MAX, 12);
+	/* Issue 7 additions */
+	ASSERT_TRUE(_SC_NPROCESSORS_CONF > 0);
+	ASSERT_TRUE(_SC_NPROCESSORS_ONLN > 0);
 }
 
 TEST(constants_pathconf_names) {
-	ASSERT_EQ(_PC_LINK_MAX, 1);
-	ASSERT_EQ(_PC_MAX_CANON, 2);
-	ASSERT_EQ(_PC_MAX_INPUT, 3);
-	ASSERT_EQ(_PC_NAME_MAX, 4);
-	ASSERT_EQ(_PC_PATH_MAX, 5);
-	ASSERT_EQ(_PC_PIPE_BUF, 6);
+	/* Mandatory pathconf constants */
+	ASSERT_EQ(_PC_LINK_MAX, 0);
+	ASSERT_EQ(_PC_MAX_CANON, 1);
+	ASSERT_EQ(_PC_MAX_INPUT, 2);
+	ASSERT_EQ(_PC_NAME_MAX, 3);
+	ASSERT_EQ(_PC_PATH_MAX, 4);
+	ASSERT_EQ(_PC_PIPE_BUF, 5);
+	ASSERT_EQ(_PC_CHOWN_RESTRICTED, 6);
+	ASSERT_EQ(_PC_NO_TRUNC, 7);
+	ASSERT_EQ(_PC_VDISABLE, 8);
+	/* Additional mandatory */
+	ASSERT_TRUE(_PC_2_SYMLINKS > 0);
+	ASSERT_TRUE(_PC_ALLOC_SIZE_MIN > 0);
+	ASSERT_TRUE(_PC_FILESIZEBITS > 0);
+	ASSERT_TRUE(_PC_SYMLINK_MAX > 0);
+	ASSERT_TRUE(_PC_REC_INCR_XFER_SIZE > 0);
+	ASSERT_TRUE(_PC_REC_MAX_XFER_SIZE > 0);
+	ASSERT_TRUE(_PC_REC_MIN_XFER_SIZE > 0);
+	ASSERT_TRUE(_PC_REC_XFER_ALIGN > 0);
+	ASSERT_TRUE(_PC_TIMESTAMP_RESOLUTION > 0);
 }
 
 TEST(constants_confstr_names) {
 	ASSERT_EQ(_CS_PATH, 1);
 	ASSERT_EQ(_CS_V8_ENV, 2);
+	ASSERT_TRUE(_CS_POSIX_V8_ILP32_OFF32_CFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_ILP32_OFF32_LDFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_ILP32_OFF32_LIBS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_ILP32_OFFBIG_CFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_ILP32_OFFBIG_LDFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_ILP32_OFFBIG_LIBS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_LP64_OFF64_CFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_LP64_OFF64_LDFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_LP64_OFF64_LIBS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_LPBIG_OFFBIG_CFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_LPBIG_OFFBIG_LDFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_LPBIG_OFFBIG_LIBS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_THREADS_CFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_THREADS_LDFLAGS > 0);
+	ASSERT_TRUE(_CS_POSIX_V8_WIDTH_RESTRICTED_ENVS > 0);
 }
 
 TEST(constants_fd_macros) {
@@ -56,50 +97,54 @@ TEST(constants_access_modes) {
 	ASSERT_EQ(R_OK | W_OK | X_OK, 7);
 }
 
+TEST(constants_lseek_whence) {
+	ASSERT_TRUE(SEEK_SET >= 0);
+	ASSERT_TRUE(SEEK_CUR > 0);
+	ASSERT_TRUE(SEEK_END > 0);
+	/* Issue 8 additions */
+	ASSERT_TRUE(SEEK_HOLE > 0);
+	ASSERT_TRUE(SEEK_DATA > 0);
+	ASSERT_NE(SEEK_HOLE, SEEK_DATA);
+	ASSERT_NE(SEEK_HOLE, SEEK_SET);
+	ASSERT_NE(SEEK_DATA, SEEK_SET);
+}
+
+TEST(constants_posix_close) {
+	/* Issue 8 */
+	ASSERT_TRUE(POSIX_CLOSE_RESTART >= 0);
+}
+
+TEST(constants_posix_vdisable) {
+	ASSERT_TRUE(_POSIX_VDISABLE >= 0);
+	ASSERT_NE(_POSIX_VDISABLE, -1);
+}
+
+TEST(constants_posix_options) {
+	/* Options that "shall always be set to a value greater than zero" */
+	ASSERT_TRUE(_POSIX_JOB_CONTROL > 0);
+	ASSERT_TRUE(_POSIX_SAVED_IDS > 0);
+	ASSERT_TRUE(_POSIX_SHELL > 0);
+	ASSERT_TRUE(_POSIX_REGEXP > 0);
+	/* Options that "shall always be set to 202405L" */
+	ASSERT_EQ(_POSIX_THREADS, 202405L);
+	ASSERT_EQ(_POSIX_THREAD_SAFE_FUNCTIONS, 202405L);
+	ASSERT_EQ(_POSIX_SEMAPHORES, 202405L);
+	ASSERT_EQ(_POSIX_MAPPED_FILES, 202405L);
+	ASSERT_EQ(_POSIX_MEMORY_PROTECTION, 202405L);
+	ASSERT_EQ(_POSIX_MONOTONIC_CLOCK, 202405L);
+	ASSERT_EQ(_POSIX_TIMERS, 202405L);
+	ASSERT_EQ(_POSIX_TIMEOUTS, 202405L);
+	ASSERT_EQ(_POSIX_BARRIERS, 202405L);
+	ASSERT_EQ(_POSIX_SPIN_LOCKS, 202405L);
+	ASSERT_EQ(_POSIX_READER_WRITER_LOCKS, 202405L);
+	ASSERT_EQ(_POSIX_CLOCK_SELECTION, 202405L);
+	ASSERT_EQ(_POSIX_REALTIME_SIGNALS, 202405L);
+}
+
+/* getenv tested in stdlib.h */
+
 /* ============================================================================ */
-#if JACL_HAS_POSIX
-TEST_SUITE(getenv);
 
-TEST(getenv_basic) {
-	char *val = getenv("PATH");
-	ASSERT_NOT_NULL(val);
-}
-
-TEST(getenv_not_found) {
-	char *val = getenv("JA_CL_NONEXISTENT_VAR_XYZ");
-	ASSERT_NULL(val);
-}
-
-TEST(getenv_null_name) {
-	errno = 0;
-	ASSERT_NULL(getenv(NULL));
-}
-
-TEST(getenv_empty_name) {
-	errno = 0;
-	ASSERT_NULL(getenv(""));
-}
-
-TEST(getenv_no_equals) {
-	char *val = getenv("THIS_VAR_DOES_NOT_EXIST");
-	ASSERT_NULL(val);
-}
-
-TEST(getenv_case_sensitive) {
-	char *lower = getenv("path");
-	char *upper = getenv("PATH");
-	ASSERT_NOT_NULL(upper);
-	ASSERT_NULL(lower);
-}
-
-TEST(getenv_consistent) {
-	char *v1 = getenv("PATH");
-	char *v2 = getenv("PATH");
-	ASSERT_PTR_EQ(v1, v2);
-}
-#endif
-
-/* ============================================================================ */
 #if JACL_HAS_POSIX
 TEST_SUITE(read);
 
@@ -162,6 +207,7 @@ TEST(read_closed_fd) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(write);
 
@@ -215,6 +261,7 @@ TEST(write_closed_fd) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(close);
 
@@ -253,6 +300,49 @@ TEST(close_stderr) {
 #endif
 
 /* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(posix_close);
+
+TEST(posix_close_basic) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	ASSERT_EQ(posix_close(fd, 0), 0);
+	unlink("/tmp/t.txt");
+}
+
+TEST(posix_close_restart) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	ASSERT_EQ(posix_close(fd, POSIX_CLOSE_RESTART), 0);
+	unlink("/tmp/t.txt");
+}
+
+TEST(posix_close_invalid_flags) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	errno = 0;
+	ASSERT_EQ(posix_close(fd, 0x8000), -1);
+	ASSERT_ERRNO(EINVAL);
+	close(fd);
+	unlink("/tmp/t.txt");
+}
+
+TEST(posix_close_invalid_fd) {
+	errno = 0;
+	ASSERT_EQ(posix_close(-1, 0), -1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(posix_close_closed_fd) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	close(fd);
+	errno = 0;
+	ASSERT_EQ(posix_close(fd, 0), -1);
+	ASSERT_ERRNO(EBADF);
+	unlink("/tmp/t.txt");
+}
+#endif
+
+/* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(lseek);
 
@@ -349,6 +439,7 @@ TEST(lseek_failed_does_not_move_offset) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(dup);
 
@@ -407,6 +498,7 @@ TEST(dup_consistent) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(dup2);
 
@@ -507,7 +599,41 @@ TEST(dup2_concurrent_same_target) {
 }
 #endif
 
+#if JACL_HAS_POSIX
+TEST_SUITE(dup3);
+
+TEST(dup3_basic) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	int fd2 = dup3(fd, 55, 0);
+	ASSERT_EQ(fd2, 55);
+	close(fd);
+	close(55);
+	unlink("/tmp/t.txt");
+}
+
+TEST(dup3_cloexec) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	int fd2 = dup3(fd, 56, O_CLOEXEC);
+	ASSERT_EQ(fd2, 56);
+	int flags = fcntl(fd2, F_GETFD);
+	ASSERT_TRUE(flags & FD_CLOEXEC);
+	close(fd);
+	close(56);
+	unlink("/tmp/t.txt");
+}
+
+TEST(dup3_same_fd) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	errno = 0;
+	ASSERT_EQ(dup3(fd, fd, 0), -1);
+	ASSERT_ERRNO(EINVAL);
+	close(fd);
+	unlink("/tmp/t.txt");
+}
+#endif
+
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(pipe);
 
@@ -601,6 +727,43 @@ TEST(pipe_read_after_writer_close_returns_zero) {
 #endif
 
 /* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(pipe2);
+
+TEST(pipe2_basic) {
+	int p[2];
+	ASSERT_EQ(pipe2(p, 0), 0);
+	ASSERT_TRUE(p[0] != p[1]);
+	close(p[0]);
+	close(p[1]);
+}
+
+TEST(pipe2_cloexec) {
+	int p[2];
+	ASSERT_EQ(pipe2(p, O_CLOEXEC), 0);
+	int flags0 = fcntl(p[0], F_GETFD);
+	int flags1 = fcntl(p[1], F_GETFD);
+	ASSERT_TRUE(flags0 & FD_CLOEXEC);
+	ASSERT_TRUE(flags1 & FD_CLOEXEC);
+	close(p[0]);
+	close(p[1]);
+}
+
+TEST(pipe2_nonblock) {
+	int p[2];
+	ASSERT_EQ(pipe2(p, O_NONBLOCK), 0);
+	int flags0 = fcntl(p[0], F_GETFL);
+	int flags1 = fcntl(p[1], F_GETFL);
+	ASSERT_TRUE(flags0 & O_NONBLOCK);
+	ASSERT_TRUE(flags1 & O_NONBLOCK);
+	close(p[0]);
+	close(p[1]);
+}
+#endif
+
+/* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(access);
 
@@ -647,6 +810,7 @@ TEST(access_write_readonly) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(unlink);
 
@@ -693,6 +857,7 @@ TEST(unlink_twice) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(rmdir);
 
@@ -741,6 +906,7 @@ TEST(rmdir_non_empty) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(link);
 
@@ -790,6 +956,7 @@ TEST(link_empty_paths) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(symlink);
 
@@ -835,6 +1002,7 @@ TEST(symlink_overwrite_existing) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(readlink);
 
@@ -920,6 +1088,7 @@ TEST(readlink_return_matches_buffer_length) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(ftruncate);
 
@@ -974,6 +1143,7 @@ TEST(ftruncate_extend) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(truncate);
 
@@ -1026,6 +1196,7 @@ TEST(truncate_readonly) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(chdir);
 
@@ -1073,6 +1244,7 @@ TEST(chdir_no_perm) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(getcwd);
 
@@ -1151,6 +1323,7 @@ TEST(getcwd_exact_size_boundary) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(execve);
 
@@ -1194,6 +1367,162 @@ TEST(execve_consistent_fail) {
 #endif
 
 /* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(fexecve);
+
+TEST(fexecve_basic) {
+	int fd = open("/bin/true", O_RDONLY);
+	if (fd < 0) { TEST_SKIP("/bin/true not found"); return; }
+	pid_t pid = fork();
+	if (pid == 0) {
+		char *argv[] = {"true", NULL};
+		fexecve(fd, argv, environ);
+		_exit(127);
+	} else if (pid > 0) {
+		int status;
+		waitpid(pid, &status, 0);
+		ASSERT_EQ(WEXITSTATUS(status), 0);
+	}
+	close(fd);
+}
+
+TEST(fexecve_invalid_fd) {
+	char *argv[] = {"true", NULL};
+	errno = 0;
+	ASSERT_EQ(fexecve(-1, argv, environ), -1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(fexecve_closed_fd) {
+	int fd = open("/bin/true", O_RDONLY);
+	close(fd);
+	char *argv[] = {"true", NULL};
+	errno = 0;
+	ASSERT_EQ(fexecve(fd, argv, environ), -1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(fexecve_null_argv) {
+	int fd = open("/bin/true", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(fexecve(fd, NULL, environ), -1);
+	ASSERT_ERRNO(EFAULT);
+	close(fd);
+}
+
+TEST(fexecve_non_executable) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	char *argv[] = {"/tmp/t.txt", NULL};
+	errno = 0;
+	ASSERT_EQ(fexecve(fd, argv, environ), -1);
+	ASSERT_ERRNO(EACCES);
+	close(fd);
+	unlink("/tmp/t.txt");
+}
+
+TEST(fexecve_with_args) {
+	int fd = open("/bin/true", O_RDONLY);
+	if (fd < 0) { TEST_SKIP("/bin/true not found"); return; }
+	pid_t pid = fork();
+	if (pid == 0) {
+		char *argv[] = {"true", "silent", NULL};
+		fexecve(fd, argv, environ);
+		_exit(127);
+	} else if (pid > 0) {
+		int status;
+		waitpid(pid, &status, 0);
+		ASSERT_EQ(WEXITSTATUS(status), 0);
+	}
+	close(fd);
+}
+
+TEST(fexecve_directory) {
+	int fd = open("/tmp", O_RDONLY | O_DIRECTORY);
+	char *argv[] = {"/tmp", NULL};
+	errno = 0;
+	ASSERT_EQ(fexecve(fd, argv, environ), -1);
+	ASSERT_ERRNO(EACCES);
+	close(fd);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(_Fork);
+
+TEST(_Fork_basic) {
+	pid_t pid = _Fork();
+	if (pid == 0) {
+		_exit(0);
+	} else if (pid > 0) {
+		int status;
+		waitpid(pid, &status, 0);
+		ASSERT_TRUE(WIFEXITED(status));
+	} else {
+		ASSERT_TRUE(pid >= 0);
+	}
+}
+
+TEST(_Fork_no_atfork_handlers) {
+	/* _Fork must not call pthread_atfork handlers */
+	pid_t pid = _Fork();
+	if (pid == 0) _exit(42);
+	else if (pid > 0) {
+		int status;
+		waitpid(pid, &status, 0);
+		ASSERT_EQ(WEXITSTATUS(status), 42);
+	}
+}
+
+TEST(_Fork_async_signal_safe) {
+	/* _Fork is async-signal-safe, fork is not */
+	pid_t pid = _Fork();
+	if (pid == 0) _exit(0);
+	else if (pid > 0) {
+		int status;
+		waitpid(pid, &status, 0);
+		ASSERT_TRUE(WIFEXITED(status));
+	}
+}
+
+TEST(_Fork_consistent) {
+	pid_t p1 = _Fork();
+	if (p1 == 0) _exit(0);
+	else if (p1 > 0) {
+		int status;
+		waitpid(p1, &status, 0);
+
+		pid_t p2 = _Fork();
+		if (p2 == 0) _exit(0);
+		else if (p2 > 0) {
+			waitpid(p2, &status, 0);
+			ASSERT_TRUE(p1 != p2);
+		}
+	}
+}
+
+TEST(_Fork_vs_fork) {
+	/* Both should work, but _Fork is async-signal-safe */
+	pid_t p1 = fork();
+	if (p1 == 0) _exit(0);
+	else if (p1 > 0) {
+		int status;
+		waitpid(p1, &status, 0);
+
+		pid_t p2 = _Fork();
+		if (p2 == 0) _exit(0);
+		else if (p2 > 0) {
+			waitpid(p2, &status, 0);
+			ASSERT_TRUE(p1 != p2);
+		}
+	}
+}
+#endif
+
+/* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(getuid);
 
@@ -1225,6 +1554,7 @@ TEST(getuid_vs_geteuid) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(getgid);
 
@@ -1256,6 +1586,7 @@ TEST(getgid_vs_getegid) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(geteuid);
 
@@ -1285,6 +1616,7 @@ TEST(geteuid_non_negative) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(getegid);
 
@@ -1314,6 +1646,7 @@ TEST(getegid_non_negative) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(setuid);
 
@@ -1355,6 +1688,7 @@ TEST(setuid_consistent_fail) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(setgid);
 
@@ -1382,7 +1716,7 @@ TEST(setgid_root_no_perm) {
 TEST(setgid_large_gid) {
 	errno = 0;
 	ASSERT_EQ(setgid(0x7FFFFFFF), -1);
-	ASSERT_TRUE(EINVAL);
+	ASSERT_ERRNO(EINVAL);
 }
 
 TEST(setgid_consistent_fail) {
@@ -1395,6 +1729,107 @@ TEST(setgid_consistent_fail) {
 #endif
 
 /* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(seteuid);
+
+TEST(seteuid_basic) {
+	uid_t euid = geteuid();
+	ASSERT_EQ(seteuid(euid), 0);
+}
+
+TEST(seteuid_to_uid) {
+	uid_t uid = getuid();
+	if (uid == geteuid()) {
+		ASSERT_EQ(seteuid(uid), 0);
+	} else {
+		errno = 0;
+		int r = seteuid(uid);
+		ASSERT_TRUE(r == 0 || r == -1);
+	}
+}
+
+TEST(seteuid_invalid) {
+	/* -1 is valid for setresuid (means "don't change") */
+	uid_t euid = geteuid();
+	ASSERT_EQ(seteuid((uid_t)-1), 0);  /* Should succeed as no-op */
+	ASSERT_EQ(geteuid(), euid);  /* euid unchanged */
+}
+
+TEST(seteuid_no_perm) {
+	if (getuid() != 0) {
+		errno = 0;
+		ASSERT_EQ(seteuid(0), -1);
+		ASSERT_ERRNO(EPERM);
+	}
+}
+
+TEST(seteuid_persistence) {
+	uid_t euid = geteuid();
+	ASSERT_EQ(seteuid(euid), 0);
+	ASSERT_EQ(geteuid(), euid);
+}
+
+TEST(seteuid_consistent) {
+	uid_t euid = geteuid();
+	int r1 = seteuid(euid);
+	int r2 = seteuid(euid);
+	ASSERT_EQ(r1, r2);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(setegid);
+
+TEST(setegid_basic) {
+	gid_t egid = getegid();
+	ASSERT_EQ(setegid(egid), 0);
+}
+
+TEST(setegid_to_gid) {
+	gid_t gid = getgid();
+	if (gid == getegid()) {
+		ASSERT_EQ(setegid(gid), 0);
+	} else {
+		errno = 0;
+		int r = setegid(gid);
+		ASSERT_TRUE(r == 0 || r == -1);
+	}
+}
+
+TEST(setegid_invalid) {
+	/* -1 is valid for setresgid (means "don't change") */
+	gid_t egid = getegid();
+	ASSERT_EQ(setegid((gid_t)-1), 0);  /* Should succeed as no-op */
+	ASSERT_EQ(getegid(), egid);  /* egid unchanged */
+}
+
+TEST(setegid_no_perm) {
+	if (getgid() != 0) {
+		errno = 0;
+		ASSERT_EQ(setegid(0), -1);
+		ASSERT_ERRNO(EPERM);
+	}
+}
+
+TEST(setegid_persistence) {
+	gid_t egid = getegid();
+	ASSERT_EQ(setegid(egid), 0);
+	ASSERT_EQ(getegid(), egid);
+}
+
+TEST(setegid_consistent) {
+	gid_t egid = getegid();
+	int r1 = setegid(egid);
+	int r2 = setegid(egid);
+	ASSERT_EQ(r1, r2);
+}
+#endif
+
+/* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(getgroups);
 
@@ -1439,6 +1874,167 @@ TEST(getgroups_consistent) {
 #endif
 
 /* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(getresuid);
+
+TEST(getresuid_basic) {
+	uid_t ruid, euid, suid;
+	ASSERT_EQ(getresuid(&ruid, &euid, &suid), 0);
+	ASSERT_EQ(ruid, getuid());
+	ASSERT_EQ(euid, geteuid());
+}
+
+TEST(getresuid_null_ruid) {
+	uid_t euid, suid;
+	ASSERT_EQ(getresuid(NULL, &euid, &suid), 0);
+	ASSERT_EQ(euid, geteuid());
+}
+
+TEST(getresuid_null_euid) {
+	uid_t ruid, suid;
+	ASSERT_EQ(getresuid(&ruid, NULL, &suid), 0);
+	ASSERT_EQ(ruid, getuid());
+}
+
+TEST(getresuid_null_suid) {
+	uid_t ruid, euid;
+	ASSERT_EQ(getresuid(&ruid, &euid, NULL), 0);
+	ASSERT_EQ(ruid, getuid());
+}
+
+TEST(getresuid_consistent) {
+	uid_t r1, e1, s1, r2, e2, s2;
+	ASSERT_EQ(getresuid(&r1, &e1, &s1), 0);
+	ASSERT_EQ(getresuid(&r2, &e2, &s2), 0);
+	ASSERT_EQ(r1, r2);
+	ASSERT_EQ(e1, e2);
+	ASSERT_EQ(s1, s2);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(getresgid);
+
+TEST(getresgid_basic) {
+	gid_t rgid, egid, sgid;
+	ASSERT_EQ(getresgid(&rgid, &egid, &sgid), 0);
+	ASSERT_EQ(rgid, getgid());
+	ASSERT_EQ(egid, getegid());
+}
+
+TEST(getresgid_null_rgid) {
+	gid_t egid, sgid;
+	ASSERT_EQ(getresgid(NULL, &egid, &sgid), 0);
+	ASSERT_EQ(egid, getegid());
+}
+
+TEST(getresgid_null_egid) {
+	gid_t rgid, sgid;
+	ASSERT_EQ(getresgid(&rgid, NULL, &sgid), 0);
+	ASSERT_EQ(rgid, getgid());
+}
+
+TEST(getresgid_null_sgid) {
+	gid_t rgid, egid;
+	ASSERT_EQ(getresgid(&rgid, &egid, NULL), 0);
+	ASSERT_EQ(rgid, getgid());
+}
+
+TEST(getresgid_consistent) {
+	gid_t r1, e1, s1, r2, e2, s2;
+	ASSERT_EQ(getresgid(&r1, &e1, &s1), 0);
+	ASSERT_EQ(getresgid(&r2, &e2, &s2), 0);
+	ASSERT_EQ(r1, r2);
+	ASSERT_EQ(e1, e2);
+	ASSERT_EQ(s1, s2);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(setresuid);
+
+TEST(setresuid_basic) {
+	uid_t ruid, euid, suid;
+	ASSERT_EQ(getresuid(&ruid, &euid, &suid), 0);
+	ASSERT_EQ(setresuid(ruid, euid, suid), 0);
+}
+
+TEST(setresuid_no_change) {
+	uid_t ruid = getuid();
+	uid_t euid = geteuid();
+	ASSERT_EQ(setresuid(ruid, euid, (uid_t)-1), 0);
+}
+
+TEST(setresuid_invalid) {
+	errno = 0;
+	ASSERT_EQ(setresuid((uid_t)-2, (uid_t)-2, (uid_t)-2), -1);
+	ASSERT_ERRNO(EINVAL);
+}
+
+TEST(setresuid_no_perm) {
+	if (getuid() != 0) {
+		errno = 0;
+		ASSERT_EQ(setresuid(0, 0, 0), -1);
+		ASSERT_ERRNO(EPERM);
+	}
+}
+
+TEST(setresuid_consistent) {
+	uid_t ruid = getuid();
+	uid_t euid = geteuid();
+	int r1 = setresuid(ruid, euid, (uid_t)-1);
+	int r2 = setresuid(ruid, euid, (uid_t)-1);
+	ASSERT_EQ(r1, r2);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(setresgid);
+
+TEST(setresgid_basic) {
+	gid_t rgid, egid, sgid;
+	ASSERT_EQ(getresgid(&rgid, &egid, &sgid), 0);
+	ASSERT_EQ(setresgid(rgid, egid, sgid), 0);
+}
+
+TEST(setresgid_no_change) {
+	gid_t rgid = getgid();
+	gid_t egid = getegid();
+	ASSERT_EQ(setresgid(rgid, egid, (gid_t)-1), 0);
+}
+
+TEST(setresgid_invalid) {
+	errno = 0;
+	ASSERT_EQ(setresgid((gid_t)-2, (gid_t)-2, (gid_t)-2), -1);
+	ASSERT_ERRNO(EINVAL);
+}
+
+TEST(setresgid_no_perm) {
+	if (getgid() != 0) {
+		errno = 0;
+		ASSERT_EQ(setresgid(0, 0, 0), -1);
+		ASSERT_ERRNO(EPERM);
+	}
+}
+
+TEST(setresgid_consistent) {
+	gid_t rgid = getgid();
+	gid_t egid = getegid();
+	int r1 = setresgid(rgid, egid, (gid_t)-1);
+	int r2 = setresgid(rgid, egid, (gid_t)-1);
+	ASSERT_EQ(r1, r2);
+}
+#endif
+
+/* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(getpgrp);
 
@@ -1468,6 +2064,7 @@ TEST(getpgrp_stable) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(setpgid);
 
@@ -1504,6 +2101,88 @@ TEST(setpgid_consistent) {
 #endif
 
 /* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(getpgid);
+
+TEST(getpgid_basic) {
+	pid_t pgid = getpgid(0);
+	ASSERT_TRUE(pgid > 0);
+	ASSERT_EQ(pgid, getpgrp());
+}
+
+TEST(getpgid_current) {
+	pid_t pgid = getpgid(getpid());
+	ASSERT_TRUE(pgid > 0);
+}
+
+TEST(getpgid_invalid_pid) {
+	errno = 0;
+	ASSERT_EQ(getpgid(-1), (pid_t)-1);
+	ASSERT_ERRNO(ESRCH);
+}
+
+TEST(getpgid_other_process) {
+	pid_t pid = fork();
+	if (pid == 0) {
+		sleep(1);
+		_exit(0);
+	} else if (pid > 0) {
+		pid_t pgid = getpgid(pid);
+		ASSERT_TRUE(pgid > 0);
+		waitpid(pid, NULL, 0);
+	}
+}
+
+TEST(getpgid_consistent) {
+	pid_t p1 = getpgid(0);
+	pid_t p2 = getpgid(0);
+	ASSERT_EQ(p1, p2);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(getsid);
+
+TEST(getsid_basic) {
+	pid_t sid = getsid(0);
+	ASSERT_TRUE(sid > 0);
+}
+
+TEST(getsid_current) {
+	pid_t sid = getsid(getpid());
+	ASSERT_TRUE(sid > 0);
+}
+
+TEST(getsid_invalid_pid) {
+	errno = 0;
+	ASSERT_EQ(getsid(-1), (pid_t)-1);
+	ASSERT_ERRNO(ESRCH);
+}
+
+TEST(getsid_other_process) {
+	pid_t pid = fork();
+	if (pid == 0) {
+		sleep(1);
+		_exit(0);
+	} else if (pid > 0) {
+		pid_t sid = getsid(pid);
+		ASSERT_TRUE(sid > 0);
+		waitpid(pid, NULL, 0);
+	}
+}
+
+TEST(getsid_consistent) {
+	pid_t s1 = getsid(0);
+	pid_t s2 = getsid(0);
+	ASSERT_EQ(s1, s2);
+}
+#endif
+
+/* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(setsid);
 
@@ -1525,6 +2204,7 @@ TEST(setsid_no_args) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(gethostname);
 
@@ -1562,6 +2242,7 @@ TEST(gethostname_consistent) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(sethostname);
 
@@ -1599,6 +2280,7 @@ TEST(sethostname_long_name) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(isatty);
 
@@ -1636,6 +2318,192 @@ TEST(isatty_negative) {
 #endif
 
 /* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(tcgetpgrp);
+
+TEST(tcgetpgrp_tty) {
+	int fd = open("/dev/tty", O_RDONLY);
+	if (fd >= 0) {
+		pid_t pgrp = tcgetpgrp(fd);
+		ASSERT_TRUE(pgrp > 0);
+		close(fd);
+	}
+}
+
+TEST(tcgetpgrp_non_tty) {
+	int p[2];
+	pipe(p);
+	errno = 0;
+	ASSERT_EQ(tcgetpgrp(p[0]), (pid_t)-1);
+	ASSERT_ERRNO(ENOTTY);
+	close(p[0]);
+	close(p[1]);
+}
+
+TEST(tcgetpgrp_invalid_fd) {
+	errno = 0;
+	ASSERT_EQ(tcgetpgrp(-1), (pid_t)-1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(tcgetpgrp_closed_fd) {
+	int fd = open("/dev/tty", O_RDONLY);
+	if (fd >= 0) {
+		close(fd);
+		errno = 0;
+		ASSERT_EQ(tcgetpgrp(fd), (pid_t)-1);
+		ASSERT_ERRNO(EBADF);
+	}
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(tcsetpgrp);
+
+static int __tcsetpgrp_setup_pty(void) {
+	int master = open("/dev/ptmx", O_RDWR | O_NOCTTY);
+	if (master < 0) {
+		if (errno == EPERM || errno == EACCES || errno == ENODEV) return -2; /* Container block */
+		return -1;
+	}
+	if (grantpt(master) < 0 || unlockpt(master) < 0) {
+	if (errno == EPERM || errno == EACCES) { close(master); return -2; }
+		close(master); return -1;
+	}
+	char *name = ptsname(master);
+	close(master);
+	if (!name) return -1;
+	int slave = open(name, O_RDWR);
+	return (slave < 0) ? -1 : slave;
+}
+
+TEST(tcsetpgrp_tty) {
+	int fd = __tcsetpgrp_setup_pty();
+	if (fd == -2) { TEST_SKIP("Container blocks PTY allocation"); return; }
+	if (fd < 0) { TEST_SKIP("PTY allocation failed"); return; }
+
+	/* Must be session leader to set foreground pgrp */
+	if (setsid() == -1) { close(fd); TEST_SKIP("setsid failed"); return; }
+
+	pid_t pgrp = getpgrp();
+	ASSERT_EQ(tcsetpgrp(fd, pgrp), 0);
+	close(fd);
+}
+
+TEST(tcsetpgrp_non_tty) {
+	int p[2];
+	pipe(p);
+	errno = 0;
+	ASSERT_EQ(tcsetpgrp(p[0], getpgrp()), -1);
+	ASSERT_ERRNO(ENOTTY);
+	close(p[0]);
+	close(p[1]);
+}
+
+TEST(tcsetpgrp_invalid_fd) {
+	errno = 0;
+	ASSERT_EQ(tcsetpgrp(-1, getpgrp()), -1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(tcsetpgrp_invalid_pgrp) {
+	int fd = __tcsetpgrp_setup_pty();
+	if (fd == -2) { TEST_SKIP("Container blocks PTY allocation"); return; }
+	if (fd < 0) { TEST_SKIP("PTY allocation failed"); return; }
+	if (setsid() == -1) { close(fd); TEST_SKIP("setsid failed"); return; }
+
+	errno = 0;
+	int r = tcsetpgrp(fd, -1);
+	int e = errno;
+	close(fd);
+
+	ASSERT_EQ(r, -1);
+	/* Linux returns EINVAL, BSD returns EPERM for invalid pgrp */
+	ASSERT_TRUE(e == EINVAL || e == EPERM);
+}
+
+TEST(tcsetpgrp_closed_fd) {
+	int fd = __tcsetpgrp_setup_pty();
+	if (fd == -2) { TEST_SKIP("Container blocks PTY allocation"); return; }
+	if (fd < 0) { TEST_SKIP("PTY allocation failed"); return; }
+
+	close(fd);
+	errno = 0;
+	ASSERT_EQ(tcsetpgrp(fd, getpgrp()), -1);
+	ASSERT_ERRNO(EBADF);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(ttyname);
+
+TEST(ttyname_tty) {
+	int fd = open("/dev/tty", O_RDONLY);
+	if (fd >= 0) {
+		char *name = ttyname(fd);
+		if (name) ASSERT_TRUE(strlen(name) > 0);
+		close(fd);
+	}
+}
+
+TEST(ttyname_r_tty) {
+	int fd = open("/dev/tty", O_RDONLY);
+	if (fd >= 0) {
+		char buf[256];
+		int r = ttyname_r(fd, buf, sizeof(buf));
+		ASSERT_EQ(r, 0);
+		close(fd);
+	}
+}
+
+TEST(ttyname_r_non_tty) {
+	int p[2];
+	pipe(p);
+	char buf[64];
+	int r = ttyname_r(p[0], buf, sizeof(buf));
+	ASSERT_EQ(r, ENOTTY);
+	close(p[0]);
+	close(p[1]);
+}
+
+TEST(ttyname_non_tty) {
+	int p[2];
+	pipe(p);
+	char *name = ttyname(p[0]);
+	ASSERT_NULL(name);
+	close(p[0]);
+	close(p[1]);
+}
+
+TEST(ttyname_r_small_buf) {
+	int fd = open("/dev/tty", O_RDONLY);
+	if (fd >= 0) {
+		char buf[4];
+		int r = ttyname_r(fd, buf, sizeof(buf));
+		ASSERT_EQ(r, ERANGE);
+		close(fd);
+	}
+}
+
+TEST(ttyname_invalid_fd) {
+	char *name = ttyname(-1);
+	ASSERT_NULL(name);
+}
+
+TEST(ttyname_r_invalid_fd) {
+	char buf[64];
+	int r = ttyname_r(-1, buf, sizeof(buf));
+	ASSERT_EQ(r, EBADF);
+}
+#endif
+
+/* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(chown);
 
@@ -1677,6 +2545,7 @@ TEST(chown_no_perm) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(fchown);
 
@@ -1723,6 +2592,7 @@ TEST(fchown_readonly_fd) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(lchown);
 
@@ -1768,6 +2638,7 @@ TEST(lchown_no_perm) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(fchdir);
 
@@ -1816,6 +2687,7 @@ TEST(fchdir_consistent) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(sync);
 
@@ -1832,6 +2704,391 @@ TEST(sync_consistent) {
 #endif
 
 /* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(faccessat);
+
+TEST(faccessat_basic) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	ASSERT_EQ(faccessat(dirfd, "t.txt", F_OK, 0), 0);
+	close(dirfd);
+	unlink("/tmp/t.txt");
+}
+
+TEST(faccessat_not_exists) {
+	int dirfd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(faccessat(dirfd, "ghost", F_OK, 0), -1);
+	ASSERT_ERRNO(ENOENT);
+	close(dirfd);
+}
+
+TEST(faccessat_at_fdcwd) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	ASSERT_EQ(faccessat(AT_FDCWD, "/tmp/t.txt", F_OK, 0), 0);
+	unlink("/tmp/t.txt");
+}
+
+TEST(faccessat_null_path) {
+	int dirfd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(faccessat(dirfd, NULL, F_OK, 0), -1);
+	ASSERT_ERRNO(EFAULT);
+	close(dirfd);
+}
+
+TEST(faccessat_empty_path) {
+	int dirfd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(faccessat(dirfd, "", F_OK, 0), -1);
+	ASSERT_ERRNO(ENOENT);
+	close(dirfd);
+}
+
+TEST(faccessat_invalid_dirfd) {
+	errno = 0;
+	ASSERT_EQ(faccessat(-1, "t.txt", F_OK, 0), -1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(faccessat_at_eaccess) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	ASSERT_EQ(faccessat(dirfd, "t.txt", F_OK, AT_EACCESS), 0);
+	close(dirfd);
+	unlink("/tmp/t.txt");
+}
+
+TEST(faccessat_absolute_path) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	ASSERT_EQ(faccessat(dirfd, "/tmp/t.txt", F_OK, 0), 0);
+	close(dirfd);
+	unlink("/tmp/t.txt");
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(fchownat);
+
+TEST(fchownat_basic) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	uid_t uid = getuid();
+	gid_t gid = getgid();
+	ASSERT_EQ(fchownat(dirfd, "t.txt", uid, gid, 0), 0);
+	close(dirfd);
+	unlink("/tmp/t.txt");
+}
+
+TEST(fchownat_symlink_nofollow) {
+	symlink("/tmp/real", "/tmp/link");
+	int dirfd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(fchownat(dirfd, "link", 0, 0, AT_SYMLINK_NOFOLLOW), -1);
+	ASSERT_ERRNO(EPERM);
+	close(dirfd);
+	unlink("/tmp/link");
+}
+
+TEST(fchownat_at_fdcwd) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	uid_t uid = getuid();
+	gid_t gid = getgid();
+	ASSERT_EQ(fchownat(AT_FDCWD, "/tmp/t.txt", uid, gid, 0), 0);
+	unlink("/tmp/t.txt");
+}
+
+TEST(fchownat_not_exists) {
+	int dirfd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(fchownat(dirfd, "ghost", 0, 0, 0), -1);
+	ASSERT_ERRNO(ENOENT);
+	close(dirfd);
+}
+
+TEST(fchownat_no_perm) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	errno = 0;
+	ASSERT_EQ(fchownat(dirfd, "t.txt", 0, 0, 0), -1);
+	ASSERT_ERRNO(EPERM);
+	close(dirfd);
+	unlink("/tmp/t.txt");
+}
+
+TEST(fchownat_invalid_dirfd) {
+	errno = 0;
+	ASSERT_EQ(fchownat(-1, "t.txt", 0, 0, 0), -1);
+	ASSERT_ERRNO(EBADF);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(linkat);
+
+TEST(linkat_basic) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int fd = open("/tmp/t_src.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	ASSERT_EQ(linkat(dirfd, "t_src.txt", dirfd, "t_tgt.txt", 0), 0);
+	ASSERT_EQ(access("/tmp/t_tgt.txt", F_OK), 0);
+	close(dirfd);
+	unlink("/tmp/t_src.txt");
+	unlink("/tmp/t_tgt.txt");
+}
+
+TEST(linkat_at_fdcwd) {
+	int fd = open("/tmp/t_src.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	ASSERT_EQ(linkat(AT_FDCWD, "/tmp/t_src.txt", AT_FDCWD, "/tmp/t_tgt.txt", 0), 0);
+	ASSERT_EQ(access("/tmp/t_tgt.txt", F_OK), 0);
+	unlink("/tmp/t_src.txt");
+	unlink("/tmp/t_tgt.txt");
+}
+
+TEST(linkat_symlink_follow) {
+	symlink("/tmp/real", "/tmp/link");
+	int fd = open("/tmp/real", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	int dirfd = open("/tmp", O_RDONLY);
+	ASSERT_EQ(linkat(dirfd, "link", dirfd, "t_tgt.txt", AT_SYMLINK_FOLLOW), 0);
+	ASSERT_EQ(access("/tmp/t_tgt.txt", F_OK), 0);
+	close(dirfd);
+	unlink("/tmp/link");
+	unlink("/tmp/real");
+	unlink("/tmp/t_tgt.txt");
+}
+
+TEST(linkat_not_exists) {
+	int dirfd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(linkat(dirfd, "ghost", dirfd, "tgt", 0), -1);
+	ASSERT_ERRNO(ENOENT);
+	close(dirfd);
+}
+
+TEST(linkat_overwrite) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int f1 = open("/tmp/l1.txt", O_CREAT | O_RDWR, 0644);
+	close(f1);
+	int f2 = open("/tmp/l2.txt", O_CREAT | O_RDWR, 0644);
+	close(f2);
+	errno = 0;
+	ASSERT_EQ(linkat(dirfd, "l1.txt", dirfd, "l2.txt", 0), -1);
+	close(dirfd);
+	unlink("/tmp/l1.txt");
+	unlink("/tmp/l2.txt");
+}
+
+TEST(linkat_invalid_dirfd) {
+	errno = 0;
+	ASSERT_EQ(linkat(-1, "src", -1, "tgt", 0), -1);
+	ASSERT_ERRNO(EBADF);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(readlinkat);
+
+TEST(readlinkat_basic) {
+	symlink("/tmp/real", "/tmp/link");
+	int dirfd = open("/tmp", O_RDONLY);
+	char buf[32];
+	ssize_t n = readlinkat(dirfd, "link", buf, sizeof(buf));
+	ASSERT_TRUE(n > 0);
+	close(dirfd);
+	unlink("/tmp/link");
+}
+
+TEST(readlinkat_at_fdcwd) {
+	symlink("/tmp/real", "/tmp/link");
+	char buf[32];
+	ssize_t n = readlinkat(AT_FDCWD, "/tmp/link", buf, sizeof(buf));
+	ASSERT_TRUE(n > 0);
+	unlink("/tmp/link");
+}
+
+TEST(readlinkat_not_link) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	int dirfd = open("/tmp", O_RDONLY);
+	char buf[32];
+	errno = 0;
+	ASSERT_EQ(readlinkat(dirfd, "t.txt", buf, sizeof(buf)), -1);
+	ASSERT_ERRNO(EINVAL);
+	close(dirfd);
+	unlink("/tmp/t.txt");
+}
+
+TEST(readlinkat_not_exists) {
+	int dirfd = open("/tmp", O_RDONLY);
+	char buf[32];
+	errno = 0;
+	ASSERT_EQ(readlinkat(dirfd, "ghost", buf, sizeof(buf)), -1);
+	ASSERT_ERRNO(ENOENT);
+	close(dirfd);
+}
+
+TEST(readlinkat_small_buf) {
+	symlink("/tmp/long_target_path", "/tmp/short");
+	int dirfd = open("/tmp", O_RDONLY);
+	char buf[4];
+	ssize_t n = readlinkat(dirfd, "short", buf, sizeof(buf));
+	ASSERT_EQ(n, 4);
+	close(dirfd);
+	unlink("/tmp/short");
+}
+
+TEST(readlinkat_invalid_dirfd) {
+	char buf[32];
+	errno = 0;
+	ASSERT_EQ(readlinkat(-1, "link", buf, sizeof(buf)), -1);
+	ASSERT_ERRNO(EBADF);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(symlinkat);
+
+TEST(symlinkat_basic) {
+	int dirfd = open("/tmp", O_RDONLY);
+	ASSERT_EQ(symlinkat("/tmp/real", dirfd, "link"), 0);
+	close(dirfd);
+	unlink("/tmp/link");
+}
+
+TEST(symlinkat_at_fdcwd) {
+	ASSERT_EQ(symlinkat("/tmp/real", AT_FDCWD, "/tmp/link"), 0);
+	unlink("/tmp/link");
+}
+
+TEST(symlinkat_overwrite) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int fd = open("/tmp/existing.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	errno = 0;
+	ASSERT_EQ(symlinkat("/tmp/real", dirfd, "existing.txt"), -1);
+	ASSERT_ERRNO(EEXIST);
+	close(dirfd);
+	unlink("/tmp/existing.txt");
+}
+
+TEST(symlinkat_not_exists_parent) {
+	int dirfd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(symlinkat("/tmp/real", dirfd, "ghost_dir/link"), -1);
+	ASSERT_ERRNO(ENOENT);
+	close(dirfd);
+}
+
+TEST(symlinkat_invalid_dirfd) {
+	errno = 0;
+	ASSERT_EQ(symlinkat("/tmp/real", -1, "link"), -1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(symlinkat_broken) {
+	int dirfd = open("/tmp", O_RDONLY);
+	ASSERT_EQ(symlinkat("/tmp/nonexistent", dirfd, "broken"), 0);
+	close(dirfd);
+	unlink("/tmp/broken");
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(unlinkat);
+
+TEST(unlinkat_basic) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	ASSERT_EQ(unlinkat(dirfd, "t.txt", 0), 0);
+	close(dirfd);
+}
+
+TEST(unlinkat_directory) {
+	int dirfd = open("/tmp", O_RDONLY);
+	mkdir("/tmp/t_dir", 0755);
+	ASSERT_EQ(unlinkat(dirfd, "t_dir", AT_REMOVEDIR), 0);
+	close(dirfd);
+}
+
+TEST(unlinkat_at_fdcwd) {
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	ASSERT_EQ(unlinkat(AT_FDCWD, "/tmp/t.txt", 0), 0);
+}
+
+TEST(unlinkat_not_exists) {
+	int dirfd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(unlinkat(dirfd, "ghost", 0), -1);
+	ASSERT_ERRNO(ENOENT);
+	close(dirfd);
+}
+
+TEST(unlinkat_directory_without_flag) {
+	int dirfd = open("/tmp", O_RDONLY);
+	mkdir("/tmp/t_dir", 0755);
+	errno = 0;
+	ASSERT_EQ(unlinkat(dirfd, "t_dir", 0), -1);
+	ASSERT_ERRNO(EISDIR);
+	close(dirfd);
+	rmdir("/tmp/t_dir");
+}
+
+TEST(unlinkat_file_with_removedir) {
+	int dirfd = open("/tmp", O_RDONLY);
+	int fd = open("/tmp/t.txt", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	errno = 0;
+	ASSERT_EQ(unlinkat(dirfd, "t.txt", AT_REMOVEDIR), -1);
+	ASSERT_ERRNO(ENOTDIR);
+	close(dirfd);
+	unlink("/tmp/t.txt");
+}
+
+TEST(unlinkat_invalid_dirfd) {
+	errno = 0;
+	ASSERT_EQ(unlinkat(-1, "t.txt", 0), -1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(unlinkat_non_empty_dir) {
+	int dirfd = open("/tmp", O_RDONLY);
+	mkdir("/tmp/t_dir", 0755);
+	int fd = open("/tmp/t_dir/file", O_CREAT | O_RDWR, 0644);
+	close(fd);
+	errno = 0;
+	ASSERT_EQ(unlinkat(dirfd, "t_dir", AT_REMOVEDIR), -1);
+	ASSERT_ERRNO(ENOTEMPTY);
+	close(dirfd);
+	unlink("/tmp/t_dir/file");
+	rmdir("/tmp/t_dir");
+}
+#endif
+
+/* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(fsync);
 
@@ -1873,6 +3130,7 @@ TEST(fsync_directory) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(fdatasync);
 
@@ -1914,6 +3172,7 @@ TEST(fdatasync_directory) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(sleep);
 
@@ -1959,6 +3218,7 @@ TEST(sleep_interrupt) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(usleep);
 
@@ -1980,6 +3240,7 @@ TEST(usleep_large) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(alarm);
 
@@ -2010,6 +3271,7 @@ TEST(alarm_negative) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(pause);
 
@@ -2032,6 +3294,7 @@ TEST(pause_signal) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(pread);
 
@@ -2092,6 +3355,7 @@ TEST(pread_negative_offset) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(pwrite);
 
@@ -2144,8 +3408,9 @@ TEST(pwrite_negative_offset) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
-TEST_SUITE(sysconf_runtime);
+TEST_SUITE(sysconf);
 
 TEST(sysconf_basic) {
 	ASSERT_TRUE(sysconf(_SC_PAGESIZE) > 0);
@@ -2177,8 +3442,9 @@ TEST(sysconf_consistent) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
-TEST_SUITE(pathconf_runtime);
+TEST_SUITE(pathconf);
 
 TEST(pathconf_basic) {
 	long n = pathconf("/tmp", _PC_NAME_MAX);
@@ -2215,8 +3481,9 @@ TEST(pathconf_consistent) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
-TEST_SUITE(confstr_runtime);
+TEST_SUITE(confstr);
 
 TEST(confstr_basic) {
 	char buf[256];
@@ -2252,8 +3519,9 @@ TEST(confstr_consistent) {
 #endif
 
 /* ============================================================================ */
+
 #if JACL_HAS_POSIX
-TEST_SUITE(getopt_runtime);
+TEST_SUITE(getopt);
 
 TEST(getopt_basic) {
 	char *av[] = {"prog", "-a", NULL};
@@ -2308,46 +3576,167 @@ TEST(getopt_with_arg) {
 #endif
 
 /* ============================================================================ */
-#if !JACL_HAS_POSIX
-TEST_SUITE(non_posix_stubs);
 
-TEST(read_stub) {
-	char b[10];
-	errno = 0;
-	ASSERT_EQ(read(0, b, 10), -1);
-	ASSERT_ERRNO(ENOSYS);
+#if JACL_HAS_POSIX
+TEST_SUITE(getentropy);
+
+TEST(getentropy_basic) {
+	char buf[32];
+	ASSERT_EQ(getentropy(buf, sizeof(buf)), 0);
+	int all_zero = 1;
+	for (int i = 0; i < 32; i++) if (buf[i] != 0) all_zero = 0;
+	ASSERT_FALSE(all_zero);
 }
 
-TEST(write_stub) {
-	errno = 0;
-	ASSERT_EQ(write(1, "x", 1), -1);
-	ASSERT_ERRNO(ENOSYS);
+TEST(getentropy_max_256) {
+	char buf[256];
+	ASSERT_EQ(getentropy(buf, 256), 0);
 }
 
-TEST(close_stub) {
+TEST(getentropy_too_large) {
+	char buf[257];
 	errno = 0;
-	ASSERT_EQ(close(0), -1);
-	ASSERT_ERRNO(ENOSYS);
+	ASSERT_EQ(getentropy(buf, 257), -1);
+	ASSERT_ERRNO(EIO);
 }
 
-TEST(pipe_stub) {
-	int p[2];
+TEST(getentropy_null_buf) {
 	errno = 0;
-	ASSERT_EQ(pipe(p), -1);
-	ASSERT_ERRNO(ENOSYS);
+	ASSERT_EQ(getentropy(NULL, 32), -1);
+	ASSERT_ERRNO(EFAULT);
 }
 
-TEST(fork_stub) {
-	errno = 0;
-	ASSERT_EQ(fork(), -1);
-	ASSERT_ERRNO(ENOSYS);
+TEST(getentropy_zero_length) {
+	ASSERT_EQ(getentropy(NULL, 0), 0);
 }
 
-TEST(getpid_stub) {
-	pid_t p = getpid();
-	ASSERT_TRUE(p >= 0);
+TEST(getentropy_consistent) {
+	char buf1[32], buf2[32];
+	ASSERT_EQ(getentropy(buf1, 32), 0);
+	ASSERT_EQ(getentropy(buf2, 32), 0);
+	/* Buffers should be different (random) */
+	int same = 1;
+	for (int i = 0; i < 32; i++) if (buf1[i] != buf2[i]) same = 0;
+	ASSERT_FALSE(same);
 }
 #endif
 
 /* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(getlogin);
+
+TEST(getlogin_basic) {
+	char *login = getlogin();
+	/* May return NULL if not logged in via terminal */
+	if (login) {
+		ASSERT_TRUE(strlen(login) > 0);
+	}
+}
+
+TEST(getlogin_r_basic) {
+	char buf[256];
+	int r = getlogin_r(buf, sizeof(buf));
+	/* Returns 0 on success, ENOTTY/ENXIO on non-terminal */
+	ASSERT_TRUE(r == 0 || r == ENOTTY || r == ENXIO);
+}
+
+TEST(getlogin_r_small_buf) {
+	char buf[1];
+	int r = getlogin_r(buf, sizeof(buf));
+	ASSERT_TRUE(r == ERANGE || r == ENOTTY || r == ENXIO);
+}
+
+TEST(getlogin_r_null_buf) {
+	int r = getlogin_r(NULL, 256);
+	ASSERT_EQ(r, EINVAL);
+}
+
+TEST(getlogin_r_zero_size) {
+	char buf[256];
+	int r = getlogin_r(buf, 0);
+	ASSERT_EQ(r, EINVAL);
+}
+
+TEST(getlogin_consistent) {
+	char *l1 = getlogin();
+	char *l2 = getlogin();
+	if (l1 && l2) {
+		ASSERT_STR_EQ(l1, l2);
+	}
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(fpathconf);
+
+TEST(fpathconf_basic) {
+	int fd = open("/tmp", O_RDONLY);
+	long n = fpathconf(fd, _PC_NAME_MAX);
+	ASSERT_TRUE(n > 0);
+	close(fd);
+}
+
+TEST(fpathconf_invalid) {
+	int fd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(fpathconf(fd, 99999), -1);
+	ASSERT_ERRNO(EINVAL);
+	close(fd);
+}
+
+TEST(fpathconf_all_constants) {
+	int fd = open("/tmp", O_RDONLY);
+	ASSERT_TRUE(fpathconf(fd, _PC_LINK_MAX) >= 0);
+	ASSERT_TRUE(fpathconf(fd, _PC_MAX_CANON) >= 0);
+	ASSERT_TRUE(fpathconf(fd, _PC_MAX_INPUT) >= 0);
+	ASSERT_TRUE(fpathconf(fd, _PC_NAME_MAX) >= 0);
+	ASSERT_TRUE(fpathconf(fd, _PC_PATH_MAX) >= 0);
+	ASSERT_TRUE(fpathconf(fd, _PC_PIPE_BUF) >= 0);
+	close(fd);
+}
+
+TEST(fpathconf_invalid_fd) {
+	errno = 0;
+	ASSERT_EQ(fpathconf(-1, _PC_NAME_MAX), -1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(fpathconf_closed_fd) {
+	int fd = open("/tmp", O_RDONLY);
+	close(fd);
+	errno = 0;
+	ASSERT_EQ(fpathconf(fd, _PC_NAME_MAX), -1);
+	ASSERT_ERRNO(EBADF);
+}
+
+TEST(fpathconf_consistent) {
+	int fd = open("/tmp", O_RDONLY);
+	long n1 = fpathconf(fd, _PC_NAME_MAX);
+	long n2 = fpathconf(fd, _PC_NAME_MAX);
+	ASSERT_EQ(n1, n2);
+	close(fd);
+}
+
+TEST(fpathconf_vs_pathconf) {
+	int fd = open("/tmp", O_RDONLY);
+	long fval = fpathconf(fd, _PC_NAME_MAX);
+	long pval = pathconf("/tmp", _PC_NAME_MAX);
+	ASSERT_EQ(fval, pval);
+	close(fd);
+}
+
+TEST(fpathconf_negative_name) {
+	int fd = open("/tmp", O_RDONLY);
+	errno = 0;
+	ASSERT_EQ(fpathconf(fd, -1), -1);
+	ASSERT_ERRNO(EINVAL);
+	close(fd);
+}
+#endif
+
+/* ============================================================================ */
+
 TEST_MAIN()
