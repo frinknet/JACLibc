@@ -1,5 +1,5 @@
 /**
- * LINUX SYSCALLS IMPORTED  //  last updated: 2026-05-24 04:37:30 UTC
+ * LINUX SYSCALLS IMPORTED  //  last updated: 2026-05-25 20:49:37 UTC
  * https://raw.githubusercontent.com/torvalds/linux/v6.17/arch/mips/kernel/syscalls/syscall_n32.tbl
  */
 

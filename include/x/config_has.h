@@ -1,5 +1,5 @@
 /**
- * JACLIBC SYSCALLS MATRIX  //  last updated: 2026-05-24 04:38:06 UTC
+ * JACLIBC SYSCALLS MATRIX  //  last updated: 2026-05-25 20:50:29 UTC
  */
 
 /* check SYS_alarm */
@@ -111,6 +111,61 @@
 #define __openbsd_generic_has_chmod 1
 #define __openbsd_x64_has_chmod 1
 #define __openbsd_x86_has_chmod 1
+
+/* check SYS_dup3 */
+#define __darwin_arm64_has_dup3 0
+#define __darwin_generic_has_dup3 0
+#define __darwin_x64_has_dup3 0
+#define __dragonfly_generic_has_dup3 0
+#define __dragonfly_x64_has_dup3 0
+#define __dragonfly_x86_has_dup3 0
+#define __freebsd_generic_has_dup3 0
+#define __freebsd_x64_has_dup3 0
+#define __freebsd_x86_has_dup3 0
+#define __linux_alpha_has_dup3 1
+#define __linux_arc_has_dup3 1
+#define __linux_arm32_has_dup3 1
+#define __linux_arm64_has_dup3 1
+#define __linux_csky_has_dup3 1
+#define __linux_generic_has_dup3 1
+#define __linux_hexagon_has_dup3 1
+#define __linux_hppa_has_dup3 1
+#define __linux_loongarch64_has_dup3 1
+#define __linux_m68k_has_dup3 1
+#define __linux_microblaze_has_dup3 1
+#define __linux_mips32_has_dup3 1
+#define __linux_mips64_has_dup3 1
+#define __linux_nios2_has_dup3 1
+#define __linux_or1k_has_dup3 1
+#define __linux_powerpc32_has_dup3 1
+#define __linux_powerpc64_has_dup3 1
+#define __linux_riscv32_has_dup3 1
+#define __linux_riscv64_has_dup3 1
+#define __linux_s390x_has_dup3 1
+#define __linux_sh4_has_dup3 1
+#define __linux_sparc32_has_dup3 1
+#define __linux_sparc64_has_dup3 1
+#define __linux_x64_has_dup3 1
+#define __linux_x86_has_dup3 1
+#define __linux_xtensa_has_dup3 1
+#define __netbsd_alpha_has_dup3 1
+#define __netbsd_arm32_has_dup3 1
+#define __netbsd_arm64_has_dup3 1
+#define __netbsd_generic_has_dup3 1
+#define __netbsd_hppa_has_dup3 1
+#define __netbsd_ia64_has_dup3 1
+#define __netbsd_powerpc32_has_dup3 1
+#define __netbsd_powerpc64_has_dup3 1
+#define __netbsd_riscv32_has_dup3 1
+#define __netbsd_riscv64_has_dup3 1
+#define __netbsd_sparc32_has_dup3 1
+#define __netbsd_sparc64_has_dup3 1
+#define __netbsd_vax_has_dup3 1
+#define __netbsd_x64_has_dup3 1
+#define __netbsd_x86_has_dup3 1
+#define __openbsd_generic_has_dup3 1
+#define __openbsd_x64_has_dup3 1
+#define __openbsd_x86_has_dup3 1
 
 /* check SYS_exit_group */
 #define __darwin_arm64_has_exit_group 0
@@ -383,9 +438,9 @@
 #define __netbsd_vax_has_fchmodat 1
 #define __netbsd_x64_has_fchmodat 1
 #define __netbsd_x86_has_fchmodat 1
-#define __openbsd_generic_has_fchmodat 0
-#define __openbsd_x64_has_fchmodat 0
-#define __openbsd_x86_has_fchmodat 0
+#define __openbsd_generic_has_fchmodat 1
+#define __openbsd_x64_has_fchmodat 1
+#define __openbsd_x86_has_fchmodat 1
 
 /* check SYS_fcntl64 */
 #define __darwin_arm64_has_fcntl64 0
@@ -496,6 +551,61 @@
 #define __openbsd_generic_has_fdatasync 0
 #define __openbsd_x64_has_fdatasync 0
 #define __openbsd_x86_has_fdatasync 0
+
+/* check SYS_fexecve */
+#define __darwin_arm64_has_fexecve 0
+#define __darwin_generic_has_fexecve 0
+#define __darwin_x64_has_fexecve 0
+#define __dragonfly_generic_has_fexecve 1
+#define __dragonfly_x64_has_fexecve 1
+#define __dragonfly_x86_has_fexecve 1
+#define __freebsd_generic_has_fexecve 1
+#define __freebsd_x64_has_fexecve 1
+#define __freebsd_x86_has_fexecve 1
+#define __linux_alpha_has_fexecve 0
+#define __linux_arc_has_fexecve 0
+#define __linux_arm32_has_fexecve 0
+#define __linux_arm64_has_fexecve 0
+#define __linux_csky_has_fexecve 0
+#define __linux_generic_has_fexecve 0
+#define __linux_hexagon_has_fexecve 0
+#define __linux_hppa_has_fexecve 0
+#define __linux_loongarch64_has_fexecve 0
+#define __linux_m68k_has_fexecve 0
+#define __linux_microblaze_has_fexecve 0
+#define __linux_mips32_has_fexecve 0
+#define __linux_mips64_has_fexecve 0
+#define __linux_nios2_has_fexecve 0
+#define __linux_or1k_has_fexecve 0
+#define __linux_powerpc32_has_fexecve 0
+#define __linux_powerpc64_has_fexecve 0
+#define __linux_riscv32_has_fexecve 0
+#define __linux_riscv64_has_fexecve 0
+#define __linux_s390x_has_fexecve 0
+#define __linux_sh4_has_fexecve 0
+#define __linux_sparc32_has_fexecve 0
+#define __linux_sparc64_has_fexecve 0
+#define __linux_x64_has_fexecve 0
+#define __linux_x86_has_fexecve 0
+#define __linux_xtensa_has_fexecve 0
+#define __netbsd_alpha_has_fexecve 1
+#define __netbsd_arm32_has_fexecve 1
+#define __netbsd_arm64_has_fexecve 1
+#define __netbsd_generic_has_fexecve 1
+#define __netbsd_hppa_has_fexecve 1
+#define __netbsd_ia64_has_fexecve 1
+#define __netbsd_powerpc32_has_fexecve 1
+#define __netbsd_powerpc64_has_fexecve 1
+#define __netbsd_riscv32_has_fexecve 1
+#define __netbsd_riscv64_has_fexecve 1
+#define __netbsd_sparc32_has_fexecve 1
+#define __netbsd_sparc64_has_fexecve 1
+#define __netbsd_vax_has_fexecve 1
+#define __netbsd_x64_has_fexecve 1
+#define __netbsd_x86_has_fexecve 1
+#define __openbsd_generic_has_fexecve 0
+#define __openbsd_x64_has_fexecve 0
+#define __openbsd_x86_has_fexecve 0
 
 /* check SYS_fstat */
 #define __darwin_arm64_has_fstat 1
@@ -713,9 +823,9 @@
 #define __netbsd_vax_has_futimens 1
 #define __netbsd_x64_has_futimens 1
 #define __netbsd_x86_has_futimens 1
-#define __openbsd_generic_has_futimens 0
-#define __openbsd_x64_has_futimens 0
-#define __openbsd_x86_has_futimens 0
+#define __openbsd_generic_has_futimens 1
+#define __openbsd_x64_has_futimens 1
+#define __openbsd_x86_has_futimens 1
 
 /* check SYS_futimes */
 #define __darwin_arm64_has_futimes 1
@@ -768,9 +878,9 @@
 #define __netbsd_vax_has_futimes 1
 #define __netbsd_x64_has_futimes 1
 #define __netbsd_x86_has_futimes 1
-#define __openbsd_generic_has_futimes 0
-#define __openbsd_x64_has_futimes 0
-#define __openbsd_x86_has_futimes 0
+#define __openbsd_generic_has_futimes 1
+#define __openbsd_x64_has_futimes 1
+#define __openbsd_x86_has_futimes 1
 
 /* check SYS_getdents */
 #define __darwin_arm64_has_getdents 0
@@ -988,9 +1098,9 @@
 #define __netbsd_vax_has_getitimer 1
 #define __netbsd_x64_has_getitimer 1
 #define __netbsd_x86_has_getitimer 1
-#define __openbsd_generic_has_getitimer 0
-#define __openbsd_x64_has_getitimer 0
-#define __openbsd_x86_has_getitimer 0
+#define __openbsd_generic_has_getitimer 1
+#define __openbsd_x64_has_getitimer 1
+#define __openbsd_x86_has_getitimer 1
 
 /* check SYS_gettimeofday */
 #define __darwin_arm64_has_gettimeofday 1
@@ -1043,9 +1153,9 @@
 #define __netbsd_vax_has_gettimeofday 1
 #define __netbsd_x64_has_gettimeofday 1
 #define __netbsd_x86_has_gettimeofday 1
-#define __openbsd_generic_has_gettimeofday 0
-#define __openbsd_x64_has_gettimeofday 0
-#define __openbsd_x86_has_gettimeofday 0
+#define __openbsd_generic_has_gettimeofday 1
+#define __openbsd_x64_has_gettimeofday 1
+#define __openbsd_x86_has_gettimeofday 1
 
 /* check SYS_ioctl */
 #define __darwin_arm64_has_ioctl 1
@@ -1098,9 +1208,9 @@
 #define __netbsd_vax_has_ioctl 0
 #define __netbsd_x64_has_ioctl 0
 #define __netbsd_x86_has_ioctl 0
-#define __openbsd_generic_has_ioctl 0
-#define __openbsd_x64_has_ioctl 0
-#define __openbsd_x86_has_ioctl 0
+#define __openbsd_generic_has_ioctl 1
+#define __openbsd_x64_has_ioctl 1
+#define __openbsd_x86_has_ioctl 1
 
 /* check SYS_lstat */
 #define __darwin_arm64_has_lstat 1
@@ -1373,9 +1483,9 @@
 #define __netbsd_vax_has_mkdirat 1
 #define __netbsd_x64_has_mkdirat 1
 #define __netbsd_x86_has_mkdirat 1
-#define __openbsd_generic_has_mkdirat 0
-#define __openbsd_x64_has_mkdirat 0
-#define __openbsd_x86_has_mkdirat 0
+#define __openbsd_generic_has_mkdirat 1
+#define __openbsd_x64_has_mkdirat 1
+#define __openbsd_x86_has_mkdirat 1
 
 /* check SYS_newfstatat */
 #define __darwin_arm64_has_newfstatat 0
@@ -1483,9 +1593,9 @@
 #define __netbsd_vax_has_open 1
 #define __netbsd_x64_has_open 1
 #define __netbsd_x86_has_open 1
-#define __openbsd_generic_has_open 0
-#define __openbsd_x64_has_open 0
-#define __openbsd_x86_has_open 0
+#define __openbsd_generic_has_open 1
+#define __openbsd_x64_has_open 1
+#define __openbsd_x86_has_open 1
 
 /* check SYS_openat */
 #define __darwin_arm64_has_openat 1
@@ -1538,9 +1648,9 @@
 #define __netbsd_vax_has_openat 1
 #define __netbsd_x64_has_openat 1
 #define __netbsd_x86_has_openat 1
-#define __openbsd_generic_has_openat 0
-#define __openbsd_x64_has_openat 0
-#define __openbsd_x86_has_openat 0
+#define __openbsd_generic_has_openat 1
+#define __openbsd_x64_has_openat 1
+#define __openbsd_x86_has_openat 1
 
 /* check SYS_pause */
 #define __darwin_arm64_has_pause 0
@@ -1758,9 +1868,9 @@
 #define __netbsd_vax_has_renameat 1
 #define __netbsd_x64_has_renameat 1
 #define __netbsd_x86_has_renameat 1
-#define __openbsd_generic_has_renameat 0
-#define __openbsd_x64_has_renameat 0
-#define __openbsd_x86_has_renameat 0
+#define __openbsd_generic_has_renameat 1
+#define __openbsd_x64_has_renameat 1
+#define __openbsd_x86_has_renameat 1
 
 /* check SYS_renameat2 */
 #define __darwin_arm64_has_renameat2 0
@@ -1923,9 +2033,9 @@
 #define __netbsd_vax_has_setitimer 1
 #define __netbsd_x64_has_setitimer 1
 #define __netbsd_x86_has_setitimer 1
-#define __openbsd_generic_has_setitimer 0
-#define __openbsd_x64_has_setitimer 0
-#define __openbsd_x86_has_setitimer 0
+#define __openbsd_generic_has_setitimer 1
+#define __openbsd_x64_has_setitimer 1
+#define __openbsd_x86_has_setitimer 1
 
 /* check SYS_settimeofday */
 #define __darwin_arm64_has_settimeofday 1
@@ -1978,9 +2088,9 @@
 #define __netbsd_vax_has_settimeofday 1
 #define __netbsd_x64_has_settimeofday 1
 #define __netbsd_x86_has_settimeofday 1
-#define __openbsd_generic_has_settimeofday 0
-#define __openbsd_x64_has_settimeofday 0
-#define __openbsd_x86_has_settimeofday 0
+#define __openbsd_generic_has_settimeofday 1
+#define __openbsd_x64_has_settimeofday 1
+#define __openbsd_x86_has_settimeofday 1
 
 /* check SYS_stat */
 #define __darwin_arm64_has_stat 1
@@ -2198,9 +2308,9 @@
 #define __netbsd_vax_has_utimensat 1
 #define __netbsd_x64_has_utimensat 1
 #define __netbsd_x86_has_utimensat 1
-#define __openbsd_generic_has_utimensat 0
-#define __openbsd_x64_has_utimensat 0
-#define __openbsd_x86_has_utimensat 0
+#define __openbsd_generic_has_utimensat 1
+#define __openbsd_x64_has_utimensat 1
+#define __openbsd_x86_has_utimensat 1
 
 /* check SYS_utimes */
 #define __darwin_arm64_has_utimes 1
@@ -2253,6 +2363,6 @@
 #define __netbsd_vax_has_utimes 1
 #define __netbsd_x64_has_utimes 1
 #define __netbsd_x86_has_utimes 1
-#define __openbsd_generic_has_utimes 0
-#define __openbsd_x64_has_utimes 0
-#define __openbsd_x86_has_utimes 0
+#define __openbsd_generic_has_utimes 1
+#define __openbsd_x64_has_utimes 1
+#define __openbsd_x86_has_utimes 1

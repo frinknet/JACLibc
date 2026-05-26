@@ -57,9 +57,9 @@ xfind() {
   fi
 
   if [ -f "$gen" ] && grep -q "$CHECK" "$gen"; then
-    echo "🗸 found   - $file"
+    echo "🗸 found - $file"
   else
-    echo "🗴 missing - $file"
+    echo "🗴 empty - $file"
   fi
 }
 

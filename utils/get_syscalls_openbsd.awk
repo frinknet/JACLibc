@@ -5,6 +5,24 @@
 /^[[:space:]]*#/ { next }
 /^[[:space:]]*$/ { next }
 
+# Join backslash-continued lines
+{
+	# Strip trailing whitespace
+	sub(/[[:space:]]+$/, "")
+
+	# If line ends with \, strip the \, save to buffer, and read next line
+	if (sub(/\\$/, "")) {
+		buf = buf $0 " "
+		next
+	}
+
+	# No backslash: prepend buffer to current line and clear buffer
+	if (buf != "") {
+		$0 = buf $0
+		buf = ""
+	}
+}
+
 # Match syscall entries: number at start
 /^[0-9]+[[:space:]]/ {
 	num  = $1

@@ -1,5 +1,5 @@
 /**
- * NETBSD SYSCALLS IMPORTED  //  last updated: 2026-05-24 04:37:59 UTC
+ * NETBSD SYSCALLS IMPORTED  //  last updated: 2026-05-25 20:50:06 UTC
  * http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/kern/syscalls.master?rev=HEAD&content-type=text/plain
  */
 
