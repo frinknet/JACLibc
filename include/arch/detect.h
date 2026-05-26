@@ -1,4 +1,4 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 
 #if defined(JACL_ARCH)
 	#include JACL_HEADER(arch, JACL_ARCH)
@@ -22,6 +22,8 @@
 	#include <arch/mips64.h>
 #elif defined(__mips__)
 	#include <arch/mips32.h>
+#elif defined(__spu__) || defined(__SPU__)
+	#include <arch/spu.h>
 #elif defined(__powerpc64__) || defined(_ARCH_PPC64)
 	#include <arch/powerpc64.h>
 #elif defined(__powerpc__) || defined(_ARCH_PPC)
