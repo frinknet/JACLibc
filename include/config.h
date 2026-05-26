@@ -420,6 +420,10 @@ static inline void* __jacl_frame_address(int level) {
   #define JACL_UNROLL(n)
 #endif /* compiler check */
 
+#define VECTORIZE JACL_VECTORIZE
+#define VECTOR_WIDTH(w) JACL_VECTOR_WIDTH(w)
+#define UNROLL(n) JACL_UNROLL(n)
+
 /* ============================================================ */
 /* Vectorization Reporting                                      */
 /* ============================================================ */
