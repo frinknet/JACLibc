@@ -1,5 +1,5 @@
 /**
- * FREEBSD SYSCALLS IMPORTED  //  last updated: 2026-05-25 20:50:02 UTC
+ * FREEBSD SYSCALLS IMPORTED  //  last updated: 2026-05-26 19:47:11 UTC
  * https://cgit.freebsd.org/src/plain/sys/kern/syscalls.master
  */
 

@@ -1,5 +1,5 @@
 /**
- * DRAGONFLY FCNTL CONSTANTS  //  last updated: 2026-03-04 00:30:13 UTC
+ * DRAGONFLY FCNTL CONSTANTS  //  last updated: 2026-05-26 19:43:39 UTC
  * https://gitweb.dragonflybsd.org/dragonfly.git/blob_plain/master:/sys/sys/fcntl.h
  */
 

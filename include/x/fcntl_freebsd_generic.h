@@ -1,5 +1,5 @@
 /**
- * FREEBSD FCNTL CONSTANTS  //  last updated: 2026-03-04 00:30:06 UTC
+ * FREEBSD FCNTL CONSTANTS  //  last updated: 2026-05-26 19:43:34 UTC
  * https://cgit.freebsd.org/src/plain/sys/sys/fcntl.h
  */
 
@@ -30,8 +30,9 @@
 	X(O_CLOEXEC, 0x00100000) \
 	X(O_VERIFY, 0x00200000) \
 	X(O_PATH, 0x00400000) \
+	X(O_SYMLINK, 4194560) \
+	X(O_RESOLVE_BENEATH, 0x00800000) \
 	X(O_DSYNC, 0x01000000) \
-	X(O_RSYNC, 0x01000000) \
 	X(O_EMPTY_PATH, 0x02000000) \
 	X(O_NAMEDATTR, 0x04000000) \
 	X(O_XATTR, 0x04000000) \
@@ -82,6 +83,7 @@
 #define FCNTL_FD_FLAGS(X) \
 	X(FD_NONE, -200) \
 	X(FD_CLOEXEC, 1) \
+	X(FD_RESOLVE_BENEATH, 2) \
 	X(FD_CLOFORK, 4)
 
 /* Lock types */
@@ -93,6 +95,8 @@
 /* AT function flags */
 #define FCNTL_AT_FLAGS(X) \
 	X(AT_FDCWD, -100) \
+	X(AT_RENAME_NOREPLACE, 0x0001) \
+	X(AT_EACCESS, 0x0100) \
 	X(AT_SYMLINK_NOFOLLOW, 0x0200) \
 	X(AT_SYMLINK_FOLLOW, 0x0400) \
 	X(AT_REMOVEDIR, 0x0800) \

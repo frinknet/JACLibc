@@ -102,10 +102,11 @@ xstubs  linux      nios2
 xstubs  linux      or1k
 xstubs  linux      riscv32
 xstubs  linux      riscv64
+xstubs  linux      spu
 xstubs  linux      powerpc32
 xstubs  linux      powerpc64
 xstubs  linux      s390x
-xstubs  linux      sh4
+xstubs  linux      sh
 xstubs  linux      xtensa
 
 # Darwin

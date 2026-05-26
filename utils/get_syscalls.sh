@@ -130,12 +130,13 @@ xfiles  linux      arm32      "/arch/arm/tools/syscall.tbl"
 xfiles  linux      mips32     "/arch/mips/kernel/syscalls/syscall_n32.tbl"
 xfiles  linux      mips64     "/arch/mips/kernel/syscalls/syscall_n64.tbl"
 xfiles  linux      hppa       "/arch/parisc/kernel/syscalls/syscall.tbl"
+xfiles  linux      spu        "/arch/powerpc/kernel/syscalls/syscall.tbl"
 xfiles  linux      powerpc32  "/arch/powerpc/kernel/syscalls/syscall.tbl"
 xfiles  linux      powerpc64  "/arch/powerpc/kernel/syscalls/syscall.tbl"
 xfiles  linux      s390x      "/arch/s390/kernel/syscalls/syscall.tbl"
 xfiles  linux      sparc32    "/arch/sparc/kernel/syscalls/syscall.tbl"
 xfiles  linux      sparc64    "/arch/sparc/kernel/syscalls/syscall.tbl"
-xfiles  linux      sh4        "/arch/sh/kernel/syscalls/syscall.tbl"
+xfiles  linux      sh         "/arch/sh/kernel/syscalls/syscall.tbl"
 xfiles  linux      xtensa     "/arch/xtensa/kernel/syscalls/syscall.tbl"
 xstubs  linux      alpha
 xstubs  linux      arc
@@ -191,8 +192,6 @@ xstubs  dragonfly  x86
 xstubs  windows    x64
 xstubs  windows    x86
 xstubs  windows    arm64
-
-echo "dude"
 
 # Config
 grep -R "if JACL_HASSYS" "$ROOT" \

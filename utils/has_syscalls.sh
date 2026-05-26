@@ -70,12 +70,14 @@ xfind  linux      arm32
 xfind  linux      mips32
 xfind  linux      mips64
 xfind  linux      hppa
+xfind  linux      spu
 xfind  linux      powerpc32
 xfind  linux      powerpc64
+xfind  linux      spu
 xfind  linux      s390x
 xfind  linux      sparc32
 xfind  linux      sparc64
-xfind  linux      sh4
+xfind  linux      sh
 xfind  linux      xtensa
 xfind  linux      alpha
 xfind  linux      arc

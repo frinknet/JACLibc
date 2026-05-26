@@ -1,5 +1,5 @@
 /**
- * DARWIN FCNTL CONSTANTS  //  last updated: 2026-03-04 00:30:04 UTC
+ * DARWIN FCNTL CONSTANTS  //  last updated: 2026-05-26 19:43:32 UTC
  * https://raw.githubusercontent.com/apple-oss-distributions/xnu/main/bsd/sys/fcntl.h
  */
 
@@ -33,6 +33,7 @@
 	X(O_ALERT, 0x20000000) \
 	X(O_NOFOLLOW_ANY, 0x20000000) \
 	X(O_EXEC, 0x40000000) \
+	X(O_SEARCH, 1074790400) \
 	X(O_POPUP, 0x80000000)
 
 /* Fcntl commands */
@@ -79,6 +80,7 @@
 	X(F_POSIX, 0x040) \
 	X(F_SETPROTECTIONCLASS, 64) \
 	X(F_LOG2PHYS_EXT, 65) \
+	X(F_GETLKPID, 66) \
 	X(F_DUPFD_CLOEXEC, 67) \
 	X(F_SETBACKINGSTORE, 70) \
 	X(F_GETPATH_MTMINFO, 71) \

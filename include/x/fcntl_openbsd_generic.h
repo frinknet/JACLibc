@@ -1,5 +1,5 @@
 /**
- * OPENBSD FCNTL CONSTANTS  //  last updated: 2026-03-04 00:30:10 UTC
+ * OPENBSD FCNTL CONSTANTS  //  last updated: 2026-05-26 19:43:38 UTC
  * https://cvsweb.openbsd.org/checkout/src/sys/sys/fcntl.h
  */
 

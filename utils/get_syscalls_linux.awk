@@ -30,8 +30,14 @@ BEGIN {
     } else if (arch == "powerpc32") {
         valid_abi["32"] = 1
         valid_abi["common"] = 1
+        valid_abi["nospu"] = 1
     } else if (arch == "powerpc64") {
         valid_abi["64"] = 1
+        valid_abi["common"] = 1
+        valid_abi["nospu"] = 1
+    } else if (arch == "spu") {
+        valid_abi["32"] = 1
+        valid_abi["spu"] = 1
         valid_abi["common"] = 1
     } else {
         # Default: accept common and anything matching arch number

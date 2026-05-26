@@ -1,5 +1,5 @@
 /**
- * NETBSD FCNTL CONSTANTS  //  last updated: 2026-03-04 00:30:08 UTC
+ * NETBSD FCNTL CONSTANTS  //  last updated: 2026-05-26 19:43:36 UTC
  * http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/sys/fcntl.h?rev=HEAD&content-type=text/plain
  */
 
