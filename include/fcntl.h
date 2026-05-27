@@ -23,28 +23,13 @@ extern "C" {
 #endif
 
 #define X(name, value) name = value,
-/* Open flags */
 enum { FCNTL_O_FLAGS(X) };
-
-/* Fcntl commands */
 enum { FCNTL_F_COMMANDS(X) };
-
-/* File descriptor flags */
 enum { FCNTL_FD_FLAGS(X) };
-
-/* Lock types */
 enum { FCNTL_LOCK_TYPES(X) };
-
-/* Owner types */
 enum { FCNTL_OWNER_TYPES(X) };
-
-/* AT function flags */
 enum { FCNTL_AT_FLAGS(X) };
-
-/* POSIX advisory flags */
 enum { FCNTL_POSIX_FADV(X) };
-
-/* Seek constants */
 enum { FCNTL_SEEK(X) };
 #undef X
 

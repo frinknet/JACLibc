@@ -18,6 +18,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/ioctl.h>
 
 #if JACL_HAS_C23
 #define __STDC_VERSION_STDLIB_H__ 202311L
@@ -384,6 +385,44 @@ static inline char *mkdtemp(char *template) {
 
 #endif /* JACL_HAS_POSIX */
 
+/* ============================================================= */
+/* Pseudo-Terminal (XSI Extension)                               */
+/* ============================================================= */
+
+#if JACL_HAS_POSIX
+
+static inline int posix_openpt(int flags) {
+	return open("/dev/ptmx", flags);
+}
+
+static inline int grantpt(int fd) {
+	/* Linux kernel handles permissions automatically; no action needed */
+	(void)fd;
+	return 0;
+}
+
+static inline int unlockpt(int fd) {
+	int unlock = 0;
+	/* 0 = unlock (make slave available), 1 = lock */
+	return ioctl(fd, TIOCSPTLCK, &unlock);
+}
+
+static inline char *ptsname(int fd) {
+	static char buf[64];
+	int index;
+	if (ioctl(fd, TIOCGPTN, &index) < 0) return NULL;
+	snprintf(buf, sizeof(buf), "/dev/pts/%d", index);
+	return buf;
+}
+
+static inline int ptsname_r(int fd, char *buf, size_t buflen) {
+	int index;
+	if (ioctl(fd, TIOCGPTN, &index) < 0) return errno ? errno : EINVAL;
+	if ((size_t)snprintf(buf, buflen, "/dev/pts/%d", index) >= buflen) return ERANGE;
+	return 0;
+}
+
+#endif /* JACL_HAS_POSIX */
 
 #ifdef __cplusplus
 }

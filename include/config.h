@@ -554,9 +554,7 @@ static inline void* __jacl_frame_address(int level) {
 // Syscall checks
 #include JACL_HEADER(x, config_has)
 
-/* POSIX Version compliance */
-#define _POSIX_VERSION    201710L  /* POSIX.1-2017 */
-#define _POSIX2_VERSION   200809L  /* POSIX.2-2008 */
-#define _XOPEN_VERSION    700      /* XPG7 */
+// POSIX definitions
+#include JACL_HEADER(x, config_posix)
 
 #endif /* _CONFIG_H */
