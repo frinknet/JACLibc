@@ -41,6 +41,7 @@ BEGIN {
         valid_abi["common"] = 1
     } else {
         # Default: accept common and anything matching arch number
+        valid_abi["rlimit"] = 1
         valid_abi["common"] = 1
         valid_abi[arch] = 1
         valid_abi[64] = 1

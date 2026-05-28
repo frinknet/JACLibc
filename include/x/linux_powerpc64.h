@@ -1,5 +1,5 @@
 /**
- * LINUX SYSCALLS IMPORTED  //  last updated: 2026-05-26 19:46:55 UTC
+ * LINUX SYSCALLS IMPORTED  //  last updated: 2026-05-28 00:39:12 UTC
  * https://raw.githubusercontent.com/torvalds/linux/v6.17/arch/powerpc/kernel/syscalls/syscall.tbl
  */
 

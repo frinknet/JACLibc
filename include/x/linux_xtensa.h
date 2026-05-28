@@ -1,5 +1,5 @@
 /**
- * LINUX SYSCALLS IMPORTED  //  last updated: 2026-05-26 19:47:06 UTC
+ * LINUX SYSCALLS IMPORTED  //  last updated: 2026-05-28 00:39:23 UTC
  * https://raw.githubusercontent.com/torvalds/linux/v6.17/arch/xtensa/kernel/syscalls/syscall.tbl
  */
 

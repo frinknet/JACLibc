@@ -1,5 +1,5 @@
 /**
- * LINUX SYSCALLS IMPORTED  //  last updated: 2026-05-26 19:46:36 UTC
+ * LINUX SYSCALLS IMPORTED  //  last updated: 2026-05-28 00:38:52 UTC
  * https://raw.githubusercontent.com/torvalds/linux/v6.17/scripts/syscall.tbl
  */
 
@@ -165,6 +165,8 @@ X(SYS_setgroups, 159, setgroups)
 X(SYS_uname, 160, uname)
 X(SYS_sethostname, 161, sethostname)
 X(SYS_setdomainname, 162, setdomainname)
+X(SYS_getrlimit, 163, getrlimit)
+X(SYS_setrlimit, 164, setrlimit)
 X(SYS_getrusage, 165, getrusage)
 X(SYS_umask, 166, umask)
 X(SYS_prctl, 167, prctl)

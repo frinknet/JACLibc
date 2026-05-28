@@ -5,16 +5,11 @@
 # PREPROCESSING: Join backslash-continued lines
 # ============================================================================
 {
-	# Strip trailing whitespace
 	sub(/[[:space:]]+$/, "")
-
-	# If line ends with \, strip the \, save to buffer, and read next line
 	if (sub(/\\$/, "")) {
 		buf = buf $0 " "
 		next
 	}
-
-	# No backslash: prepend buffer to current line and clear buffer
 	if (buf != "") {
 		$0 = buf $0
 		buf = ""
@@ -28,78 +23,52 @@
 /^[[:space:]]*$/ { next }
 
 # ============================================================================
-# PARSING: Handle multi-line { } blocks
+# PARSING: Process single-line blocks (preprocessor already joined them)
 # ============================================================================
-{
-	if (inblock) {
-		block = block " " $0
-		if ($0 ~ /}[[:space:]]*(;.*)?$/) {
-			process_block(cur_num, block)
-			inblock = 0
-			block = ""
-		}
-		next
-	}
-
-	if (/^[0-9]+[[:space:]]/) {
-		cur_num = $1
-		line = $0
-		sub(/^[0-9]+[[:space:]]+/, "", line)
-
-		if (line !~ /\{/) {
-			next
-		}
-
-		if (line ~ /\{.*\}[[:space:]]*(;.*)?$/) {
-			process_block(cur_num, line)
-		} else if (line ~ /\{/) {
-			inblock = 1
-			block = line
-		}
+/^[0-9]+[[:space:]]/ {
+	if ($0 ~ /\{/) {
+		process_block($1, $0)
 	}
 }
 
 # ============================================================================
 # EXTRACTION: Parse syscall name from block
 # ============================================================================
-function process_block(num, blk,    m, name, candidate, suffix, parts, n, sparts) {
-	# 1. Try to find alias AFTER the closing brace }
+function process_block(num, blk,    name, idx, prefix, suffix) {
 	name = ""
-	
-	n = split(blk, parts, /\}/)
-	if (n > 1) {
-		suffix = parts[2]
-		gsub(/^[[:space:]]+/, "", suffix)
-		split(suffix, sparts, /[[:space:]]+/)
-		candidate = sparts[1]
-		
-		if (candidate != "" && candidate !~ /^;/ && candidate != "nosys" && candidate != "__nosys") {
-			name = candidate
+
+	# 1. Check for explicit alias after the LAST closing brace
+	if (match(blk, /.*\}[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
+		suffix = substr(blk, RSTART, RLENGTH)
+		sub(/.*\}[[:space:]]+/, "", suffix)
+
+		if (suffix != "nosys" && suffix != "__nosys" && suffix !~ /^o[a-z]/) {
+			name = suffix
 		}
 	}
 
-	# 2. If no alias found, extract from inside { ... }
+	# 2. If no alias, extract the function name right before the first '('
 	if (name == "") {
-		if (!match(blk, /([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\(/, m)) {
-			return
+		idx = index(blk, "(")
+		if (idx > 0) {
+			prefix = substr(blk, 1, idx - 1)
+			sub(/.*[^A-Za-z0-9_]/, "", prefix)
+			name = prefix
 		}
-		name = m[1]
 	}
 
-	# 3. Clean up prefixes
+	# 3. Clean up internal prefixes
 	sub(/^__/, "", name)
 	sub(/^sys_/, "", name)
 
 	# 4. Filter noise
-	if (name == "" || name == "nosys" || name == "enosys") {
+	if (name == "" || name == "nosys" || name == "enosys" || name ~ /^[0-9]/) {
 		return
 	}
 
-	# 5. Deduplication (keep first occurrence)
-	if (name in seen) {
-		return
-	}
-	
+	# 5. Deduplication
+	if (name in seen) return
 	seen[name] = 1
+
 	printf "X(SYS_%s, %d)\n", name, num
 }
