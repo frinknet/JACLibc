@@ -3,6 +3,7 @@
 #define _CORE_FORMAT_H
 #pragma once
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdbit.h>
 
@@ -657,8 +658,8 @@ static inline int __jacl_input_scan(FILE *stream, const char **in, size_t *read,
 }
 #define CASE(len, PRE, UPRE) case JACL_FMT_VAL(LENGTH, len): \
 	if (JACL_FMT_HAS(FLAG, spec, sign) && (JACL_FMT_GET(BASE, spec) == JACL_FMT_BASE_dec || JACL_FMT_GET(BASE, spec) == JACL_FMT_BASE_int)) { \
-		if (neg && val > (uintmax_t)-(PRE##_MIN + 1) + 1) { errno = ERANGE; val = (uintmax_t)PRE##_MIN; } \
-		else if (!neg && val > (uintmax_t)(PRE##_MAX)) { errno = ERANGE; val = (uintmax_t)(PRE##_MAX); } \
+		if (neg && val > (uintmax_t)-(PRE##_MIN + 1) + 1) { __errno_set(ERANGE); val = (uintmax_t)PRE##_MIN; } \
+		else if (!neg && val > (uintmax_t)(PRE##_MAX)) { __errno_set(ERANGE); val = (uintmax_t)(PRE##_MAX); } \
 		else if (neg) val = (uintmax_t)(-(intmax_t)val); \
 	} else if (neg) { \
 		val = (uintmax_t)(-(intmax_t)val); \
@@ -826,8 +827,8 @@ static inline int __jacl_input_float(FILE *stream, const char **in, size_t *read
 
 	// Build result
 	if (exp) epart += is_hex ? exp * 4 : exp;
-	if (epart > emax) { errno = ERANGE; *rtn = INFINITY; }
-	else if (epart < emin) { errno = ERANGE; *rtn = 0.0L; }
+	if (epart > emax) { __errno_set(ERANGE); *rtn = INFINITY; }
+	else if (epart < emin) { __errno_set(ERANGE); *rtn = 0.0L; }
 	else *rtn = (ipart + (long double)fpart / powl(base, digits - idig)) * powl(base == 16 ? 2.0L : 10.0L, epart);
 	if (mneg) *rtn = __jacl_signset_LDBL(*rtn);
 	if (ch != EOF) __jacl_read_back(ch, stream, in, pos);

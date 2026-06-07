@@ -130,9 +130,9 @@
 #include <config.h>
 #include <stdarg.h>  // va_arg()
 #include <stddef.h>  // offsetof
+#include <string.h>  // strcmp(), memset()
 #include <stdio.h>   // fprintf(), printf(), puts()
 #include <stdlib.h>  // exit()
-#include <string.h>  // strcmp(), memset()
 #include <inttypes.h>  // PRIdMAX, PRIuMAX
 #include <errno.h>
 #include <math.h>
@@ -262,8 +262,8 @@ static inline void __jacl_test_run(test_suite_t *suite, test_t *t) {
 	__jacl_test_skipped = 0;
 	__jacl_test_stats.total++;
 	suite->stats.total++;
-	errno = 0;
 
+	__errno_clr();
 	memset(__jacl_test_error, 0, sizeof(__jacl_test_error));
 
 	// Filter output: only print matching tests if filter is set
@@ -789,9 +789,9 @@ static inline void __jacl_test_report(void) {
 } while(0)
 
 #define ASSERT_ERRNO(err) do { \
-	if (!((errno) == (err))) { \
+	if (!((errno) == __errno_val(err))) { \
 		TEST_FAIL("Error should be set\n\tTEST: error %d is %d", \
-		          (errno), (err)); \
+		          (errno), __errno_val(err)); \
 	} \
 } while(0)
 

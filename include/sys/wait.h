@@ -28,15 +28,12 @@ extern "C" {
 #include <windows.h>
 #include <io.h>
 static inline pid_t wait(int *status) {
-	// No OS-wide process tracking, so just fail. Implement if you keep a process table.
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 static inline pid_t waitpid(pid_t pid, int *status, int options) {
 	HANDLE h = (HANDLE)_get_osfhandle(pid);
 	if (!h || h == INVALID_HANDLE_VALUE) {
-		errno = EINVAL;
-		return -1;
+		return (__errno_set(EINVAL), -1);
 	}
 	DWORD ms = (options & WNOHANG) ? 0 : INFINITE;
 	DWORD r = WaitForSingleObject(h, ms);
@@ -47,24 +44,16 @@ static inline pid_t waitpid(pid_t pid, int *status, int options) {
 		return pid;
 	}
 	if (r == WAIT_TIMEOUT) return 0;
-	errno = ECHILD;
-	return -1;
+	return (__errno_set(ECHILD), -1);
 }
 #elif defined(JACL_ARCH_WASM)
-// WASM/unsupported implementation---
-static inline pid_t wait(int *status)         { (void)status; errno = ENOSYS; return -1; }
-static inline pid_t waitpid(pid_t pid, int *status, int options)
-                              { (void)pid; (void)status; (void)options; errno = ENOSYS; return -1; }
+static inline pid_t wait(int *status)  { (void)status; return (__errno_set(ENOSYS), -1); }
+static inline pid_t waitpid(pid_t pid, int *status, int options) { (void)pid; (void)status; (void)options; return (__errno_set(ENOSYS), -1); }
 #else
-// POSIX implementation
 #include <sys/syscall.h>
 #include <unistd.h>
-static inline pid_t wait(int *status) {
-	return (pid_t)syscall(SYS_wait4, -1, status, 0, NULL);
-}
-static inline pid_t waitpid(pid_t pid, int *status, int options) {
-	return (pid_t)syscall(SYS_wait4, pid, status, options, NULL);
-}
+static inline pid_t wait(int *status) { return (pid_t)syscall(SYS_wait4, -1, status, 0, NULL); }
+static inline pid_t waitpid(pid_t pid, int *status, int options) { return (pid_t)syscall(SYS_wait4, pid, status, options, NULL); }
 #endif
 
 #ifdef __cplusplus

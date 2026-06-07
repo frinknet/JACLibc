@@ -49,8 +49,7 @@ static inline int ioctl(int fd, unsigned long request, ...) {
 
 	return (int)syscall(SYS_ioctl, fd, request, arg);
 #else
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 #endif
 }
 

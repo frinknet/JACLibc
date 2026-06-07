@@ -103,14 +103,20 @@ static int __nftw_walk(const char *path, int (*fn)(const char *, const struct st
 					else snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
 
 					/* Compute base using splitname; preserve errno across call */
-					int saved_errno = errno;
+					int olderr = __errno_get();
 					char sub_copy[PATH_MAX];
+
 					strncpy(sub_copy, subpath, sizeof(sub_copy) - 1);
+
 					sub_copy[sizeof(sub_copy) - 1] = '\0';
+
 					char *dir_ptr, *base_ptr;
+
 					splitname(sub_copy, &dir_ptr, &base_ptr);
+
 					int child_base = base_ptr ? (int)(base_ptr - sub_copy) : 0;
-					errno = saved_errno;
+
+					__errno_set(olderr);
 
 					ret = __nftw_walk(subpath, fn, nopenfd, flags, level + 1, child_base, root_dev);
 				}
@@ -136,8 +142,8 @@ static int __nftw_walk(const char *path, int (*fn)(const char *, const struct st
 /* ============================================================================ */
 
 static inline int nftw(const char *path, int (*fn)(const char *, const struct stat *, int, struct FTW *), int nopenfd, int flags) {
-	if (!path || !fn) { errno = EINVAL; return -1; }
-	if (nopenfd < 1) { errno = EINVAL; return -1; }
+	if (!path || !fn) return (__errno_set(EINVAL), -1);
+	if (nopenfd < 1) return (__errno_set(EINVAL), -1);
 
 	dev_t root_dev = 0;
 

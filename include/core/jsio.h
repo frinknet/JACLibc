@@ -85,11 +85,7 @@ jsio_t* js_create(jsio_type_t type, uint32_t klen, uint32_t vlen) {
 	size_t len = sizeof(jsio_t) + klen + (type == JS_TYPE_STRING ? vlen + 1 : 0);
 	jsio_t* x = (jsio_t*)malloc(len);
 
-	if (!x) {
-		errno = ENOMEM;
-
-		return NULL;
-	}
+	if (!x) { return (__errno_set(ENOMEM), NULL); }
 
 	memset(x, 0, sizeof(jsio_t));
 
@@ -176,9 +172,7 @@ char* js_path(jsio_t* v) {
 		if (!segments[n]) {
 			for (int j = 0; j < n; j++) free(segments[j]);
 
-			errno = ENOMEM;
-
-			return NULL;
+			return (__errno_set(ENOMEM), NULL);
 		}
 
 		n++;
@@ -193,9 +187,7 @@ char* js_path(jsio_t* v) {
 	if (!path) {
 		for (int i = 0; i < n; i++) free(segments[i]);
 
-		errno = ENOMEM;
-
-		return NULL;
+		return (__errno_set(ENOMEM), NULL);
 	}
 
 	path[0] = 0;
@@ -226,11 +218,7 @@ jsio_t* js_setkey(jsio_t* x, const char* key) {
 	size_t klen = strlen(key);
 	char* nk = (char*)realloc(x->key, klen + 1);
 
-	if (!nk) {
-		errno = ENOMEM;
-
-		return NULL;  // or return x->key to leave unchanged
-	}
+	if (!nk) return (__errno_set(ENOMEM), NULL);
 
 	memcpy(nk, key, klen + 1);
 
@@ -483,11 +471,7 @@ static fd_buf_t fd_bufs[JS_MAX_FDS] = {0};
 static bool fd_inits[JS_MAX_FDS] = {0};
 
 static ssize_t js_read(int fd, void *buf, size_t count) {
-	if (fd < 0 || fd >= JS_MAX_FDS || !buf) {
-		errno = EBADF;
-
-		return -1;
-	}
+	if (fd < 0 || fd >= JS_MAX_FDS || !buf) return (__errno_set(EBADF), -1);
 
 	if (count == 0) return 0;
 
@@ -503,11 +487,7 @@ static ssize_t js_read(int fd, void *buf, size_t count) {
 }
 
 static ssize_t js_write(int fd, const void *buf, size_t count) {
-	if (fd < 0 || fd >= JS_MAX_FDS || !buf) {
-		errno = EBADF;
-
-		return -1;
-	}
+	if (fd < 0 || fd >= JS_MAX_FDS || !buf) return (__errno_set(EBADF), -1);
 
 	if (count == 0) return 0;
 
@@ -589,11 +569,7 @@ static jsio_t* js_parse_string(const char* s, size_t* i) {
 	size_t unescaped_len = raw_len - escaped_count;
 	char* substr = (char*)malloc(unescaped_len + 1);
 
-	if (!substr) {
-		errno = ENOMEM;
-
-		return NULL;
-	}
+	if (!substr) return (__errno_set(ENOMEM), NULL);
 
 	size_t src = start;
 	size_t dst = 0;
@@ -666,9 +642,7 @@ static jsio_t* js_parse_object(const char* s, size_t* i) {
 		if (!key) {
 			js_delete(o);
 
-			errno = ENOMEM;
-
-			return NULL;
+			return (__errno_set(ENOMEM), NULL);
 		}
 
 		while (*i < l && s[*i] != ':') (*i)++;
@@ -722,33 +696,21 @@ static char* js_stringify_value(jsio_t* v);
 static char* js_stringify_null(jsio_t* v) {
 	char* result = strdup("null");
 
-	if (!result) {
-		errno = ENOMEM;
-
-		return NULL;
-	}
+	if (!result) return (__errno_set(ENOMEM), NULL);
 
 	return result;
 }
 static char* js_stringify_boolean(jsio_t* v) {
 	char* result = strdup(v->value.num ? "true" : "false");
 
-	if (!result) {
-		errno = ENOMEM;
-
-		return NULL;
-	}
+	if (!result) return (__errno_set(ENOMEM), NULL);
 
 	return result;
 }
 static char* js_stringify_number(jsio_t* v) {
 	char* buf = (char*)malloc(32);
 
-	if (!buf) {
-		errno = ENOMEM;
-
-		return NULL;
-	}
+	if (!buf) return (__errno_set(ENOMEM), NULL);
 
 	snprintf(buf, 32, "%.17g", v->value.num);
 
@@ -767,11 +729,7 @@ static char* js_stringify_string(jsio_t* v) {
 
 	char* buf = malloc(need);
 
-	if (!buf) {
-		errno = ENOMEM;
-
-		return NULL;
-	}
+	if (!buf) return (__errno_set(ENOMEM), NULL);
 
 	char* p = buf + 1;
 

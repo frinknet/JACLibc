@@ -313,7 +313,7 @@ static void __jacl_aio_thread_worker(struct __jacl_aio_thread_pool *pool) {
 				if (signo > 0 && signo < NSIG) {
 					union sigval val = {.sival_ptr = (void *)cb};
 
-					if (sigqueue(getpid(), signo, val) < 0 && errno == EAGAIN) kill(getpid(), signo);
+					if (sigqueue(getpid(), signo, val) < 0 && __errno_chk(EAGAIN)) kill(getpid(), signo);
 				}
 			} else if (notify == SIGEV_THREAD && notify_func) {
 				union sigval val = {.sival_ptr = (void *)cb};
@@ -374,8 +374,7 @@ static inline int __jacl_aio_queue_fallback(struct aiocb *cb) {
 	int next_tail = (__jacl_thread_pool.queue_tail + 1) % __jacl_thread_pool.queue_size;
 	if (next_tail == __jacl_thread_pool.queue_head) {
 		pthread_mutex_unlock(&__jacl_thread_pool.lock);
-		errno = EAGAIN;
-		return -1;
+		return (__errno_set(EAGAIN), -1);
 	}
 
 	__jacl_thread_pool.queue[__jacl_thread_pool.queue_tail] = cb;
@@ -416,9 +415,7 @@ static inline int __jacl_aio_init_ring(unsigned entries) {
 	int fd = (int)syscall(SYS_io_uring_setup, entries, &p);
 
 	if (fd < 0) {
-		if (errno == EPERM || errno == ENOSYS || errno == EOPNOTSUPP) {
-			atomic_store_explicit(&__jacl_ring.use_fallback, 1, memory_order_release);
-		}
+		if (__errno_chk(EPERM) || __errno_chk(ENOSYS) || __errno_chk(EOPNOTSUPP)) atomic_store_explicit(&__jacl_ring.use_fallback, 1, memory_order_release);
 
 		atomic_store_explicit(&__jacl_ring.initialized, 1, memory_order_release);
 		pthread_mutex_unlock(&__jacl_thread_pool.lock);
@@ -522,7 +519,7 @@ static inline void __jacl_aio_reap_cq(void) {
 			if (notify == SIGEV_SIGNAL) {
 				if (signo > 0 && signo < NSIG) {
 					union sigval val = {.sival_ptr = (void *)cb};
-					if (sigqueue(getpid(), signo, val) < 0 && errno == EAGAIN) {
+					if (sigqueue(getpid(), signo, val) < 0 && __errno_chk(EAGAIN)) {
 						kill(getpid(), signo);
 					}
 				}
@@ -558,13 +555,13 @@ static inline void aio_init(const struct aioinit *init) {
 
 static inline int aio_read(struct aiocb *cb) {
 	int err = __jacl_validate_sigevent(cb);
-	if (err != 0) { errno = err; return -1; }
+	if (err != 0) return (__errno_set(err), -1);
 
 	err = __jacl_validate_args(cb);
-	if (err != 0) { errno = err; return -1; }
+	if (err != 0) return (__errno_set(err), -1);
 
 	err = __jacl_check_fd_access(cb->aio_fildes, 0);
-	if (err != 0) { errno = err; return -1; }
+	if (err != 0) return (__errno_set(err), -1);
 
 	if (__jacl_aio_init_ring(1024) == 0) {
 		struct __jacl_uring_sqe *sqe = __jacl_aio_get_sqe();
@@ -585,13 +582,13 @@ static inline int aio_read(struct aiocb *cb) {
 
 static inline int aio_write(struct aiocb *cb) {
 	int err = __jacl_validate_sigevent(cb);
-	if (err != 0) { errno = err; return -1; }
+	if (err != 0) return (__errno_set(err), -1);
 
 	err = __jacl_validate_args(cb);
-	if (err != 0) { errno = err; return -1; }
+	if (err != 0) return (__errno_set(err), -1);
 
 	err = __jacl_check_fd_access(cb->aio_fildes, 1);
-	if (err != 0) { errno = err; return -1; }
+	if (err != 0) return (__errno_set(err), -1);
 
 	if (__jacl_aio_init_ring(1024) == 0) {
 		struct __jacl_uring_sqe *sqe = __jacl_aio_get_sqe();
@@ -613,10 +610,10 @@ static inline int aio_write(struct aiocb *cb) {
 static inline int aio_fsync(int op, struct aiocb *cb) {
 	(void)op;
 	int err = __jacl_validate_sigevent(cb);
-	if (err != 0) { errno = err; return -1; }
+	if (err != 0) return (__errno_set(err), -1);
 
 	err = __jacl_validate_args(cb);
-	if (err != 0) { errno = err; return -1; }
+	if (err != 0) return (__errno_set(err), -1);
 
 	if (__jacl_aio_init_ring(1024) == 0) {
 		struct __jacl_uring_sqe *sqe = __jacl_aio_get_sqe();
@@ -632,7 +629,7 @@ static inline int aio_fsync(int op, struct aiocb *cb) {
 	return __jacl_aio_queue_fallback(cb);
 }
 
-static inline int aio_mlock(struct aiocb *cb) { (void)cb; errno = ENOSYS; return -1; }
+static inline int aio_mlock(struct aiocb *cb) { (void)cb; return (__errno_set(ENOSYS), -1); }
 
 static inline int aio_error(const struct aiocb *cb) {
 	if (!cb) return EINVAL;
@@ -647,24 +644,24 @@ static inline int aio_error(const struct aiocb *cb) {
 }
 
 static inline ssize_t aio_return(struct aiocb *cb) {
-	if (!cb) { errno = EINVAL; return -1; }
+	if (!cb) return (__errno_set(EINVAL), -1);
 	int err = aio_error(cb);
-	if (err == EINPROGRESS) { errno = err; return -1; }
-	if (cb->__jacl_state == 2 || cb->__jacl_state == 3) { errno = cb->__jacl_errno_val; return -1; }
+	if (err == EINPROGRESS) return (__errno_set(err), -1);
+	if (cb->__jacl_state == 2 || cb->__jacl_state == 3) return (__errno_set(cb->__jacl_errno_val), -1);
 	return cb->__jacl_result;
 }
 
 static inline int aio_suspend(const struct aiocb *const cbs[], int n, const struct timespec *timeout) {
-	if (!cbs || n <= 0) { errno = EINVAL; return -1; }
+	if (!cbs || n <= 0) return (__errno_set(EINVAL), -1);
 	__jacl_aio_reap_cq();
 
 	for (int i = 0; i < n; i++) if (cbs[i] && cbs[i]->__jacl_state != 0) return 0;
 
-	if (__jacl_ring.fd < 0) { errno = EINVAL; return -1; }
+	if (__jacl_ring.fd < 0) return (__errno_set(EINVAL), -1);
 
 	long r = syscall(SYS_io_uring_enter, __jacl_ring.fd, 0, 1, JACL_IORING_ENTER_GETEVENTS,
 					timeout ? (void *)timeout : NULL, sizeof(struct timespec));
-	if (r < 0 && errno != EINTR) return -1;
+	if (r < 0 && __errno_chk(EINTR)) return -1;
 
 	__jacl_aio_reap_cq();
 	for (int i = 0; i < n; i++) if (cbs[i] && cbs[i]->__jacl_state != 0) return 0;
@@ -702,8 +699,8 @@ static inline int aio_cancel(int fd, struct aiocb *cb) {
 }
 
 static inline int lio_listio(int mode, struct aiocb *const cb[], int nent, struct sigevent *sig) {
-	if (nent <= 0 || cb == NULL) { errno = EINVAL; return -1; }
-	if (sig != NULL) { errno = EINVAL; return -1; }
+	if (nent <= 0 || cb == NULL) return (__errno_set(EINVAL), -1);
+	if (sig != NULL) return (__errno_set(EINVAL), -1);
 
 	for (int i = 0; i < nent; i++) {
 		if (cb[i] == NULL) continue;
@@ -711,20 +708,17 @@ static inline int lio_listio(int mode, struct aiocb *const cb[], int nent, struc
 		if (cb[i]->aio_lio_opcode != LIO_READ &&
 		    cb[i]->aio_lio_opcode != LIO_WRITE &&
 		    cb[i]->aio_lio_opcode != LIO_NOP) {
-			errno = EINVAL;
-			return -1;
+			return (__errno_set(EINVAL), -1);
 		}
 
 		if (cb[i]->aio_lio_opcode != LIO_NOP && cb[i]->aio_fildes < 0) {
-			errno = EBADF;
-			return -1;
+			return (__errno_set(EBADF), -1);
 		}
 
 		if (cb[i]->aio_sigevent.sigev_notify != SIGEV_NONE &&
 		    cb[i]->aio_sigevent.sigev_notify != SIGEV_SIGNAL &&
 		    cb[i]->aio_sigevent.sigev_notify != SIGEV_THREAD) {
-			errno = EINVAL;
-			return -1;
+			return (__errno_set(EINVAL), -1);
 		}
 	}
 
@@ -769,7 +763,7 @@ static inline int lio_listio(int mode, struct aiocb *const cb[], int nent, struc
 }
 
 static inline int aio_submit_batch(struct aiocb *cbs[], int n) {
-	if (!cbs || n <= 0) { errno = EINVAL; return -1; }
+	if (!cbs || n <= 0) return (__errno_set(EINVAL), -1);
 
 	int submitted = 0;
 	for (int i = 0; i < n; i++) {
@@ -812,7 +806,7 @@ static inline void aio_destroy(void) {
 	}
 }
 static inline int aio_read(struct aiocb *cb) {
-	if (!cb) { errno = EINVAL; return -1; }
+	if (!cb) return (__errno_set(EINVAL), -1);
 
 	int ret = syscall(SYS_aio_read, cb);
 	if (ret < 0) return -1;
@@ -826,7 +820,7 @@ static inline int aio_read(struct aiocb *cb) {
 	return 0;
 }
 static inline int aio_write(struct aiocb *cb) {
-	if (!cb) { errno = EINVAL; return -1; }
+	if (!cb) return (__errno_set(EINVAL), -1);
 
 	int ret = syscall(SYS_aio_write, cb);
 	if (ret < 0) return -1;
@@ -841,27 +835,27 @@ static inline int aio_write(struct aiocb *cb) {
 }
 static inline int aio_fsync(int op, struct aiocb *cb) {
 	(void)op;
-	if (!cb) { errno = EINVAL; return -1; }
+	if (!cb) return (__errno_set(EINVAL), -1);
 	return syscall(SYS_aio_fsync, cb);
 }
-static inline int aio_mlock(struct aiocb *cb) { (void)cb; errno = ENOSYS; return -1; }
+static inline int aio_mlock(struct aiocb *cb) { (void)cb; return (__errno_set(ENOSYS), -1); }
 static inline int aio_error(const struct aiocb *cb) {
 	if (!cb) return EINVAL;
 	return syscall(SYS_aio_error, cb);
 }
 static inline ssize_t aio_return(struct aiocb *cb) {
-	if (!cb) { errno = EINVAL; return -1; }
+	if (!cb) return (__errno_set(EINVAL), -1);
 	return syscall(SYS_aio_return, cb);
 }
 static inline int aio_suspend(const struct aiocb *const cbs[], int n, const struct timespec *timeout) {
-	if (!cbs || n <= 0) { errno = EINVAL; return -1; }
+	if (!cbs || n <= 0) return (__errno_set(EINVAL), -1);
 
 	if (__jacl_kq >= 0) {
 		struct kevent ev;
 		int ret = kevent(__jacl_kq, NULL, 0, &ev, 1, timeout);
 		if (ret > 0) return 0;
-		if (errno == EINTR) return -1;
-		if (timeout && ret == 0) { errno = EAGAIN; return -1; }
+		if (__errno_chk(EINTR)) return -1;
+		if (timeout && ret == 0) return (__errno_set(EAGAIN), -1);
 	}
 
 	return syscall(SYS_aio_suspend, cbs, n, timeout);
@@ -871,7 +865,7 @@ static inline int aio_cancel(int fd, struct aiocb *cb) {
 	return syscall(SYS_aio_cancel, fd, cb);
 }
 static inline int lio_listio(int mode, struct aiocb *const cbs[], int n, struct sigevent *sig) {
-	if (!cbs || n <= 0) { errno = EINVAL; return -1; }
+	if (!cbs || n <= 0) return (__errno_set(EINVAL), -1);
 	return syscall(SYS_lio_listio, mode, cbs, n, sig);
 }
 static inline int aio_submit_batch(struct aiocb *cbs[], int n) {
@@ -906,13 +900,13 @@ static inline void aio_init(const struct aioinit *init) { (void)init; }
 static inline void aio_destroy(void) { }
 
 static inline int aio_read(struct aiocb *cb) {
-	if (!cb) { errno = EINVAL; return -1; }
+	if (!cb) return (__errno_set(EINVAL), -1);
 
 	HANDLE h = __jacl_win_get_handle(cb->aio_fildes);
-	if (h == INVALID_HANDLE_VALUE) { errno = EBADF; return -1; }
+	if (h == INVALID_HANDLE_VALUE) return (__errno_set(EBADF), -1);
 
 	OVERLAPPED *ol = (OVERLAPPED *)calloc(1, sizeof(OVERLAPPED));
-	if (!ol) { errno = ENOMEM; return -1; }
+	if (!ol) return (__errno_set(ENOMEM), -1);
 	ol->Offset = cb->aio_offset & 0xFFFFFFFF;
 	ol->OffsetHigh = (cb->aio_offset >> 32) & 0xFFFFFFFF;
 
@@ -935,13 +929,13 @@ static inline int aio_read(struct aiocb *cb) {
 }
 
 static inline int aio_write(struct aiocb *cb) {
-	if (!cb) { errno = EINVAL; return -1; }
+	if (!cb) return (__errno_set(EINVAL), -1);
 
 	HANDLE h = __jacl_win_get_handle(cb->aio_fildes);
-	if (h == INVALID_HANDLE_VALUE) { errno = EBADF; return -1; }
+	if (h == INVALID_HANDLE_VALUE) return (__errno_set(EBADF), -1);
 
 	OVERLAPPED *ol = (OVERLAPPED *)calloc(1, sizeof(OVERLAPPED));
-	if (!ol) { errno = ENOMEM; return -1; }
+	if (!ol) return (__errno_set(ENOMEM), -1);
 	ol->Offset = cb->aio_offset & 0xFFFFFFFF;
 	ol->OffsetHigh = (cb->aio_offset >> 32) & 0xFFFFFFFF;
 
@@ -965,13 +959,13 @@ static inline int aio_write(struct aiocb *cb) {
 
 static inline int aio_fsync(int op, struct aiocb *cb) {
 	(void)op;
-	if (!cb) { errno = EINVAL; return -1; }
+	if (!cb) return (__errno_set(EINVAL), -1);
 	HANDLE h = __jacl_win_get_handle(cb->aio_fildes);
-	if (h == INVALID_HANDLE_VALUE) { errno = EBADF; return -1; }
+	if (h == INVALID_HANDLE_VALUE) return (__errno_set(EBADF), -1);
 	return FlushFileBuffers(h) ? 0 : -1;
 }
 
-static inline int aio_mlock(struct aiocb *cb) { (void)cb; errno = ENOSYS; return -1; }
+static inline int aio_mlock(struct aiocb *cb) { (void)cb; return (__errno_set(ENOSYS), -1); }
 
 static inline int aio_error(const struct aiocb *cb) {
 	if (!cb) return EINVAL;
@@ -979,8 +973,8 @@ static inline int aio_error(const struct aiocb *cb) {
 }
 
 static inline ssize_t aio_return(struct aiocb *cb) {
-	if (!cb) { errno = EINVAL; return -1; }
-	if (cb->__jacl_state == 0) { errno = EINPROGRESS; return -1; }
+	if (!cb) return (__errno_set(EINVAL), -1);
+	if (cb->__jacl_state == 0) return (__errno_set(EINPROGRESS), -1);
 
 	if (cb->__jacl_private) {
 		free(cb->__jacl_private);
@@ -990,25 +984,25 @@ static inline ssize_t aio_return(struct aiocb *cb) {
 	return cb->__jacl_result;
 }
 
-static inline int aio_suspend(const struct aiocb *const cbs[], int n, const struct timespec *timeout) {  (void)cbs; (void)n; (void)timeout; errno = ENOSYS; return -1; }
+static inline int aio_suspend(const struct aiocb *const cbs[], int n, const struct timespec *timeout) {  (void)cbs; (void)n; (void)timeout; return (__errno_set(ENOSYS), -1); }
 static inline int aio_cancel(int fd, struct aiocb *cb) { (void)fd; (void)cb; return AIO_NOTCANCELED; }
-static inline int lio_listio(int mode, struct aiocb *const cbs[], int n, struct sigevent *sig) { (void)mode; (void)cbs; (void)n; (void)sig; errno = ENOSYS; return -1; }
-static inline int aio_submit_batch(struct aiocb *cbs[], int n) { (void)cbs; (void)n; errno = ENOSYS; return -1; }
+static inline int lio_listio(int mode, struct aiocb *const cbs[], int n, struct sigevent *sig) { (void)mode; (void)cbs; (void)n; (void)sig; return (__errno_set(ENOSYS), -1); }
+static inline int aio_submit_batch(struct aiocb *cbs[], int n) { (void)cbs; (void)n; return (__errno_set(ENOSYS), -1); }
 
 #else
 
 static inline void aio_init(const struct aioinit *init) { (void)init; }
 static inline void aio_destroy(void) { }
-static inline int aio_read(struct aiocb *cb) { (void)cb; errno = ENOSYS; return -1; }
-static inline int aio_write(struct aiocb *cb) { (void)cb; errno = ENOSYS; return -1; }
-static inline int aio_fsync(int op, struct aiocb *cb) { (void)op; (void)cb; errno = ENOSYS; return -1; }
-static inline int aio_mlock(struct aiocb *cb) { (void)cb; errno = ENOSYS; return -1; }
+static inline int aio_read(struct aiocb *cb) { (void)cb; return (__errno_set(ENOSYS), -1); }
+static inline int aio_write(struct aiocb *cb) { (void)cb; return (__errno_set(ENOSYS), -1); }
+static inline int aio_fsync(int op, struct aiocb *cb) { (void)op; (void)cb; return (__errno_set(ENOSYS), -1); }
+static inline int aio_mlock(struct aiocb *cb) { (void)cb; return (__errno_set(ENOSYS), -1); }
 static inline int aio_error(const struct aiocb *cb) { (void)cb; return ENOSYS; }
-static inline ssize_t aio_return(struct aiocb *cb) { (void)cb; errno = ENOSYS; return -1; }
-static inline int aio_suspend(const struct aiocb *const cbs[], int n, const struct timespec *timeout) { (void)cbs; (void)n; (void)timeout; errno = ENOSYS; return -1; }
+static inline ssize_t aio_return(struct aiocb *cb) { (void)cb; return (__errno_set(ENOSYS), -1); }
+static inline int aio_suspend(const struct aiocb *const cbs[], int n, const struct timespec *timeout) { (void)cbs; (void)n; (void)timeout; return (__errno_set(ENOSYS), -1); }
 static inline int aio_cancel(int fd, struct aiocb *cb) { (void)fd; (void)cb; return AIO_NOTCANCELED; }
-static inline int lio_listio(int mode, struct aiocb *const cbs[], int n, struct sigevent *sig) { (void)mode; (void)cbs; (void)n; (void)sig; errno = ENOSYS; return -1; }
-static inline int aio_submit_batch(struct aiocb *cbs[], int n) { (void)cbs; (void)n; errno = ENOSYS; return -1; }
+static inline int lio_listio(int mode, struct aiocb *const cbs[], int n, struct sigevent *sig) { (void)mode; (void)cbs; (void)n; (void)sig; return (__errno_set(ENOSYS), -1); }
+static inline int aio_submit_batch(struct aiocb *cbs[], int n) { (void)cbs; (void)n; return (__errno_set(ENOSYS), -1); }
 
 #endif /* JACL_OS_* */
 

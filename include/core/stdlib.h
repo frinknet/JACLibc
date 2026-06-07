@@ -23,6 +23,17 @@ static struct {
 	int used;
 } __jacl_exit_handlers[__JACL_ATEXIT_MAX];
 
+unsigned 	     __jacl_rand_seed = RAND_MAX;
+unsigned short __jacl_rand48_seed[3] = { 0x330E, 0xABCD, 0x1234 };
+unsigned short __jacl_rand48_mult[3] = { 0xE66D, 0xDEEC, 0x0005 };
+unsigned short __jacl_rand48_add = 0x000B;
+unsigned short __jacl_rand48_oldseed[3] = { 0, 0, 0 };
+
+uint_least32_t __jacl_random_state_default[31] = {0};
+uint_least32_t *__jacl_random_state = __jacl_random_state_default;
+uint_least32_t *__jacl_random_fptr = &__jacl_random_state_default[3];
+uint_least32_t *__jacl_random_rptr = &__jacl_random_state_default[0];
+
 static int __jacl_exit_count = 0;
 
 #if JACL_HAS_C11
@@ -93,6 +104,29 @@ noreturn void quick_exit(int status) {
 
 #endif /* JACL_HAS_C11 */
 
+
+#if JACL_HAS_C99
+noreturn void _Exit(int status) { _exit(status); }
+#endif
+
+void abort(void) {
+	raise(SIGABRT);  // Standard attempt
+
+	#if JACL_ARCH_X64 || JACL_ARCH_X86
+		__asm__ volatile ("ud2");  // Invalid opcode
+	#elif JACL_ARCH_ARM64 || JACL_ARCH_ARM32
+			__asm__ volatile ("brk #0");	// Breakpoint
+	#elif JACL_ARCH_RISCV
+			__asm__ volatile ("ebreak");	// Environment break
+	#elif JACL_ARCH_WASM
+			__asm__ volatile ("unreachable");  // WASM trap
+	#else
+			*(volatile int*)0 = 0;	// Universal fallback
+	#endif
+
+	for(;;) {}	// The heat death of the universe
+}
+
 void exit(int status) {
 	__jacl_exit_run_handlers();
 
@@ -103,101 +137,6 @@ void exit(int status) {
 
 		abort();
 	#endif
-}
-
-/* ============================================================= */
-/* Sorting & Searching                                           */
-/* ============================================================= */
-
-static inline void __jacl_sort_swap(unsigned char* a, unsigned char* b, size_t size) {
-	while (size--) {
-		unsigned char tmp = *a;
-
-		*a++ = *b;
-		*b++ = tmp;
-	}
-}
-
-static void __jacl_sort_again(void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*)) {
-	if (nmemb < 2) return;
-
-	unsigned char* arr = (unsigned char*)base;
-
-	// Median-of-three pivot selection
-	size_t low = 0;
-	size_t high = nmemb - 1;
-	size_t mid = low + (high - low) / 2;
-
-	// Sort low, mid, high
-	if (compar(arr + low * size, arr + mid * size) > 0) __jacl_sort_swap(arr + low * size, arr + mid * size, size);
-	if (compar(arr + mid * size, arr + high * size) > 0) __jacl_sort_swap(arr + mid * size, arr + high * size, size);
-	if (compar(arr + low * size, arr + mid * size) > 0) __jacl_sort_swap(arr + low * size, arr + mid * size, size);
-
-	// Allocate pivot storage
-	void* pivot = malloc(size);
-
-	if (!pivot) {
-		// Fallback to bubble sort
-		for (size_t i = 0; i < nmemb - 1; i++) {
-			for (size_t j = 0; j < nmemb - i - 1; j++) {
-				if (compar(arr + j * size, arr + (j + 1) * size) > 0) __jacl_sort_swap(arr + j * size, arr + (j + 1) * size, size);
-			}
-		}
-
-		return;
-	}
-
-	memcpy(pivot, arr + mid * size, size);
-
-	// Partition
-	size_t i = 0;
-	size_t j = nmemb - 1;
-
-	while (1) {
-		while (i < nmemb && compar(arr + i * size, pivot) < 0) i++;
-		while (j > 0 && compar(arr + j * size, pivot) > 0) j--;
-
-		if (i >= j) break;
-
-		__jacl_sort_swap(arr + i * size, arr + j * size, size);
-
-		i++;
-
-		if (j > 0) j--;
-	}
-
-	free(pivot);
-
-	// Recursively sort partitions
-	if (j > 0) __jacl_sort_again(arr, j + 1, size, compar);
-	if (i < nmemb - 1) __jacl_sort_again(arr + (i + 1) * size, nmemb - i - 1, size, compar);
-}
-
-void qsort(void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*)) {
-	if (!base || !compar || size == 0 || nmemb < 2) return;
-
-	__jacl_sort_again(base, nmemb, size, compar);
-}
-
-void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*)) {
-	if (!key || !base || !compar || size == 0 || nmemb == 0)
-		return NULL;
-
-	const unsigned char* arr = (const unsigned char*)base;
-	size_t low = 0;
-	size_t high = nmemb;
-
-	while (low < high) {
-		size_t mid = low + (high - low) / 2;
-		const void* mid_elem = arr + mid * size;
-		int cmp = compar(key, mid_elem);
-
-		if (cmp == 0) return (void*)mid_elem;
-		else if (cmp < 0) high = mid;
-		else low = mid + 1;
-	}
-
-	return NULL;
 }
 
 /* ============================================================= */
@@ -214,7 +153,7 @@ void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int 
 }
 #define __jacl_strto_int(suf, type, len, usig) type strto##suf(const char* restrict str, char** restrict endptr, int base) { \
 	if (base != 0 && (base < 2 || base > 36)) { \
-		errno = EINVAL; \
+		__errno_set(EINVAL); \
 		if (endptr) *endptr = (char*)str; \
 		return 0; \
 	} \

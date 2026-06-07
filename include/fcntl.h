@@ -286,8 +286,7 @@ static inline int open(const char *pathname, int flags, ...) {
 	#elif JACL_HASSYS(open)
 		return (int)syscall(SYS_open, pathname, flags, mode);
 	#else
-		errno = ENOSYS;
-		return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
@@ -316,9 +315,7 @@ static inline int renameat(int olddirfd, const char *oldpath, int newdirfd, cons
 		return syscall(SYS_renameat, olddirfd, oldpath, newdirfd, newpath);
 	#else
 		if (olddirfd != AT_FDCWD || newdirfd != AT_FDCWD) {
-			errno = ENOSYS;
-
-			return -1;
+			return (__errno_set(ENOSYS), -1);
 		}
 
 		return syscall(SYS_rename, oldpath, newpath);
@@ -387,9 +384,8 @@ static inline int posix_fadvise(int fd, off_t offset, off_t len, int advice) {
 		return (int)syscall(SYS_posix_fadvise, fd, offset, len, advice);
 	#else
 		(void)fd; (void)offset; (void)len; (void)advice;
-		errno = ENOSYS;
 
-		return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
@@ -414,14 +410,14 @@ static inline int posix_fallocate(int fd, off_t offset, off_t len) {
 	#elif JACL_OS_OPENBSD
 		/* OpenBSD doesn't support fallocate */
 		(void)fd; (void)offset; (void)len;
-		errno = EOPNOTSUPP;
-		return -1;
+
+		return (__errno_set(EOPNOTSUPP), -1);
 	#elif JACL_OS_DRAGONFLY
 		return (int)syscall(SYS_posix_fallocate, fd, offset, len);
 	#else
 		(void)fd; (void)offset; (void)len;
-		errno = ENOSYS;
-		return -1;
+
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
@@ -454,10 +450,9 @@ static inline int fcntl64(int fd, int cmd, ...) {
 
 	/* Fallback to regular fcntl */
 	#if JACL_HAS_LFS && JACL_32BIT
-		errno = ENOSYS;
-			return -1;
+		return (__errno_set(ENOSYS), -1);
 	#else
-				return fcntl(fd, cmd, arg);
+		return fcntl(fd, cmd, arg);
 	#endif
 }
 
@@ -465,9 +460,7 @@ static inline int posix_fadvise64(int fd, off64_t offset, off64_t len, int advic
 	#if JACL_HASSYS(fadvise64_64)
 		return (int)syscall(SYS_fadvise64_64, fd, offset, len, advice);
 	#else
-		errno = ENOSYS;
-
-		return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 

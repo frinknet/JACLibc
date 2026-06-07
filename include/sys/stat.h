@@ -7,35 +7,13 @@
 #include <time.h>
 #include <fcntl.h>
 
-/**
- * NOTE: This consolidates functionality traditionally found in:
- *
- *   - <sys/stat.h>
- *   - <sys/statvfs.h>
- *
- * We unify these into a single header at <sys/stat.h> for ease of maintenance
- * and clarity with hopes that one day C Standards or POSIX may revamp layout
- * for sanity's sake so that we can remove the abstraction of legacy cruft that
- * cause so many security bugs because the coders don't see how things work.
- *
- * There has to be a better way!!!
- */
-
 #ifdef __cplusplus
 	extern "C" {
 #endif
 
-#if JACL_OS_WINDOWS
-		#define STAT_WIN32 1
-		#include <windows.h>
-		#include <direct.h>
-		#include <io.h>
-#elif JACL_ARCH_WASM
-		#define STAT_WASM 1
-#else
-		#define STAT_POSIX 1
-		#include <unistd.h>
-		#include <sys/syscall.h>
+#if JACL_HAS_POSIX
+	#include <unistd.h>
+	#include <sys/syscall.h>
 #endif
 
 /* ================================================================ */
@@ -97,8 +75,6 @@
 /* Structures                                                       */
 /* ================================================================ */
 
-#ifndef STAT_WIN32
-
 struct stat {
 	dev_t     st_dev;
 	ino_t     st_ino;
@@ -115,8 +91,6 @@ struct stat {
 	struct timespec st_mtim;
 	struct timespec st_ctim;
 };
-
-#endif /* !STAT_WIN32 */
 
 #if JACL_HAS_LFS
 
@@ -157,246 +131,102 @@ struct statvfs {
 #define __OS_STAT
 #include JACL_OS_FILE
 
-#if STAT_WIN32
-
-static inline mode_t win32_attrs_to_mode(DWORD attrs, DWORD reparse_tag) {
-	mode_t mode = 0;
-
-	if (attrs & FILE_ATTRIBUTE_REPARSE_POINT) {
-		if (reparse_tag == IO_REPARSE_TAG_SYMLINK) mode |= S_IFLNK;
-		else mode |= S_IFREG;
-	} else if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
-		mode |= S_IFDIR;
-	} else {
-		mode |= S_IFREG;
-	}
-
-	mode |= S_IRUSR | S_IRGRP | S_IROTH;
-	if (!(attrs & FILE_ATTRIBUTE_READONLY)) mode |= S_IWUSR;
-	if (attrs & FILE_ATTRIBUTE_DIRECTORY) mode |= S_IXUSR | S_IXGRP | S_IXOTH;
-
-	return mode;
-}
-
-static inline void win32_filetime_to_timespec(const FILETIME *ft, struct timespec *ts) {
-	ULARGE_INTEGER ull;
-	ull.LowPart = ft->dwLowDateTime;
-	ull.HighPart = ft->dwHighDateTime;
-
-	int64_t unix_time = (int64_t)ull.QuadPart - 116444736000000000LL;
-
-	ts->tv_sec = (time_t)(unix_time / 10000000LL);
-	ts->tv_nsec = (long)((unix_time % 10000000LL) * 100);
-
-	if (ts->tv_nsec < 0) {
-		ts->tv_sec -= 1;
-		ts->tv_nsec += 1000000000L;
-	}
-}
-
-static inline int stat(const char *pathname, struct stat *statbuf) {
-	if (!pathname || !statbuf) return -1;
-
-	WIN32_FILE_ATTRIBUTE_DATA data;
-	if (!GetFileAttributesExA(pathname, GetFileExInfoStandard, &data)) return -1;
-
-	statbuf->st_dev = 0;
-	statbuf->st_ino = 0;
-	statbuf->st_mode = win32_attrs_to_mode(data.dwFileAttributes, 0);
-	statbuf->st_nlink = 1;
-	statbuf->st_uid = 0;
-	statbuf->st_gid = 0;
-	statbuf->st_rdev = 0;
-
-	LARGE_INTEGER size;
-	size.LowPart = data.nFileSizeLow;
-	size.HighPart = data.nFileSizeHigh;
-	statbuf->st_size = (off_t)size.QuadPart;
-
-	win32_filetime_to_timespec(&data.ftLastAccessTime, &statbuf->st_atim);
-	win32_filetime_to_timespec(&data.ftLastWriteTime, &statbuf->st_mtim);
-	win32_filetime_to_timespec(&data.ftCreationTime, &statbuf->st_ctim);
-
-	statbuf->st_blksize = 4096;
-	statbuf->st_blocks = (blkcnt_t)((statbuf->st_size + 511) / 512);
-
-	return 0;
-}
-
-static inline int fstat(int fd, struct stat *statbuf) {
-	if (!statbuf) return -1;
-
-	HANDLE h = (HANDLE)_get_osfhandle(fd);
-	if (h == INVALID_HANDLE_VALUE) return -1;
-
-	BY_HANDLE_FILE_INFORMATION info;
-	if (!GetFileInformationByHandle(h, &info)) return -1;
-
-	statbuf->st_dev = 0;
-	statbuf->st_ino = ((ino_t)info.nFileIndexHigh << 32) | info.nFileIndexLow;
-	statbuf->st_mode = win32_attrs_to_mode(info.dwFileAttributes, 0);
-	statbuf->st_nlink = (nlink_t)info.nNumberOfLinks;
-	statbuf->st_uid = 0;
-	statbuf->st_gid = 0;
-	statbuf->st_rdev = 0;
-
-	LARGE_INTEGER size;
-	size.LowPart = info.nFileSizeLow;
-	size.HighPart = info.nFileSizeHigh;
-	statbuf->st_size = (off_t)size.QuadPart;
-
-	win32_filetime_to_timespec(&info.ftLastAccessTime, &statbuf->st_atim);
-	win32_filetime_to_timespec(&info.ftLastWriteTime, &statbuf->st_mtim);
-	win32_filetime_to_timespec(&info.ftCreationTime, &statbuf->st_ctim);
-
-	statbuf->st_blksize = 4096;
-	statbuf->st_blocks = (blkcnt_t)((statbuf->st_size + 511) / 512);
-
-	return 0;
-}
-
-static inline int lstat(const char *pathname, struct stat *statbuf) {
-	return stat(pathname, statbuf);
-}
-
-static inline int chmod(const char *pathname, mode_t mode) {
-	if (!pathname) return -1;
-
-	DWORD attrs = GetFileAttributesA(pathname);
-	if (attrs == INVALID_FILE_ATTRIBUTES) return -1;
-
-	if (mode & S_IWUSR) attrs &= ~FILE_ATTRIBUTE_READONLY;
-	else attrs |= FILE_ATTRIBUTE_READONLY;
-
-	return SetFileAttributesA(pathname, attrs) ? 0 : -1;
-}
-
-static inline int fchmod(int fd, mode_t mode) { (void)fd; (void)mode; return -1; }
-
-static inline int mkdir(const char *pathname, mode_t mode) {
-	(void)mode;
-	return CreateDirectoryA(pathname, NULL) ? 0 : -1;
-}
-
-static inline mode_t umask(mode_t mask) { (void)mask; return 0; }
-
-static inline int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags) {
-	(void)dirfd; (void)flags;
-	return stat(pathname, statbuf);
-}
-
-static inline int mkdirat(int dirfd, const char *pathname, mode_t mode) {
-	(void)dirfd; (void)mode;
-	return mkdir(pathname, mode);
-}
-
-static inline int fchmodat(int dirfd, const char *pathname, mode_t mode, int flags) {
-	(void)dirfd; (void)flags;
-	return chmod(pathname, mode);
-}
-
-static inline int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags) {
-  (void)dirfd; (void)pathname; (void)times; (void)flags;
-  return -1;
-}
-
-static inline int futimens(int fd, const struct timespec times[2]) {
-  (void)fd; (void)times;
-  return -1;
-}
-
-#elif STAT_WASM
-
-static inline int stat(const char *pathname, struct stat *statbuf) { (void)pathname; (void)statbuf; return -1; }
-static inline int fstat(int fd, struct stat *statbuf) { (void)fd; (void)statbuf; return -1; }
-static inline int lstat(const char *pathname, struct stat *statbuf) { (void)pathname; (void)statbuf; return -1; }
-static inline int chmod(const char *pathname, mode_t mode) { (void)pathname; (void)mode; return -1; }
-static inline int fchmod(int fd, mode_t mode) { (void)fd; (void)mode; return -1; }
-static inline int mkdir(const char *pathname, mode_t mode) { (void)pathname; (void)mode; return -1; }
-static inline mode_t umask(mode_t mask) { (void)mask; return 0; }
-static inline int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags) { (void)dirfd; (void)pathname; (void)statbuf; (void)flags; return -1; }
-static inline int mkdirat(int dirfd, const char *pathname, mode_t mode) { (void)dirfd; (void)pathname; (void)mode; return -1; }
-static inline int fchmodat(int dirfd, const char *pathname, mode_t mode, int flags) { (void)dirfd; (void)pathname; (void)mode; (void)flags; return -1; }
-static inline int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags) { (void)dirfd; (void)pathname; (void)times; (void)flags; return -1; }
-static inline int futimens(int fd, const struct timespec times[2]) { (void)fd; (void)times; return -1; }
-
-#else
-
 /* ================================================================ */
-/* POSIX/Linux implementation using system calls                   */
+/* Implementations                                                  */
 /* ================================================================ */
 
+#if JACL_HAS_POSIX
+
 static inline int stat(const char *pathname, struct stat *statbuf) {
-	if (!pathname || !statbuf) { errno = EINVAL; return -1; }
+	if (!pathname || !statbuf) return (__errno_set(EINVAL), -1);
+
 	struct __jacl_os_stat kbuf;
+
 	#if JACL_HASSYS(stat)
 		if ((int)syscall(SYS_stat, pathname, &kbuf) < 0) return -1;
 	#elif JACL_HASSYS(newfstatat)
 		if ((int)syscall(SYS_newfstatat, AT_FDCWD, pathname, &kbuf, 0) < 0) return -1;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
+
 	__jacl_os_statnorm(&kbuf, statbuf);
+
 	return 0;
 }
 
 static inline int fstat(int fd, struct stat *statbuf) {
-	if (!statbuf) { errno = EINVAL; return -1; }
+	if (!statbuf) return (__errno_set(EINVAL), -1);
+
 	struct __jacl_os_stat kbuf;
+
 	#if JACL_HASSYS(fstat)
 		if ((int)syscall(SYS_fstat, fd, &kbuf) < 0) return -1;
 	#elif JACL_HASSYS(newfstatat)
 		if ((int)syscall(SYS_newfstatat, fd, "", &kbuf, AT_EMPTY_PATH) < 0) return -1;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
+
 	__jacl_os_statnorm(&kbuf, statbuf);
+
 	return 0;
 }
 
 static inline int lstat(const char *pathname, struct stat *statbuf) {
-	if (!pathname || !statbuf) { errno = EINVAL; return -1; }
+	if (!pathname || !statbuf) return (__errno_set(EINVAL), -1);
+
 	struct __jacl_os_stat kbuf;
+
 	#if JACL_HASSYS(lstat)
 		if ((int)syscall(SYS_lstat, pathname, &kbuf) < 0) return -1;
 	#elif JACL_HASSYS(newfstatat)
 		if ((int)syscall(SYS_newfstatat, AT_FDCWD, pathname, &kbuf, AT_SYMLINK_NOFOLLOW) < 0) return -1;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
+
 	__jacl_os_statnorm(&kbuf, statbuf);
+
 	return 0;
 }
 
 static inline int chmod(const char *pathname, mode_t mode) {
-	if (!pathname) { errno = EINVAL; return -1; }
+	if (!pathname) return (__errno_set(EINVAL), -1);
+
 	#if JACL_HASSYS(chmod)
-		return (int)syscall(SYS_chmod, pathname, mode);
+		if ((int)syscall(SYS_chmod, pathname, mode) < 0) return -1;
 	#elif JACL_HASSYS(fchmodat)
-		return (int)syscall(SYS_fchmodat, AT_FDCWD, pathname, mode);
+		if ((int)syscall(SYS_fchmodat, AT_FDCWD, pathname, mode) < 0) return -1;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
+
+	return 0;
 }
 
 static inline int mkdir(const char *pathname, mode_t mode) {
-	if (!pathname) { errno = EINVAL; return -1; }
+	if (!pathname) return (__errno_set(EINVAL), -1);
+
 	#if JACL_HASSYS(mkdir)
-		return (int)syscall(SYS_mkdir, pathname, mode);
+		if ((int)syscall(SYS_mkdir, pathname, mode) < 0) return -1;
 	#elif JACL_HASSYS(mkdirat)
-		return (int)syscall(SYS_mkdirat, AT_FDCWD, pathname, mode);
+		if ((int)syscall(SYS_mkdirat, AT_FDCWD, pathname, mode) < 0) return -1;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
+
+	return 0;
 }
 
 static inline int fchmod(int fd, mode_t mode) {
 	#if JACL_HASSYS(fchmod)
-		return (int)syscall(SYS_fchmod, fd, mode);
+		if ((int)syscall(SYS_fchmod, fd, mode) < 0) return -1;
+		return 0;
 	#else
 		(void)fd; (void)mode;
-		errno = ENOSYS;
-		return -1;
+
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
@@ -405,17 +235,26 @@ static inline mode_t umask(mode_t mask) {
 }
 
 static inline int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags) {
-	if (!pathname || !statbuf) { errno = EINVAL; return -1; }
+	if (!pathname || !statbuf) return (__errno_set(EINVAL), -1);
+
+	struct __jacl_os_stat kbuf;
+
 	#if JACL_HASSYS(newfstatat)
-		return (int)syscall(SYS_newfstatat, dirfd, pathname, statbuf, flags);
+		if ((int)syscall(SYS_newfstatat, dirfd, pathname, &kbuf, flags) < 0) return -1;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
+
+	__jacl_os_statnorm(&kbuf, statbuf);
+
+	return 0;
 }
 
 static inline int mknod(const char *pathname, mode_t mode, dev_t dev) {
-	if (!pathname) { errno = EINVAL; return -1; }
-	return (int)syscall(SYS_mknod, pathname, mode, dev);
+	if (!pathname) return (__errno_set(EINVAL), -1);
+
+	if ((int)syscall(SYS_mknod, pathname, mode, dev) < 0) return -1;
+	return 0;
 }
 
 static inline int mkfifo(const char *pathname, mode_t mode) {
@@ -424,97 +263,117 @@ static inline int mkfifo(const char *pathname, mode_t mode) {
 
 #if JACL_HAS_LFS
 static inline int stat64(const char *pathname, struct stat64 *statbuf) {
-	if (!pathname || !statbuf) { errno = EINVAL; return -1; }
+	if (!pathname || !statbuf) return (__errno_set(EINVAL), -1);
+
 	#if JACL_HASSYS(stat64)
-		return (int)syscall(SYS_stat64, pathname, statbuf);
+		if ((int)syscall(SYS_stat64, pathname, statbuf) < 0) return -1;
+		return 0;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
+
 static inline int fstat64(int fd, struct stat64 *statbuf) {
-	if (!statbuf) { errno = EINVAL; return -1; }
+	if (!statbuf) return (__errno_set(EINVAL), -1);
+
 	#if JACL_HASSYS(fstat64)
-		return (int)syscall(SYS_fstat64, fd, statbuf);
+		if ((int)syscall(SYS_fstat64, fd, statbuf) < 0) return -1;
+		return 0;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
+
 static inline int lstat64(const char *pathname, struct stat64 *statbuf) {
-	if (!pathname || !statbuf) { errno = EINVAL; return -1; }
+	if (!pathname || !statbuf) return (__errno_set(EINVAL), -1);
+
 	#if JACL_HASSYS(lstat64)
-		return (int)syscall(SYS_lstat64, pathname, statbuf);
+		if ((int)syscall(SYS_lstat64, pathname, statbuf) < 0) return -1;
+		return 0;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 #endif /* JACL_HAS_LFS */
 
 static inline int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags) {
-	if (!pathname) { errno = EINVAL; return -1; }
+	if (!pathname) return (__errno_set(EINVAL), -1);
+
 	#if JACL_HASSYS(utimensat)
-		return (int)syscall(SYS_utimensat, dirfd, pathname, times, flags);
+		if ((int)syscall(SYS_utimensat, dirfd, pathname, times, flags) < 0) return -1;
+		return 0;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
 static inline int futimens(int fd, const struct timespec times[2]) {
 	#if JACL_HASSYS(futimens)
-		return (int)syscall(SYS_futimens, fd, times);
+		if ((int)syscall(SYS_futimens, fd, times) < 0) return -1;
+		return 0;
 	#else
-		errno = ENOSYS; return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
-#endif
-
-/* ================================================================ */
-/* File System Statistics (POSIX.1-2017 §12.2.3)                   */
-/* ================================================================ */
-
-#if STAT_POSIX || STAT_WASM
-
 static inline int statvfs(const char *path, struct statvfs *buf) {
-	if (!path || !buf) { errno = EINVAL; return -1; }
+	if (!path || !buf) return (__errno_set(EINVAL), -1);
+
 #if JACL_HASSYS(statvfs)
-	return (int)syscall(SYS_statvfs, path, buf);
+	if ((int)syscall(SYS_statvfs, path, buf) < 0) return -1;
+	return 0;
 #elif JACL_HASSYS(fstatvfs)
 	int fd = open(path, O_RDONLY | O_DIRECTORY);
+
 	if (fd < 0) return -1;
+
 	int r = (int)syscall(SYS_fstatvfs, fd, buf);
+
 	close(fd);
-	return r;
+
+	if (r < 0) return -1;
+	return 0;
 #else
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 #endif
 }
 
 static inline int fstatvfs(int fd, struct statvfs *buf) {
-	if (!buf) { errno = EINVAL; return -1; }
+	if (!buf) return (__errno_set(EINVAL), -1);
+
 #if JACL_HASSYS(fstatvfs)
-	return (int)syscall(SYS_fstatvfs, fd, buf);
+	if ((int)syscall(SYS_fstatvfs, fd, buf) < 0) return -1;
+	return 0;
 #else
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 #endif
 }
 
-#else /* STAT_WIN32 */
+#else /* !JACL_HAS_POSIX */
 
-static inline int statvfs(const char *path, struct statvfs *buf) {
-	(void)path; (void)buf;
-	errno = ENOSYS;
-	return -1;
-}
+static inline int stat(const char *pathname, struct stat *statbuf) { (void)pathname; (void)statbuf; return (__errno_set(ENOSYS), -1); }
+static inline int fstat(int fd, struct stat *statbuf) { (void)fd; (void)statbuf; return (__errno_set(ENOSYS), -1); }
+static inline int lstat(const char *pathname, struct stat *statbuf) { (void)pathname; (void)statbuf; return (__errno_set(ENOSYS), -1); }
+static inline int chmod(const char *pathname, mode_t mode) { (void)pathname; (void)mode; return (__errno_set(ENOSYS), -1); }
+static inline int mkdir(const char *pathname, mode_t mode) { (void)pathname; (void)mode; return (__errno_set(ENOSYS), -1); }
+static inline int fchmod(int fd, mode_t mode) { (void)fd; (void)mode; return (__errno_set(ENOSYS), -1); }
+static inline mode_t umask(mode_t mask) { (void)mask; return 0; }
+static inline int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags) { (void)dirfd; (void)pathname; (void)statbuf; (void)flags; return (__errno_set(ENOSYS), -1); }
+static inline int mknod(const char *pathname, mode_t mode, dev_t dev) { (void)pathname; (void)mode; (void)dev; return (__errno_set(ENOSYS), -1); }
+static inline int mkfifo(const char *pathname, mode_t mode) { (void)pathname; (void)mode; return (__errno_set(ENOSYS), -1); }
 
-static inline int fstatvfs(int fd, struct statvfs *buf) {
-	(void)fd; (void)buf;
-	errno = ENOSYS;
-	return -1;
-}
+#if JACL_HAS_LFS
+static inline int stat64(const char *pathname, struct stat64 *statbuf) { (void)pathname; (void)statbuf; return (__errno_set(ENOSYS), -1); }
+static inline int fstat64(int fd, struct stat64 *statbuf) { (void)fd; (void)statbuf; return (__errno_set(ENOSYS), -1); }
+static inline int lstat64(const char *pathname, struct stat64 *statbuf) { (void)pathname; (void)statbuf; return (__errno_set(ENOSYS), -1); }
+#endif
 
-#endif /* STAT_POSIX || STAT_WASM */
+static inline int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags) { (void)dirfd; (void)pathname; (void)times; (void)flags; return (__errno_set(ENOSYS), -1); }
+static inline int futimens(int fd, const struct timespec times[2]) { (void)fd; (void)times; return (__errno_set(ENOSYS), -1); }
+static inline int statvfs(const char *path, struct statvfs *buf) { (void)path; (void)buf; return (__errno_set(ENOSYS), -1); }
+static inline int fstatvfs(int fd, struct statvfs *buf) { (void)fd; (void)buf; return (__errno_set(ENOSYS), -1); }
+
+#endif /* JACL_HAS_POSIX */
 
 #ifdef __cplusplus
 }

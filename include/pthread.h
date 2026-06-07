@@ -1,4 +1,4 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 #ifndef _PTHREAD_H
 #define _PTHREAD_H
 #pragma once
@@ -27,30 +27,24 @@
 extern "C" {
 #endif
 
-/* PLATFORM */
-#if JACL_OS_WINDOWS
-	#define PTHREAD_WIN32 1
-	#include <windows.h>
-	#include <process.h>
-#elif JACL_HAS_PTHREADS
+#if JACL_HAS_PTHREADS
 	#define PTHREAD_POSIX 1
 	#include <unistd.h>
 	#include <signal.h>
+	#include <sched.h>
 	#include <sys/wait.h>
 	#include <sys/mman.h>
 	#include <sys/syscall.h>
+	#define __ARCH_CLONE
+	#include JACL_ARCH_FILE
 #else
 	#define PTHREAD_DUMMY 1
 #endif
 
-#if JACL_OS_LINUX
-	#include <sched.h>
-	#include <sys/futex.h>
-	#define __ARCH_CLONE
-	#include JACL_ARCH_FILE
-#endif
+#define PTHREAD_PRIO_NONE    0
+#define PTHREAD_PRIO_INHERIT 1
+#define PTHREAD_PRIO_PROTECT 2
 
-/* CONSTANTS */
 #define PTHREAD_CREATE_JOINABLE         0
 #define PTHREAD_CREATE_DETACHED         1
 #define PTHREAD_DESTRUCTOR_ITERATIONS   4
@@ -72,6 +66,7 @@ extern "C" {
 #define PTHREAD_CANCEL_DEFERRED         0
 #define PTHREAD_CANCEL_ASYNCHRONOUS     1
 #define PTHREAD_CANCELED                ((void *)-1)
+#define PTHREAD_STACK_MIN 8192
 
 #define PTHREAD_BARRIER_SERIAL_THREAD   -1
 
@@ -81,7 +76,6 @@ extern "C" {
 #define PTHREAD_DETACHED_WAIT       5000
 #endif
 
-/* INITIALIZERS */
 #define PTHREAD_ONCE_INIT               {0}
 #define PTHREAD_MUTEX_INITIALIZER       { 0, 0, PTHREAD_MUTEX_NORMAL, 0 }
 #define PTHREAD_COND_INITIALIZER        { 0, 0 }
@@ -93,6 +87,11 @@ extern "C" {
 #define PTHREAD_ATTR_INITIALIZER        { 0, 0, NULL }
 #define PTHREAD_BARRIERATTR_INITIALIZER { PTHREAD_PROCESS_PRIVATE }
 #define PTHREAD_RWLOCKATTR_INITIALIZER  { PTHREAD_PROCESS_PRIVATE }
+
+#define PTHREAD_EXPLICIT_SCHED 0
+#define PTHREAD_INHERIT_SCHED  1
+#define PTHREAD_SCOPE_PROCESS  0
+#define PTHREAD_SCOPE_SYSTEM   1
 
 #if PTHREAD_POSIX
 extern _Atomic unsigned int __jacl_pthread_tls_key_counter;
@@ -108,137 +107,22 @@ typedef struct {
 	pthread_t thread_ptr;
 } __jacl_thread_arg_t;
 
-/* WINDOWS */
-#if PTHREAD_WIN32
+typedef struct __jacl_atfork_handler {
+	void (*prepare)(void);
+	void (*parent)(void);
+	void (*child)(void);
+	struct __jacl_atfork_handler *next;
+} __jacl_atfork_handler_t;
 
-static unsigned __stdcall __jacl_win_thread_start(void *arg) {
-	__jacl_thread_arg_t *ta = (__jacl_thread_arg_t *)arg;
-	void *result = ta->start_routine(ta->arg);
-	ta->thread_ptr->result = result;
-	free(ta);
-	return (unsigned)(uintptr_t)result;
-}
-static inline int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg) {
-	if (!thread || !start_routine) return EINVAL;
-	__jacl_thread_arg_t *ta = malloc(sizeof(*ta));
-	if (!ta) return ENOMEM;
-	ta->start_routine = start_routine; ta->arg = arg; ta->thread_ptr = thread; thread->result = NULL;
-	thread->handle = (HANDLE)_beginthreadex(NULL, attr ? (unsigned)attr->stack_size : 0, __jacl_win_thread_start, ta, 0, &thread->id);
-	if (!thread->handle) { free(ta); return EAGAIN; }
-	return 0;
-}
-static inline int pthread_join(pthread_t thread, void **retval) {
-	DWORD result = WaitForSingleObject(thread.handle, INFINITE);
-	if (result == WAIT_OBJECT_0) {
-		if (retval) *retval = thread.result;
-		CloseHandle(thread.handle);
-		return 0;
-	}
-	return EINVAL;
-}
-static inline void pthread_exit(void *retval) { _endthreadex((unsigned)(uintptr_t)retval); }
-static inline pthread_t pthread_self(void) {
-	pthread_t self = {0}; self.handle = GetCurrentThread(); self.id = GetCurrentThreadId();
-	return self;
-}
-static inline int pthread_equal(pthread_t t1, pthread_t t2) { return t1.id == t2.id; }
-static inline int pthread_detach(pthread_t thread) { return CloseHandle(thread.handle) ? 0 : EINVAL; }
-static inline int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) {
-	if (!mutex) return EINVAL;
-	InitializeCriticalSection(&mutex->cs);
-	mutex->type = (attr && attr->type) ? attr->type : PTHREAD_MUTEX_NORMAL;
-	return 0;
-}
-static inline int pthread_mutex_lock(pthread_mutex_t *mutex) { if (!mutex) return EINVAL; EnterCriticalSection(&mutex->cs); return 0; }
-static inline int pthread_mutex_trylock(pthread_mutex_t *mutex) { if (!mutex) return EINVAL; return TryEnterCriticalSection(&mutex->cs) ? 0 : EBUSY; }
-static inline int pthread_mutex_timedlock(pthread_mutex_t *mutex, const struct timespec *ts) {
-	if (!mutex || !ts) return EINVAL;
-	DWORD timeout = (ts->tv_sec * 1000) + (ts->tv_nsec / 1000000), result = WaitForSingleObject(mutex->cs, timeout);
-	if (result == WAIT_OBJECT_0) return 0;
-	if (result == WAIT_TIMEOUT) return ETIMEDOUT;
-	return EINVAL;
-}
-static inline int pthread_mutex_unlock(pthread_mutex_t *mutex) { if (!mutex) return EINVAL; LeaveCriticalSection(&mutex->cs); return 0; }
-static inline int pthread_mutex_destroy(pthread_mutex_t *mutex) { if (!mutex) return EINVAL; DeleteCriticalSection(&mutex->cs); return 0; }
-static inline int pthread_mutex_consistent(pthread_mutex_t *mutex) { (void)mutex; return ENOSYS; }
-static inline int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) { (void)attr; if (!cond) return EINVAL; InitializeConditionVariable(&cond->cv); return 0; }
-static inline int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) { if (!cond || !mutex) return EINVAL; return SleepConditionVariableCS(&cond->cv, &mutex->cs, INFINITE) ? 0 : EINVAL; }
-static inline int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime) { (void)abstime; if (!cond || !mutex) return EINVAL; return SleepConditionVariableCS(&cond->cv, &mutex->cs, INFINITE) ? 0 : EINVAL; }
-static inline int pthread_cond_clockwait(pthread_cond_t *cond, pthread_mutex_t *mutex, clockid_t clock_id, const struct timespec *abstime) { (void)clock_id; (void)abstime; return pthread_cond_timedwait(cond, mutex, abstime); }
-static inline int pthread_cond_signal(pthread_cond_t *cond) { if (!cond) return EINVAL; WakeConditionVariable(&cond->cv); return 0; }
-static inline int pthread_cond_broadcast(pthread_cond_t *cond) { if (!cond) return EINVAL; WakeAllConditionVariable(&cond->cv); return 0; }
-static inline int pthread_cond_destroy(pthread_cond_t *cond) { if (!cond) return EINVAL; return 0; }
-static inline int pthread_key_create(pthread_key_t *key, void (*destructor)(void*)) { (void)destructor; if (!key) return EINVAL; *key = TlsAlloc(); return (*key != TLS_OUT_OF_INDEXES) ? 0 : EAGAIN; }
-static inline int pthread_key_delete(pthread_key_t key) { return TlsFree(key) ? 0 : EINVAL; }
-static inline int pthread_setspecific(pthread_key_t key, const void *value) { return TlsSetValue(key, (void*)value) ? 0 : EINVAL; }
-static inline void *pthread_getspecific(pthread_key_t key) { return TlsGetValue(key); }
-static inline int pthread_once(pthread_once_t *once_control, void (*init_routine)(void)) {
-	if (!once_control || !init_routine) return EINVAL;
-	int expected = 0;
-	if (atomic_compare_exchange_strong(&once_control->done, &expected, 1)) init_routine();
-	return 0;
-}
-static inline int pthread_attr_init(pthread_attr_t *attr) { if (!attr) return EINVAL; attr->detached = 0; attr->stack_size = 0; attr->stack_addr = NULL; return 0; }
-static inline int pthread_attr_destroy(pthread_attr_t *attr) { if (!attr) return EINVAL; return 0; }
-static inline int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate) { if (!attr) return EINVAL; attr->detached = (detachstate == PTHREAD_CREATE_DETACHED); return 0; }
-static inline int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize) { if (!attr) return EINVAL; attr->stack_size = stacksize; return 0; }
-static inline int pthread_mutexattr_init(pthread_mutexattr_t *attr) { if (!attr) return EINVAL; attr->type = PTHREAD_MUTEX_NORMAL; attr->robust = 0; attr->pshared = PTHREAD_PROCESS_PRIVATE; return 0; }
-static inline int pthread_mutexattr_destroy(pthread_mutexattr_t *attr) { if (!attr) return EINVAL; return 0; }
-static inline int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type) { if (!attr) return EINVAL; attr->type = type; return 0; }
-static inline int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type) { if (!attr || !type) return EINVAL; *type = attr->type; return 0; }
-static inline int pthread_mutexattr_setrobust(pthread_mutexattr_t *attr, int robust) { if (!attr) return EINVAL; attr->robust = robust; return 0; }
-static inline int pthread_mutexattr_getrobust(const pthread_mutexattr_t *attr, int *robust) { if (!attr || !robust) return EINVAL; *robust = attr->robust; return 0; }
-static inline int pthread_condattr_init(pthread_condattr_t *attr) { if (!attr) return EINVAL; attr->pshared = PTHREAD_PROCESS_PRIVATE; attr->clock_id = CLOCK_REALTIME; return 0; }
-static inline int pthread_condattr_destroy(pthread_condattr_t *attr) { if (!attr) return EINVAL; return 0; }
-static inline int pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset) { (void)how; (void)set; (void)oldset; return ENOSYS; }
-static inline int pthread_spin_init(pthread_spinlock_t *lock, int pshared) { (void)lock; (void)pshared; return ENOSYS; }
-static inline int pthread_spin_destroy(pthread_spinlock_t *lock) { (void)lock; return ENOSYS; }
-static inline int pthread_spin_lock(pthread_spinlock_t *lock) { (void)lock; return ENOSYS; }
-static inline int pthread_spin_trylock(pthread_spinlock_t *lock) { (void)lock; return ENOSYS; }
-static inline int pthread_spin_unlock(pthread_spinlock_t *lock) { (void)lock; return ENOSYS; }
-static inline int pthread_rwlock_init(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr) { (void)rwlock; (void)attr; return ENOSYS; }
-static inline int pthread_rwlock_destroy(pthread_rwlock_t *rwlock) { (void)rwlock; return ENOSYS; }
-static inline int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock) { (void)rwlock; return ENOSYS; }
-static inline int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock) { (void)rwlock; return ENOSYS; }
-static inline int pthread_rwlock_unlock(pthread_rwlock_t *rwlock) { (void)rwlock; return ENOSYS; }
-static inline int pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock) { (void)rwlock; return ENOSYS; }
-static inline int pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock) { (void)rwlock; return ENOSYS; }
-static inline int pthread_rwlock_timedrdlock(pthread_rwlock_t *rwlock, const struct timespec *abstime) { (void)rwlock; (void)abstime; return ENOSYS; }
-static inline int pthread_rwlock_timedwrlock(pthread_rwlock_t *rwlock, const struct timespec *abstime) { (void)rwlock; (void)abstime; return ENOSYS; }
-static inline int pthread_rwlockattr_init(pthread_rwlockattr_t *attr) { (void)attr; return ENOSYS; }
-static inline int pthread_rwlockattr_destroy(pthread_rwlockattr_t *attr) { (void)attr; return ENOSYS; }
-static inline int pthread_barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_t *attr, unsigned count) { (void)barrier; (void)attr; (void)count; return ENOSYS; }
-static inline int pthread_barrier_destroy(pthread_barrier_t *barrier) { (void)barrier; return ENOSYS; }
-static inline int pthread_barrier_wait(pthread_barrier_t *barrier) { (void)barrier; return ENOSYS; }
-static inline int pthread_barrierattr_init(pthread_barrierattr_t *attr) { (void)attr; return ENOSYS; }
-static inline int pthread_barrierattr_destroy(pthread_barrierattr_t *attr) { (void)attr; return ENOSYS; }
-static inline int pthread_cancel(pthread_t thread) { (void)thread; return ENOSYS; }
-static inline int pthread_setcancelstate(int state, int *oldstate) { (void)state; (void)oldstate; return ENOSYS; }
-static inline int pthread_setcanceltype(int type, int *oldtype) { (void)type; (void)oldtype; return ENOSYS; }
-static inline void pthread_testcancel(void) { }
-static inline int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate) { (void)attr; (void)detachstate; return ENOSYS; }
-#define pthread_cleanup_push(routine, arg) do{
-#define pthread_cleanup_pop(execute) }while(0)
-static inline int pthread_mutexattr_setpshared(pthread_mutexattr_t *a, int p) { if (!a || (p != PTHREAD_PROCESS_PRIVATE && p != PTHREAD_PROCESS_SHARED)) return EINVAL; a->pshared = p; return 0; }
-static inline int pthread_mutexattr_getpshared(const pthread_mutexattr_t *a, int *p) { if (!a || !p) return EINVAL; *p = a->pshared; return 0; }
-static inline int pthread_condattr_setpshared(pthread_condattr_t *a, int p) { if (!a || (p != PTHREAD_PROCESS_PRIVATE && p != PTHREAD_PROCESS_SHARED)) return EINVAL; a->pshared = p; return 0; }
-static inline int pthread_condattr_getpshared(const pthread_condattr_t *a, int *p) { if (!a || !p) return EINVAL; *p = a->pshared; return 0; }
-static inline int pthread_condattr_setclock(pthread_condattr_t *a, clockid_t c) { if (!a || (c != CLOCK_REALTIME && c != CLOCK_MONOTONIC)) return EINVAL; a->clock_id = c; return 0; }
-static inline int pthread_condattr_getclock(const pthread_condattr_t *a, clockid_t *c) { if (!a || !c) return EINVAL; *c = a->clock_id; return 0; }
-static inline int pthread_rwlockattr_setpshared(pthread_rwlockattr_t *a, int p) { if (!a || (p != PTHREAD_PROCESS_PRIVATE && p != PTHREAD_PROCESS_SHARED)) return EINVAL; a->pshared = p; return 0; }
-static inline int pthread_rwlockattr_getpshared(const pthread_rwlockattr_t *a, int *p) { if (!a || !p) return EINVAL; *p = a->pshared; return 0; }
-static inline int pthread_barrierattr_setpshared(pthread_barrierattr_t *a, int p) { if (!a || (p != PTHREAD_PROCESS_PRIVATE && p != PTHREAD_PROCESS_SHARED)) return EINVAL; a->pshared = p; return 0; }
-static inline int pthread_barrierattr_getpshared(const pthread_barrierattr_t *a, int *p) { if (!a || !p) return EINVAL; *p = a->pshared; return 0; }
+extern __jacl_atfork_handler_t *__jacl_atfork_list;
+extern pthread_spinlock_t __jacl_atfork_lock;
 
-/* ======================================================================== */
-/* POSIX IMPLEMENTATION (PURE C - NO ASM)                                   */
-/* ======================================================================== */
-#elif PTHREAD_POSIX
+#if PTHREAD_POSIX
 
 #if JACL_OS_LINUX
 	static inline pid_t __jacl_pthread_gettid(void) { return (pid_t)syscall(SYS_gettid); }
-	static inline int __jacl_pthread_futex_wait(void *addr, int val) { return syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL, NULL, 0); }
-	static inline int __jacl_pthread_futex_wake(void *addr, int num) { return syscall(SYS_futex, addr, FUTEX_WAKE, num, NULL, NULL, 0); }
+	static inline int __jacl_pthread_futex_wait(void *addr, int val) { return syscall(SYS_futex, addr, 0, val, NULL, NULL, 0); }
+	static inline int __jacl_pthread_futex_wake(void *addr, int num) { return syscall(SYS_futex, addr, 1, num, NULL, NULL, 0); }
 #elif JACL_OS_DARWIN
 	static inline pid_t __jacl_pthread_gettid(void) { return (pid_t)syscall(SYS_thread_selfid); }
 	extern int __ulock_wait(uint32_t, void *, uint64_t, uint32_t);
@@ -371,15 +255,25 @@ static inline noreturn void pthread_exit(void *retval) {
 
 	if (self) {
 		self->result = retval;
+
 		atomic_store(&self->finished, 1);
+		__jacl_pthread_destroy();
+
+		__jacl_cleanup_node_t *item = self->cleanup_stack;
+		while (item) {
+			__jacl_cleanup_node_t *next = item->next;
+
+			item->routine(item->arg);
+			free(item);
+
+			item = next;
+		}
 	}
 
 	#if JACL_OS_LINUX
 		syscall(SYS_exit, 0);
 	#elif JACL_OS_FREEBSD
 		syscall(SYS_thr_exit, 0);
-	#elif JACL_OS_DARWIN
-		_exit(0);
 	#else
 		_exit(0);
 	#endif
@@ -404,24 +298,46 @@ static inline int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutex
 }
 static inline int pthread_mutex_lock(pthread_mutex_t *mutex) {
 	if (!mutex) return EINVAL;
-	if (mutex->type == PTHREAD_MUTEX_ERRORCHECK) {
+
+	/* Handle Errorcheck and Recursive types first */
+	if (mutex->type == PTHREAD_MUTEX_ERRORCHECK || mutex->type == PTHREAD_MUTEX_RECURSIVE) {
 		pid_t tid = __jacl_pthread_gettid();
-		if (mutex->owner == tid) return EDEADLK;
-	}
-	if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
-		pid_t tid = __jacl_pthread_gettid();
-		if (mutex->owner == tid) { mutex->recursive_count++; return 0; }
-	}
-	int expected = 0, backoff = 1000;
-	while (!atomic_compare_exchange_weak(&mutex->futex, &expected, 1)) {
-		expected = 0;
-		if (__jacl_pthread_futex_wait(&mutex->futex, 1) != 0) {
-			struct timespec ts = {0, backoff}; nanosleep(&ts, NULL);
-			if (backoff < 1000000) backoff *= 2;
+
+		if (mutex->owner == tid) {
+			if (mutex->type == PTHREAD_MUTEX_ERRORCHECK) return EDEADLK;
+
+			mutex->recursive_count++;
+
+			return 0;
 		}
 	}
+
+	int expected = 0;
+
+	while (!atomic_compare_exchange_weak(&mutex->futex, &expected, 1)) {
+		expected = 0;
+
+		int ret = __jacl_pthread_futex_wait(&mutex->futex, 1);
+
+		/* Handle Robust Mutex Death */
+		if (ret != 0 && errno == EOWNERDEAD) {
+			mutex->owner = 0; /* Clear dead owner */
+
+			return EOWNERDEAD;
+		}
+
+		/* Spurious wakeups or errors: backoff */
+		if (ret != 0) {
+			struct timespec ts = {0, 1000};
+
+			nanosleep(&ts, NULL);
+		}
+	}
+
 	mutex->owner = __jacl_pthread_gettid();
+
 	if (mutex->type == PTHREAD_MUTEX_RECURSIVE) mutex->recursive_count = 1;
+
 	return 0;
 }
 static inline int pthread_mutex_trylock(pthread_mutex_t *mutex) {
@@ -481,6 +397,11 @@ static inline int pthread_mutex_destroy(pthread_mutex_t *mutex) {
 }
 static inline int pthread_mutex_consistent(pthread_mutex_t *mutex) {
 	if (!mutex || mutex->type != PTHREAD_MUTEX_ROBUST) return EINVAL;
+
+	/* The mutex is now consistent. The next lock will succeed. */
+	atomic_store(&mutex->futex, 0);
+	__jacl_pthread_futex_wake(&mutex->futex, 1);
+
 	return 0;
 }
 static inline int pthread_mutexattr_init(pthread_mutexattr_t *attr) { if (!attr) return EINVAL; attr->type = PTHREAD_MUTEX_NORMAL; attr->robust = 0; attr->pshared = PTHREAD_PROCESS_PRIVATE; return 0; }
@@ -490,7 +411,13 @@ static inline int pthread_mutexattr_destroy(pthread_mutexattr_t *attr) {
 }
 static inline int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type) {
 	if (!attr) return EINVAL;
+	if (type != PTHREAD_MUTEX_NORMAL &&
+
+	type != PTHREAD_MUTEX_RECURSIVE &&
+	type != PTHREAD_MUTEX_ERRORCHECK &&
+	type != PTHREAD_MUTEX_ROBUST) return EINVAL;
 	attr->type = type;
+
 	return 0;
 }
 static inline int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type) {
@@ -500,7 +427,10 @@ static inline int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int
 }
 static inline int pthread_mutexattr_setrobust(pthread_mutexattr_t *attr, int robust) {
 	if (!attr) return EINVAL;
+	if (robust != PTHREAD_MUTEX_STALLED && robust != PTHREAD_MUTEX_ROBUST) return EINVAL;
+
 	attr->robust = robust;
+
 	return 0;
 }
 static inline int pthread_mutexattr_getrobust(const pthread_mutexattr_t *attr, int *robust) {
@@ -734,12 +664,6 @@ static inline void pthread_testcancel(void) {
 
 	pthread_exit(PTHREAD_CANCELED);
 }
-static inline int pthread_cancel(pthread_t thread) {
-	if (!thread) return ESRCH;
-	atomic_store(&thread->canceled, 1);
-	__jacl_pthread_futex_wake(&thread->finished, 1);
-	return 0;
-}
 static inline int pthread_setcancelstate(int state, int *oldstate) {
 	pthread_t self = pthread_self();
 	if (!self || (state != PTHREAD_CANCEL_ENABLE && state != PTHREAD_CANCEL_DISABLE)) return EINVAL;
@@ -748,14 +672,100 @@ static inline int pthread_setcancelstate(int state, int *oldstate) {
 	if (state == PTHREAD_CANCEL_ENABLE) pthread_testcancel();
 	return 0;
 }
-static inline int pthread_setcanceltype(int type, int *oldtype) {
-	pthread_t self = pthread_self();
-	if (!self || (type != PTHREAD_CANCEL_DEFERRED && type != PTHREAD_CANCEL_ASYNCHRONOUS)) return EINVAL;
-	if (oldtype) *oldtype = atomic_load(&self->cancel_type);
-	atomic_store(&self->cancel_type, type);
+static inline void __jacl_pthread_atfork_prepare(void) {
+	pthread_spin_lock(&__jacl_atfork_lock);
+
+	__jacl_atfork_handler_t *h = __jacl_atfork_list;
+
+	while (h) { if (h->prepare) h->prepare(); h = h->next; }
+}
+static inline void __jacl_pthread_atfork_parent(void) {
+	__jacl_atfork_handler_t *h = __jacl_atfork_list;
+
+	while (h) { if (h->parent) h->parent(); h = h->next; }
+
+	pthread_spin_unlock(&__jacl_atfork_lock);
+}
+static inline void __jacl_pthread_atfork_child(void) {
+	__jacl_atfork_handler_t *h = __jacl_atfork_list;
+
+	while (h) { if (h->child) h->child(); h = h->next; }
+
+	pthread_spin_init(&__jacl_atfork_lock, PTHREAD_PROCESS_PRIVATE);
+}
+static inline int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void)) {
+	__jacl_atfork_handler_t *h = malloc(sizeof(*h));
+
+	if (!h) return ENOMEM;
+
+	h->prepare = prepare; h->parent = parent; h->child = child;
+
+	pthread_spin_lock(&__jacl_atfork_lock);
+
+	h->next = __jacl_atfork_list;
+
+	__jacl_atfork_list = h;
+
+	pthread_spin_unlock(&__jacl_atfork_lock);
+
 	return 0;
 }
+static inline int pthread_kill(pthread_t thread, int sig) {
+	if (!thread) return (__errno_set(EINVAL), -1);
 
+	/* Basic sanity check for signal range */
+	if (sig < 0 || sig > 64) return (__errno_set(EINVAL), -1);
+
+	#if JACL_OS_LINUX
+		return (int)syscall(SYS_tgkill, getpid(), thread->tid, sig);
+	#elif JACL_OS_DARWIN
+		return (int)syscall(SYS___pthread_kill, thread->tid, sig);
+	#elif JACL_OS_FREEBSD
+		return (int)syscall(SYS_thr_kill2, getpid(), thread->tid, sig);
+	#else
+		return (__errno_set(ENOSYS), -1);
+	#endif
+}
+
+#define __JACL_CANCEL_SIG SIGUSR2
+static void __jacl_cancel_handler(int sig) {
+	pthread_exit(PTHREAD_CANCELED);
+}
+static inline int pthread_setcanceltype(int type, int *oldtype) {
+	pthread_t self = pthread_self();
+
+	if (!self) return EINVAL;
+
+	/* Validate the type argument */
+	if (type != PTHREAD_CANCEL_DEFERRED && type != PTHREAD_CANCEL_ASYNCHRONOUS) return EINVAL;
+
+	if (oldtype) *oldtype = atomic_load(&self->cancel_type);
+
+	if (type == PTHREAD_CANCEL_ASYNCHRONOUS) {
+		struct sigaction sa = {0};
+
+		sa.sa_handler = __jacl_cancel_handler;
+
+		sigemptyset(&sa.sa_mask);
+
+		sa.sa_flags = SA_RESTART;
+
+		sigaction(__JACL_CANCEL_SIG, &sa, NULL);
+	}
+
+	atomic_store(&self->cancel_type, type);
+
+	return 0;
+}
+static inline int pthread_cancel(pthread_t thread) {
+	if (!thread) return ESRCH;
+
+	atomic_store(&thread->canceled, 1);
+
+	if (atomic_load(&thread->cancel_type) == PTHREAD_CANCEL_ASYNCHRONOUS) return pthread_kill(thread, __JACL_CANCEL_SIG);
+
+	return 0;
+}
 #define pthread_cleanup_push(routine, arg) \
 	do { \
 		pthread_t _self = pthread_self(); \
@@ -771,7 +781,6 @@ static inline int pthread_setcanceltype(int type, int *oldtype) {
 			if ((execute) && _cb_item.routine) _cb_item.routine(_cb_item.arg); \
 		} \
 	} while (0)
-
 static inline int pthread_once(pthread_once_t *once_control, void (*init_routine)(void)) {
 	if (!once_control || !init_routine) return EINVAL;
 	int expected = 0;
@@ -801,19 +810,6 @@ static inline int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *d
 }
 static inline int pthread_condattr_init(pthread_condattr_t *attr) { if (!attr) return EINVAL; attr->pshared = PTHREAD_PROCESS_PRIVATE; attr->clock_id = CLOCK_REALTIME; return 0; }
 static inline int pthread_condattr_destroy(pthread_condattr_t *attr) { if (!attr) return EINVAL; return 0; }
-static inline int pthread_kill(pthread_t thread, int sig) {
-	if (!thread) return EINVAL;
-
-	#if JACL_OS_LINUX
-		return (int)syscall(SYS_tgkill, getpid(), thread->tid, sig);
-	#elif JACL_OS_DARWIN
-		return (int)syscall(SYS___pthread_kill, thread->tid, sig);
-	#elif JACL_OS_FREEBSD
-		return (int)syscall(SYS_thr_kill2, getpid(), thread->tid, sig);
-	#else
-		(void)sig; return ENOSYS;
-	#endif
-}
 static inline int pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset) {
 	#if JACL_HAS_POSIX
 		if (sigprocmask(how, set, oldset) == 0) return 0;
@@ -832,12 +828,76 @@ static inline int pthread_rwlockattr_setpshared(pthread_rwlockattr_t *a, int p) 
 static inline int pthread_rwlockattr_getpshared(const pthread_rwlockattr_t *a, int *p) { if (!a || !p) return EINVAL; *p = a->pshared; return 0; }
 static inline int pthread_barrierattr_setpshared(pthread_barrierattr_t *a, int p) { if (!a || (p != PTHREAD_PROCESS_PRIVATE && p != PTHREAD_PROCESS_SHARED)) return EINVAL; a->pshared = p; return 0; }
 static inline int pthread_barrierattr_getpshared(const pthread_barrierattr_t *a, int *p) { if (!a || !p) return EINVAL; *p = a->pshared; return 0; }
+static inline int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param) {
+	if (!attr || !param) return EINVAL;
+	/* Store in attr for later use by pthread_create if needed */
+	attr->sched_param = *param;
+	return 0;
+}
+static inline int pthread_attr_getschedparam(const pthread_attr_t *attr, struct sched_param *param) {
+	if (!attr || !param) return EINVAL;
+	*param = attr->sched_param;
+	return 0;
+}
+static inline int pthread_setschedparam(pthread_t thread, int policy, const struct sched_param *param) {
+	if (!thread || !param) return EINVAL;
+	#if JACL_HAS_POSIX
+		struct sched_param p = *param;
+		if (sched_setscheduler(thread->tid, policy, &p) != 0) return errno;
+		return 0;
+	#else
+		return ENOSYS;
+	#endif
+}
+static inline int pthread_getschedparam(pthread_t thread, int *policy, struct sched_param *param) {
+	if (!thread || !policy || !param) return EINVAL;
+	#if JACL_HAS_POSIX
+		struct sched_param p;
+		int pol = sched_getscheduler(thread->tid);
+		if (pol == -1) return errno;
+		if (sched_getparam(thread->tid, &p) != 0) return errno;
+		*policy = pol;
+		*param = p;
+		return 0;
+	#else
+		return ENOSYS;
+	#endif
+}
+static inline int pthread_attr_setstack(pthread_attr_t *attr, void *stackaddr, size_t stacksize) {
+	if (!attr || !stackaddr || stacksize < PTHREAD_STACK_MIN) return EINVAL;
+	attr->stack_addr = stackaddr;
+	attr->stack_size = stacksize;
+	return 0;
+}
+static inline int pthread_attr_getstack(const pthread_attr_t *attr, void **stackaddr, size_t *stacksize) {
+	if (!attr || !stackaddr || !stacksize) return EINVAL;
+	*stackaddr = attr->stack_addr;
+	*stacksize = attr->stack_size;
+	return 0;
+}
+static inline int pthread_getcpuclockid(pthread_t thread, clockid_t *clock_id) {
+	if (!thread || !clock_id) return EINVAL;
+
+	#if defined(CLOCK_THREAD_CPUTIME_ID)
+		*clock_id = CLOCK_THREAD_CPUTIME_ID;
+
+		return 0;
+	#elif JACL_OS_LINUX
+		/* Linux specific: clock ID is derived from PID/TID */
+		*clock_id = ((~(thread->tid) << 3) | 6); /* CPUCLOCK_SCHED | CPUCLOCK_PERTHREAD_MASK */
+
+		return 0;
+	#else
+		return ENOSYS;
+	#endif
+}
 
 #else /* PTHREAD_DUMMY */
 
 #define pthread_create(t,a,s,arg) (ENOSYS)
 #define pthread_join(t,r) (ENOSYS)
 #define pthread_detach(t) (ENOSYS)
+#define pthread_atfork(r) (ENOSYS)
 #define pthread_exit(r) do { exit(0); } while(0)
 #define pthread_self() ((pthread_t){0})
 #define pthread_equal(t1,t2) (1)

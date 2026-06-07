@@ -164,16 +164,16 @@ static inline void __jacl_mq_do_notify(int pool_idx) {
 }
 
 static inline mqd_t mq_open(const char *name, int oflag, ...) {
-    if (!__jacl_mq_name_valid(name)) { errno = EINVAL; return -1; }
-    if ((oflag & O_EXCL) && !(oflag & O_CREAT)) { errno = EINVAL; return -1; }
+    if (!__jacl_mq_name_valid(name)) return (__errno_set(EINVAL), -1);
+    if ((oflag & O_EXCL) && !(oflag & O_CREAT)) return (__errno_set(EINVAL), -1);
 
     pthread_mutex_lock(&__jacl_mq_global);
     __jacl_mq_t *mq = __jacl_mq_find(name);
 
     if (!mq) {
-        if (!(oflag & O_CREAT)) { pthread_mutex_unlock(&__jacl_mq_global); errno = ENOENT; return -1; }
+        if (!(oflag & O_CREAT)) { pthread_mutex_unlock(&__jacl_mq_global); return (__errno_set(ENOENT), -1); }
         int id = __jacl_mq_alloc(name);
-        if (id < 0) { pthread_mutex_unlock(&__jacl_mq_global); errno = ENFILE; return -1; }
+        if (id < 0) { pthread_mutex_unlock(&__jacl_mq_global); return (__errno_set(ENFILE), -1); }
         mq = &__jacl_mq_pool[id];
 
         va_list ap; va_start(ap, oflag);
@@ -183,7 +183,7 @@ static inline mqd_t mq_open(const char *name, int oflag, ...) {
 
         if (attr) {
             if (attr->mq_maxmsg <= 0 || attr->mq_msgsize <= 0) {
-                pthread_mutex_unlock(&__jacl_mq_global); errno = EINVAL; return -1;
+                pthread_mutex_unlock(&__jacl_mq_global); return (__errno_set(EINVAL), -1);
             }
             mq->attr.mq_flags = attr->mq_flags;
             mq->attr.mq_maxmsg = attr->mq_maxmsg;
@@ -193,12 +193,12 @@ static inline mqd_t mq_open(const char *name, int oflag, ...) {
             mq->attr.mq_msgsize = 8192;
         }
     } else if (oflag & O_CREAT) {
-        pthread_mutex_unlock(&__jacl_mq_global); errno = EEXIST; return -1;
+        pthread_mutex_unlock(&__jacl_mq_global); return (__errno_set(EEXIST), -1);
     }
 
     int pool_idx = (int)(mq - __jacl_mq_pool);
     int desc = __jacl_mq_desc_alloc(pool_idx, oflag);
-    if (desc < 0) { pthread_mutex_unlock(&__jacl_mq_global); errno = EMFILE; return -1; }
+    if (desc < 0) { pthread_mutex_unlock(&__jacl_mq_global); return (__errno_set(EMFILE), -1); }
 
     mq->refcount++;
     if (oflag & O_NONBLOCK) mq->attr.mq_flags |= O_NONBLOCK;
@@ -207,9 +207,9 @@ static inline mqd_t mq_open(const char *name, int oflag, ...) {
 }
 
 static inline int mq_close(mqd_t mqdes) {
-    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) { errno = EBADF; return -1; }
+    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) return (__errno_set(EBADF), -1);
     __jacl_mq_desc_t *desc = &__jacl_mq_descs[mqdes];
-    if (!desc->active) { errno = EBADF; return -1; }
+    if (!desc->active) return (__errno_set(EBADF), -1);
 
     pthread_mutex_lock(&__jacl_mq_global);
     __jacl_mq_t *mq = &__jacl_mq_pool[desc->pool_idx];
@@ -228,13 +228,13 @@ static inline int mq_close(mqd_t mqdes) {
 }
 
 static inline int mq_unlink(const char *name) {
-    if (!__jacl_mq_name_valid(name)) { errno = EINVAL; return -1; }
+    if (!__jacl_mq_name_valid(name)) return (__errno_set(EINVAL), -1);
     pthread_mutex_lock(&__jacl_mq_global);
     __jacl_mq_t *mq = __jacl_mq_find(name);
-    if (!mq) { pthread_mutex_unlock(&__jacl_mq_global); errno = ENOENT; return -1; }
+    if (!mq) { pthread_mutex_unlock(&__jacl_mq_global); return (__errno_set(ENOENT), -1); }
 
     if (mq->unlinked) {
-        pthread_mutex_unlock(&__jacl_mq_global); errno = ENOENT; return -1;
+        pthread_mutex_unlock(&__jacl_mq_global); return (__errno_set(ENOENT), -1);
     }
 
     mq->unlinked = 1;
@@ -244,20 +244,20 @@ static inline int mq_unlink(const char *name) {
 }
 
 static inline int mq_send(mqd_t mqdes, const char *msg_ptr, size_t msg_len, unsigned msg_prio) {
-    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) { errno = EBADF; return -1; }
+    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) return (__errno_set(EBADF), -1);
     __jacl_mq_desc_t *desc = &__jacl_mq_descs[mqdes];
-    if (!desc->active) { errno = EBADF; return -1; }
+    if (!desc->active) return (__errno_set(EBADF), -1);
     __jacl_mq_t *mq = &__jacl_mq_pool[desc->pool_idx];
-    if (!mq->active) { errno = EBADF; return -1; }
-    if (!msg_ptr) { errno = EINVAL; return -1; }
-    if (msg_len > (size_t)mq->attr.mq_msgsize) { errno = EMSGSIZE; return -1; }
-    if (desc->oflags == O_RDONLY) { errno = EBADF; return -1; }
+    if (!mq->active) return (__errno_set(EBADF), -1);
+    if (!msg_ptr) return (__errno_set(EINVAL), -1);
+    if (msg_len > (size_t)mq->attr.mq_msgsize) return (__errno_set(EMSGSIZE), -1);
+    if (desc->oflags == O_RDONLY) return (__errno_set(EBADF), -1);
 
     int pool_idx = desc->pool_idx;
 
     pthread_mutex_lock(&mq->lock);
     while (mq->attr.mq_curmsgs >= mq->attr.mq_maxmsg) {
-        if (mq->attr.mq_flags & O_NONBLOCK) { pthread_mutex_unlock(&mq->lock); errno = EAGAIN; return -1; }
+        if (mq->attr.mq_flags & O_NONBLOCK) { pthread_mutex_unlock(&mq->lock); return (__errno_set(EAGAIN), -1); }
         pthread_cond_wait(&mq->cond, &mq->lock);
     }
 
@@ -283,13 +283,13 @@ static inline int mq_send(mqd_t mqdes, const char *msg_ptr, size_t msg_len, unsi
 }
 
 static inline ssize_t mq_receive(mqd_t mqdes, char *msg_ptr, size_t msg_len, unsigned *msg_prio) {
-    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) { errno = EBADF; return -1; }
+    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) return (__errno_set(EBADF), -1);
     __jacl_mq_desc_t *desc = &__jacl_mq_descs[mqdes];
-    if (!desc->active) { errno = EBADF; return -1; }
+    if (!desc->active) return (__errno_set(EBADF), -1);
     __jacl_mq_t *mq = &__jacl_mq_pool[desc->pool_idx];
-    if (!mq->active) { errno = EBADF; return -1; }
-    if (!msg_ptr) { errno = EINVAL; return -1; }
-    if (desc->oflags == O_WRONLY) { errno = EBADF; return -1; }
+    if (!mq->active) return (__errno_set(EBADF), -1);
+    if (!msg_ptr) return (__errno_set(EINVAL), -1);
+    if (desc->oflags == O_WRONLY) return (__errno_set(EBADF), -1);
 
     pthread_mutex_lock(&mq->lock);
 
@@ -298,12 +298,12 @@ static inline ssize_t mq_receive(mqd_t mqdes, char *msg_ptr, size_t msg_len, uns
     __jacl_mq_notify[desc->pool_idx].notify_pid = 0;
 
     while (!mq->head) {
-        if (mq->attr.mq_flags & O_NONBLOCK) { pthread_mutex_unlock(&mq->lock); errno = EAGAIN; return -1; }
+        if (mq->attr.mq_flags & O_NONBLOCK) { pthread_mutex_unlock(&mq->lock); return (__errno_set(EAGAIN), -1); }
         pthread_cond_wait(&mq->cond, &mq->lock);
     }
 
     __jacl_mq_node_t *node = mq->head;
-    if (msg_len < node->len) { pthread_mutex_unlock(&mq->lock); errno = EMSGSIZE; return -1; }
+    if (msg_len < node->len) { pthread_mutex_unlock(&mq->lock); return (__errno_set(EMSGSIZE), -1); }
 
     memcpy(msg_ptr, node->data, node->len);
     if (msg_prio) *msg_prio = node->prio;
@@ -318,22 +318,22 @@ static inline ssize_t mq_receive(mqd_t mqdes, char *msg_ptr, size_t msg_len, uns
 }
 
 static inline int mq_timedsend(mqd_t mqdes, const char *msg_ptr, size_t msg_len, unsigned msg_prio, const struct timespec *abs_timeout) {
-    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) { errno = EBADF; return -1; }
+    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) return (__errno_set(EBADF), -1);
     __jacl_mq_desc_t *desc = &__jacl_mq_descs[mqdes];
-    if (!desc->active) { errno = EBADF; return -1; }
+    if (!desc->active) return (__errno_set(EBADF), -1);
     __jacl_mq_t *mq = &__jacl_mq_pool[desc->pool_idx];
-    if (!mq->active || !abs_timeout) { errno = mq->active ? EINVAL : EBADF; return -1; }
-    if (abs_timeout->tv_nsec < 0 || abs_timeout->tv_nsec >= 1000000000L) { errno = EINVAL; return -1; }
-    if (!msg_ptr) { errno = EINVAL; return -1; }
-    if (msg_len > (size_t)mq->attr.mq_msgsize) { errno = EMSGSIZE; return -1; }
-    if (desc->oflags == O_RDONLY) { errno = EBADF; return -1; }
+    if (!mq->active || !abs_timeout) return (__errno_set(mq->active ? EINVAL : EBADF), -1);
+    if (abs_timeout->tv_nsec < 0 || abs_timeout->tv_nsec >= 1000000000L) return (__errno_set(EINVAL), -1);
+    if (!msg_ptr) return (__errno_set(EINVAL), -1);
+    if (msg_len > (size_t)mq->attr.mq_msgsize) return (__errno_set(EMSGSIZE), -1);
+    if (desc->oflags == O_RDONLY) return (__errno_set(EBADF), -1);
 
     int pool_idx = desc->pool_idx;
 
     pthread_mutex_lock(&mq->lock);
     while (mq->attr.mq_curmsgs >= mq->attr.mq_maxmsg) {
         int rc = pthread_cond_timedwait(&mq->cond, &mq->lock, abs_timeout);
-        if (rc == ETIMEDOUT) { pthread_mutex_unlock(&mq->lock); errno = ETIMEDOUT; return -1; }
+        if (rc == ETIMEDOUT) { pthread_mutex_unlock(&mq->lock); return (__errno_set(ETIMEDOUT), -1); }
     }
 
     __jacl_mq_node_t *node = malloc(sizeof(*node));
@@ -358,14 +358,14 @@ static inline int mq_timedsend(mqd_t mqdes, const char *msg_ptr, size_t msg_len,
 }
 
 static inline ssize_t mq_timedreceive(mqd_t mqdes, char *msg_ptr, size_t msg_len, unsigned *msg_prio, const struct timespec *abs_timeout) {
-    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) { errno = EBADF; return -1; }
+    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) return (__errno_set(EBADF), -1);
     __jacl_mq_desc_t *desc = &__jacl_mq_descs[mqdes];
-    if (!desc->active) { errno = EBADF; return -1; }
+    if (!desc->active) return (__errno_set(EBADF), -1);
     __jacl_mq_t *mq = &__jacl_mq_pool[desc->pool_idx];
-    if (!mq->active || !abs_timeout) { errno = mq->active ? EINVAL : EBADF; return -1; }
-    if (abs_timeout->tv_nsec < 0 || abs_timeout->tv_nsec >= 1000000000L) { errno = EINVAL; return -1; }
-    if (!msg_ptr) { errno = EINVAL; return -1; }
-    if (desc->oflags == O_WRONLY) { errno = EBADF; return -1; }
+    if (!mq->active || !abs_timeout) return (__errno_set(mq->active ? EINVAL : EBADF), -1);
+    if (abs_timeout->tv_nsec < 0 || abs_timeout->tv_nsec >= 1000000000L) return (__errno_set(EINVAL), -1);
+    if (!msg_ptr) return (__errno_set(EINVAL), -1);
+    if (desc->oflags == O_WRONLY) return (__errno_set(EBADF), -1);
 
     pthread_mutex_lock(&mq->lock);
 
@@ -375,11 +375,11 @@ static inline ssize_t mq_timedreceive(mqd_t mqdes, char *msg_ptr, size_t msg_len
 
     while (!mq->head) {
         int rc = pthread_cond_timedwait(&mq->cond, &mq->lock, abs_timeout);
-        if (rc == ETIMEDOUT) { pthread_mutex_unlock(&mq->lock); errno = ETIMEDOUT; return -1; }
+        if (rc == ETIMEDOUT) { pthread_mutex_unlock(&mq->lock); return (__errno_set(ETIMEDOUT), -1); }
     }
 
     __jacl_mq_node_t *node = mq->head;
-    if (msg_len < node->len) { pthread_mutex_unlock(&mq->lock); errno = EMSGSIZE; return -1; }
+    if (msg_len < node->len) { pthread_mutex_unlock(&mq->lock); return (__errno_set(EMSGSIZE), -1); }
 
     memcpy(msg_ptr, node->data, node->len);
     if (msg_prio) *msg_prio = node->prio;
@@ -394,11 +394,11 @@ static inline ssize_t mq_timedreceive(mqd_t mqdes, char *msg_ptr, size_t msg_len
 }
 
 static inline int mq_notify(mqd_t mqdes, const struct sigevent *notification) {
-    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) { errno = EBADF; return -1; }
+    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX) return (__errno_set(EBADF), -1);
     __jacl_mq_desc_t *desc = &__jacl_mq_descs[mqdes];
-    if (!desc->active) { errno = EBADF; return -1; }
+    if (!desc->active) return (__errno_set(EBADF), -1);
     __jacl_mq_t *mq = &__jacl_mq_pool[desc->pool_idx];
-    if (!mq->active) { errno = EBADF; return -1; }
+    if (!mq->active) return (__errno_set(EBADF), -1);
 
     pthread_mutex_lock(&__jacl_mq_global);
     __jacl_mq_notify_t *n = &__jacl_mq_notify[desc->pool_idx];
@@ -417,8 +417,7 @@ static inline int mq_notify(mqd_t mqdes, const struct sigevent *notification) {
     /* Register */
     if (n->registered) {
         pthread_mutex_unlock(&__jacl_mq_global);
-        errno = EBUSY;
-        return -1;
+        return (__errno_set(EBUSY), -1);
     }
 
     n->registered = 1;
@@ -429,11 +428,11 @@ static inline int mq_notify(mqd_t mqdes, const struct sigevent *notification) {
 }
 
 static inline int mq_getattr(mqd_t mqdes, struct mq_attr *mqstat) {
-    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX || !mqstat) { errno = mqstat ? EBADF : EINVAL; return -1; }
+    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX || !mqstat) return (__errno_set(mqstat ? EBADF : EINVAL), -1);
     __jacl_mq_desc_t *desc = &__jacl_mq_descs[mqdes];
-    if (!desc->active) { errno = EBADF; return -1; }
+    if (!desc->active) return (__errno_set(EBADF), -1);
     __jacl_mq_t *mq = &__jacl_mq_pool[desc->pool_idx];
-    if (!mq->active) { errno = EBADF; return -1; }
+    if (!mq->active) return (__errno_set(EBADF), -1);
 
     pthread_mutex_lock(&mq->lock);
     *mqstat = mq->attr;
@@ -442,11 +441,11 @@ static inline int mq_getattr(mqd_t mqdes, struct mq_attr *mqstat) {
 }
 
 static inline int mq_setattr(mqd_t mqdes, const struct mq_attr *mqstat, struct mq_attr *omqstat) {
-    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX || !mqstat) { errno = mqstat ? EBADF : EINVAL; return -1; }
+    if (mqdes < 0 || mqdes >= __JACL_MQ_DESC_MAX || !mqstat) return (__errno_set(mqstat ? EBADF : EINVAL), -1);
     __jacl_mq_desc_t *desc = &__jacl_mq_descs[mqdes];
-    if (!desc->active) { errno = EBADF; return -1; }
+    if (!desc->active) return (__errno_set(EBADF), -1);
     __jacl_mq_t *mq = &__jacl_mq_pool[desc->pool_idx];
-    if (!mq->active) { errno = EBADF; return -1; }
+    if (!mq->active) return (__errno_set(EBADF), -1);
 
     pthread_mutex_lock(&mq->lock);
     if (omqstat) *omqstat = mq->attr;

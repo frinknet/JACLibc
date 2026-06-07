@@ -440,11 +440,7 @@ static inline __jacl_memseg_t* __jacl_grow_heap(size_t need) {
 
 static inline size_t __jacl_alloc_need(size_t n) {
 	if (n == 0) n = 1;
-	if (JACL_UNLIKELY(n > SIZE_MAX - sizeof(__jacl_memhdr_t))) {
-		errno = ENOMEM;
-
-		return 0;
-	}
+	if (JACL_UNLIKELY(n > SIZE_MAX - sizeof(__jacl_memhdr_t))) return (__errno_set(ENOMEM), 0);
 
 	return __jacl_round_size(n + sizeof(__jacl_memhdr_t));
 }
@@ -452,7 +448,9 @@ static inline size_t __jacl_alloc_need(size_t n) {
 static inline void* __jacl_alloc_recycle(size_t n) {
 	if (n < 16 || n > 48) return NULL;
 
-	int rbin = (n >> 3) - 2;
+	// Round up to the nearest 8-byte alignment before calculating bin
+	size_t aligned = (n + 7) & ~7u;
+	int rbin = (aligned >> 3) - 2;
 
 	if (rbin >= 0 && rbin < 4 && __jacl_recycling[rbin].count > 0) {
 		void* p = __jacl_recycling[rbin].slots[--__jacl_recycling[rbin].count];
@@ -642,9 +640,7 @@ void* malloc(size_t n) {
 
 	if (p) return p;
 
-	errno = ENOMEM;
-
-	return NULL;
+	return (__errno_set(ENOMEM), NULL);
 }
 
 void free(void* p) {
@@ -680,11 +676,7 @@ void free(void* p) {
 }
 
 void* calloc(size_t nmemb, size_t size) {
-	if (nmemb && size > SIZE_MAX / nmemb) {
-		errno = ENOMEM;
-
-		return NULL;
-	}
+	if (nmemb && size > SIZE_MAX / nmemb) return (__errno_set(ENOMEM), NULL);
 
 	size_t total = nmemb * size;
 	void* p = malloc(total);
@@ -750,11 +742,7 @@ void* realloc(void* ptr, size_t size) {
 }
 
 void* aligned_alloc(size_t alignment, size_t size) {
-	if (alignment == 0 || (alignment & (alignment-1)) != 0 || size % alignment != 0) {
-		errno = EINVAL;
-
-		return NULL;
-	}
+	if (alignment == 0 || (alignment & (alignment-1)) != 0 || size % alignment != 0) return (__errno_set(EINVAL), NULL);
 	if (alignment <= JACL_ALIGNMENT) return malloc(size);
 
 	size_t extra = alignment + sizeof(void*);
@@ -774,9 +762,13 @@ void* aligned_alloc(size_t alignment, size_t size) {
 int posix_memalign(void** memptr, size_t alignment, size_t size) {
 	if (!memptr) return EINVAL;
 	if (alignment < sizeof(void*) || (alignment & (alignment - 1))) return EINVAL;
-	if (size % alignment != 0) return EINVAL;
 
-	void* p = aligned_alloc(alignment, size);
+	// POSIX doesn't require size to be a multiple of alignment, but C11 aligned_alloc does.
+	// Pad the size up to the nearest multiple of alignment.
+	size_t alloc_size = (size + alignment - 1) & ~(alignment - 1);
+	if (alloc_size == 0) alloc_size = alignment;
+
+	void* p = aligned_alloc(alignment, alloc_size);
 
 	if (!p) return ENOMEM;
 
@@ -786,11 +778,7 @@ int posix_memalign(void** memptr, size_t alignment, size_t size) {
 }
 
 void* reallocarray(void* ptr, size_t nmemb, size_t size) {
-	if (nmemb && size > SIZE_MAX / nmemb) {
-		errno = ENOMEM;
-
-		return NULL;
-	}
+	if (nmemb && size > SIZE_MAX / nmemb) return (__errno_set(ENOMEM), NULL);
 
 	return realloc(ptr, nmemb * size);
 }

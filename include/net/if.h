@@ -199,29 +199,33 @@ static inline char *if_indextoname(unsigned int ifindex, char *ifname) {
 
 	for (int i = 0; i < count; i++) {
 		struct ifreq tmp = {0};
+
 		strncpy(tmp.ifr_name, ifr[i].ifr_name, IFNAMSIZ - 1);
+
 		tmp.ifr_name[IFNAMSIZ - 1] = '\0';
 
 		/* Reuse FD instead of reopening per loop */
 		if (ioctl(fd, SIOCGIFINDEX, &tmp) == 0 && tmp.ifr_ifindex == ifindex) {
 			strncpy(ifname, tmp.ifr_name, IFNAMSIZ - 1);
+
 			ifname[IFNAMSIZ - 1] = '\0';
+
 			close(fd);
+
 			return ifname;
 		}
 	}
 
 	close(fd);
-	errno = ENOENT;
-	return NULL;
+
+	return (__errno_set(ENOENT), NULL);
 }
 
 static inline void if_freenameindex(struct if_nameindex *ptr) {
 	if (!ptr) return;
 
-	for (int i = 0; ptr[i].if_index != 0 || ptr[i].if_name != NULL; i++) {
-		free(ptr[i].if_name);
-	}
+	for (int i = 0; ptr[i].if_index != 0 || ptr[i].if_name != NULL; i++) free(ptr[i].if_name);
+
 	free(ptr);
 }
 
@@ -236,15 +240,19 @@ static inline struct if_nameindex *if_nameindex(void) {
 
 	int count = ifc.ifc_len / sizeof(struct ifreq);
 	struct if_nameindex *idx = calloc(count + 1, sizeof(struct if_nameindex));
+
 	if (!idx) { close(fd); return NULL; }
 
 	/* Reuse a single FD for batch index resolution */
 	int fd2 = socket(AF_INET, SOCK_DGRAM, 0);
+
 	if (fd2 < 0) { close(fd); if_freenameindex(idx); return NULL; }
 
 	for (int i = 0; i < count; i++) {
 		struct ifreq ifr = {0};
+
 		strncpy(ifr.ifr_name, ifc.ifc_req[i].ifr_name, IFNAMSIZ - 1);
+
 		ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 
 		if (ioctl(fd2, SIOCGIFINDEX, &ifr) == 0) {
@@ -257,12 +265,16 @@ static inline struct if_nameindex *if_nameindex(void) {
 
 		if (!idx[i].if_name) {
 			if_freenameindex(idx);
-			close(fd); close(fd2);
+			close(fd);
+			close(fd2);
+
 			return NULL;
 		}
 	}
 
-	close(fd); close(fd2);
+	close(fd);
+	close(fd2);
+
 	return idx; /* Sentinel {0, NULL} auto-zeroed by calloc */
 }
 

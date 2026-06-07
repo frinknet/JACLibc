@@ -1,4 +1,4 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 #ifndef _TIME_H
 #define _TIME_H
 #pragma once
@@ -35,35 +35,6 @@ extern "C" {
 #define CLOCK_THREAD_CPUTIME_ID  3
 
 /* ================================================================ */
-/* Time Structures                                                  */
-/* ================================================================ */
-
-/* POSIX timespec structure */
-typedef struct timespec {
-	time_t tv_sec;   /* Seconds */
-	long  tv_nsec;   /* Nanoseconds */
-} timespec;
-
-/* Standard tm structure */
-typedef struct tm {
-	int tm_sec;    /* Seconds (0-60) */
-	int tm_min;    /* Minutes (0-59) */
-	int tm_hour;   /* Hours (0-23) */
-	int tm_mday;   /* Day of month (1-31) */
-	int tm_mon;    /* Month (0-11) */
-	int tm_year;   /* Years since 1900 */
-	int tm_wday;   /* Day of week (0-6, Sunday = 0) */
-	int tm_yday;   /* Day of year (0-365) */
-	int tm_isdst;  /* Daylight saving time flag */
-} tm;
-
-/* POSIX timer structure */
-typedef struct itimerspec {
-	struct timespec it_interval;
-	struct timespec it_value;
-} itimerspec;
-
-/* ================================================================ */
 /* Helper routines (calendar math, string helpers)                  */
 /* ================================================================ */
 
@@ -98,30 +69,30 @@ static inline void __jacl_str_copy(char *dest, const char *src, int len) {
 #if JACL_OS_LINUX
 
 static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	long r = syscall(SYS_clock_gettime, (long)clk_id, (long)tp);
 
-	if (r < 0) { errno = (int)-r; return -1; }
+	if (r < 0) return (__errno_set((int)-r), -1);
 
 	return 0;
 }
 static inline int clock_getres(clockid_t clk_id, struct timespec *tp) {
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	long r = syscall(SYS_clock_getres, (long)clk_id, (long)tp);
 
-	if (r < 0) { errno = (int)-r; return -1; }
+	if (r < 0) return (__errno_set((int)-r), -1);
 
 	return 0;
 }
 
 static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
-	if (!req || req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec >= 1000000000L) { errno = EINVAL; return -1; }
+	if (!req || req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec >= 1000000000L) return (__errno_set(EINVAL), -1);
 
 	long r = syscall(SYS_nanosleep, (long)req, (long)rem);
 
-	if (r < 0) { errno = (int)-r; return -1; }
+	if (r < 0) return (__errno_set((int)-r), -1);
 
 	return 0;
 }
@@ -153,7 +124,7 @@ static inline time_t time(time_t *tloc) {
 #elif JACL_OS_DARWIN
 
 static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	// macOS 10.12+ has native clock_gettime, but for older versions
 	// we need a fallback using mach_absolute_time or gettimeofday
@@ -165,7 +136,7 @@ static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 }
 
 static inline int clock_getres(clockid_t clk_id, struct timespec *tp) {
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	long r = syscall(SYS_clock_getres, (long)clk_id, (long)tp);
 
@@ -174,8 +145,7 @@ static inline int clock_getres(clockid_t clk_id, struct timespec *tp) {
 
 static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
 	if (!req || req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec >= 1000000000L) {
-		errno = EINVAL;
-		return -1;
+		return (__errno_set(EINVAL), -1);
 	}
 
 	long r = syscall(SYS_nanosleep, (long)req, (long)rem);
@@ -249,7 +219,7 @@ static inline time_t time(time_t *tloc) {
 }
 
 static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
-	if (!req || req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec >= 1000000000L) { errno = EINVAL; return -1; }
+	if (!req || req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec >= 1000000000L) return (__errno_set(EINVAL), -1);
 
 	unsigned long ms = (unsigned long)(req->tv_sec * 1000 + req->tv_nsec / 1000000);
 
@@ -265,7 +235,7 @@ static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
 static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 	(void)clk_id;
 
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	time_t now = time(NULL);
 
@@ -280,7 +250,7 @@ static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 static inline int clock_getres(clockid_t clk_id, struct timespec *tp) {
 	(void)clk_id;
 
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	tp->tv_sec  = 0;
 	tp->tv_nsec = 1000000L; /* assume 1ms resolution */
@@ -316,7 +286,7 @@ static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
 static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 	(void)clk_id;
 
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	tp->tv_sec  = WASM_EPOCH_TIME;
 	tp->tv_nsec = 0;
@@ -327,7 +297,7 @@ static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 static inline int clock_getres(clockid_t clk_id, struct timespec *tp) {
 	(void)clk_id;
 
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	tp->tv_sec  = 0;
 	tp->tv_nsec = 1000000L;
@@ -356,7 +326,7 @@ static inline time_t time(time_t *tloc) {
 }
 
 static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
-	if (!req) { errno = EINVAL; return -1; }
+	if (!req) return (__errno_set(EINVAL), -1);
 
 	volatile long long spin = req->tv_sec * 1000000LL + req->tv_nsec / 1000;
 
@@ -369,7 +339,7 @@ static inline int nanosleep(const struct timespec *req, struct timespec *rem) {
 static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 	(void)clk_id;
 
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	time_t now = time(NULL);
 
@@ -384,7 +354,7 @@ static inline int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 static inline int clock_getres(clockid_t clk_id, struct timespec *tp) {
 	(void)clk_id;
 
-	if (!tp) { errno = EINVAL; return -1; }
+	if (!tp) return (__errno_set(EINVAL), -1);
 
 	tp->tv_sec  = 0;
 	tp->tv_nsec = 1000000L;
@@ -726,37 +696,37 @@ static inline int timespec_getres(struct timespec *ts, int base) {
 #endif
 
 static inline int timer_create(clockid_t clockid, struct sigevent *evp, timer_t *timerid) {
-	if (!timerid) { errno = EINVAL; return -1; }
+	if (!timerid) return (__errno_set(EINVAL), -1);
 	long r = syscall(SYS_timer_create, (long)clockid, (long)evp, (long)timerid);
-	if (r < 0) { errno = (int)-r; return -1; }
+	if (r < 0) return (__errno_set((int)-r), -1);
 	return 0;
 }
 
 static inline int timer_settime(timer_t timerid, int flags, const struct itimerspec *value, struct itimerspec *ovalue) {
-	if (!timerid || !value) { errno = EINVAL; return -1; }
+	if (!timerid || !value) return (__errno_set(EINVAL), -1);
 	long r = syscall(SYS_timer_settime, (long)timerid, (long)flags, (long)value, (long)ovalue);
-	if (r < 0) { errno = (int)-r; return -1; }
+	if (r < 0) return (__errno_set((int)-r), -1);
 	return 0;
 }
 
 static inline int timer_gettime(timer_t timerid, struct itimerspec *value) {
-	if (!timerid || !value) { errno = EINVAL; return -1; }
+	if (!timerid || !value) return (__errno_set(EINVAL), -1);
 	long r = syscall(SYS_timer_gettime, (long)timerid, (long)value);
-	if (r < 0) { errno = (int)-r; return -1; }
+	if (r < 0) return (__errno_set((int)-r), -1);
 	return 0;
 }
 
 static inline int timer_getoverrun(timer_t timerid) {
-	if (!timerid) { errno = EINVAL; return -1; }
+	if (!timerid) return (__errno_set(EINVAL), -1);
 	long r = syscall(SYS_timer_getoverrun, (long)timerid);
-	if (r < 0) { errno = (int)-r; return -1; }
+	if (r < 0) return (__errno_set((int)-r), -1);
 	return (int)r;
 }
 
 static inline int timer_delete(timer_t timerid) {
-	if (!timerid) { errno = EINVAL; return -1; }
+	if (!timerid) return (__errno_set(EINVAL), -1);
 	long r = syscall(SYS_timer_delete, (long)timerid);
-	if (r < 0) { errno = (int)-r; return -1; }
+	if (r < 0) return (__errno_set((int)-r), -1);
 	return 0;
 }
 
@@ -764,32 +734,27 @@ static inline int timer_delete(timer_t timerid) {
 
 static inline int timer_create(clockid_t clockid, struct sigevent *evp, timer_t *timerid) {
 	(void)clockid; (void)evp; (void)timerid;
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 
 static inline int timer_settime(timer_t timerid, int flags, const struct itimerspec *value, struct itimerspec *ovalue) {
 	(void)timerid; (void)flags; (void)value; (void)ovalue;
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 
 static inline int timer_gettime(timer_t timerid, struct itimerspec *value) {
 	(void)timerid; (void)value;
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 
 static inline int timer_getoverrun(timer_t timerid) {
 	(void)timerid;
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 
 static inline int timer_delete(timer_t timerid) {
 	(void)timerid;
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 
 #endif

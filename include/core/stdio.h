@@ -86,7 +86,7 @@ int sprintf(char * restrict s, const char * restrict fmt, ...) { va_list ap; va_
 #if JACL_HAS_C99
 int vsnprintf(char * restrict s, size_t n, const char * restrict fmt, va_list ap) { return __jacl_printf(NULL, s, n, fmt, ap); }
 int vdprintf(int fd, const char* restrict fmt, va_list ap) {
-	if (fd < 0) { errno = EBADF; return -1; }
+	if (fd < 0) return (__errno_set(EBADF), -1);
 
 	__jacl_init_stdio();
 
@@ -100,7 +100,7 @@ int vdprintf(int fd, const char* restrict fmt, va_list ap) {
 	return __jacl_printf(&temp, NULL, 0, fmt, ap);
 }
 int vasprintf(char **strp, const char *fmt, va_list ap) {
-	if (!strp || !fmt) { errno = EINVAL; return -1; }
+	if (!strp || !fmt) return (__errno_set(EINVAL), -1);
 
 	va_list ap_copy;
 

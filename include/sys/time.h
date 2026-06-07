@@ -295,9 +295,7 @@ static inline int getitimer(int which, itimerval *curr_value) {
 		(void)which;
 		(void)curr_value;
 
-		errno = ENOSYS;
-
-		return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
@@ -309,9 +307,7 @@ static inline int setitimer(int which, const itimerval *new_value, itimerval *ol
 	#else
 		(void)which; (void)old_value;
 
-		errno = ENOSYS;
-
-		return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
@@ -323,13 +319,10 @@ static inline int utimes(const char *pathname, const timeval times[2]) {
 	#else
 		(void)times;
 
-		errno = ENOSYS;
-
-		return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
-/* Additional POSIX.1-2008 functions */
 /* Additional POSIX.1-2008 functions */
 static inline int futimes(int fd, const timeval times[2]) {
 	#if JACL_HASSYS(futimes)
@@ -338,9 +331,7 @@ static inline int futimes(int fd, const timeval times[2]) {
 		(void)fd;
 		(void)times;
 
-		errno = ENOSYS;
-
-		return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 
@@ -352,9 +343,7 @@ static inline int lutimes(const char *pathname, const timeval times[2]) {
 	#else
 		(void)times;
 
-		errno = ENOSYS;
-
-		return -1;
+		return (__errno_set(ENOSYS), -1);
 	#endif
 }
 

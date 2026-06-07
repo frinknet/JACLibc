@@ -17,10 +17,7 @@
 extern "C" {
 #endif
 
-/* ============================================================================ */
-/* POSIX Constants & Types                                                      */
-/* ============================================================================ */
-
+/* POSIX Constants & Types */
 #define RTLD_LAZY   0x00001
 #define RTLD_NOW    0x00002
 #define RTLD_GLOBAL 0x00100
@@ -29,16 +26,13 @@ extern "C" {
 #define RTLD_NEXT    ((void *)-1)
 
 typedef struct {
-    const char *dli_fname;
-    void       *dli_fbase;
-    const char *dli_sname;
-    void       *dli_saddr;
+	const char *dli_fname;
+	void       *dli_fbase;
+	const char *dli_sname;
+	void       *dli_saddr;
 } Dl_info;
 
-/* ============================================================================ */
-/* Internal State                                                               */
-/* ============================================================================ */
-
+/* Internal State */
 typedef struct jacl_dl_handle {
     char path[256];
     void *base;
@@ -50,10 +44,7 @@ typedef struct jacl_dl_handle {
 static jacl_dl_handle_t *__dl_handles = NULL;
 static char __dl_err[256] = {0};
 
-/* ============================================================================ */
-/* Backend Injection                                                            */
-/* ============================================================================ */
-
+/* Backend Injection */
 #define __BIN_LINK 1
 #include JACL_BIN_FILE
 
@@ -62,66 +53,77 @@ static char __dl_err[256] = {0};
 #define __dl_free JACL_CONCAT_EXPAND(__dl_free, JACL_BIN, _)
 #define __dl_addr JACL_CONCAT_EXPAND(__dl_addr, JACL_BIN, _)
 
-/* ============================================================================ */
-/* Public API                                                                   */
-/* ============================================================================ */
-
+/* Public API */
 static inline void *dlopen(const char *filename, int flag) {
 	(void)flag;
+
 	__dl_err[0] = '\0';
+
 	if (!filename) return RTLD_DEFAULT;
 
 	int fd = open(filename, O_RDONLY);
+
 	if (fd < 0) { snprintf(__dl_err, sizeof(__dl_err), "open: %s", strerror(errno)); return NULL; }
 
 	struct stat st;
+
 	if (fstat(fd, &st) < 0) { close(fd); snprintf(__dl_err, sizeof(__dl_err), "fstat: %s", strerror(errno)); return NULL; }
 
 	void *file_map = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+
 	close(fd);
+
 	if (file_map == MAP_FAILED) { snprintf(__dl_err, sizeof(__dl_err), "mmap: %s", strerror(errno)); return NULL; }
 
 	jacl_dl_handle_t *h = calloc(1, sizeof(jacl_dl_handle_t));
+
 	if (!h) { munmap(file_map, st.st_size); snprintf(__dl_err, sizeof(__dl_err), "alloc: %s", strerror(errno)); return NULL; }
+
 	strncpy(h->path, filename, sizeof(h->path) - 1);
 
 	if (!__dl_load(h, file_map, &st)) {
 		munmap(file_map, st.st_size); free(h);
 		snprintf(__dl_err, sizeof(__dl_err), "invalid binary or format not supported");
+
 		return NULL;
 	}
 
 	munmap(file_map, st.st_size);
+
 	h->next = __dl_handles;
 	__dl_handles = h;
+
 	return h;
 }
 
 static inline void *dlsym(void *handle, const char *symbol) {
 	__dl_err[0] = '\0';
-	if (!symbol) { errno = EINVAL; return NULL; }
+	if (!symbol) return (__errno_set(EINVAL), NULL);
 
 	if (handle == RTLD_DEFAULT) {
 		for (jacl_dl_handle_t *h = __dl_handles; h; h = h->next) {
 			void *addr = __dl_find(h, symbol);
+
 			if (addr) return addr;
 		}
+
 		strncpy(__dl_err, "not found", sizeof(__dl_err) - 1);
-		errno = EFAULT;
-		return NULL;
+
+		return (__errno_set(EFAULT), NULL);
 	}
 
 	if (handle == RTLD_NEXT) {
 		strncpy(__dl_err, "RTLD_NEXT unsupported", sizeof(__dl_err) - 1);
-		errno = ENOSYS;
-		return NULL;
+
+		return (__errno_set(ENOSYS), NULL);
 	}
 
 	void *addr = __dl_find((jacl_dl_handle_t *)handle, symbol);
 	if (!addr) {
 		strncpy(__dl_err, "not found in handle", sizeof(__dl_err) - 1);
-		errno = EFAULT;
+		__errno_set(EFAULT);
 	}
+
 	return addr;
 }
 
@@ -150,7 +152,7 @@ static inline int dlclose(void *handle) {
 
 static inline int dladdr(const void *addr, Dl_info *info) {
 	__dl_err[0] = '\0';
-	if (!info) { errno = EINVAL; return 0; }
+	if (!info) return (__errno_set(EINVAL), 0);
 
 	/* Initialize output */
 	info->dli_fname = NULL;

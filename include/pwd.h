@@ -124,10 +124,12 @@ static inline int getpwuid_r(uid_t uid, struct passwd *pwd, char *buf, size_t bu
 	int r = __jacl_search_passwd(__jacl_match_uid, &uid, pwd, buf, buflen);
 	if (r == 0) {
 		*result = pwd;
-		errno = 0;
+
+		__errno_clr();
 	} else {
 		*result = NULL;
-		errno = r;
+
+		__errno_set(r);
 	}
 	return r;
 }
@@ -140,10 +142,10 @@ static inline int getpwnam_r(const char *name, struct passwd *pwd, char *buf, si
 	int r = __jacl_search_passwd(__jacl_match_name, name, pwd, buf, buflen);
 	if (r == 0) {
 		*result = pwd;
-		errno = 0;
+		__errno_clr();
 	} else {
 		*result = NULL;
-		errno = r;
+		__errno_set(r);
 	}
 	return r;
 }

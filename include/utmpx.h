@@ -17,8 +17,6 @@ extern "C" {
 #endif
 
 /* ============================================================================ */
-/* Constants                                                                    */
-/* ============================================================================ */
 
 #define EMPTY           0
 #define BOOT_TIME       1
@@ -105,7 +103,7 @@ static inline struct utmpx *getutxent(void) {
 }
 
 static inline struct utmpx *getutxid(const struct utmpx *id) {
-	if (!id) { errno = EINVAL; return NULL; }
+	if (!id) return (__errno_set(EINVAL), NULL);
 
 	setutxent();
 
@@ -132,7 +130,7 @@ static inline struct utmpx *getutxid(const struct utmpx *id) {
 }
 
 static inline struct utmpx *getutxline(const struct utmpx *line) {
-	if (!line) { errno = EINVAL; return NULL; }
+	if (!line) return (__errno_set(EINVAL), NULL);
 
 	setutxent();
 
@@ -150,7 +148,7 @@ static inline struct utmpx *getutxline(const struct utmpx *line) {
 }
 
 static inline struct utmpx *pututxline(const struct utmpx *ut) {
-	if (!ut) { errno = EINVAL; return NULL; }
+	if (!ut) return (__errno_set(EINVAL), NULL);
 	if (!__utmpx_fp) setutxent();
 	if (!__utmpx_fp) return NULL;
 
@@ -168,23 +166,21 @@ static inline struct utmpx *pututxline(const struct utmpx *ut) {
 	while (fread(&rec, sizeof(struct utmpx), 1, __utmpx_fp) == 1) {
 		int match = 0;
 
-		/* USER_PROCESS, INIT_PROCESS, LOGIN_PROCESS, DEAD_PROCESS match by ut_id */
 		if (src->ut_type == USER_PROCESS ||
 			src->ut_type == INIT_PROCESS ||
 			src->ut_type == LOGIN_PROCESS ||
 			src->ut_type == DEAD_PROCESS) {
 			match = (memcmp(rec.ut_id, src->ut_id, sizeof(rec.ut_id)) == 0);
 		} else {
-			/* BOOT_TIME, OLD_TIME, NEW_TIME match by ut_type only */
 			match = (rec.ut_type == src->ut_type);
 		}
 
 		if (match) {
 			off_t offset = idx * (off_t)sizeof(struct utmpx);
+
 			if (lseek(fd, offset, SEEK_SET) == (off_t)-1) return NULL;
 			if (write(fd, src, sizeof(struct utmpx)) != (ssize_t)sizeof(struct utmpx)) return NULL;
 
-			/* Invalidate stdio buffer state to force re-read from fd */
 			__utmpx_fp->_cnt = 0;
 			__utmpx_fp->_ptr = __utmpx_fp->_base + OVRSIZ;
 			__utmpx_fp->_read_pos = offset + (off_t)sizeof(struct utmpx);
@@ -193,19 +189,19 @@ static inline struct utmpx *pututxline(const struct utmpx *ut) {
 			__utmpx_fp->_last_op = 0;
 
 			memcpy(&__utmpx_buf, src, sizeof(__utmpx_buf));
+
 			return &__utmpx_buf;
 		}
 		idx++;
 	}
 
-	if (ferror(__utmpx_fp)) { errno = EIO; return NULL; }
-
-	/* Append at true end */
+	if (ferror(__utmpx_fp)) return (__errno_set(EIO), NULL);
 	if (fseek(__utmpx_fp, 0, SEEK_END) != 0) return NULL;
+
 	off_t append_pos = lseek(fd, 0, SEEK_CUR);
+
 	if (write(fd, src, sizeof(struct utmpx)) != (ssize_t)sizeof(struct utmpx)) return NULL;
 
-	/* Invalidate stdio buffer state */
 	__utmpx_fp->_cnt = 0;
 	__utmpx_fp->_ptr = __utmpx_fp->_base + OVRSIZ;
 	__utmpx_fp->_read_pos = append_pos + (off_t)sizeof(struct utmpx);
@@ -214,6 +210,7 @@ static inline struct utmpx *pututxline(const struct utmpx *ut) {
 	__utmpx_fp->_last_op = 0;
 
 	memcpy(&__utmpx_buf, src, sizeof(__utmpx_buf));
+
 	return &__utmpx_buf;
 }
 

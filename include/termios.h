@@ -246,9 +246,7 @@ struct __jacl_kernel_termios {
 /* ============================================================================ */
 
 #if JACL_OS_LINUX
-static inline int __jacl_ioctl(int fd, unsigned long req, void *arg) {
-	return (int)syscall(SYS_ioctl, fd, req, arg);
-}
+static inline int __jacl_ioctl(int fd, unsigned long req, void *arg) { return (int)syscall(SYS_ioctl, fd, req, arg); }
 
 static inline void __jacl_to_kernel(const struct termios *u, struct __jacl_kernel_termios *k) {
 	k->c_iflag = u->c_iflag;
@@ -256,10 +254,11 @@ static inline void __jacl_to_kernel(const struct termios *u, struct __jacl_kerne
 	k->c_cflag = u->c_cflag;
 	k->c_lflag = u->c_lflag;
 	k->c_line  = u->c_line;
+
 	for (int i = 0; i < 19; i++) k->c_cc[i] = u->c_cc[i];
+
 	/* Apply __ispeed to c_cflag baud bits if set */
-	if (u->__ispeed)
-		k->c_cflag = (k->c_cflag & ~(CBAUD | CBAUDEX)) | (u->__ispeed & (CBAUD | CBAUDEX));
+	if (u->__ispeed) k->c_cflag = (k->c_cflag & ~(CBAUD | CBAUDEX)) | (u->__ispeed & (CBAUD | CBAUDEX));
 }
 
 static inline void __jacl_from_kernel(struct termios *u, const struct __jacl_kernel_termios *k) {
@@ -268,8 +267,10 @@ static inline void __jacl_from_kernel(struct termios *u, const struct __jacl_ker
 	u->c_cflag = k->c_cflag;
 	u->c_lflag = k->c_lflag;
 	u->c_line  = k->c_line;
+
 	for (int i = 0; i < 19; i++) u->c_cc[i] = k->c_cc[i];
 	for (int i = 19; i < NCCS; i++) u->c_cc[i] = 0;
+
 	u->__ispeed = k->c_cflag & (CBAUD | CBAUDEX);
 	u->__ospeed = k->c_cflag & (CBAUD | CBAUDEX);
 }
@@ -281,89 +282,68 @@ static inline void __jacl_from_kernel(struct termios *u, const struct __jacl_ker
 
 #if JACL_OS_LINUX
 
-static inline speed_t cfgetispeed(const struct termios *t) {
-	if (!t) return 0;
-	return t->__ispeed ? t->__ispeed : (t->c_cflag & (CBAUD | CBAUDEX));
-}
-
-static inline speed_t cfgetospeed(const struct termios *t) {
-	if (!t) return 0;
-	return t->__ospeed ? t->__ospeed : (t->c_cflag & (CBAUD | CBAUDEX));
-}
-
-static inline int cfsetispeed(struct termios *t, speed_t speed) {
-	if (!t) { errno = EINVAL; return -1; }
-	t->__ispeed = speed;
-	return 0;
-}
-
-static inline int cfsetospeed(struct termios *t, speed_t speed) {
-	if (!t) { errno = EINVAL; return -1; }
-	t->__ospeed = speed;
-	return 0;
-}
+static inline speed_t cfgetispeed(const struct termios *t) { return !t ? 0 : t->__ispeed ? t->__ispeed : (t->c_cflag & (CBAUD | CBAUDEX)); }
+static inline speed_t cfgetospeed(const struct termios *t) { return !t ? 0 : t->__ospeed ? t->__ospeed : (t->c_cflag & (CBAUD | CBAUDEX)); }
+static inline int cfsetispeed(struct termios *t, speed_t speed) { return t ? (t->__ispeed = speed, 0) : (__errno_set(EINVAL), -1); }
+static inline int cfsetospeed(struct termios *t, speed_t speed) { return t ? (t->__ospeed = speed, 0) : (__errno_set(EINVAL), -1); }
 
 static inline int cfsetspeed(struct termios *t, speed_t speed) {
-	if (!t) { errno = EINVAL; return -1; }
+	if (!t) return (__errno_set(EINVAL), -1);
+
 	t->__ispeed = speed;
 	t->__ospeed = speed;
 	t->c_cflag = (t->c_cflag & ~(CBAUD | CBAUDEX)) | (speed & (CBAUD | CBAUDEX));
+
 	return 0;
 }
 
 static inline int tcgetattr(int fd, struct termios *t) {
-	if (!t) { errno = EINVAL; return -1; }
+	if (!t) return (__errno_set(EINVAL), -1);
+
 	struct __jacl_kernel_termios k;
 	int r = __jacl_ioctl(fd, __JACL_TCGETS, &k);
+
 	if (r < 0) return -1;
+
 	__jacl_from_kernel(t, &k);
+
 	return 0;
 }
 
 static inline int tcsetattr(int fd, int action, const struct termios *t) {
-	if (!t) { errno = EINVAL; return -1; }
-	if (action != TCSANOW && action != TCSADRAIN && action != TCSAFLUSH) {
-		errno = EINVAL; return -1;
-	}
+	if (!t) return (__errno_set(EINVAL), -1);
+	if (action != TCSANOW && action != TCSADRAIN && action != TCSAFLUSH) return (__errno_set(EINVAL), -1);
+
 	struct __jacl_kernel_termios k;
+
 	__jacl_to_kernel(t, &k);
+
 	unsigned long req;
+
 	switch (action) {
 		case TCSANOW:   req = __JACL_TCSETS;  break;
 		case TCSADRAIN: req = __JACL_TCSETSW; break;
 		case TCSAFLUSH: req = __JACL_TCSETSF; break;
-		default: errno = EINVAL; return -1;
+		default: return (__errno_set(EINVAL), -1);
 	}
+
 	return __jacl_ioctl(fd, req, &k);
 }
 
 static inline int tcsendbreak(int fd, int duration) {
 	(void)duration;
+
 	return __jacl_ioctl(fd, __JACL_TCSBRK, (void *)0);
 }
 
-static inline int tcdrain(int fd) {
-	return __jacl_ioctl(fd, __JACL_TCSBRK, (void *)1);
-}
-
-static inline int tcflush(int fd, int queue) {
-	if (queue != TCIFLUSH && queue != TCOFLUSH && queue != TCIOFLUSH) {
-		errno = EINVAL; return -1;
-	}
-	return __jacl_ioctl(fd, __JACL_TCFLSH, (void *)(long)queue);
-}
-
-static inline int tcflow(int fd, int action) {
-	if (action != TCOOFF && action != TCOON && action != TCIOFF && action != TCION) {
-		errno = EINVAL; return -1;
-	}
-	return __jacl_ioctl(fd, __JACL_TCXONC, (void *)(long)action);
-}
+static inline int tcdrain(int fd) { return __jacl_ioctl(fd, __JACL_TCSBRK, (void *)1); }
+static inline int tcflush(int fd, int queue) { return (queue != TCIFLUSH && queue != TCOFLUSH && queue != TCIOFLUSH) ? (__errno_set(EINVAL), -1) : __jacl_ioctl(fd, __JACL_TCFLSH, (void *)(long)queue); }
+static inline int tcflow(int fd, int action) { return (action != TCOOFF && action != TCOON && action != TCIOFF && action != TCION) ? (__errno_set(EINVAL), -1) : __jacl_ioctl(fd, __JACL_TCXONC, (void *)(long)action); }
 
 static inline pid_t tcgetsid(int fd) {
 	int sid = 0;
-	if (__jacl_ioctl(fd, __JACL_TIOCGSID, &sid) < 0) return (pid_t)-1;
-	return (pid_t)sid;
+
+	return (__jacl_ioctl(fd, __JACL_TIOCGSID, &sid) < 0) ? (pid_t)-1 : (pid_t)sid;
 }
 
 static inline void cfmakeraw(struct termios *t) {
@@ -377,33 +357,26 @@ static inline void cfmakeraw(struct termios *t) {
 	t->c_cc[VTIME] = 0;
 }
 
-static inline int tcgetwinsize(int fd, struct winsize *w) {
-	if (!w) { errno = EINVAL; return -1; }
-	return __jacl_ioctl(fd, __JACL_TIOCGWINSZ, w);
-}
-
-static inline int tcsetwinsize(int fd, const struct winsize *w) {
-	if (!w) { errno = EINVAL; return -1; }
-	return __jacl_ioctl(fd, __JACL_TIOCSWINSZ, (void *)w);
-}
+static inline int tcgetwinsize(int fd, struct winsize *w) { return w ? __jacl_ioctl(fd, __JACL_TIOCGWINSZ, w) : (__errno_set(EINVAL), -1); }
+static inline int tcsetwinsize(int fd, const struct winsize *w) { return w ? __jacl_ioctl(fd, __JACL_TIOCSWINSZ, (void *)w) : (__errno_set(EINVAL), -1); }
 
 #else /* !JACL_OS_LINUX */
 
 static inline speed_t cfgetispeed(const struct termios *t) { (void)t; return 0; }
 static inline speed_t cfgetospeed(const struct termios *t) { (void)t; return 0; }
-static inline int cfsetispeed(struct termios *t, speed_t s) { (void)t; (void)s; errno = ENOSYS; return -1; }
-static inline int cfsetospeed(struct termios *t, speed_t s) { (void)t; (void)s; errno = ENOSYS; return -1; }
-static inline int cfsetspeed(struct termios *t, speed_t s) { (void)t; (void)s; errno = ENOSYS; return -1; }
-static inline int tcgetattr(int fd, struct termios *t) { (void)fd; (void)t; errno = ENOSYS; return -1; }
-static inline int tcsetattr(int fd, int a, const struct termios *t) { (void)fd; (void)a; (void)t; errno = ENOSYS; return -1; }
-static inline int tcsendbreak(int fd, int d) { (void)fd; (void)d; errno = ENOSYS; return -1; }
-static inline int tcdrain(int fd) { (void)fd; errno = ENOSYS; return -1; }
-static inline int tcflush(int fd, int q) { (void)fd; (void)q; errno = ENOSYS; return -1; }
-static inline int tcflow(int fd, int a) { (void)fd; (void)a; errno = ENOSYS; return -1; }
-static inline pid_t tcgetsid(int fd) { (void)fd; errno = ENOSYS; return (pid_t)-1; }
+static inline int cfsetispeed(struct termios *t, speed_t s) { (void)t; (void)s; return (__errno_set(ENOSYS), -1); }
+static inline int cfsetospeed(struct termios *t, speed_t s) { (void)t; (void)s; return (__errno_set(ENOSYS), -1); }
+static inline int cfsetspeed(struct termios *t, speed_t s) { (void)t; (void)s; return (__errno_set(ENOSYS), -1); }
+static inline int tcgetattr(int fd, struct termios *t) { (void)fd; (void)t; return (__errno_set(ENOSYS), -1); }
+static inline int tcsetattr(int fd, int a, const struct termios *t) { (void)fd; (void)a; (void)t; return (__errno_set(ENOSYS), -1); }
+static inline int tcsendbreak(int fd, int d) { (void)fd; (void)d; return (__errno_set(ENOSYS), -1); }
+static inline int tcdrain(int fd) { (void)fd; return (__errno_set(ENOSYS), -1); }
+static inline int tcflush(int fd, int q) { (void)fd; (void)q; return (__errno_set(ENOSYS), -1); }
+static inline int tcflow(int fd, int a) { (void)fd; (void)a; return (__errno_set(ENOSYS), -1); }
+static inline pid_t tcgetsid(int fd) { (void)fd; return (__errno_set(ENOSYS), (pid_t)-1); }
 static inline void cfmakeraw(struct termios *t) { (void)t; }
-static inline int tcgetwinsize(int fd, struct winsize *w) { (void)fd; (void)w; errno = ENOSYS; return -1; }
-static inline int tcsetwinsize(int fd, const struct winsize *w) { (void)fd; (void)w; errno = ENOSYS; return -1; }
+static inline int tcgetwinsize(int fd, struct winsize *w) { (void)fd; (void)w; return (__errno_set(ENOSYS), -1); }
+static inline int tcsetwinsize(int fd, const struct winsize *w) { (void)fd; (void)w; return (__errno_set(ENOSYS), -1); }
 
 #endif
 

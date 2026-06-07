@@ -21,7 +21,7 @@ extern "C" {
 
 static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
     /* POSIX contract: NULL buffer with positive length is EINVAL */
-    if (!buf && buflen > 0) { errno = EINVAL; return -1; }
+    if (!buf && buflen > 0) { return (__errno_set(EINVAL), -1); }
     if (buflen == 0) return 0;
 
 	const char *dev = (flags & GRND_RANDOM) ? "/dev/random" : "/dev/urandom";
@@ -62,8 +62,7 @@ static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
 
 static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
 	(void)buf; (void)buflen; (void)flags;
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 
 #else

@@ -85,19 +85,20 @@ static inline size_t c16rtomb(char *s, char16_t c16, mbstate_t *ps) {
 				// Low surrogate expected
 				if (c16 < 0xdc00 || c16 >= 0xe000) {
 						*x = 0;
-						errno = EILSEQ;
-						return (size_t)-1;
+
+						return (__errno_set(EILSEQ), (size_t)-1);
 				}
+
 				wc = 0x10000 + ((*x - 0xd800) << 10) + (c16 - 0xdc00);
 				*x = 0;
 		} else if (c16 >= 0xd800 && c16 < 0xdc00) {
 				// High surrogate - store and wait for low
 				*x = c16;
+
 				return 0;
 		} else if (c16 >= 0xdc00 && c16 < 0xe000) {
 				// Unexpected low surrogate
-				errno = EILSEQ;
-				return (size_t)-1;
+				return (__errno_set(EILSEQ), (size_t)-1);
 		} else {
 				// BMP character
 				wc = c16;
@@ -110,20 +111,20 @@ static inline size_t c16rtomb(char *s, char16_t c16, mbstate_t *ps) {
 static inline size_t mbrtoc32(char32_t *pc32, const char *s, size_t n, mbstate_t *ps) {
 		static unsigned internal_state;
 		if (!ps) ps = (mbstate_t *)&internal_state;
-
 		if (!s) return mbrtoc32(0, "", 1, ps);
 
 		wchar_t wc;
 		size_t ret = mbrtowc(&wc, s, n, ps);
 
 		if (ret <= 4 && pc32) *pc32 = wc;
+
 		return ret;
 }
 
 static inline size_t c32rtomb(char *s, char32_t c32, mbstate_t *ps) {
 		static unsigned internal_state;
-		if (!ps) ps = (mbstate_t *)&internal_state;
 
+		if (!ps) ps = (mbstate_t *)&internal_state;
 		if (!s) return c32rtomb((char[MB_CUR_MAX]){0}, 0, ps);
 
 		return wcrtomb(s, c32, ps);

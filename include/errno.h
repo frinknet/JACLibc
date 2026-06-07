@@ -357,4 +357,10 @@ extern thread_local int errno;
 #define ENOTSUP EOPNOTSUPP
 #endif
 
+#define __errno_get() (errno)
+#define __errno_set(ERR) (errno = (ERR))
+#define __errno_chk(ERR) (errno == (ERR))
+#define __errno_val(ERR) (ERR)
+#define __errno_clr() __errno_set(0)
+
 #endif /* _ERRNO_H */

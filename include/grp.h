@@ -26,10 +26,7 @@ struct group {
 	char  **gr_mem;
 };
 
-/* ============================================================================ */
-/* Internal Parser                                                              */
-/* ============================================================================ */
-
+/* Internal Parser */
 static inline int __jacl_parse_group_line(char *line, struct group *grp, char *mem_buf, size_t mem_buf_size) {
 	char *p = line;
 	char *fields[4];
@@ -48,12 +45,12 @@ static inline int __jacl_parse_group_line(char *line, struct group *grp, char *m
 		p++;
 		count = i + 1;
 	}
-	
+
 	if (count < 4) return -1;
 
 	grp->gr_name   = fields[0];
 	grp->gr_passwd = fields[1];
-	
+
 	char *endptr;
 	long gid = strtol(fields[2], &endptr, 10);
 	if (*endptr != '\0' || fields[2][0] == '\0') return -1;
@@ -64,15 +61,15 @@ static inline int __jacl_parse_group_line(char *line, struct group *grp, char *m
 	char *nl = strchr(m, '\n');
 	if (nl) *nl = '\0';
 
-	/* mem_buf holds char* pointers. 
-	   Max members = (mem_buf_size / sizeof(char*)) - 1 
+	/* mem_buf holds char* pointers.
+	   Max members = (mem_buf_size / sizeof(char*)) - 1
 	*/
 	size_t max_members = (mem_buf_size / sizeof(char*)) - 1;
 	if (max_members == 0) return -1; /* Buffer too small for even one pointer */
 
 	char **mem_ptrs = (char **)mem_buf;
 	int mem_count = 0;
-	
+
 	/* Manual tokenization to avoid strtok static state */
 	char *token_start = m;
 	while (*token_start != '\0' && mem_count < (int)max_members) {
@@ -97,10 +94,7 @@ static inline int __jacl_parse_group_line(char *line, struct group *grp, char *m
 	return 0;
 }
 
-/* ============================================================================ */
-/* Core Search Logic                                                            */
-/* ============================================================================ */
-
+/* Core Search Logic */
 static inline int __jacl_search_group(int (*match)(const struct group *, const void *), const void *key, struct group *grp, char *buf, size_t buflen, char *mem_buf, size_t mem_buf_size) {
 	FILE *f = fopen(JACL_GROUP_PATH, "r");
 	if (!f) return ENOENT;
@@ -110,7 +104,7 @@ static inline int __jacl_search_group(int (*match)(const struct group *, const v
 
 	while (fgets(line, sizeof(line), f)) {
 		if (line[0] == '#' || line[0] == '\n') continue;
-		
+
 		if (strlen(line) >= buflen) continue;
 		strcpy(buf, line);
 
@@ -134,33 +128,27 @@ static inline int __jacl_match_name(const struct group *grp, const void *key) {
 	return strcmp(grp->gr_name, (const char *)key) == 0;
 }
 
-/* ============================================================================ */
-/* Reentrant API (_r)                                                           */
-/* ============================================================================ */
-
+/* Reentrant API */
 static inline int getgrgid_r(gid_t gid, struct group *grp, char *buf, size_t buflen, struct group **result) {
 	if (!grp || !buf || !result) {
 		if (result) *result = NULL;
 		return EINVAL;
 	}
-	
+
 	/* Reserve space for member pointers at the end of buf */
 	size_t ptr_space = 512; /* Enough for 64 pointers on 64-bit */
 	if (buflen <= ptr_space) {
 		if (result) *result = NULL;
 		return ERANGE;
 	}
-	
+
 	char *mem_ptr_area = buf + (buflen - ptr_space);
-	
 	int r = __jacl_search_group(__jacl_match_gid, &gid, grp, buf, buflen - ptr_space, mem_ptr_area, ptr_space);
-	if (r == 0) {
-		*result = grp;
-		errno = 0;
-	} else {
-		*result = NULL;
-		errno = r;
-	}
+
+	*result = (r == 0) ? grp : NULL;
+
+	__errno_set(r);
+
 	return r;
 }
 
@@ -179,13 +167,11 @@ static inline int getgrnam_r(const char *name, struct group *grp, char *buf, siz
 	char *mem_ptr_area = buf + (buflen - ptr_space);
 
 	int r = __jacl_search_group(__jacl_match_name, name, grp, buf, buflen - ptr_space, mem_ptr_area, ptr_space);
-	if (r == 0) {
-		*result = grp;
-		errno = 0;
-	} else {
-		*result = NULL;
-		errno = r;
-	}
+
+	*result = (r == 0) ? grp : NULL;
+
+	__errno_set(r);
+
 	return r;
 }
 
@@ -197,10 +183,10 @@ static inline struct group *getgrgid(gid_t gid) {
 	static char buf_gid[1024];
 	static struct group grp_gid;
 	static char mem_buf_gid[512]; /* 64 pointers */
-	
+
 	FILE *f = fopen(JACL_GROUP_PATH, "r");
 	if (!f) return NULL;
-	
+
 	char line[1024];
 	while (fgets(line, sizeof(line), f)) {
 		if (line[0] == '#' || line[0] == '\n') continue;
@@ -221,10 +207,10 @@ static inline struct group *getgrnam(const char *name) {
 	static char buf_name[1024];
 	static struct group grp_name;
 	static char mem_buf_name[512];
-	
+
 	FILE *f = fopen(JACL_GROUP_PATH, "r");
 	if (!f) return NULL;
-	
+
 	char line[1024];
 	while (fgets(line, sizeof(line), f)) {
 		if (line[0] == '#' || line[0] == '\n') continue;

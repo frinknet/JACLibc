@@ -178,10 +178,7 @@ static inline int win32_poll_file(HANDLE h, short events) {
 /* ================================================================ */
 
 static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
-	if (!fds && nfds > 0) {
-		errno = EINVAL;
-		return -1;
-	}
+	if (!fds && nfds > 0) return (__errno_set(EINVAL), -1);
 
 	if (nfds == 0) {
 		if (timeout > 0) {
@@ -304,8 +301,7 @@ static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 					if (fds[orig_idx].revents != 0) ready_count++;
 				}
 			} else if (sock_result < 0) {
-				errno = EINVAL;
-				return -1;
+				return (__errno_set(EINVAL), -1);
 			}
 		}
 	}
@@ -348,14 +344,12 @@ static inline int ppoll(struct pollfd fds[], nfds_t nfds, const struct timespec 
 
 static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 	(void)fds; (void)nfds; (void)timeout;
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 
 static inline int ppoll(struct pollfd fds[], nfds_t nfds, const struct timespec *timeout_ts, const sigset_t *sigmask) {
 	(void)fds; (void)nfds; (void)timeout_ts; (void)sigmask;
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 
 #else
@@ -366,7 +360,7 @@ static inline int ppoll(struct pollfd fds[], nfds_t nfds, const struct timespec 
 
 static inline int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 	if (nfds == 0) return 0;
-	if (!fds && nfds > 0) { errno = EINVAL; return -1; }
+	if (!fds && nfds > 0) return (__errno_set(EINVAL), -1);
 
 	/* All POSIX platforms have poll syscall */
 	return (int)syscall(SYS_poll, fds, nfds, timeout);
@@ -376,8 +370,7 @@ static inline int ppoll(struct pollfd fds[], nfds_t nfds, const struct timespec 
 	if (nfds == 0) return 0;
 
 	if (!fds && nfds > 0) {
-		errno = EINVAL;
-		return -1;
+		return (__errno_set(EINVAL), -1);
 	}
 
 	#if JACL_OS_LINUX
@@ -441,15 +434,13 @@ static inline int pollfd_has_hangup(const struct pollfd *pfd) {
 // Enhanced validation with better error messages
 static inline int poll_validate(const struct pollfd fds[], nfds_t nfds) {
 	if (!fds && nfds > 0) {
-		errno = EINVAL;
-		return -1;
+		return (__errno_set(EINVAL), -1);
 	}
 
 	/* Check for obviously invalid file descriptors */
 	for (nfds_t i = 0; i < nfds; i++) {
 		if (fds[i].fd < -1) {
-			errno = EINVAL;
-			return -1;
+			return (__errno_set(EINVAL), -1);
 		}
 
 		/* Check for invalid event flags */
@@ -460,7 +451,7 @@ static inline int poll_validate(const struct pollfd fds[], nfds_t nfds) {
 			valid_events |= POLLRDHUP | POLLMSG | POLLREMOVE;
 		#endif
 
-		if (fds[i].events & ~valid_events) { errno = EINVAL; return -1; }
+		if (fds[i].events & ~valid_events) return (__errno_set(EINVAL), -1);
 	}
 
 	return 0;

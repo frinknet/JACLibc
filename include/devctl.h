@@ -20,32 +20,27 @@ extern "C" {
  * Preserves errno across internal validation steps.
  */
 static inline int posix_devctl(int fildes, int dcmd, void *restrict dev_data_ptr, size_t nbyte, int *restrict dev_info_ptr) {
-    int saved_errno = errno;
-    (void)nbyte;
+	int olderr = __errno_get();
+	(void)nbyte;
 
-    if (dev_info_ptr) *dev_info_ptr = 0;
+	if (dev_info_ptr) *dev_info_ptr = 0;
 
-    /* 1. Validate file descriptor */
-    if (fildes < 0) { errno = saved_errno; return EBADF; }
-    if (fcntl(fildes, F_GETFL) == -1) { errno = saved_errno; return EBADF; }
+	if (fildes < 0) { return (__errno_set(olderr), EBADF); }
+	if (fcntl(fildes, F_GETFL) == -1) { return (__errno_set(olderr), EBADF); }
 
-    /* 2. Verify character special device requirement */
-    struct stat st;
-    if (fstat(fildes, &st) == 0 && !S_ISCHR(st.st_mode)) {
-        errno = saved_errno;
-        return ENOTTY;
-    }
+	struct stat st;
 
-    /* 3. Delegate to kernel or return ENOSYS */
-    #ifdef SYS_ioctl
-        long rc = syscall(SYS_ioctl, fildes, dcmd, dev_data_ptr);
-        if (dev_info_ptr) *dev_info_ptr = (int)rc;
-        errno = saved_errno;
-        return (rc >= 0) ? 0 : -rc;
-    #else
-        errno = saved_errno;
-        return ENOSYS;
-    #endif
+	if (fstat(fildes, &st) == 0 && !S_ISCHR(st.st_mode)) { return (__errno_set(olderr), ENOTTY); }
+
+	#ifdef SYS_ioctl
+		long rc = syscall(SYS_ioctl, fildes, dcmd, dev_data_ptr);
+
+		if (dev_info_ptr) *dev_info_ptr = (int)rc;
+
+		return (__errno_set(olderr), (rc >= 0) ? 0 : -rc);
+	#else
+		return (__errno_set(olderr), __errno_val(ENOSYS));
+	#endif
 }
 
 #ifdef __cplusplus

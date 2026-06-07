@@ -192,22 +192,16 @@ static inline unsigned char win32_attrs_to_dtype(DWORD attrs, DWORD reparse_tag)
 }
 
 static inline DIR *opendir(const char *dirname) {
-	if (!dirname) {
-		errno = EINVAL;
-		return NULL;
-	}
+	if (!dirname) return (__errno_set(EINVAL), NULL);
 
 	DIR *dirp = (DIR *)malloc(sizeof(DIR));
 
-	if (!dirp) {
-		errno = ENOMEM;
-		return NULL;
-	}
+	if (!dirp) return (__errno_set(ENOMEM), NULL);
 
 	if (win32_utf8_to_wchar(dirname, dirp->path, PATH_MAX) != 0) {
 		free(dirp);
-		errno = EINVAL;
-		return NULL;
+
+		return (__errno_set(EINVAL), NULL);
 	}
 
 	/* Build search pattern: "dirname\*" */
@@ -215,8 +209,8 @@ static inline DIR *opendir(const char *dirname) {
 
 	if (len >= PATH_MAX - 3) {
 		free(dirp);
-		errno = ENAMETOOLONG;
-		return NULL;
+
+		return (__errno_set(ENAMETOOLONG), NULL);
 	}
 
 	if (len > 0 && dirp->path[len - 1] != L'\\' && dirp->path[len - 1] != L'/') {
@@ -241,19 +235,19 @@ static inline DIR *opendir(const char *dirname) {
  * If you need to store the filename, copy d_name immediately.
  */
 static inline dirent *readdir(DIR *dirp) {
-	if (!dirp) {
-		errno = EBADF;
-		return NULL;
-	}
+	if (!dirp) return (__errno_set(EBADF), NULL);
 
 	BOOL result;
+
 	if (dirp->first_call) {
 		dirp->handle = FindFirstFileW(dirp->path, &dirp->find_data);
+
 		if (dirp->handle == INVALID_HANDLE_VALUE) {
 			DWORD error = GetLastError();
-			errno = (error == ERROR_FILE_NOT_FOUND) ? ENOENT : EACCES;
-			return NULL;
+
+			return (__errno_set((error == ERROR_FILE_NOT_FOUND) ? ENOENT : EACCES), NULL);
 		}
+
 		dirp->first_call = 0;
 		result = TRUE;
 	} else {
@@ -262,11 +256,10 @@ static inline dirent *readdir(DIR *dirp) {
 
 	if (!result) {
 		DWORD error = GetLastError();
-		if (error == ERROR_NO_MORE_FILES) {
-			errno = 0;  /* End of directory, not an error */
-		} else {
-			errno = EIO;
-		}
+
+		if (error == ERROR_NO_MORE_FILES) __errno_clr();
+		else __errno_set(EIO);
+
 		return NULL;
 	}
 
@@ -277,49 +270,39 @@ static inline dirent *readdir(DIR *dirp) {
 		dirp->find_data.dwReserved0);
 
 	/* Convert filename from UTF-16 to UTF-8 */
-	if (win32_wchar_to_utf8(dirp->find_data.cFileName,
-	                        dirp->current.d_name, NAME_MAX + 1) != 0) {
-		errno = EILSEQ;  /* Invalid character sequence */
-		return NULL;
-	}
+	if (win32_wchar_to_utf8(dirp->find_data.cFileName, dirp->current.d_name, NAME_MAX + 1) != 0) return (__errno_set(EILSEQ), NULL);
 
 	size_t name_len = strlen(dirp->current.d_name);
+
 	dirp->current.d_namlen = (unsigned short)name_len;
 	dirp->current.d_reclen = (unsigned short)(sizeof(dirent) - NAME_MAX - 1 + name_len + 1);
-
 	dirp->position++;
+
 	return &dirp->current;
 }
 
 /* Thread-safe readdir_r (deprecated but provided for POSIX compliance) */
 static inline int readdir_r(DIR *dirp, dirent *entry, dirent **result) {
-	if (!dirp || !entry || !result) {
-		return EINVAL;
-	}
+	if (!dirp || !entry || !result) return __errno_val(EINVAL);
 
 	*result = NULL;
 
 	dirent *current = readdir(dirp);
-	if (!current) {
-		return errno;  /* errno set by readdir */
-	}
 
-	/* Copy to provided buffer */
-	*entry = *current;  /* Struct copy */
+	if (!current) return __errno_get();
+
+	*entry = *current;
 	*result = entry;
+
 	return 0;
 }
 
 static inline int closedir(DIR *dirp) {
-	if (!dirp) {
-		errno = EBADF;
-		return -1;
-	}
+	if (!dirp) return (__errno_set(EBADF), -1);
+	if (dirp->handle != INVALID_HANDLE_VALUE) FindClose(dirp->handle);
 
-	if (dirp->handle != INVALID_HANDLE_VALUE) {
-		FindClose(dirp->handle);
-	}
 	free(dirp);
+
 	return 0;
 }
 
@@ -330,17 +313,12 @@ static inline void rewinddir(DIR *dirp) {
 		FindClose(dirp->handle);
 		dirp->handle = INVALID_HANDLE_VALUE;
 	}
+
 	dirp->first_call = 1;
 	dirp->position = 0;
 }
 
-static inline long telldir(DIR *dirp) {
-	if (!dirp) {
-		errno = EBADF;
-		return -1;
-	}
-	return dirp->position;
-}
+static inline long telldir(DIR *dirp) { return dirp ? dirp->position : (__errno_set(EBADF), -1); }
 
 static inline void seekdir(DIR *dirp, long pos) {
 	if (!dirp) return;
@@ -360,14 +338,12 @@ static inline void seekdir(DIR *dirp, long pos) {
 
 static inline int dirfd(DIR *dirp) {
 	(void)dirp;
-	errno = ENOTSUP;
-	return -1; /* Windows doesn't have directory file descriptors */
+	return (__errno_set(ENOTSUP), -1);
 }
 
 static inline DIR *fdopendir(int fd) {
 	(void)fd;
-	errno = ENOTSUP;
-	return NULL; /* Not supported on Windows */
+	return (__errno_set(ENOTSUP), NULL);
 }
 
 #else
@@ -381,10 +357,7 @@ static inline DIR *fdopendir(int fd) {
 static inline ssize_t posix_getdents(int fd, void *buf, size_t nbyte, int flags) {
 	(void)flags;  /* Not used in basic implementation */
 
-	if (!buf || nbyte == 0) {
-		errno = EINVAL;
-		return -1;
-	}
+	if (!buf || nbyte == 0) return (__errno_set(EINVAL), -1);
 
 	#if JACL_HASSYS(getdents64)
 		return syscall(SYS_getdents64, fd, buf, nbyte);
@@ -394,8 +367,7 @@ static inline ssize_t posix_getdents(int fd, void *buf, size_t nbyte, int flags)
 
 	/* Not supported or no syscall available */
 	(void)fd;
-	errno = ENOSYS;
-	return -1;
+	return (__errno_set(ENOSYS), -1);
 }
 
 /* Simple atomic operations for spinlock */
@@ -417,7 +389,7 @@ static inline void dir_unlock(DIR *dirp) {
 #endif
 
 static inline DIR *opendir(const char *dirname) {
-	if (!dirname) { errno = EINVAL; return NULL; }
+	if (!dirname) return (__errno_set(EINVAL), NULL);
 
 	int fd = open(dirname, O_RDONLY | O_CLOEXEC);
 
@@ -427,8 +399,8 @@ static inline DIR *opendir(const char *dirname) {
 
 	if (!dirp) {
 		close(fd);
-		errno = ENOMEM;
-		return NULL;
+
+		return (__errno_set(ENOMEM), NULL);
 	}
 
 	dirp->buffer = (char *)malloc(DIRENT_BUFFER_SIZE);
@@ -436,8 +408,8 @@ static inline DIR *opendir(const char *dirname) {
 	if (!dirp->buffer) {
 		close(fd);
 		free(dirp);
-		errno = ENOMEM;
-		return NULL;
+
+		return (__errno_set(ENOMEM), NULL);
 	}
 
 	dirp->fd = fd;
@@ -464,29 +436,24 @@ static inline DIR *opendir(const char *dirname) {
  * If you need to store the filename, copy d_name immediately.
  */
 static inline dirent *readdir(DIR *dirp) {
-	if (!dirp) { errno = EBADF; return NULL; }
+	if (!dirp) return (__errno_set(EBADF), NULL);
 
 	/* Refill buffer if needed */
 	if (dirp->buffer_pos >= dirp->buffer_end) {
 		ssize_t bytes = posix_getdents(dirp->fd, dirp->buffer, dirp->buffer_size, 0);
 
-		if (bytes <= 0) { if (bytes == 0) errno = 0; return NULL; }
+		if (bytes == 0) return (__errno_clr(), NULL);
 
 		dirp->buffer_end = bytes;
 		dirp->buffer_pos = 0;
 	}
 
 	#if JACL_HASSYS(getdents64)
-		if (dirp->buffer_pos + sizeof(linux_dirent64) > dirp->buffer_end) {
-			errno = EIO; return NULL;
-		}
+		if (dirp->buffer_pos + sizeof(linux_dirent64) > dirp->buffer_end) return (__errno_set(EIO), NULL);
 
 		linux_dirent64 *d = (linux_dirent64 *)(dirp->buffer + dirp->buffer_pos);
 
-		if (d->d_reclen < sizeof(linux_dirent64) ||
-			dirp->buffer_pos + d->d_reclen > dirp->buffer_end) {
-			errno = EIO; return NULL;
-		}
+		if (d->d_reclen < sizeof(linux_dirent64) || dirp->buffer_pos + d->d_reclen > dirp->buffer_end) return (__errno_set(EIO), NULL);
 
 		dirp->current.d_ino = d->d_ino;
 		dirp->current.d_off = d->d_off;
@@ -499,16 +466,11 @@ static inline dirent *readdir(DIR *dirp) {
 
 		dirp->current.d_name[name_len] = '\0';
 	#else
-		if (dirp->buffer_pos + sizeof(linux_dirent) > dirp->buffer_end) {
-			errno = EIO; return NULL;
-		}
+		if (dirp->buffer_pos + sizeof(linux_dirent) > dirp->buffer_end) return (__errno_set(EIO), NULL);
 
 		linux_dirent *d = (linux_dirent *)(dirp->buffer + dirp->buffer_pos);
 
-		if (d->d_reclen < sizeof(linux_dirent) ||
-			dirp->buffer_pos + d->d_reclen > dirp->buffer_end) {
-			errno = EIO; return NULL;
-		}
+		if (d->d_reclen < sizeof(linux_dirent) || dirp->buffer_pos + d->d_reclen > dirp->buffer_end) return (__errno_set(EIO), NULL);
 
 		dirp->current.d_ino = d->d_ino;
 		dirp->current.d_off = d->d_off;
@@ -517,14 +479,13 @@ static inline dirent *readdir(DIR *dirp) {
 		char *name_ptr = dirp->buffer + dirp->buffer_pos + offsetof(linux_dirent, d_name);
 		struct stat st;
 
-		if (fstatat(dirp->fd, name_ptr, &st, 0) == 0) {
-			dirp->current.d_type = IFTODT(st.st_mode);
-		} else {
-			dirp->current.d_type = DT_UNKNOWN;
-		}
+		if (fstatat(dirp->fd, name_ptr, &st, 0) == 0) dirp->current.d_type = IFTODT(st.st_mode);
+		else dirp->current.d_type = DT_UNKNOWN;
+
 		size_t name_len = strnlen(name_ptr, NAME_MAX);
 
 		memcpy(dirp->current.d_name, name_ptr, name_len);
+
 		dirp->current.d_name[name_len] = '\0';
 	#endif
 
@@ -535,7 +496,7 @@ static inline dirent *readdir(DIR *dirp) {
 }
 
 static inline int readdir_r(DIR *dirp, dirent *entry, dirent **result) {
-	if (!dirp || !entry || !result) return EINVAL;
+	if (!dirp || !entry || !result) return __errno_val(EINVAL);
 
 	*result = NULL;
 
@@ -544,7 +505,7 @@ static inline int readdir_r(DIR *dirp, dirent *entry, dirent **result) {
 	#endif
 
 	dirent *current = readdir(dirp);
-	int saved_errno = errno;
+	int olderr = __errno_get();
 
 	if (current) {
 		size_t name_len = strlen(current->d_name);
@@ -553,7 +514,8 @@ static inline int readdir_r(DIR *dirp, dirent *entry, dirent **result) {
 			#if DIRENT_THREADS
 				dir_unlock(dirp);
 			#endif
-			return ENAMETOOLONG;
+
+			return __errno_val(ENAMETOOLONG);
 		}
 
 		*entry = *current;
@@ -564,24 +526,18 @@ static inline int readdir_r(DIR *dirp, dirent *entry, dirent **result) {
 		dir_unlock(dirp);
 	#endif
 
-	return current ? 0 : saved_errno;
+	return current ? 0 : olderr;
 }
 
 static inline int closedir(DIR *dirp) {
-	if (!dirp) {
-		errno = EBADF;
-		return -1;
-	}
+	if (!dirp) return (__errno_set(EBADF), -1);
 
 	int ret = close(dirp->fd);
+
 	free(dirp->buffer);
 	free(dirp);
 
-	/* POSIX: Return error from close() if any */
-	if (ret != 0) {
-		errno = EBADF; /* Or preserve original errno if needed, but EBADF is safe for invalid fd */
-		return -1;
-	}
+	if (ret != 0) return (__errno_set(EBADF), -1);
 
 	return 0;
 }
@@ -590,16 +546,14 @@ static inline void rewinddir(DIR *dirp) {
 	if (!dirp) return;
 
 	lseek(dirp->fd, 0, SEEK_SET);
+
 	dirp->buffer_pos = 0;
 	dirp->buffer_end = 0;
 	dirp->position = 0;
 }
 
 static inline long telldir(DIR *dirp) {
-	if (!dirp) {
-		errno = EBADF;
-		return -1;
-	}
+	if (!dirp) return (__errno_set(EBADF), -1);
 
 	return dirp->position;
 }
@@ -623,33 +577,23 @@ static inline void seekdir(DIR *dirp, long pos) {
 }
 
 static inline int dirfd(DIR *dirp) {
-	if (!dirp) {
-		errno = EBADF;
-		return -1;
-	}
+	if (!dirp) return (__errno_set(EBADF), -1);
 
 	return dirp->fd;
 }
 
 static inline DIR *fdopendir(int fd) {
-	if (fd < 0) {
-		errno = EBADF;
-		return NULL;
-	}
+	if (fd < 0) return (__errno_set(EBADF), NULL);
 
 	DIR *dirp = (DIR *)malloc(sizeof(DIR));
 
-	if (!dirp) {
-		errno = ENOMEM;
-		return NULL;
-	}
+	if (!dirp) return (__errno_set(ENOMEM), NULL);
 
 	dirp->buffer = (char *)malloc(DIRENT_BUFFER_SIZE);
 
 	if (!dirp->buffer) {
 		free(dirp);
-		errno = ENOMEM;
-		return NULL;
+		return (__errno_set(ENOMEM), NULL);
 	}
 
 	dirp->fd = fd;
@@ -692,10 +636,7 @@ static inline int versionsort(dirent **a, dirent **b) {
 static inline int scandir(const char *dirpath, dirent ***namelist,
                          int (*select_fn)(const dirent *),
                          int (*compar)(dirent **, dirent **)) {
-	if (!dirpath || !namelist) {
-		errno = EINVAL;
-		return -1;
-	}
+	if (!dirpath || !namelist) return (__errno_set(EINVAL), -1);
 
 	DIR *dirp = opendir(dirpath);
 	if (!dirp) return -1;
@@ -707,8 +648,7 @@ static inline int scandir(const char *dirpath, dirent ***namelist,
 	list = (dirent **)malloc(capacity * sizeof(dirent *));
 	if (!list) {
 		closedir(dirp);
-		errno = ENOMEM;
-		return -1;
+		return (__errno_set(ENOMEM), -1);
 	}
 
 	dirent *entry;
@@ -724,8 +664,7 @@ static inline int scandir(const char *dirpath, dirent ***namelist,
 				for (int i = 0; i < count; i++) free(list[i]);
 				free(list);
 				closedir(dirp);
-				errno = ENOMEM;
-				return -1;
+				return (__errno_set(ENOMEM), -1);
 			}
 			list = new_list;
 		}
@@ -737,8 +676,7 @@ static inline int scandir(const char *dirpath, dirent ***namelist,
 			for (int i = 0; i < count; i++) free(list[i]);
 			free(list);
 			closedir(dirp);
-			errno = ENOMEM;
-			return -1;
+			return (__errno_set(ENOMEM), -1);
 		}
 
 		*list[count] = *entry;  /* Struct copy */
