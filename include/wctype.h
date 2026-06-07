@@ -1,17 +1,18 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 #ifndef _WCTYPE_H
 #define _WCTYPE_H
 #pragma once
 
-#include <locale.h>
-#include <wchar.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// ===== Types =====
 typedef enum {
 	WCTYPE_UNKNOWN  = 0,
 	WCTYPE_LOWER    = 1,
@@ -34,40 +35,37 @@ typedef enum {
 	WCTRANS_TOUPPER = 2
 } wctrans_t;
 
+// ===== Locale-Aware Classification (_l) =====
 static inline int iswcntrl_l(wint_t c, locale_t l) {
 	(void)l;
 
 	return (c >= 0x0000 && c <= 0x001F)
 		|| (c >= 0x007F && c <= 0x009F)
-		|| c == 0x2028   // LS
-		|| c == 0x2029;  // PS
+		|| c == 0x2028   /* LS */
+		|| c == 0x2029;  /* PS */
 }
 
-static inline int iswspace_l(wint_t c,  locale_t l) {
+static inline int iswspace_l(wint_t c, locale_t l) {
 	(void)l;
 
 	return c == L' ' || c == L'\t' || c == L'\n' || c == L'\v' || c == L'\f' || c == L'\r';
 }
 
-static inline int iswblank_l(wint_t c,  locale_t l) {
+static inline int iswblank_l(wint_t c, locale_t l) {
 	(void)l;
 
 	return c == L' ' || c == L'\t';
 }
 
-static inline int iswprint_l(wint_t c,  locale_t l) {
-	(void)l;
-
-	return !iswcntrl_l(c, l);
+static inline int iswprint_l(wint_t c, locale_t l) {
+	return (c != WEOF) && !iswcntrl_l(c, l);
 }
 
-static inline int iswgraph_l(wint_t c,  locale_t l) {
-	(void)l;
-
+static inline int iswgraph_l(wint_t c, locale_t l) {
 	return iswprint_l(c, l) && !iswspace_l(c, l);
 }
 
-static inline int iswxdigit_l(wint_t c,  locale_t l) {
+static inline int iswxdigit_l(wint_t c, locale_t l) {
 	(void)l;
 
 	return (c >= L'0' && c <= L'9') || (c >= L'A' && c <= L'F') || (c >= L'a' && c <= L'f');
@@ -84,8 +82,10 @@ static inline int iswdigit_l(wint_t c, locale_t l) {
 static inline int iswpunct_l(wint_t c, locale_t l) {
 	static const wchar_t core[] = L".,!?;:'\"()[]{}<>/\\-_=+@#$%^&*|`~–—…‘’“”·•°¶§†‡«»";
 
-	for (uint8_t i = 0; i < 48; i++) {
-		if (core[i] == c) return 1;
+	if (c != L'\0') {
+		for (size_t i = 0; core[i] != L'\0'; i++) {
+			if (core[i] == c) return 1;
+		}
 	}
 
 	for (uint8_t i = 0; i < l->wctype.e_count; i++) {
@@ -112,8 +112,6 @@ static inline int iswupper_l(wint_t c, locale_t l) {
 }
 
 static inline int iswalpha_l(wint_t c, locale_t l) {
-	if(!l->wctype.u_count && !l->wctype.l_count) return (c >= l->wctype.u[0] &&  c <= l->wctype.l[0]);
-
 	return iswlower_l(c, l) || iswupper_l(c, l);
 }
 
@@ -121,6 +119,7 @@ static inline int iswalnum_l(wint_t c, locale_t l) {
 	return iswalpha_l(c, l) || iswdigit_l(c, l);
 }
 
+// ===== Locale-Aware Transformation (_l) =====
 static inline wint_t towupper_l(wint_t c, locale_t l) {
 	if (l->wctype.u_count != l->wctype.l_count) return c;
 
@@ -131,7 +130,7 @@ static inline wint_t towupper_l(wint_t c, locale_t l) {
 	return c;
 }
 
-static inline wint_t towlower_l(wint_t c,  locale_t l) {
+static inline wint_t towlower_l(wint_t c, locale_t l) {
 	if (l->wctype.u_count != l->wctype.l_count) return c;
 
 	for (uint8_t i = 0; i < l->wctype.u_count; i++) {
@@ -141,26 +140,26 @@ static inline wint_t towlower_l(wint_t c,  locale_t l) {
 	return c;
 }
 
-static inline wctype_t wctype_l(const char *name, locale_t l) {
+// ===== Generic Classification & Transformation (_l) =====
+static inline wctype_t wctype_l(const char *property, locale_t l) {
 	(void)l;
 
-	if (!name) return 0;
+	if (!property) return WCTYPE_UNKNOWN;
 
-	/* Simple string comparison for common names */
-	if (strcmp(name, "lower") == 0)  return WCTYPE_LOWER;
-	if (strcmp(name, "upper") == 0)  return WCTYPE_UPPER;
-	if (strcmp(name, "digit") == 0)  return WCTYPE_DIGIT;
-	if (strcmp(name, "alpha") == 0)  return WCTYPE_ALPHA;
-	if (strcmp(name, "alnum") == 0)  return WCTYPE_ALNUM;
-	if (strcmp(name, "space") == 0)  return WCTYPE_SPACE;
-	if (strcmp(name, "cntrl") == 0)  return WCTYPE_CNTRL;
-	if (strcmp(name, "print") == 0)  return WCTYPE_PRINT;
-	if (strcmp(name, "graph") == 0)  return WCTYPE_GRAPH;
-	if (strcmp(name, "punct") == 0)  return WCTYPE_PUNCT;
-	if (strcmp(name, "blank") == 0)  return WCTYPE_BLANK;
-	if (strcmp(name, "xdigit") == 0) return WCTYPE_XDIGIT;
+	if (strcmp(property, "lower") == 0)  return WCTYPE_LOWER;
+	if (strcmp(property, "upper") == 0)  return WCTYPE_UPPER;
+	if (strcmp(property, "digit") == 0)  return WCTYPE_DIGIT;
+	if (strcmp(property, "alpha") == 0)  return WCTYPE_ALPHA;
+	if (strcmp(property, "alnum") == 0)  return WCTYPE_ALNUM;
+	if (strcmp(property, "space") == 0)  return WCTYPE_SPACE;
+	if (strcmp(property, "cntrl") == 0)  return WCTYPE_CNTRL;
+	if (strcmp(property, "print") == 0)  return WCTYPE_PRINT;
+	if (strcmp(property, "graph") == 0)  return WCTYPE_GRAPH;
+	if (strcmp(property, "punct") == 0)  return WCTYPE_PUNCT;
+	if (strcmp(property, "blank") == 0)  return WCTYPE_BLANK;
+	if (strcmp(property, "xdigit") == 0) return WCTYPE_XDIGIT;
 
-	return WCTYPE_UNKNOWN; /* Unknown */
+	return WCTYPE_UNKNOWN;
 }
 
 static inline int iswctype_l(wint_t c, wctype_t t, locale_t l) {
@@ -183,46 +182,49 @@ static inline int iswctype_l(wint_t c, wctype_t t, locale_t l) {
 	}
 }
 
-static inline wctrans_t wctrans_l(const char *name, locale_t l) {
-	if (!name) return 0;
-	if (strcmp(name, "tolower") == 0) return WCTRANS_TOLOWER;
-	if (strcmp(name, "toupper") == 0) return WCTRANS_TOUPPER;
+static inline wctrans_t wctrans_l(const char *property, locale_t l) {
+	(void)l;
 
-	return 0;
+	if (!property) return WCTRANS_UNKNOWN;
+	if (strcmp(property, "tolower") == 0) return WCTRANS_TOLOWER;
+	if (strcmp(property, "toupper") == 0) return WCTRANS_TOUPPER;
+
+	return WCTRANS_UNKNOWN;
 }
 
 static inline wint_t towctrans_l(wint_t c, wctrans_t t, locale_t l) {
 	if (!t) return c;
 
-	switch ((wctrans_t)t) {
+	switch (t) {
 		case WCTRANS_TOLOWER:  return towlower_l(c, l);
 		case WCTRANS_TOUPPER:  return towupper_l(c, l);
 		default:               return c;
 	}
 }
 
-static inline int iswcntrl(wint_t c) { return iswcntrl_l(c,    __jacl_locale_current); }
-static inline int iswspace(wint_t c) { return iswspace_l(c,    __jacl_locale_current); }
-static inline int iswblank(wint_t c) { return iswblank_l(c,    __jacl_locale_current); }
-static inline int iswprint(wint_t c) { return iswprint_l(c,    __jacl_locale_current); }
-static inline int iswgraph(wint_t c) { return iswgraph_l(c,    __jacl_locale_current); }
-static inline int iswxdigit(wint_t c) { return iswxdigit_l(c,  __jacl_locale_current); }
+// ===== Standard Wrappers =====
+static inline int iswcntrl(wint_t c) { return iswcntrl_l(c, __jacl_locale_current); }
+static inline int iswspace(wint_t c) { return iswspace_l(c, __jacl_locale_current); }
+static inline int iswblank(wint_t c) { return iswblank_l(c, __jacl_locale_current); }
+static inline int iswprint(wint_t c) { return iswprint_l(c, __jacl_locale_current); }
+static inline int iswgraph(wint_t c) { return iswgraph_l(c, __jacl_locale_current); }
+static inline int iswxdigit(wint_t c) { return iswxdigit_l(c, __jacl_locale_current); }
 
-static inline int iswdigit(wint_t c) { return iswdigit_l(c,    __jacl_locale_current); }
-static inline int iswpunct(wint_t c) { return iswpunct_l(c,    __jacl_locale_current); }
-static inline int iswlower(wint_t c) { return iswlower_l(c,    __jacl_locale_current); }
-static inline int iswupper(wint_t c) { return iswupper_l(c,    __jacl_locale_current); }
-static inline int iswalpha(wint_t c) { return iswalpha_l(c,    __jacl_locale_current); }
-static inline int iswalnum(wint_t c) { return iswalnum_l(c,    __jacl_locale_current); }
+static inline int iswdigit(wint_t c) { return iswdigit_l(c, __jacl_locale_current); }
+static inline int iswpunct(wint_t c) { return iswpunct_l(c, __jacl_locale_current); }
+static inline int iswlower(wint_t c) { return iswlower_l(c, __jacl_locale_current); }
+static inline int iswupper(wint_t c) { return iswupper_l(c, __jacl_locale_current); }
+static inline int iswalpha(wint_t c) { return iswalpha_l(c, __jacl_locale_current); }
+static inline int iswalnum(wint_t c) { return iswalnum_l(c, __jacl_locale_current); }
 
 static inline wint_t towlower(wint_t c) { return towlower_l(c, __jacl_locale_current); }
 static inline wint_t towupper(wint_t c) { return towupper_l(c, __jacl_locale_current); }
 
-static inline wctrans_t wctrans(const char *c) { return wctrans_l(c, __jacl_locale_current); }
-static inline wctrans_t towctrans(wint_t c, wctrans_t t) { return towctrans_l(c, t, __jacl_locale_current); }
+static inline wctrans_t wctrans(const char *property) { return wctrans_l(property, __jacl_locale_current); }
+static inline wint_t towctrans(wint_t c, wctrans_t t) { return towctrans_l(c, t, __jacl_locale_current); }
 
-static inline int iswctype(wint_t c, wctype_t t) { return iswctype_l(c, t,  __jacl_locale_current); }
-static inline wctype_t wctype(const char *c) { return wctype_l(c, __jacl_locale_current); }
+static inline int iswctype(wint_t c, wctype_t t) { return iswctype_l(c, t, __jacl_locale_current); }
+static inline wctype_t wctype(const char *property) { return wctype_l(property, __jacl_locale_current); }
 
 #ifdef __cplusplus
 }

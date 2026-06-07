@@ -12,7 +12,7 @@ typedef enum {
 #include JACL_X_SYSCALL
 #undef X
 	sys_max
-} syscall_t;
+} __syscall_t;
 
 // include os-specific syscall
 #define __OS_SYSCALL
@@ -44,13 +44,8 @@ static inline long __sys_error(long result) {
 #define __sys_args5(num, a, b, c, d)        __sys_error(__jacl_os_syscall(num, (long)(a), (long)(b), (long)(c), (long)(d), 0, 0))
 #define __sys_args6(num, a, b, c, d, e)     __sys_error(__jacl_os_syscall(num, (long)(a), (long)(b), (long)(c), (long)(d), (long)(e), 0))
 #define __sys_args7(num, a, b, c, d, e, f)  __sys_error(__jacl_os_syscall(num, (long)(a), (long)(b), (long)(c), (long)(d), (long)(e), (long)(f)))
+#define __sys_maybe(NUM, ERR, ...) (NUM + 0 ? syscall(NUM, __VA_ARGS__) : __sys_error(-ERR))
 
-#define syscall(...) JACL_CONCAT_EXPAND(__sys_args, JACL_NARGS(__VA_ARGS__),)(__VA_ARGS__)
-#define sysdebug(num, ...) ( \
-	fprintf(stderr, "syscall(%s, %s)\n", #num, #__VA_ARGS__) \
-	? __debug_syscall(num, __VA_ARGS__ +0, 0, 0, 0, 0, 0, 0) \
-	: 0 \
-)
 static inline long __debug_syscall(long num, ...) {
 	va_list args;
 	long a1, a2, a3, a4, a5, a6;
@@ -82,6 +77,13 @@ static inline long __debug_syscall(long num, ...) {
 
 	return result;
 }
+
+#define syscall(...) JACL_CONCAT_EXPAND(__sys_args, JACL_NARGS(__VA_ARGS__),)(__VA_ARGS__)
+#define sysdebug(num, ...) ( \
+	fprintf(stderr, "syscall(%s, %s)\n", #num, #__VA_ARGS__) \
+	? __debug_syscall(num, __VA_ARGS__ +0, 0, 0, 0, 0, 0, 0) \
+	: 0 \
+)
 
 #ifdef __cplusplus
 }

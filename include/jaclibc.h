@@ -103,8 +103,8 @@
 #include <assert.h>       // Diagnostic assertions
 
 // JACLibc Extensions
-#include <testing.h>      // Testing Harness
 #include <jsio.h>         // JS Type Bridge
+#include <testing.h>      // Testing Harness
 
 // STATIC GLOBALS
 #ifdef JACL_MAIN

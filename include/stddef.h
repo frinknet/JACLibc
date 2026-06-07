@@ -49,6 +49,10 @@ extern "C" {
 	typedef unsigned int wint_t;
 #endif
 
+#ifndef WEOF
+#define WEOF ((wint_t)-1)
+#endif
+
 /**
  * NOTE: These moved to <config.h> in the Polyfill Section.
  *
