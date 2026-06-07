@@ -174,6 +174,18 @@ TEST(memcmp_embedded_nulls) {
 	ASSERT_TRUE(memcmp(a, b, 5) < 0);
 }
 
+TEST(memcmp_null_a) {
+	ASSERT_NE(0, memcmp(NULL, "a", 1));
+}
+
+TEST(memcmp_null_b) {
+	ASSERT_NE(0, memcmp("a", NULL, 1));
+}
+
+TEST(memcmp_null_both) {
+	ASSERT_EQ(0, memcmp(NULL, NULL, 0));
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(memchr)
@@ -206,9 +218,16 @@ TEST(memchr_binary_search) {
 	ASSERT_EQ(data + 2, memchr(data, 0xAA, 5));
 }
 
+TEST(memchr_null_s) {
+	ASSERT_NULL(memchr(NULL, 'a', 1));
+}
+
+TEST(memchr_zero_n) {
+	ASSERT_NULL(memchr("a", 'a', 0));
+}
+
 /* ============================================================================ */
 
-#if JACL_HAS_POSIX
 TEST_SUITE(memmem)
 
 TEST(memmem_found) {
@@ -233,7 +252,14 @@ TEST(memmem_empty_needle) {
 TEST(memmem_needle_larger) {
 	ASSERT_NULL(memmem("hi", 2, "hello", 5));
 }
-#endif
+
+TEST(memmem_null_haystack) {
+	ASSERT_NULL(memmem(NULL, 1, "a", 1));
+}
+
+TEST(memmem_null_needle) {
+	ASSERT_NULL(memmem("a", 1, NULL, 1));
+}
 
 /* ============================================================================ */
 
@@ -251,6 +277,10 @@ TEST(strlen_embedded_null) {
 	ASSERT_EQ(2, strlen(str));
 }
 
+TEST(strlen_null) {
+	ASSERT_EQ(0, strlen(NULL));
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(strnlen)
@@ -258,6 +288,10 @@ TEST_SUITE(strnlen)
 TEST(strnlen_within_limit) {
 	ASSERT_EQ(5, strnlen("hello", 10));
 	ASSERT_EQ(0, strnlen("", 10));
+}
+
+TEST(strnlen_null) {
+	ASSERT_EQ(0, strnlen(NULL, 10));
 }
 
 TEST(strnlen_exceeds_limit) {
@@ -285,6 +319,15 @@ TEST(strcpy_empty) {
 	strcpy(dest, "");
 
 	ASSERT_STR_EQ("", dest);
+}
+
+TEST(strcpy_null_dest) {
+	ASSERT_NULL(strcpy(NULL, "a"));
+}
+
+TEST(strcpy_null_src) {
+	char d[2];
+	ASSERT_NULL(strcpy(d, NULL));
 }
 
 /* ============================================================================ */
@@ -328,6 +371,23 @@ TEST(strncpy_no_null_termination) {
 	ASSERT_EQ('X', dest[5]);
 }
 
+TEST(strncpy_null_dest) {
+	ASSERT_NULL(strncpy(NULL, "a", 1));
+}
+
+TEST(strncpy_null_src) {
+	char d[2];
+	ASSERT_NULL(strncpy(d, NULL, 1));
+}
+
+TEST(strncpy_exact_fit) {
+	char dest[6];
+	memset(dest, 'X', 6);
+	strncpy(dest, "hello", 5);
+	ASSERT_EQ('o', dest[4]);
+	ASSERT_EQ('X', dest[5]); // Not null terminated because n == strlen(src)
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(strcat)
@@ -352,6 +412,15 @@ TEST(strcat_empty_src) {
 	strcat(dest, "");
 
 	ASSERT_STR_EQ("test", dest);
+}
+
+TEST(strcat_null_dest) {
+	ASSERT_NULL(strcat(NULL, "a"));
+}
+
+TEST(strcat_null_src) {
+	char d[4] = "a";
+	ASSERT_NULL(strcat(d, NULL));
 }
 
 /* ============================================================================ */
@@ -380,6 +449,14 @@ TEST(strncat_exact) {
 	ASSERT_STR_EQ("abcd", dest);
 }
 
+TEST(strncat_null_dest) {
+	ASSERT_NULL(strncat(NULL, "a", 1));
+}
+TEST(strncat_null_src) {
+	char d[4] = "a";
+	ASSERT_NULL(strncat(d, NULL, 1));
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(strcmp)
@@ -404,6 +481,14 @@ TEST(strcmp_different_lengths) {
 	ASSERT_TRUE(strcmp("abcd", "abc") > 0);
 }
 
+TEST(strcmp_null_a) {
+	ASSERT_NE(0, strcmp(NULL, "a"));
+}
+
+TEST(strcmp_null_b) {
+	ASSERT_NE(0, strcmp("a", NULL));
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(strncmp)
@@ -422,6 +507,14 @@ TEST(strncmp_zero_length) {
 	ASSERT_EQ(0, strncmp("different", "strings", 0));
 }
 
+TEST(strncmp_null_a) {
+	ASSERT_NE(0, strncmp(NULL, "a", 1));
+}
+
+TEST(strncmp_null_b) {
+	ASSERT_NE(0, strncmp("a", NULL, 1));
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(strcoll)
@@ -429,6 +522,14 @@ TEST_SUITE(strcoll)
 TEST(strcoll_basic) {
 	ASSERT_EQ(0, strcoll("hello", "hello"));
 	ASSERT_TRUE(strcoll("abc", "abd") < 0);
+}
+
+TEST(strcoll_null_a) {
+	ASSERT_NE(0, strcoll(NULL, "a"));
+}
+
+TEST(strcoll_null_b) {
+	ASSERT_NE(0, strcoll("a", NULL));
 }
 
 /* ============================================================================ */
@@ -448,6 +549,16 @@ TEST(strxfrm_small_buffer) {
 	size_t result = strxfrm(dest, "hello", 3);
 
 	ASSERT_EQ(5, result);
+}
+
+TEST(strxfrm_null_dest) {
+	ASSERT_EQ(1, strxfrm(NULL, "a", 10));
+	ASSERT_EQ(0, strxfrm(NULL, "", 10));
+}
+
+TEST(strxfrm_null_src) {
+	char d[2];
+	ASSERT_EQ(0, strxfrm(d, NULL, 10));
 }
 
 /* ============================================================================ */
@@ -502,6 +613,20 @@ TEST(strerror_r_invalid) {
 	ASSERT_EQ(EINVAL, strerror_r(0, buf, 0));
 }
 
+TEST(strerror_r_exact_fit) {
+	char buf[8]; // "Success" is 7 chars + 1 null = 8 bytes
+	int ret = strerror_r(0, buf, 8);
+	ASSERT_EQ(0, ret);
+	ASSERT_STR_EQ("Success", buf);
+}
+
+TEST(strerror_r_off_by_one) {
+	char buf[7]; // Needs 8, has 7
+	int ret = strerror_r(0, buf, 7);
+	ASSERT_EQ(ERANGE, ret);
+	ASSERT_EQ(6, strlen(buf)); // Truncated to "Succe" + '\0'
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(strchr)
@@ -526,6 +651,10 @@ TEST(strchr_null_terminator) {
 	ASSERT_EQ(str + 5, strchr(str, '\0'));
 }
 
+TEST(strchr_null_s) {
+	ASSERT_NULL(strchr(NULL, 'a'));
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(strrchr)
@@ -540,6 +669,15 @@ TEST(strrchr_last_occurrence) {
 
 TEST(strrchr_not_found) {
 	ASSERT_NULL(strrchr("hello", 'x'));
+}
+
+TEST(strrchr_null_s) {
+	ASSERT_NULL(strrchr(NULL, 'a'));
+}
+
+TEST(strrchr_null_terminator) {
+	const char *str = "hello";
+	ASSERT_EQ(str + 5, strrchr(str, '\0'));
 }
 
 /* ============================================================================ */
@@ -564,6 +702,14 @@ TEST(strstr_empty_needle) {
 	ASSERT_EQ(str, strstr(str, ""));
 }
 
+TEST(strstr_null_haystack) {
+	ASSERT_NULL(strstr(NULL, "a"));
+}
+
+TEST(strstr_null_needle) {
+	ASSERT_NULL(strstr("a", NULL));
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(strspn)
@@ -577,6 +723,18 @@ TEST(strspn_basic) {
 TEST(strspn_empty) {
 	ASSERT_EQ(0, strspn("hello", ""));
 	ASSERT_EQ(0, strspn("", "abc"));
+}
+
+TEST(strspn_null_s) {
+	ASSERT_EQ(0, strspn(NULL, "a"));
+}
+
+TEST(strspn_null_accept) {
+	ASSERT_EQ(0, strspn("a", NULL));
+}
+
+TEST(strspn_all_match) {
+	ASSERT_EQ(5, strspn("hello", "helo"));
 }
 
 /* ============================================================================ */
@@ -594,6 +752,18 @@ TEST(strcspn_empty) {
 	ASSERT_EQ(5, strcspn("hello", ""));
 }
 
+TEST(strcspn_null_s) {
+	ASSERT_EQ(0, strcspn(NULL, "a"));
+}
+
+TEST(strcspn_null_reject) {
+	ASSERT_EQ(1, strcspn("a", NULL));
+}
+
+TEST(strcspn_no_match) {
+	ASSERT_EQ(5, strcspn("hello", "xyz"));
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(strpbrk)
@@ -608,6 +778,14 @@ TEST(strpbrk_found) {
 
 TEST(strpbrk_not_found) {
 	ASSERT_NULL(strpbrk("hello", "xyz"));
+}
+
+TEST(strpbrk_null_s) {
+	ASSERT_NULL(strpbrk(NULL, "a"));
+}
+
+TEST(strpbrk_null_accept) {
+	ASSERT_NULL(strpbrk("a", NULL));
 }
 
 /* ============================================================================ */
@@ -692,9 +870,25 @@ TEST(strtok_r_basic) {
 	ASSERT_STR_EQ("y", t2);
 }
 
+TEST(strtok_r_null_delim) {
+	char *save;
+	ASSERT_NULL(strtok_r("a", NULL, &save));
+}
+
+TEST(strtok_r_null_save) {
+	ASSERT_NULL(strtok_r("a", ",", NULL));
+}
+
+TEST(strtok_r_empty_delim) {
+	char str[] = "hello";
+	char *save;
+	char *tok = strtok_r(str, "", &save);
+	ASSERT_STR_EQ("hello", tok);
+	ASSERT_NULL(strtok_r(NULL, "", &save));
+}
+
 /* ============================================================================ */
 
-#if JACL_OS_BSD
 TEST_SUITE(strlcpy)
 
 TEST(strlcpy_basic) {
@@ -712,6 +906,31 @@ TEST(strlcpy_truncate) {
 	ASSERT_EQ(16, result);
 	ASSERT_STR_EQ("very", dest);
 	ASSERT_EQ('\0', dest[4]);
+}
+
+TEST(strlcpy_zero_n) {
+	char dest[5] = "XXXX";
+	size_t ret = strlcpy(dest, "hello", 0);
+	ASSERT_EQ(5, ret);
+	ASSERT_EQ('X', dest[0]); // Buffer untouched
+}
+
+TEST(strlcpy_null_dest) {
+	ASSERT_EQ(1, strlcpy(NULL, "a", 10));
+}
+
+TEST(strlcpy_null_src) {
+	char d[2];
+	ASSERT_EQ(0, strlcpy(d, NULL, 10));
+}
+
+TEST(strlcpy_n_is_1) {
+	char dest[2];
+	memset(dest, 'X', 2); // Properly initialize both bytes to 'X'
+	size_t ret = strlcpy(dest, "hello", 1);
+	ASSERT_EQ(5, ret);
+	ASSERT_EQ('\0', dest[0]); // Only the null terminator is written
+	ASSERT_EQ('X', dest[1]);  // Rest of buffer untouched
 }
 
 /* ============================================================================ */
@@ -742,6 +961,364 @@ TEST(strlcat_dest_full) {
 	ASSERT_EQ(11, result);
 	ASSERT_STR_EQ("hello", dest);
 }
-#endif
+
+TEST(strlcat_zero_n) {
+	char dest[5] = "XXXX";
+	size_t ret = strlcat(dest, "hello", 0);
+	ASSERT_EQ(5, ret);
+	ASSERT_EQ('X', dest[0]); // Buffer untouched
+}
+
+TEST(strlcat_null_dest) {
+	ASSERT_EQ(1, strlcat(NULL, "a", 10));
+}
+
+TEST(strlcat_null_src) {
+	char d[4] = "a";
+	ASSERT_EQ(1, strlcat(d, NULL, 10));
+}
+
+TEST(strlcat_empty_dest_string) {
+	char d[10] = "";
+	ASSERT_EQ(5, strlcat(d, "hello", 10));
+	ASSERT_STR_EQ("hello", d);
+}
+
+TEST(strlcat_n_is_1) {
+	char dest[5] = "a";
+	size_t ret = strlcat(dest, "hello", 1);
+	ASSERT_EQ(6, ret); // 1 (dlen) + 5 (slen)
+	ASSERT_STR_EQ("a", dest); // Buffer untouched because n <= dlen
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(memccpy)
+
+TEST(memccpy_found) {
+	char dest[10];
+	void *ret = memccpy(dest, "hello", 'l', 5);
+	ASSERT_EQ(dest + 3, ret);
+	ASSERT_EQ('h', dest[0]);
+	ASSERT_EQ('e', dest[1]);
+	ASSERT_EQ('l', dest[2]);
+}
+
+TEST(memccpy_not_found) {
+	char dest[10];
+	void *ret = memccpy(dest, "hello", 'x', 5);
+	ASSERT_NULL(ret);
+	ASSERT_EQ('o', dest[4]);
+}
+
+TEST(memccpy_null_dest) {
+	ASSERT_NULL(memccpy(NULL, "a", 'a', 1));
+}
+
+TEST(memccpy_null_src) {
+	char d[2];
+	ASSERT_NULL(memccpy(d, NULL, 'a', 1));
+}
+
+TEST(memccpy_exact_match) {
+	char d[10];
+	void *ret = memccpy(d, "abc", 'c', 3);
+	ASSERT_EQ(d + 3, ret);
+	ASSERT_EQ('c', d[2]);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(stpcpy)
+
+TEST(stpcpy_basic) {
+	char dest[10];
+	char *ret = stpcpy(dest, "test");
+	ASSERT_EQ(dest + 4, ret);
+	ASSERT_EQ('\0', *ret);
+	ASSERT_STR_EQ("test", dest);
+}
+
+TEST(stpcpy_null_dest) {
+	ASSERT_NULL(stpcpy(NULL, "a"));
+}
+
+TEST(stpcpy_null_src) {
+	char d[2];
+	ASSERT_NULL(stpcpy(d, NULL));
+}
+
+TEST(stpcpy_empty) {
+	char dest[10] = "X";
+	char *ret = stpcpy(dest, "");
+	ASSERT_EQ(dest, ret);
+	ASSERT_EQ('\0', *ret);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(stpncpy)
+
+TEST(stpncpy_basic) {
+	char dest[10] = {0};
+	char *ret = stpncpy(dest, "hello", 3);
+	ASSERT_EQ(dest + 3, ret);
+	ASSERT_EQ('h', dest[0]);
+	ASSERT_EQ('l', dest[2]);
+}
+
+TEST(stpncpy_pads) {
+	char dest[10];
+	memset(dest, 'X', 10);
+	char *ret = stpncpy(dest, "hi", 5);
+	ASSERT_EQ(dest + 2, ret);
+	ASSERT_EQ('\0', dest[2]);
+	ASSERT_EQ('\0', dest[4]);
+}
+
+TEST(stpncpy_null_dest) {
+	ASSERT_NULL(stpncpy(NULL, "a", 1));
+}
+
+TEST(stpncpy_null_src) {
+	char d[2];
+	ASSERT_NULL(stpncpy(d, NULL, 1));
+}
+
+TEST(stpncpy_exact_no_pad) {
+	char dest[5];
+	memset(dest, 'X', 5);
+	char *ret = stpncpy(dest, "hello", 5);
+	ASSERT_EQ(dest + 5, ret);
+	ASSERT_EQ('o', dest[4]); // POSIX: If src length == n, NO null terminator is added
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(strdup)
+
+TEST(strdup_basic) {
+	char *dup = strdup("test");
+	ASSERT_NOT_NULL(dup);
+	ASSERT_STR_EQ("test", dup);
+	free(dup);
+}
+
+TEST(strdup_null) {
+	ASSERT_NULL(strdup(NULL));
+}
+
+TEST(strdup_empty) {
+	char *dup = strdup("");
+	ASSERT_NOT_NULL(dup);
+	ASSERT_STR_EQ("", dup);
+	free(dup);
+}
+
+TEST(strdup_stops_at_null) {
+	char src[] = {'a', 'b', '\0', 'c', 'd', '\0'};
+	char *dup = strdup(src);
+	ASSERT_NOT_NULL(dup);
+	ASSERT_EQ(2, strlen(dup));
+	ASSERT_STR_EQ("ab", dup);
+	free(dup);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(strndup)
+
+TEST(strndup_basic) {
+	char *dup = strndup("hello world", 5);
+	ASSERT_NOT_NULL(dup);
+	ASSERT_STR_EQ("hello", dup);
+	free(dup);
+}
+
+TEST(strndup_short) {
+	char *dup = strndup("hi", 10);
+	ASSERT_NOT_NULL(dup);
+	ASSERT_STR_EQ("hi", dup);
+	free(dup);
+}
+
+TEST(strndup_null) {
+	ASSERT_NULL(strndup(NULL, 10));
+}
+
+TEST(strndup_zero_n) {
+	char *dup = strndup("hello", 0);
+	ASSERT_NOT_NULL(dup);
+	ASSERT_STR_EQ("", dup);
+	free(dup);
+}
+
+TEST(strndup_exact_length) {
+	char *dup = strndup("hello", 5);
+	ASSERT_NOT_NULL(dup);
+	ASSERT_STR_EQ("hello", dup);
+	ASSERT_EQ('\0', dup[5]);
+	free(dup);
+}
+
+TEST(strndup_no_null_in_n) {
+	char src[] = {'a', 'b', 'c', 'd', 'e'}; // No null terminator in source array
+	char *dup = strndup(src, 5);
+	ASSERT_NOT_NULL(dup);
+	ASSERT_STR_EQ("abcde", dup);
+	ASSERT_EQ('\0', dup[5]); // strndup MUST add the null terminator
+	free(dup);
+}
+
+TEST(strndup_large_n) {
+	char *dup = strndup("hi", 100);
+	ASSERT_NOT_NULL(dup);
+	ASSERT_STR_EQ("hi", dup);
+	free(dup);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(strsignal)
+
+TEST(strsignal_basic) {
+	char *msg = strsignal(SIGSEGV);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Segmentation fault", msg);
+}
+
+TEST(strsignal_unknown) {
+	char *msg = strsignal(9999);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Unknown signal", msg);
+}
+
+TEST(strsignal_sigint) {
+	char *msg = strsignal(SIGINT);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Interrupt", msg);
+}
+
+TEST(strsignal_sigkill) {
+	char *msg = strsignal(SIGKILL);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Killed", msg);
+}
+
+TEST(strsignal_zero) {
+	char *msg = strsignal(0);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Unknown signal", msg);
+}
+
+TEST(strsignal_negative) {
+	char *msg = strsignal(-1);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Unknown signal", msg);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(strcoll_l)
+
+TEST(strcoll_l_basic) {
+	ASSERT_EQ(0, strcoll_l("hello", "hello", __jacl_locale_current));
+	ASSERT_TRUE(strcoll_l("abc", "abd", __jacl_locale_current) < 0);
+}
+
+TEST(strcoll_l_equal) {
+	ASSERT_EQ(0, strcoll_l("hello", "hello", __jacl_locale_current));
+}
+
+TEST(strcoll_l_less) {
+	ASSERT_TRUE(strcoll_l("abc", "abd", __jacl_locale_current) < 0);
+}
+
+TEST(strcoll_l_greater) {
+	ASSERT_TRUE(strcoll_l("abd", "abc", __jacl_locale_current) > 0);
+}
+
+TEST(strcoll_l_null_a) {
+	ASSERT_NE(0, strcoll_l(NULL, "a", __jacl_locale_current));
+}
+
+TEST(strcoll_l_null_b) {
+	ASSERT_NE(0, strcoll_l("a", NULL, __jacl_locale_current));
+}
+
+TEST(strcoll_l_empty) {
+	ASSERT_EQ(0, strcoll_l("", "", __jacl_locale_current));
+	ASSERT_TRUE(strcoll_l("", "a", __jacl_locale_current) < 0);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(strxfrm_l)
+
+TEST(strxfrm_l_basic) {
+	char dest[20];
+	size_t ret = strxfrm_l(dest, "hello", 20, __jacl_locale_current);
+	ASSERT_EQ(5, ret);
+	ASSERT_STR_EQ("hello", dest);
+}
+
+TEST(strxfrm_l_null_dest) {
+	ASSERT_EQ(5, strxfrm_l(NULL, "hello", 0, __jacl_locale_current));
+}
+
+TEST(strxfrm_l_null_src) {
+	char dest[10];
+	ASSERT_EQ(0, strxfrm_l(dest, NULL, 10, __jacl_locale_current));
+}
+
+TEST(strxfrm_l_small_buffer) {
+	char dest[3];
+	size_t ret = strxfrm_l(dest, "hello", 3, __jacl_locale_current);
+	ASSERT_EQ(5, ret);
+}
+
+TEST(strxfrm_l_zero_n) {
+	char dest[10] = "X";
+	size_t ret = strxfrm_l(dest, "hello", 0, __jacl_locale_current);
+	ASSERT_EQ(5, ret);
+	ASSERT_EQ('X', dest[0]);
+}
+
+TEST(strxfrm_l_empty_src) {
+	char dest[10];
+	size_t ret = strxfrm_l(dest, "", 10, __jacl_locale_current);
+	ASSERT_EQ(0, ret);
+	ASSERT_EQ('\0', dest[0]);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(strerror_l)
+
+TEST(strerror_l_basic) {
+	char *msg = strerror_l(ENOENT, __jacl_locale_current);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("No such file or directory", msg);
+}
+
+TEST(strerror_l_success) {
+	char *msg = strerror_l(0, __jacl_locale_current);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Success", msg);
+}
+
+TEST(strerror_l_enomem) {
+	char *msg = strerror_l(ENOMEM, __jacl_locale_current);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Out of memory", msg);
+}
+
+TEST(strerror_l_unknown) {
+	char *msg = strerror_l(9999, __jacl_locale_current);
+	ASSERT_NOT_NULL(msg);
+	ASSERT_STR_EQ("Unknown error", msg);
+}
+
+/* ============================================================================ */
 
 TEST_MAIN()

@@ -1,4 +1,4 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 #include <stdio.h>
 
@@ -6,8 +6,7 @@ TEST_TYPE(unit);
 TEST_UNIT(stdio.h);
 
 /* ============================================================= */
-/* Test Data                                                     */
-/* ============================================================= */
+
 static const int int_vals[] = {0, 1, 42, 100000001, 254321, -1234, INT_MAX, INT_MIN};
 static const unsigned int uint_vals[] = {0, 1, 42, 100000001, 254321, UINT_MAX};
 static const double dbl_vals[] = {0.0, -0.0, 1.5, -1.5, 123.456, -123.456, 0.001, 1000.0, 1.23e5, -1.23e-5, 0.999999, -0.999999};
@@ -71,10 +70,7 @@ static const int precisions[] = {0, 1, 2, 3, 4, 6, 10};
 #endif
 
 /* ============================================================= */
-/* PRINTF TESTS (Alphabetical by Specifier)                      */
-/* ============================================================= */
 
-/* ============= Printf: %a, %A (hex float) - C99+ ============= */
 #if JACL_HAS_C99
 TEST_SUITE(printf_a);
 
@@ -161,7 +157,8 @@ TEST(printf_a_plus_width) {
 }
 #endif
 
-/* ============= Printf: %c (character) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_c);
 
 TEST(printf_c_basic) {
@@ -208,7 +205,8 @@ TEST(printf_c_minus_width) {
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
-/* ============= Printf: %d, %i (signed decimal) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_d);
 
 TEST(printf_d_basic) {
@@ -329,7 +327,8 @@ TEST(printf_d_negative_dynamic_width) {
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
-/* ============= Printf: %e, %E (scientific) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_e);
 
 TEST(printf_e_basic) {
@@ -441,7 +440,8 @@ TEST(printf_e_negative_nan)
 	ASSERT_TRUE(strchr(buf, 'n') != NULL);
 }
 
-/* ============= Printf: %f, %F (fixed-point) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_f);
 
 TEST(printf_f_basic) {
@@ -584,7 +584,8 @@ TEST(printf_f_negative_nan)
 	ASSERT_TRUE(strchr(buf, 'n') != NULL || strchr(buf, 'N') != NULL);
 }
 
-/* ============= Printf: %g, %G (shortest) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_g);
 
 TEST(printf_g_basic) {
@@ -688,7 +689,8 @@ TEST(printf_g_negative_nan)
 	ASSERT_TRUE(strchr(buf, 'n') != NULL);
 }
 
-/* ============= Printf: %n (chars written) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_n);
 
 TEST(printf_n_basic) {
@@ -727,7 +729,8 @@ TEST(printf_n_longlong) {
 	ASSERT_INT_EQ(8, count);
 }
 
-/* ============= Printf: %o (octal) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_o);
 
 TEST(printf_o_basic) {
@@ -780,7 +783,8 @@ TEST(printf_o_minus_hash_width) {
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
-/* ============= Printf: %p (pointer) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_p);
 
 TEST(printf_p_basic) {
@@ -825,7 +829,8 @@ TEST(printf_p_width_pad) {
 	ASSERT_TRUE(strlen(buf) >= 20);
 }
 
-/* ============= Printf: %s (string) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_s);
 
 TEST(printf_s_basic) {
@@ -858,7 +863,6 @@ TEST(printf_s_precision_null) {
 	snprintf(buf, sizeof(buf), "%.3s", nullish);
 	ASSERT_STR_EQ("(nu", buf);
 }
-
 
 TEST(printf_s_precision_and_width) {
 	char buf[256] = {0};
@@ -903,7 +907,8 @@ TEST(printf_s_minus_width) {
 	ASSERT_TRUE(strlen(buf) >= 15);
 }
 
-/* ============= Printf: %u (unsigned decimal) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_u);
 
 TEST(printf_u_basic) {
@@ -954,7 +959,8 @@ TEST(printf_u_minus_width) {
 	ASSERT_TRUE(buf[0] != ' ');
 }
 
-/* ============= Printf: %x, %X (hexadecimal) ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_x);
 
 TEST(printf_x_lowercase) {
@@ -1031,7 +1037,8 @@ TEST(printf_x_minus_hash_width) {
 	ASSERT_TRUE(strlen(buf) >= 10);
 }
 
-/* ============= Printf: max ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_max)
 
 TEST(printf_max_intmax) {
@@ -1058,7 +1065,8 @@ TEST(printf_max_uintptr) {
 	ASSERT_TRUE(strlen(buf) > 0);
 }
 
-/* ============= Printf: min ============= */
+/* ============================================================= */
+
 TEST_SUITE(printf_min)
 
 TEST(printf_min_intmax) {
@@ -1086,10 +1094,7 @@ TEST(printf_min_uintptr) {
 }
 
 /* ============================================================= */
-/* SCANF TESTS (Alphabetical by Specifier)					  */
-/* ============================================================= */
 
-/* ============= Scanf: %c (character) ============= */
 TEST_SUITE(scanf_c);
 
 TEST(scanf_c_basic) {
@@ -1112,7 +1117,8 @@ TEST(scanf_c_digit) {
 	ASSERT_INT_EQ('5', parsed);
 }
 
-/* ============= Scanf: %d (signed decimal) ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_d);
 
 TEST(scanf_d_roundtrip) {
@@ -1171,7 +1177,8 @@ TEST(scanf_d_ll_longlong) {
 	ASSERT_INT_EQ(123456789012LL, parsed);
 }
 
-/* ============= Scanf: %e, %E (scientific) - C99+ ============= */
+/* ============================================================= */
+
 #if JACL_HAS_C99
 TEST_SUITE(scanf_e);
 
@@ -1214,7 +1221,8 @@ TEST(scanf_e_negative_infinity)
 }
 #endif
 
-/* ============= Scanf: %f, %F (float) ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_f);
 
 TEST(scanf_f_roundtrip) {
@@ -1288,7 +1296,8 @@ TEST(scanf_f_negative_inf)
 	ASSERT_TRUE(parsed < 0);
 }
 
-/* ============= Scanf: %g, %G (shortest) - C99+ ============= */
+/* ============================================================= */
+
 #if JACL_HAS_C99
 TEST_SUITE(scanf_g);
 
@@ -1332,7 +1341,8 @@ TEST(scanf_g_negative_nan_payload)
 }
 #endif
 
-/* ============= Scanf: %i (auto-base) ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_i);
 
 TEST(scanf_i_decimal) {
@@ -1377,7 +1387,8 @@ TEST(scanf_i_negative_0) {
 	ASSERT_EQ(-63, v);
 }
 
-/* ============= Scanf: %o (octal) ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_o);
 
 TEST(scanf_o_basic) {
@@ -1404,7 +1415,8 @@ TEST(scanf_o_zero) {
 	ASSERT_INT_EQ(0, parsed);
 }
 
-/* ============= Scanf: %s (string) ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_s);
 
 TEST(scanf_s_basic) {
@@ -1441,7 +1453,8 @@ TEST(scanf_s_single) {
 	ASSERT_STR_EQ("x", s);
 }
 
-/* ============= Scanf: %u (unsigned decimal) ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_u);
 
 TEST(scanf_u_roundtrip) {
@@ -1488,7 +1501,8 @@ TEST(scanf_u_positive) {
 	ASSERT_INT_EQ(v, 42);
 }
 
-/* ============= Scanf: %x, %X (hexadecimal) ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_x);
 
 TEST(scanf_x_lowercase) {
@@ -1527,7 +1541,8 @@ TEST(scanf_x_negative) {
 	ASSERT_EQ(-31, v);
 }
 
-/* ============= Scanf: %[ (character class) ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_bracket);
 
 TEST(scanf_bracket_include) {
@@ -1556,7 +1571,8 @@ TEST(scanf_bracket_digits) {
 	ASSERT_STR_EQ("12345", s);
 }
 
-/* ============= Scanf: %* (suppression) ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_suppress);
 
 TEST(scanf_suppress_int) {
@@ -1594,7 +1610,8 @@ TEST(scanf_suppress_scan) {
 	ASSERT_STR_EQ("df", s);
 }
 
-/* ============= Scanf: Return Values ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_return);
 
 TEST(scanf_return_count) {
@@ -1621,7 +1638,8 @@ TEST(scanf_return_partial) {
 	ASSERT_INT_EQ(0, ret);
 }
 
-/* ============= Scanf: Edge Cases ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_edge);
 
 TEST(scanf_edge_whitespace_skip) {
@@ -1642,7 +1660,8 @@ TEST(scanf_edge_leading_space) {
 	ASSERT_INT_EQ(99, d);
 }
 
-/* ============= Scanf: max ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_max)
 
 TEST(scanf_max_intmax) {
@@ -1677,7 +1696,8 @@ TEST(scanf_max_uintptr) {
 	ASSERT_EQ(actual, UINTPTR_MAX);
 }
 
-/* ============= Scanf: min ============= */
+/* ============================================================= */
+
 TEST_SUITE(scanf_min)
 
 TEST(scanf_min_intmax) {
@@ -1708,8 +1728,6 @@ TEST(scanf_min_uintptr) {
 	ASSERT_EQ(actual, 0);
 }
 
-/* ============================================================= */
-/* ROUNDTRIP TESTS (printf → scanf)							  */
 /* ============================================================= */
 
 TEST_SUITE(roundtrip);
@@ -1855,10 +1873,7 @@ TEST(roundtrip_tmpfile_mixed) {
 }
 
 /* ============================================================= */
-/* FILE I/O TESTS												*/
-/* ============================================================= */
 
-/* ============= fopen (file opening modes) ============= */
 TEST_SUITE(fopen);
 
 TEST(fopen_write_truncate) {
@@ -1942,7 +1957,23 @@ TEST(fopen_nonexistent_read) {
 	ASSERT_NULL(f);
 }
 
-/* ============= fclose (file closing) ============= */
+TEST(fopen_invalid_mode) {
+	FILE *f = fopen("/tmp/test.txt", "xyz");
+	ASSERT_NULL(f);
+}
+
+TEST(fopen_null_path) {
+	FILE *f = fopen(NULL, "r");
+	ASSERT_NULL(f);
+}
+
+TEST(fopen_null_mode) {
+	FILE *f = fopen("/tmp/test.txt", NULL);
+	ASSERT_NULL(f);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(fclose);
 
 TEST(fclose_after_write_flushes) {
@@ -1966,7 +1997,21 @@ TEST(fclose_tmpfile) {
 	ASSERT_INT_EQ(0, fclose(f));
 }
 
-/* ============= fread (block input) ============= */
+TEST(fclose_null) {
+	int ret = fclose(NULL);
+	ASSERT_INT_EQ(EOF, ret);
+}
+
+TEST(fclose_double_close) {
+	FILE *f = tmpfile();
+	ASSERT_NOT_NULL(f);
+	ASSERT_INT_EQ(0, fclose(f));
+	int ret = fclose(f);
+	ASSERT_INT_EQ(EOF, ret);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(fread);
 
 TEST(fread_exact_size) {
@@ -2019,7 +2064,43 @@ TEST(fread_eof) {
 	fclose(f);
 }
 
-/* ============= fwrite (block output) ============= */
+TEST(fread_null_stream) {
+	char buf[10];
+	size_t n = fread(buf, 1, 10, NULL);
+	ASSERT_EQ((size_t)0, n);
+}
+
+TEST(fread_null_buffer) {
+	FILE *f = tmpfile();
+	fputs("test", f);
+	rewind(f);
+	size_t n = fread(NULL, 1, 4, f);
+	ASSERT_EQ((size_t)0, n);
+	fclose(f);
+}
+
+TEST(fread_zero_size) {
+	FILE *f = tmpfile();
+	fputs("test", f);
+	rewind(f);
+	char buf[10];
+	size_t n = fread(buf, 0, 10, f);
+	ASSERT_EQ((size_t)0, n);
+	fclose(f);
+}
+
+TEST(fread_zero_count) {
+	FILE *f = tmpfile();
+	fputs("test", f);
+	rewind(f);
+	char buf[10];
+	size_t n = fread(buf, 1, 0, f);
+	ASSERT_EQ((size_t)0, n);
+	fclose(f);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(fwrite);
 
 TEST(fwrite_basic) {
@@ -2036,14 +2117,34 @@ TEST(fwrite_multi_item) {
 	fclose(f);
 }
 
-TEST(fwrite_zero_count) {
+TEST(fwrite_null_stream) {
+	size_t n = fwrite("test", 1, 4, NULL);
+	ASSERT_EQ((size_t)0, n);
+}
+
+TEST(fwrite_null_buffer) {
 	FILE *f = tmpfile();
-	size_t n = fwrite("data", 1, 0, f);
-	ASSERT_INT_EQ(0, n);
+	size_t n = fwrite(NULL, 1, 4, f);
+	ASSERT_EQ((size_t)0, n);
 	fclose(f);
 }
 
-/* ============= fgetc (single char input) ============= */
+TEST(fwrite_zero_size) {
+	FILE *f = tmpfile();
+	size_t n = fwrite("test", 0, 4, f);
+	ASSERT_EQ((size_t)0, n);
+	fclose(f);
+}
+
+TEST(fwrite_zero_count) {
+	FILE *f = tmpfile();
+	size_t n = fwrite("test", 1, 0, f);
+	ASSERT_EQ((size_t)0, n);
+	fclose(f);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(fgetc);
 
 TEST(fgetc_sequence) {
@@ -2080,7 +2181,13 @@ TEST(fgetc_return_unsigned) {
 	fclose(f);
 }
 
-/* ============= fputc (single char output) ============= */
+TEST(fgetc_null_stream) {
+	int c = fgetc(NULL);
+	ASSERT_INT_EQ(EOF, c);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(fputc);
 
 TEST(fputc_basic) {
@@ -2101,7 +2208,13 @@ TEST(fputc_sequence) {
 	fclose(f);
 }
 
-/* ============= fgets (line input) ============= */
+TEST(fputc_null_stream) {
+	int ret = fputc('X', NULL);
+	ASSERT_INT_EQ(EOF, ret);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(fgets);
 
 TEST(fgets_full_line) {
@@ -2140,7 +2253,43 @@ TEST(fgets_eof) {
 	fclose(f);
 }
 
-/* ============= fputs (line output) ============= */
+TEST(fgets_null_buffer) {
+	FILE *f = tmpfile();
+	fputs("test\n", f);
+	rewind(f);
+	char *result = fgets(NULL, 10, f);
+	ASSERT_NULL(result);
+	fclose(f);
+}
+
+TEST(fgets_null_stream) {
+	char buf[10];
+	char *result = fgets(buf, 10, NULL);
+	ASSERT_NULL(result);
+}
+
+TEST(fgets_zero_size) {
+	FILE *f = tmpfile();
+	fputs("test\n", f);
+	rewind(f);
+	char buf[10];
+	char *result = fgets(buf, 0, f);
+	ASSERT_NULL(result);
+	fclose(f);
+}
+
+TEST(fgets_negative_size) {
+	FILE *f = tmpfile();
+	fputs("test\n", f);
+	rewind(f);
+	char buf[10];
+	char *result = fgets(buf, -1, f);
+	ASSERT_NULL(result);
+	fclose(f);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(fputs);
 
 TEST(fputs_basic) {
@@ -2167,7 +2316,20 @@ TEST(fputs_with_newline) {
 	fclose(f);
 }
 
-/* ============= fseek (file positioning) ============= */
+TEST(fputs_null_string) {
+	FILE *f = tmpfile();
+	int ret = fputs(NULL, f);
+	ASSERT_INT_EQ(EOF, ret);
+	fclose(f);
+}
+
+TEST(fputs_null_stream) {
+	int ret = fputs("test", NULL);
+	ASSERT_INT_EQ(EOF, ret);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(fseek);
 
 TEST(fseek_seek_set) {
@@ -2214,12 +2376,49 @@ TEST(fseek_backward) {
 	fclose(f);
 }
 
-/* ============= ftell (position query) ============= */
+TEST(fseek_null_stream) {
+	int ret = fseek(NULL, 0, SEEK_SET);
+	ASSERT_INT_EQ(-1, ret);
+}
+
+TEST(fseek_invalid_whence) {
+	FILE *f = tmpfile();
+	fprintf(f, "test");
+	int ret = fseek(f, 0, 99);
+	ASSERT_INT_EQ(-1, ret);
+	fclose(f);
+}
+
+TEST(fseek_large_offset) {
+	FILE *f = tmpfile();
+	int ret = fseek(f, 1000000L, SEEK_SET);
+	fclose(f);
+}
+
+TEST(fseek_negative_offset) {
+	FILE *f = tmpfile();
+	fprintf(f, "test");
+	int ret = fseek(f, -1, SEEK_SET);
+	ASSERT_INT_EQ(-1, ret);
+	fclose(f);
+}
+
+TEST(fseek_before_start) {
+	FILE *f = tmpfile();
+	fprintf(f, "test");
+	fseek(f, 2, SEEK_SET);
+	int ret = fseek(f, -10, SEEK_CUR);
+	fclose(f);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(ftell);
 
 TEST(ftell_after_write) {
 	FILE *f = tmpfile();
 	fprintf(f, "hello");
+	fflush(f);  // <--- THE PATCH
 
 	long pos = ftell(f);
 	ASSERT_INT_EQ(5, pos);
@@ -2234,7 +2433,13 @@ TEST(ftell_after_seek) {
 	fclose(f);
 }
 
-/* ============= rewind (position reset) ============= */
+TEST(ftell_null_stream) {
+	long pos = ftell(NULL);
+	ASSERT_EQ(-1L, pos);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(rewind);
 
 TEST(rewind_to_start) {
@@ -2265,7 +2470,12 @@ TEST(rewind_clears_eof) {
 	fclose(f);
 }
 
-/* ============= feof (EOF detection) ============= */
+TEST(rewind_null_stream) {
+	rewind(NULL);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(feof);
 
 TEST(feof_not_at_end) {
@@ -2291,7 +2501,13 @@ TEST(feof_at_end) {
 	fclose(f);
 }
 
-/* ============= ferror (error detection) ============= */
+TEST(feof_null_stream) {
+	int ret = feof(NULL);
+	ASSERT_INT_EQ(0, ret);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(ferror);
 
 TEST(ferror_no_error) {
@@ -2301,7 +2517,19 @@ TEST(ferror_no_error) {
 	fclose(f);
 }
 
-/* ============= clearerr (error reset) ============= */
+TEST(ferror_null_stream) {
+	int ret = ferror(NULL);
+	ASSERT_INT_EQ(0, ret);
+}
+
+TEST(ferror_after_read_error) {
+	FILE *f = tmpfile();
+	fprintf(f, "test");
+	fclose(f);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(clearerr);
 
 TEST(clearerr_resets_flags) {
@@ -2312,7 +2540,26 @@ TEST(clearerr_resets_flags) {
 	fclose(f);
 }
 
-/* ============= setvbuf (buffering mode) ============= */
+TEST(clearerr_null_stream) {
+	clearerr(NULL);
+}
+
+TEST(clearerr_clears_both) {
+	FILE *f = tmpfile();
+	fputs("x", f);
+	rewind(f);
+	char buf[2];
+	fread(buf, 1, 1, f);
+	fgetc(f);
+	ASSERT_TRUE(feof(f));
+	clearerr(f);
+	ASSERT_FALSE(feof(f));
+	ASSERT_FALSE(ferror(f));
+	fclose(f);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(setvbuf);
 
 TEST(setvbuf_full_buffering) {
@@ -2333,7 +2580,53 @@ TEST(setvbuf_no_buffering) {
 	fclose(f);
 }
 
-/* ============= setbuf (simple buffering) ============= */
+TEST(setvbuf_null_stream) {
+	int ret = setvbuf(NULL, NULL, _IOFBF, 0);
+	ASSERT_INT_EQ(EOF, ret);
+}
+
+TEST(setvbuf_invalid_mode) {
+	FILE *f = tmpfile();
+	int ret = setvbuf(f, NULL, 99, 0);
+	ASSERT_INT_EQ(EOF, ret);
+	fclose(f);
+}
+
+TEST(setvbuf_null_buffer_full) {
+	FILE *f = tmpfile();
+	int ret = setvbuf(f, NULL, _IOFBF, 1024);
+	ASSERT_INT_EQ(0, ret);
+	fprintf(f, "test");
+	fclose(f);
+}
+
+TEST(setvbuf_user_buffer) {
+	FILE *f = tmpfile();
+	char buf[1024];
+	int ret = setvbuf(f, buf, _IOFBF, 1024);
+	ASSERT_INT_EQ(0, ret);
+	fprintf(f, "test");
+	fclose(f);
+}
+
+TEST(setvbuf_no_buffer) {
+	FILE *f = tmpfile();
+	int ret = setvbuf(f, NULL, _IONBF, 0);
+	ASSERT_INT_EQ(0, ret);
+	fprintf(f, "test");
+	fclose(f);
+}
+
+TEST(setvbuf_line_buffer) {
+	FILE *f = tmpfile();
+	int ret = setvbuf(f, NULL, _IOLBF, 1024);
+	ASSERT_INT_EQ(0, ret);
+	fprintf(f, "test\n");
+	fclose(f);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(setbuf);
 
 TEST(setbuf_user_buffer) {
@@ -2344,9 +2637,15 @@ TEST(setbuf_user_buffer) {
 	fclose(f);
 }
 
+TEST(setbuf_null_stream) {
+	char buf[1024];
+	setbuf(NULL, buf);
+}
+
 #if JACL_HAS_POSIX
 
-/* ============= fdopen (fd to stream) ============= */
+/* ============================================================= */
+
 TEST_SUITE(fdopen);
 
 TEST(fdopen_from_pipe) {
@@ -2359,7 +2658,34 @@ TEST(fdopen_from_pipe) {
 	fclose(f);
 }
 
-/* ============= tmpfile (temporary file) ============= */
+TEST(fdopen_invalid_fd) {
+	FILE *f = fdopen(-1, "r");
+	ASSERT_NULL(f);
+}
+
+TEST(fdopen_null_mode) {
+	int fd = open("/dev/null", O_RDONLY);
+	FILE *f = fdopen(fd, NULL);
+	ASSERT_NULL(f);
+	close(fd);
+}
+
+TEST(fdopen_invalid_mode) {
+	int fd = open("/dev/null", O_RDONLY);
+	FILE *f = fdopen(fd, "xyz");
+	ASSERT_NULL(f);
+	close(fd);
+}
+
+TEST(fdopen_closed_fd) {
+	int fd = open("/dev/null", O_RDONLY);
+	close(fd);
+	FILE *f = fdopen(fd, "r");
+	ASSERT_NULL(f);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(tmpfile);
 
 TEST(tmpfile_read_write) {
@@ -2373,7 +2699,8 @@ TEST(tmpfile_read_write) {
 	fclose(f);
 }
 
-/* ============= tmpnam (temp filename) ============= */
+/* ============================================================= */
+
 TEST_SUITE(tmpnam);
 
 TEST(tmpnam_generates_name) {
@@ -2383,6 +2710,1277 @@ TEST(tmpnam_generates_name) {
 	ASSERT_TRUE(strlen(name) > 0);
 }
 
+TEST(tmpnam_null_buffer) {
+	char *result = tmpnam(NULL);
+	ASSERT_NOT_NULL(result);
+}
+
 #endif
+
+/* ============================================================= */
+
+TEST_SUITE(getchar);
+
+TEST(getchar_basic) {
+	FILE *f = tmpfile();
+	fputs("Hello", f);
+	rewind(f);
+	int saved_fd = dup(STDIN_FILENO);
+	dup2(fileno(f), STDIN_FILENO);
+	int c = getchar();
+	ASSERT_INT_EQ('H', c);
+	dup2(saved_fd, STDIN_FILENO);
+	close(saved_fd);
+	fclose(f);
+}
+
+TEST(getchar_multiple) {
+	FILE *f = tmpfile();
+	fputs("ABC", f);
+	rewind(f);
+	int saved_fd = dup(STDIN_FILENO);
+	dup2(fileno(f), STDIN_FILENO);
+
+	/* Reset stdin buffer state to avoid pollution from prior tests */
+	stdin->_cnt = 0;
+	stdin->_flags = __SRD;
+	stdin->_ptr = stdin->_base + OVRSIZ;
+
+	ASSERT_INT_EQ('A', getchar());
+	ASSERT_INT_EQ('B', getchar());
+	ASSERT_INT_EQ('C', getchar());
+	ASSERT_INT_EQ(EOF, getchar());
+
+	dup2(saved_fd, STDIN_FILENO);
+	close(saved_fd);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(putchar);
+
+TEST(putchar_basic) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+
+	FILE *f = fopen(tmpname, "w+");
+	ASSERT_NOT_NULL(f);
+
+	int saved_fd = dup(STDOUT_FILENO);
+
+	fflush(stdout);
+	dup2(fileno(f), STDOUT_FILENO);
+
+	int ret = putchar('Z');
+
+	fflush(stdout);
+
+	dup2(saved_fd, STDOUT_FILENO);
+	close(saved_fd);
+
+	rewind(f);
+	char c = fgetc(f);
+	ASSERT_INT_EQ('Z', c);
+
+	fclose(f);
+	remove(tmpname);
+}
+
+TEST(putchar_sequence) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+
+	FILE *f = fopen(tmpname, "w+");
+	ASSERT_NOT_NULL(f);
+
+	int saved_fd = dup(STDOUT_FILENO);
+
+	fflush(stdout);
+	dup2(fileno(f), STDOUT_FILENO);
+
+	putchar('X');
+	putchar('Y');
+
+	fflush(stdout);
+
+	dup2(saved_fd, STDOUT_FILENO);
+	close(saved_fd);
+
+	rewind(f);
+	ASSERT_INT_EQ('X', fgetc(f));
+	ASSERT_INT_EQ('Y', fgetc(f));
+
+	fclose(f);
+	remove(tmpname);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(getc);
+
+TEST(getc_basic) {
+	FILE *f = tmpfile();
+	fputc('A', f);
+	rewind(f);
+	ASSERT_INT_EQ('A', getc(f));
+	fclose(f);
+}
+
+TEST(getc_sequence) {
+	FILE *f = tmpfile();
+	fputs("XYZ", f);
+	rewind(f);
+	ASSERT_INT_EQ('X', getc(f));
+	ASSERT_INT_EQ('Y', getc(f));
+	ASSERT_INT_EQ('Z', getc(f));
+	ASSERT_INT_EQ(EOF, getc(f));
+	fclose(f);
+}
+
+TEST(getc_eof) {
+	FILE *f = tmpfile();
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(putc);
+
+TEST(putc_basic) {
+	FILE *f = tmpfile();
+	int ret = putc('B', f);
+	ASSERT_INT_EQ('B', ret);
+	rewind(f);
+	ASSERT_INT_EQ('B', fgetc(f));
+	fclose(f);
+}
+
+TEST(putc_sequence) {
+	FILE *f = tmpfile();
+	putc('1', f);
+	putc('2', f);
+	putc('3', f);
+	rewind(f);
+	ASSERT_INT_EQ('1', fgetc(f));
+	ASSERT_INT_EQ('2', fgetc(f));
+	ASSERT_INT_EQ('3', fgetc(f));
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(puts);
+
+TEST(puts_basic) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+
+	FILE *f = fopen(tmpname, "w+");
+	ASSERT_NOT_NULL(f);
+
+	int saved_fd = dup(STDOUT_FILENO);
+
+	fflush(stdout);
+
+	dup2(fileno(f), STDOUT_FILENO);
+
+	int ret = puts("hello");
+
+	fflush(stdout);
+
+	dup2(saved_fd, STDOUT_FILENO);
+	close(saved_fd);
+
+	rewind(f);
+	char buf[64] = {0};
+	fgets(buf, sizeof(buf), f);
+	ASSERT_STR_EQ("hello\n", buf);
+
+	fclose(f);
+	remove(tmpname);
+}
+
+TEST(puts_adds_newline) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+
+	FILE *f = fopen(tmpname, "w+");
+	ASSERT_NOT_NULL(f);
+
+	int saved_fd = dup(STDOUT_FILENO);
+	fflush(stdout); /* CRITICAL PRE-FLUSH */
+	dup2(fileno(f), STDOUT_FILENO);
+
+	puts("test");
+	fflush(stdout);
+
+	dup2(saved_fd, STDOUT_FILENO);
+	close(saved_fd);
+
+	rewind(f);
+	char buf[64] = {0};
+	fgets(buf, sizeof(buf), f);
+
+	size_t len = strlen(buf);
+	ASSERT_TRUE(len > 0 && (buf[len-1] == '\n' || (len > 1 && buf[len-2] == '\n')));
+
+	fclose(f);
+	remove(tmpname);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(ungetc);
+
+TEST(ungetc_basic) {
+	FILE *f = tmpfile();
+	fputs("AB", f);
+	rewind(f);
+	int c1 = fgetc(f);
+	ASSERT_INT_EQ('A', c1);
+	int ret = ungetc('Z', f);
+	ASSERT_INT_EQ('Z', ret);
+	int c2 = fgetc(f);
+	ASSERT_INT_EQ('Z', c2);
+	int c3 = fgetc(f);
+	ASSERT_INT_EQ('B', c3);
+	fclose(f);
+}
+
+TEST(ungetc_multiple) {
+	FILE *f = tmpfile();
+	fputs("X", f);
+	rewind(f);
+	ungetc('C', f);
+	ungetc('B', f);
+	ungetc('A', f);
+	ASSERT_INT_EQ('A', fgetc(f));
+	ASSERT_INT_EQ('B', fgetc(f));
+	ASSERT_INT_EQ('C', fgetc(f));
+	ASSERT_INT_EQ('X', fgetc(f));
+	fclose(f);
+}
+
+TEST(ungetc_null_stream) {
+	int ret = ungetc('X', NULL);
+	ASSERT_INT_EQ(EOF, ret);
+}
+
+TEST(ungetc_eof) {
+	FILE *f = tmpfile();
+	int ret = ungetc(EOF, f);
+	ASSERT_INT_EQ(EOF, ret);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(freopen);
+
+TEST(freopen_change_mode) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+	FILE *f = fopen(tmpname, "w");
+	fprintf(f, "data");
+	f = freopen(tmpname, "r", f);
+	ASSERT_NOT_NULL(f);
+	char buf[256] = {0};
+	fgets(buf, sizeof(buf), f);
+	ASSERT_STR_EQ("data", buf);
+	fclose(f);
+	remove(tmpname);
+}
+
+TEST(freopen_same_file) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+	FILE *f = fopen(tmpname, "w");
+	fprintf(f, "original");
+	f = freopen(tmpname, "w", f);
+	ASSERT_NOT_NULL(f);
+	fprintf(f, "new");
+	fclose(f);
+	f = fopen(tmpname, "r");
+	char buf[64] = {0};
+	fgets(buf, sizeof(buf), f);
+	ASSERT_STR_EQ("new", buf);
+	fclose(f);
+	remove(tmpname);
+}
+
+TEST(freopen_null_path) {
+	FILE *f = tmpfile();
+	FILE *r = freopen(NULL, "w", f);
+	/* Implementation-defined: may return NULL or re-open same fd */
+	/* Just ensure no crash */
+	if (r) fclose(r);
+}
+
+TEST(freopen_null_stream) {
+	FILE *f = freopen("/tmp/test.txt", "w", NULL);
+	ASSERT_NULL(f);
+}
+
+TEST(freopen_null_mode) {
+	FILE *f = tmpfile();
+	FILE *r = freopen("/tmp/test.txt", NULL, f);
+	ASSERT_NULL(r);
+	if (f) fclose(f);
+}
+
+TEST(freopen_invalid_mode) {
+	FILE *f = tmpfile();
+	FILE *r = freopen("/tmp/test.txt", "xyz", f);
+	ASSERT_NULL(r);
+	if (f) fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(remove);
+
+TEST(remove_file) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+	FILE *f = fopen(tmpname, "w");
+	fclose(f);
+	ASSERT_INT_EQ(0, remove(tmpname));
+	ASSERT_NULL(fopen(tmpname, "r"));
+}
+
+TEST(remove_nonexistent) {
+	int ret = remove("/nonexistent/path/that/does/not/exist.txt");
+	ASSERT_INT_EQ(-1, ret);
+}
+
+TEST(remove_null) {
+	int ret = remove(NULL);
+	ASSERT_INT_EQ(-1, ret);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(rename);
+
+TEST(rename_file) {
+	char old_name[L_tmpnam] = {0}, new_name[L_tmpnam] = {0};
+	tmpnam(old_name);
+	tmpnam(new_name);
+	FILE *f = fopen(old_name, "w");
+	fprintf(f, "test");
+	fclose(f);
+	ASSERT_INT_EQ(0, rename(old_name, new_name));
+	ASSERT_NULL(fopen(old_name, "r"));
+	f = fopen(new_name, "r");
+	ASSERT_NOT_NULL(f);
+	char buf[256] = {0};
+	fgets(buf, sizeof(buf), f);
+	ASSERT_STR_EQ("test", buf);
+	fclose(f);
+	remove(new_name);
+}
+
+TEST(rename_nonexistent) {
+	int ret = rename("/no/such/file", "/tmp/whatever");
+	ASSERT_INT_EQ(-1, ret);
+}
+
+TEST(rename_null_old) {
+	int ret = rename(NULL, "/tmp/new");
+	ASSERT_INT_EQ(-1, ret);
+}
+
+TEST(rename_null_new) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+	FILE *f = fopen(tmpname, "w");
+	fclose(f);
+	int ret = rename(tmpname, NULL);
+	ASSERT_INT_EQ(-1, ret);
+	remove(tmpname);
+}
+
+TEST(rename_same_file) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+	FILE *f = fopen(tmpname, "w");
+	fprintf(f, "test");
+	fclose(f);
+	int ret = rename(tmpname, tmpname);
+	remove(tmpname);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(fflush);
+
+TEST(fflush_write) {
+	FILE *f = tmpfile();
+	fprintf(f, "buffered");
+	ASSERT_INT_EQ(0, fflush(f));
+	fclose(f);
+}
+
+TEST(fflush_null) {
+	ASSERT_INT_EQ(0, fflush(NULL));
+}
+
+TEST(fflush_read_only_stream) {
+	char tmpname[L_tmpnam] = {0};
+	tmpnam(tmpname);
+	FILE *f = fopen(tmpname, "w");
+	fprintf(f, "test");
+	fclose(f);
+
+	f = fopen(tmpname, "r");
+	int ret = fflush(f);
+	fclose(f);
+	remove(tmpname);
+}
+
+
+/* ============================================================= */
+
+TEST_SUITE(fgetpos);
+
+TEST(fgetpos_basic) {
+	FILE *f = tmpfile();
+	fprintf(f, "hello");
+	fpos_t pos;
+	ASSERT_INT_EQ(0, fgetpos(f, &pos));
+	fclose(f);
+}
+
+TEST(fgetpos_after_seek) {
+	FILE *f = tmpfile();
+	fprintf(f, "ABCDEF");
+	fseek(f, 3, SEEK_SET);
+	fpos_t pos;
+	ASSERT_INT_EQ(0, fgetpos(f, &pos));
+	fclose(f);
+}
+
+TEST(fgetpos_null_stream) {
+	fpos_t pos;
+	int ret = fgetpos(NULL, &pos);
+	ASSERT_INT_EQ(-1, ret);
+}
+
+TEST(fgetpos_null_pos) {
+	FILE *f = tmpfile();
+	int ret = fgetpos(f, NULL);
+	ASSERT_INT_EQ(-1, ret);
+	fclose(f);
+}
+
+
+/* ============================================================= */
+
+TEST_SUITE(fsetpos);
+
+TEST(fsetpos_basic) {
+	FILE *f = tmpfile();
+	fprintf(f, "ABCDEF");
+	fpos_t pos;
+	fgetpos(f, &pos);
+	fprintf(f, "GHI");
+	ASSERT_INT_EQ(0, fsetpos(f, &pos));
+	int c = fgetc(f);
+	ASSERT_INT_EQ('G', c);
+	fclose(f);
+}
+
+TEST(fsetpos_to_start) {
+	FILE *f = tmpfile();
+	fprintf(f, "ABCDEF");
+	fseek(f, 3, SEEK_SET);
+	fpos_t start_pos;
+	fseek(f, 0, SEEK_SET);
+	fgetpos(f, &start_pos);
+	fseek(f, 3, SEEK_SET);
+	ASSERT_INT_EQ(0, fsetpos(f, &start_pos));
+	ASSERT_INT_EQ(0, ftell(f));
+	fclose(f);
+}
+
+TEST(fsetpos_null_stream) {
+	fpos_t pos = 0;
+	int ret = fsetpos(NULL, &pos);
+	ASSERT_INT_EQ(-1, ret);
+}
+
+TEST(fsetpos_null_pos) {
+	FILE *f = tmpfile();
+	int ret = fsetpos(f, NULL);
+	ASSERT_INT_EQ(-1, ret);
+	fclose(f);
+}
+
+
+#if JACL_HAS_POSIX
+
+/* ============================================================= */
+
+TEST_SUITE(fseeko);
+
+TEST(fseeko_basic) {
+	FILE *f = tmpfile();
+	fprintf(f, "0123456789");
+	ASSERT_INT_EQ(0, fseeko(f, 5, SEEK_SET));
+	ASSERT_EQ((off_t)5, ftello(f));
+	fclose(f);
+}
+
+TEST(fseeko_cur) {
+	FILE *f = tmpfile();
+	fprintf(f, "ABCDEFGH");
+	fseeko(f, 2, SEEK_SET);
+	fseeko(f, 3, SEEK_CUR);
+	ASSERT_EQ((off_t)5, ftello(f));
+	fclose(f);
+}
+
+TEST(fseeko_end) {
+	FILE *f = tmpfile();
+	fprintf(f, "data");
+	fseeko(f, 0, SEEK_END);
+	ASSERT_EQ((off_t)4, ftello(f));
+	fclose(f);
+}
+
+TEST(fseeko_invalid_whence) {
+	FILE *f = tmpfile();
+	int ret = fseeko(f, 0, 99);
+	ASSERT_INT_EQ(-1, ret);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(ftello);
+
+TEST(ftello_large) {
+	FILE *f = tmpfile();
+	for (int i = 0; i < 1000; i++) fprintf(f, "x");
+	off_t pos = ftello(f);
+	ASSERT_EQ((off_t)1000, pos);
+	fclose(f);
+}
+
+TEST(ftello_after_read) {
+	FILE *f = tmpfile();
+	fputs("hello", f);
+	rewind(f);
+	fgetc(f);
+	fgetc(f);
+	off_t pos = ftello(f);
+	ASSERT_EQ((off_t)2, pos);
+	fclose(f);
+}
+
+TEST(ftello_null) {
+	off_t pos = ftello(NULL);
+	ASSERT_EQ((off_t)-1, pos);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(popen);
+
+TEST(popen_read) {
+	FILE *f = popen("echo hello", "r");
+	ASSERT_NOT_NULL(f);
+	char buf[256] = {0};
+	fgets(buf, sizeof(buf), f);
+	ASSERT_STR_HAS("hello", buf);
+	int status = pclose(f);
+	ASSERT_INT_EQ(0, status);
+}
+
+TEST(popen_write) {
+	FILE *f = popen("cat", "w");
+	ASSERT_NOT_NULL(f);
+	fputs("test", f);
+	int status = pclose(f);
+	ASSERT_TRUE(status >= 0);
+}
+
+TEST(popen_null_command) {
+	FILE *f = popen(NULL, "r");
+	ASSERT_NULL(f);
+}
+
+TEST(popen_null_mode) {
+	FILE *f = popen("echo test", NULL);
+	ASSERT_NULL(f);
+}
+
+TEST(popen_invalid_mode) {
+	FILE *f = popen("echo test", "xyz");
+	ASSERT_NULL(f);
+}
+
+TEST(popen_nonexistent_command) {
+	FILE *f = popen("{ /nonexistent/command/that/does/not/exist ; } 2>/dev/null", "r");
+
+	if (f) {
+		char buf[10];
+		size_t n = fread(buf, 1, 10, f);
+
+		ASSERT_EQ((size_t)0, n);
+		pclose(f);
+	}
+}
+
+/* ============================================================= */
+
+TEST_SUITE(pclose);
+
+TEST(pclose_null) {
+	int ret = pclose(NULL);
+	ASSERT_INT_EQ(-1, ret);
+}
+
+TEST(pclose_invalid_stream) {
+	FILE *f = tmpfile();
+	int ret = pclose(f);
+	ASSERT_INT_EQ(-1, ret);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(fileno);
+
+TEST(fileno_basic) {
+	FILE *f = tmpfile();
+	int fd = fileno(f);
+	ASSERT_TRUE(fd >= 0);
+	fclose(f);
+}
+
+TEST(fileno_stdin) {
+	int fd = fileno(stdin);
+	ASSERT_INT_EQ(STDIN_FILENO, fd);
+}
+
+TEST(fileno_stdout) {
+	int fd = fileno(stdout);
+	ASSERT_INT_EQ(STDOUT_FILENO, fd);
+}
+
+TEST(fileno_stderr) {
+	int fd = fileno(stderr);
+	ASSERT_INT_EQ(STDERR_FILENO, fd);
+}
+
+TEST(fileno_null) {
+	int fd = fileno(NULL);
+	ASSERT_INT_EQ(-1, fd);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(getline);
+
+TEST(getline_basic) {
+	FILE *f = tmpfile();
+	fputs("hello world\n", f);
+	rewind(f);
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t nread = getline(&line, &len, f);
+	ASSERT_TRUE(nread > 0);
+	ASSERT_STR_EQ("hello world\n", line);
+	free(line);
+	fclose(f);
+}
+
+TEST(getline_no_newline) {
+	FILE *f = tmpfile();
+	fputs("no newline", f);
+	rewind(f);
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t nread = getline(&line, &len, f);
+	ASSERT_TRUE(nread > 0);
+	ASSERT_STR_EQ("no newline", line);
+	free(line);
+	fclose(f);
+}
+
+TEST(getline_empty) {
+	FILE *f = tmpfile();
+	rewind(f);
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t nread = getline(&line, &len, f);
+	ASSERT_INT_EQ(-1, nread);
+	fclose(f);
+}
+
+TEST(getline_null_args) {
+	FILE *f = tmpfile();
+	ssize_t nread = getline(NULL, NULL, f);
+	ASSERT_INT_EQ(-1, nread);
+	fclose(f);
+}
+
+TEST(getline_null_stream) {
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t n = getline(&line, &len, NULL);
+	ASSERT_EQ(-1, n);
+	if (line) free(line);
+}
+
+TEST(getline_null_lineptr) {
+	FILE *f = tmpfile();
+	fputs("test\n", f);
+	rewind(f);
+	size_t len = 0;
+	ssize_t n = getline(NULL, &len, f);
+	ASSERT_EQ(-1, n);
+	fclose(f);
+}
+
+TEST(getline_null_n) {
+	FILE *f = tmpfile();
+	fputs("test\n", f);
+	rewind(f);
+	char *line = NULL;
+	ssize_t n = getline(&line, NULL, f);
+	ASSERT_EQ(-1, n);
+	if (line) free(line);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(getdelim);
+
+TEST(getdelim_basic) {
+	FILE *f = tmpfile();
+	fputs("abc:def:ghi", f);
+	rewind(f);
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t nread = getdelim(&line, &len, ':', f);
+	ASSERT_TRUE(nread > 0);
+	ASSERT_STR_EQ("abc:", line);
+	free(line);
+	fclose(f);
+}
+
+TEST(getdelim_no_delim) {
+	FILE *f = tmpfile();
+	fputs("nodelim", f);
+	rewind(f);
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t nread = getdelim(&line, &len, ':', f);
+	ASSERT_TRUE(nread > 0);
+	ASSERT_STR_EQ("nodelim", line);
+	free(line);
+	fclose(f);
+}
+
+TEST(getdelim_multiple) {
+	FILE *f = tmpfile();
+	fputs("a|b|c", f);
+	rewind(f);
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t n1 = getdelim(&line, &len, '|', f);
+	ASSERT_STR_EQ("a|", line);
+	ssize_t n2 = getdelim(&line, &len, '|', f);
+	ASSERT_STR_EQ("b|", line);
+	ssize_t n3 = getdelim(&line, &len, '|', f);
+	ASSERT_STR_EQ("c", line);
+	free(line);
+	fclose(f);
+}
+
+TEST(getdelim_null_stream) {
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t n = getdelim(&line, &len, '\n', NULL);
+	ASSERT_EQ(-1, n);
+	if (line) free(line);
+}
+
+TEST(getdelim_eof_delimiter) {
+	FILE *f = tmpfile();
+	fputs("test", f);
+	rewind(f);
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t n = getdelim(&line, &len, EOF, f);
+	if (line) free(line);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(ctermid);
+
+TEST(ctermid_basic) {
+	char buf[L_ctermid] = {0};
+	char *result = ctermid(buf);
+	ASSERT_NOT_NULL(result);
+	ASSERT_STR_EQ("/dev/tty", buf);
+}
+
+TEST(ctermid_null) {
+	char *result = ctermid(NULL);
+	ASSERT_NOT_NULL(result);
+	ASSERT_STR_EQ("/dev/tty", result);
+}
+
+TEST(ctermid_static_buffer) {
+	char *r1 = ctermid(NULL);
+	char *r2 = ctermid(NULL);
+	ASSERT_STR_EQ(r1, r2);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(fmemopen);
+
+TEST(fmemopen_read) {
+	char buf[] = "hello world";
+	FILE *f = fmemopen(buf, strlen(buf), "r");
+	ASSERT_NOT_NULL(f);
+	char out[256] = {0};
+	fgets(out, sizeof(out), f);
+	ASSERT_STR_EQ("hello world", out);
+	fclose(f);
+}
+
+TEST(fmemopen_write) {
+	char buf[256] = {0};
+	FILE *f = fmemopen(buf, sizeof(buf), "w");
+	ASSERT_NOT_NULL(f);
+	fputs("test", f);
+	fclose(f);
+	ASSERT_STR_EQ("test", buf);
+}
+
+TEST(fmemopen_append) {
+	char buf[256] = "hello";
+	FILE *f = fmemopen(buf, sizeof(buf), "a");
+	ASSERT_NOT_NULL(f);
+	fputs(" world", f);
+	fclose(f);
+	ASSERT_STR_EQ("hello world", buf);
+}
+
+TEST(fmemopen_seek) {
+	char buf[] = "ABCDEFGH";
+	FILE *f = fmemopen(buf, strlen(buf), "r");
+	fseek(f, 4, SEEK_SET);
+	int c = fgetc(f);
+	ASSERT_INT_EQ('E', c);
+	fclose(f);
+}
+
+TEST(fmemopen_null_buffer_read) {
+	FILE *f = fmemopen(NULL, 10, "r");
+	if (f) {
+		char buf[10];
+		size_t n = fread(buf, 1, 10, f);
+		fclose(f);
+	}
+}
+
+TEST(fmemopen_null_buffer_write) {
+	FILE *f = fmemopen(NULL, 10, "w");
+	if (f) {
+		fputs("test", f);
+		fclose(f);
+	}
+}
+
+TEST(fmemopen_zero_size) {
+	char buf[10];
+	FILE *f = fmemopen(buf, 0, "r");
+	ASSERT_NULL(f);
+}
+
+TEST(fmemopen_null_mode) {
+	char buf[10];
+	FILE *f = fmemopen(buf, 10, NULL);
+	ASSERT_NULL(f);
+}
+
+TEST(fmemopen_invalid_mode) {
+	char buf[10];
+	FILE *f = fmemopen(buf, 10, "xyz");
+	ASSERT_NULL(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(open_memstream);
+
+TEST(open_memstream_basic) {
+	char *buf = NULL;
+	size_t size = 0;
+	FILE *f = open_memstream(&buf, &size);
+	ASSERT_NOT_NULL(f);
+	fputs("hello", f);
+	fclose(f);
+	ASSERT_NOT_NULL(buf);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_STR_EQ("hello", buf);
+	free(buf);
+}
+
+TEST(open_memstream_grow) {
+	char *buf = NULL;
+	size_t size = 0;
+	FILE *f = open_memstream(&buf, &size);
+	for (int i = 0; i < 1000; i++) fputc('x', f);
+	fclose(f);
+	ASSERT_EQ((size_t)1000, size);
+	free(buf);
+}
+
+TEST(open_memstream_null_ptr) {
+	size_t size;
+	FILE *f = open_memstream(NULL, &size);
+	ASSERT_NULL(f);
+}
+
+TEST(open_memstream_null_sizeloc) {
+	char *buf;
+	FILE *f = open_memstream(&buf, NULL);
+	ASSERT_NULL(f);
+}
+
+TEST(open_memstream_write_and_reopen) {
+	char *buf = NULL;
+	size_t size = 0;
+	FILE *f = open_memstream(&buf, &size);
+	ASSERT_NOT_NULL(f);
+	if (f) {
+		fputs("hello", f);
+		fclose(f);
+		ASSERT_STR_EQ("hello", buf);
+		ASSERT_EQ((size_t)5, size);
+
+		FILE *r = fmemopen(buf, size, "r");
+		if (r) {
+			char readbuf[10];
+			fgets(readbuf, 10, r);
+			ASSERT_STR_EQ("hello", readbuf);
+			fclose(r);
+		}
+		free(buf);
+	}
+}
+
+/* ============================================================= */
+
+static int test_readfn(void *cookie, char *buf, int size) {
+	const char **src = (const char **)cookie;
+	int n = 0;
+	while (n < size && (*src)[n]) {
+		buf[n] = (*src)[n];
+		n++;
+	}
+	*src += n;
+	return n;
+}
+
+static int test_writefn(void *cookie, const char *buf, int size) {
+	char **dst = (char **)cookie;
+	memcpy(*dst, buf, size);
+	*dst += size;
+	return size;
+}
+
+static fpos_t test_seekfn(void *cookie, fpos_t offset, int whence) {
+	(void)cookie; (void)offset; (void)whence;
+	errno = ESPIPE;
+	return -1;
+}
+
+static int test_closefn(void *cookie) {
+	(void)cookie;
+	return 0;
+}
+
+static int funopen_readfn_stub(void *cookie, char *buf, int size) {
+	(void)cookie; (void)buf; (void)size;
+	return 0;
+}
+
+static int funopen_writefn_stub(void *cookie, const char *buf, int size) {
+	(void)cookie; (void)buf; (void)size;
+	return size;
+}
+
+TEST_SUITE(funopen);
+
+TEST(funopen_read) {
+	const char *data = "test data";
+	FILE *f = funopen(&data, test_readfn, NULL, test_seekfn, test_closefn);
+	ASSERT_NOT_NULL(f);
+	char buf[256] = {0};
+	fgets(buf, sizeof(buf), f);
+	ASSERT_STR_EQ("test data", buf);
+	fclose(f);
+}
+
+TEST(funopen_write) {
+	char buf[256] = {0};
+	char *ptr = buf;
+	FILE *f = funopen(&ptr, NULL, test_writefn, test_seekfn, test_closefn);
+	ASSERT_NOT_NULL(f);
+	fputs("hello", f);
+	fclose(f);
+	ASSERT_STR_EQ("hello", buf);
+}
+
+TEST(funopen_null_read_and_write) {
+	FILE *f = funopen(NULL, NULL, NULL, NULL, NULL);
+	ASSERT_NULL(f);
+}
+
+TEST(funopen_only_read) {
+	FILE *f = funopen(NULL, funopen_readfn_stub, NULL, NULL, NULL);
+	ASSERT_NOT_NULL(f);
+	if (f) fclose(f);
+}
+
+TEST(funopen_only_write) {
+	FILE *f = funopen(NULL, NULL, funopen_writefn_stub, NULL, NULL);
+	ASSERT_NOT_NULL(f);
+	if (f) fclose(f);
+}
+
+#endif /* JACL_HAS_POSIX */
+
+/* ============================================================= */
+
+TEST_SUITE(perror);
+
+TEST(perror_basic) {
+	FILE *f = tmpfile();
+	int saved_fd = dup(STDERR_FILENO);
+	dup2(fileno(f), STDERR_FILENO);
+	errno = ENOENT;
+	perror("test");
+	fflush(stderr);
+	dup2(saved_fd, STDERR_FILENO);
+	close(saved_fd);
+	rewind(f);
+	char buf[256] = {0};
+	fgets(buf, sizeof(buf), f);
+	ASSERT_STR_HAS("test", buf);
+	fclose(f);
+}
+
+TEST(perror_null) {
+	FILE *f = tmpfile();
+	int saved_fd = dup(STDERR_FILENO);
+	dup2(fileno(f), STDERR_FILENO);
+	errno = EPERM;
+	perror(NULL);
+	fflush(stderr);
+	dup2(saved_fd, STDERR_FILENO);
+	close(saved_fd);
+	rewind(f);
+	char buf[256] = {0};
+	fgets(buf, sizeof(buf), f);
+	ASSERT_TRUE(strlen(buf) > 0);
+	fclose(f);
+}
+
+#if JACL_HAS_THREADS
+
+/* ============================================================= */
+
+TEST_SUITE(flockfile);
+
+TEST(flockfile_stub) {
+	FILE *f = tmpfile();
+	flockfile(f);
+	funlockfile(f);
+	fclose(f);
+}
+
+TEST(flockfile_null) {
+	flockfile(NULL);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(funlockfile);
+
+TEST(funlockfile_null) {
+	funlockfile(NULL);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(ftrylockfile);
+
+TEST(ftrylockfile_stub) {
+	FILE *f = tmpfile();
+	int ret = ftrylockfile(f);
+	ASSERT_INT_EQ(0, ret);
+	funlockfile(f);
+	fclose(f);
+}
+
+TEST(ftrylockfile_null) {
+	int ret = ftrylockfile(NULL);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(getc_unlocked);
+
+TEST(getc_unlocked_basic) {
+	FILE *f = tmpfile();
+	fputc('A', f);
+	rewind(f);
+	int c = getc_unlocked(f);
+	ASSERT_INT_EQ('A', c);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(putc_unlocked);
+
+TEST(putc_unlocked_basic) {
+	FILE *f = tmpfile();
+	int ret = putc_unlocked('B', f);
+	ASSERT_INT_EQ('B', ret);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(fgetc_unlocked);
+
+TEST(fgetc_unlocked_basic) {
+	FILE *f = tmpfile();
+	fputc('C', f);
+	rewind(f);
+	int c = fgetc_unlocked(f);
+	ASSERT_INT_EQ('C', c);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(fputc_unlocked);
+
+TEST(fputc_unlocked_basic) {
+	FILE *f = tmpfile();
+	int ret = fputc_unlocked('D', f);
+	ASSERT_INT_EQ('D', ret);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(fgets_unlocked);
+
+TEST(fgets_unlocked_basic) {
+	FILE *f = tmpfile();
+	fputs("test\n", f);
+	rewind(f);
+	char buf[10];
+	char *result = fgets_unlocked(buf, 10, f);
+	ASSERT_NOT_NULL(result);
+	ASSERT_STR_EQ("test\n", buf);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(fputs_unlocked);
+
+TEST(fputs_unlocked_basic) {
+	FILE *f = tmpfile();
+	int ret = fputs_unlocked("hello", f);
+	ASSERT_INT_EQ(0, ret);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(fread_unlocked);
+
+TEST(fread_unlocked_basic) {
+	FILE *f = tmpfile();
+	fputs("test", f);
+	rewind(f);
+	char buf[10];
+	size_t n = fread_unlocked(buf, 1, 4, f);
+	ASSERT_EQ((size_t)4, n);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(fwrite_unlocked);
+
+TEST(fwrite_unlocked_basic) {
+	FILE *f = tmpfile();
+	size_t n = fwrite_unlocked("test", 1, 4, f);
+	ASSERT_EQ((size_t)4, n);
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(feof_unlocked);
+
+TEST(feof_unlocked_basic) {
+	FILE *f = tmpfile();
+	fputs("x", f);
+	rewind(f);
+	fgetc(f);
+	fgetc(f);
+	ASSERT_TRUE(feof_unlocked(f));
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(ferror_unlocked);
+
+TEST(ferror_unlocked_basic) {
+	FILE *f = tmpfile();
+	ASSERT_FALSE(ferror_unlocked(f));
+	fclose(f);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(clear_unlocked);
+
+TEST(clearerr_unlocked_basic) {
+	FILE *f = tmpfile();
+	fputs("x", f);
+	rewind(f);
+	fgetc(f);
+	fgetc(f);
+	ASSERT_TRUE(feof(f));
+	clearerr_unlocked(f);
+	ASSERT_FALSE(feof(f));
+	fclose(f);
+}
+
+#endif
+
+/* ============================================================= */
 
 TEST_MAIN()

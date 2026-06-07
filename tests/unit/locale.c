@@ -618,33 +618,32 @@ TEST(newlocale_errno_on_invalid) {
 	ASSERT_EQ(errno, EINVAL);
 }
 
-/* ============================================================================ */
-
-TEST_SUITE(uselocale);
-
-TEST(uselocale_basic) {
-	locale_t old = __jacl_locale_current;
-	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
-	locale_t prev = uselocale(loc);
-	ASSERT_EQ(prev, old);
-	ASSERT_EQ(__jacl_locale_current, loc);
-	uselocale(old);
-	freelocale(loc);
+TEST(newlocale_null_name) {
+	errno = 0;
+	locale_t loc = newlocale(LC_ALL_MASK, NULL, NULL);
+	ASSERT_NULL(loc);
+	ASSERT_EQ(errno, EINVAL);
 }
 
-TEST(uselocale_global_sentinel) {
-	locale_t old = __jacl_locale_current;
-	locale_t prev = uselocale(LC_GLOBAL_LOCALE);
-	ASSERT_EQ(prev, old);
-	ASSERT_EQ(__jacl_locale_current, __jacl_locale_global);
-	uselocale(old);
+TEST(newlocale_empty_name) {
+	errno = 0;
+	locale_t loc = newlocale(LC_ALL_MASK, "", NULL);
+	ASSERT_NULL(loc);
+	ASSERT_EQ(errno, EINVAL);
 }
 
-TEST(uselocale_null) {
-	locale_t old = __jacl_locale_current;
-	locale_t prev = uselocale(NULL);
-	ASSERT_EQ(prev, old);
-	ASSERT_EQ(__jacl_locale_current, old);
+TEST(newlocale_lang_err_for_ctype) {
+	errno = 0;
+	locale_t loc = newlocale(LC_CTYPE_MASK, "not_a_lang_US", NULL);
+	ASSERT_NULL(loc);
+	ASSERT_EQ(errno, EINVAL);
+}
+
+TEST(newlocale_cc_err_for_numeric) {
+	errno = 0;
+	locale_t loc = newlocale(LC_NUMERIC_MASK, "en_not_a_cc", NULL);
+	ASSERT_NULL(loc);
+	ASSERT_EQ(errno, EINVAL);
 }
 
 /* ============================================================================ */
@@ -667,6 +666,13 @@ TEST(freelocale_global_sentinel) {
 
 TEST(freelocale_global_pointer) {
 	freelocale(__jacl_locale_global);
+}
+
+TEST(freelocale_double_free) {
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	freelocale(loc);
+	/* Second free should be safe (no-op or handled) */
+	freelocale(loc);
 }
 
 /* ============================================================================ */
@@ -742,6 +748,7 @@ TEST(edge_case_languages) {
 	if (LANG != LANG_C) ASSERT_STR_EQ(name "_US.UTF-8" , setlocale(LC_ALL, name "_US.UTF-8"));
 	X_LANGUAGES
 	#undef X
+	setlocale(LC_ALL, "C");
 }
 
 TEST(edge_case_countries) {
@@ -749,7 +756,78 @@ TEST(edge_case_countries) {
 	if (CC != CC_NONE) ASSERT_STR_EQ("en_" name ".UTF-8" , setlocale(LC_ALL, "en_" name ".UTF-8"));
 	X_COUNTRIES
 	#undef X
+	setlocale(LC_ALL, "C");
 }
+
+/* ============================================================================ */
+
+TEST_SUITE(getlocalename_l);
+
+TEST(getlocalename_l_basic) {
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	ASSERT_NOT_NULL(loc);
+	const char *name = getlocalename_l(LC_CTYPE, loc);
+	ASSERT_NOT_NULL(name);
+	ASSERT_STR_EQ("C.UTF-8", name);
+	freelocale(loc);
+}
+
+TEST(getlocalename_l_null_loc) {
+	const char *name = getlocalename_l(LC_CTYPE, NULL);
+	ASSERT_NOT_NULL(name);
+	ASSERT_STR_EQ("C.UTF-8", name);
+}
+
+TEST(getlocalename_l_global) {
+	const char *name = getlocalename_l(LC_NUMERIC, LC_GLOBAL_LOCALE);
+	ASSERT_NOT_NULL(name);
+	ASSERT_STR_EQ("C.UTF-8", name);
+}
+
+/* ============================================================================ */
+
+
+TEST_SUITE(uselocale);
+
+TEST(uselocale_errno_on_invalid) {
+	/* If uselocale receives a freed or invalid locale, it should handle gracefully */
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	freelocale(loc);
+	/* Using a freed locale is undefined, but we test the NULL fallback */
+	locale_t old = uselocale(NULL);
+	ASSERT_NOT_NULL(old);
+}
+
+TEST(uselocale_basic) {
+	locale_t old = __jacl_locale_current;
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	locale_t prev = uselocale(loc);
+	ASSERT_EQ(prev, old);
+	ASSERT_EQ(__jacl_locale_current, loc);
+	uselocale(old);
+	freelocale(loc);
+}
+
+TEST(uselocale_global_sentinel) {
+	locale_t old = __jacl_locale_current;
+	locale_t prev = uselocale(LC_GLOBAL_LOCALE);
+	ASSERT_EQ(prev, old);
+	ASSERT_EQ(__jacl_locale_current, __jacl_locale_global);
+	uselocale(old);
+}
+
+TEST(uselocale_null) {
+	locale_t old = __jacl_locale_current;
+	locale_t prev = uselocale(NULL);
+	ASSERT_EQ(prev, old);
+	ASSERT_EQ(__jacl_locale_current, old);
+}
+
+/* ============================================================================ */
+
+
+/* ============================================================================ */
+
 /* ============================================================================ */
 
 TEST_MAIN()

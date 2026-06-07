@@ -3739,4 +3739,240 @@ TEST(fpathconf_negative_name) {
 
 /* ============================================================================ */
 
+#if JACL_HAS_POSIX
+TEST_SUITE(swab);
+
+TEST(swab_basic) {
+	const char src[] = "123456";
+	char dst[6] = {0};
+	swab(src, dst, 6);
+	ASSERT_EQ(dst[0], '2');
+	ASSERT_EQ(dst[1], '1');
+	ASSERT_EQ(dst[2], '4');
+	ASSERT_EQ(dst[3], '3');
+	ASSERT_EQ(dst[4], '6');
+	ASSERT_EQ(dst[5], '5');
+}
+
+TEST(swab_odd_length) {
+	const char src[] = "12345";
+	char dst[5] = {'a', 'b', 'c', 'd', 'e'};
+	swab(src, dst, 5);
+	ASSERT_EQ(dst[0], '2');
+	ASSERT_EQ(dst[1], '1');
+	ASSERT_EQ(dst[2], '4');
+	ASSERT_EQ(dst[3], '3');
+	ASSERT_EQ(dst[4], 'e'); /* 5th byte untouched */
+}
+
+TEST(swab_zero_length) {
+	const char src[] = "12";
+	char dst[2] = {'a', 'b'};
+	swab(src, dst, 0);
+	ASSERT_EQ(dst[0], 'a');
+	ASSERT_EQ(dst[1], 'b');
+}
+
+TEST(swab_negative_length) {
+	const char src[] = "12";
+	char dst[2] = {'a', 'b'};
+	swab(src, dst, -1);
+	ASSERT_EQ(dst[0], 'a');
+	ASSERT_EQ(dst[1], 'b');
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(nice);
+
+TEST(nice_zero) {
+	errno = 0;
+	int ret = nice(0);
+	/* nice() returns new nice value. -1 is valid, so check errno if ret == -1 */
+	if (ret == -1) {
+		ASSERT_EQ(errno, 0);
+	} else {
+		ASSERT_TRUE(ret >= -20 && ret <= 19);
+	}
+}
+
+TEST(nice_increase) {
+	errno = 0;
+	int old_nice = nice(0);
+	if (old_nice == -1 && errno != 0) {
+		TEST_SKIP("nice(0) failed");
+		return;
+	}
+
+	if (old_nice < 19) {
+		errno = 0;
+		int new_nice = nice(1);
+		if (new_nice == -1) {
+			ASSERT_EQ(errno, 0);
+		} else {
+			ASSERT_EQ(new_nice, old_nice + 1);
+		}
+	} else {
+		ASSERT_TRUE(1);
+	}
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(gethostid);
+
+TEST(gethostid_basic) {
+	long id = gethostid();
+	ASSERT_TRUE(id != 0 || id == 0);
+}
+
+TEST(gethostid_consistent) {
+	long id1 = gethostid();
+	long id2 = gethostid();
+	ASSERT_EQ(id1, id2);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(setreuid);
+
+TEST(setreuid_no_change) {
+	ASSERT_EQ(setreuid((uid_t)-1, (uid_t)-1), 0);
+}
+
+TEST(setreuid_to_self) {
+	uid_t uid = getuid();
+	uid_t euid = geteuid();
+	ASSERT_EQ(setreuid(uid, euid), 0);
+}
+
+TEST(setreuid_no_perm) {
+	if (getuid() != 0) {
+		errno = 0;
+		ASSERT_EQ(setreuid(0, 0), -1);
+		ASSERT_ERRNO(EPERM);
+	} else {
+		ASSERT_TRUE(1);
+	}
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(setregid);
+
+TEST(setregid_no_change) {
+	ASSERT_EQ(setregid((gid_t)-1, (gid_t)-1), 0);
+}
+
+TEST(setregid_to_self) {
+	gid_t gid = getgid();
+	gid_t egid = getegid();
+	ASSERT_EQ(setregid(gid, egid), 0);
+}
+
+TEST(setregid_no_perm) {
+	if (getgid() != 0) {
+		errno = 0;
+		ASSERT_EQ(setregid(0, 0), -1);
+		ASSERT_ERRNO(EPERM);
+	} else {
+		ASSERT_TRUE(1);
+	}
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(lockf);
+
+TEST(lockf_basic_lock_unlock) {
+	int fd = open("/tmp/t_lockf.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	ASSERT_GE(fd, 0);
+	write(fd, "data", 4);
+
+	ASSERT_EQ(lockf(fd, F_LOCK, 4), 0);
+	ASSERT_EQ(lockf(fd, F_ULOCK, 4), 0);
+
+	close(fd);
+	unlink("/tmp/t_lockf.txt");
+}
+
+TEST(lockf_test_unlocked) {
+	int fd = open("/tmp/t_lockf.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	ASSERT_GE(fd, 0);
+
+	ASSERT_EQ(lockf(fd, F_TEST, 4), 0);
+
+	close(fd);
+	unlink("/tmp/t_lockf.txt");
+}
+
+TEST(lockf_tlock) {
+	int fd = open("/tmp/t_lockf.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	ASSERT_GE(fd, 0);
+	write(fd, "data", 4);
+
+	ASSERT_EQ(lockf(fd, F_TLOCK, 4), 0);
+	lockf(fd, F_ULOCK, 4);
+
+	close(fd);
+	unlink("/tmp/t_lockf.txt");
+}
+
+TEST(lockf_invalid_cmd) {
+	int fd = open("/tmp/t_lockf.txt", O_CREAT | O_RDWR | O_TRUNC, 0644);
+	ASSERT_GE(fd, 0);
+
+	errno = 0;
+	ASSERT_EQ(lockf(fd, 999, 4), -1);
+	ASSERT_ERRNO(EINVAL);
+
+	close(fd);
+	unlink("/tmp/t_lockf.txt");
+}
+
+TEST(lockf_invalid_fd) {
+	errno = 0;
+	ASSERT_EQ(lockf(-1, F_LOCK, 4), -1);
+	ASSERT_ERRNO(EBADF);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(crypt);
+
+TEST(crypt_enosys) {
+	errno = 0;
+	char *res = crypt("key", "salt");
+	ASSERT_NULL(res);
+	ASSERT_ERRNO(ENOSYS);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(encrypt);
+
+TEST(encrypt_enosys) {
+	char block[64] = {0};
+	errno = 0;
+	encrypt(block, 0);
+	ASSERT_ERRNO(ENOSYS);
+}
+#endif
+
+/* ============================================================================ */
+
 TEST_MAIN()

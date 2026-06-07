@@ -5,6 +5,20 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
+
+static int open_pty_pair(int *master, int *slave) {
+	int m = posix_openpt(O_RDWR | O_NOCTTY);
+	if (m < 0) return -1;
+	if (grantpt(m) < 0 || unlockpt(m) < 0) { close(m); return -1; }
+	char *name = ptsname(m);
+	if (!name) { close(m); return -1; }
+	int s = open(name, O_RDWR | O_NOCTTY);
+	if (s < 0) { close(m); return -1; }
+	*master = m;
+	*slave = s;
+	return 0;
+}
 
 TEST_TYPE(unit);
 TEST_UNIT(termios.h);

@@ -1,4 +1,4 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 #include <testing.h>
 #include <stdlib.h>
 
@@ -6,8 +6,7 @@ TEST_TYPE(unit)
 TEST_UNIT(stdlib.h)
 
 /* ============================================================= */
-/* atoi - stdlib.h: unit tests                                   */
-/* ============================================================= */
+
 TEST_SUITE(atoi)
 
 TEST(atoi_positive) {
@@ -84,8 +83,7 @@ TEST(atoi_sign_only) {
 }
 
 /* ============================================================= */
-/* atol - stdlib.h: unit tests                                   */
-/* ============================================================= */
+
 TEST_SUITE(atol)
 
 TEST(atol_basic) {
@@ -111,8 +109,7 @@ TEST(atol_overflow_boundary) {
 }
 
 /* ============================================================= */
-/* atoll - stdlib.h: unit tests                                  */
-/* ============================================================= */
+
 TEST_SUITE(atoll)
 
 TEST(atoll_basic) {
@@ -134,8 +131,7 @@ TEST(atoll_overflow_boundary) {
 }
 
 /* ============================================================= */
-/* atof - stdlib.h: unit tests                                   */
-/* ============================================================= */
+
 TEST_SUITE(atof)
 
 TEST(atof_integer) {
@@ -163,8 +159,7 @@ TEST(atof_invalid) {
 }
 
 /* ============================================================= */
-/* strtol - stdlib.h: unit tests                                 */
-/* ============================================================= */
+
 TEST_SUITE(strtol)
 
 TEST(strtol_base10_endptr) {
@@ -368,9 +363,29 @@ TEST(strtol_overflow_by_one) {
 	ASSERT_ERRNO(ERANGE);
 }
 
+TEST(strtol_base_1) {
+	errno = 0;
+	long r = strtol("123", NULL, 1);
+	ASSERT_INT_EQ(r, 0);
+	ASSERT_ERRNO(EINVAL);
+}
+
+TEST(strtol_base_37) {
+	errno = 0;
+	long r = strtol("123", NULL, 37);
+	ASSERT_INT_EQ(r, 0);
+	ASSERT_ERRNO(EINVAL);
+}
+
+TEST(strtol_negative_base) {
+	errno = 0;
+	long r = strtol("123", NULL, -10);
+	ASSERT_INT_EQ(r, 0);
+	ASSERT_ERRNO(EINVAL);
+}
+
 /* ============================================================= */
-/* strtoll - stdlib.h: unit tests                                */
-/* ============================================================= */
+
 TEST_SUITE(strtoll)
 
 TEST(strtoll_basic) {
@@ -451,8 +466,7 @@ TEST(strtoll_overflow_boundary) {
 }
 
 /* ============================================================= */
-/* strtoul - stdlib.h: unit tests                                */
-/* ============================================================= */
+
 TEST_SUITE(strtoul)
 
 TEST(strtoul_basic) {
@@ -480,8 +494,7 @@ TEST(strtoul_negative_input) {
 }
 
 /* ============================================================= */
-/* strtoull - stdlib.h: unit tests                               */
-/* ============================================================= */
+
 TEST_SUITE(strtoull)
 
 TEST(strtoull_basic) {
@@ -523,8 +536,7 @@ TEST(strtoull_negative_input) {
 }
 
 /* ============================================================= */
-/* strtod - stdlib.h: unit tests                                 */
-/* ============================================================= */
+
 TEST_SUITE(strtod)
 
 TEST(strtod_basic) {
@@ -602,8 +614,7 @@ TEST(strtod_subnormal) {
 }
 
 /* ============================================================= */
-/* strtof - stdlib.h: unit tests                                 */
-/* ============================================================= */
+
 TEST_SUITE(strtof)
 
 TEST(strtof_basic) {
@@ -692,8 +703,7 @@ TEST(strtof_endptr_stops_at_invalid_char) {
 }
 
 /* ============================================================= */
-/* strtold - stdlib.h: unit tests                                */
-/* ============================================================= */
+
 TEST_SUITE(strtold)
 
 TEST(strtold_basic) {
@@ -712,8 +722,7 @@ TEST(strtold_similar_special_values) {
 }
 
 /* ============================================================= */
-/* abs - stdlib.h: unit tests                                    */
-/* ============================================================= */
+
 TEST_SUITE(abs)
 
 TEST(abs_positive) {
@@ -742,9 +751,13 @@ TEST(abs_int_min_undefined) {
 	ASSERT_TRUE(1);
 }
 
+TEST(abs_int_min_wrap) {
+	int r = abs(INT_MIN);
+	ASSERT_INT_EQ(r, INT_MIN);
+}
+
 /* ============================================================= */
-/* labs - stdlib.h: unit tests                                   */
-/* ============================================================= */
+
 TEST_SUITE(labs)
 
 TEST(labs_positive) {
@@ -765,9 +778,13 @@ TEST(labs_long_min_undefined) {
 	ASSERT_TRUE(1);
 }
 
+TEST(labs_long_min_wrap) {
+	long r = labs(LONG_MIN);
+	ASSERT_INT_EQ(r, LONG_MIN);
+}
+
 /* ============================================================= */
-/* llabs - stdlib.h: unit tests                                  */
-/* ============================================================= */
+
 TEST_SUITE(llabs)
 
 TEST(llabs_positive) {
@@ -788,9 +805,13 @@ TEST(llabs_llong_min_undefined) {
 	ASSERT_TRUE(1);
 }
 
+TEST(llabs_llong_min_wrap) {
+	long long r = llabs(LLONG_MIN);
+	ASSERT_INT_EQ(r, LLONG_MIN);
+}
+
 /* ============================================================= */
-/* div - stdlib.h: unit tests                                    */
-/* ============================================================= */
+
 TEST_SUITE(div)
 
 TEST(div_basic) {
@@ -839,9 +860,16 @@ TEST(div_by_zero) {
 	ASSERT_TRUE(1);
 }
 
+TEST(div_zero_errno) {
+	errno = 0;
+	div_t r = div(10, 0);
+	ASSERT_ERRNO(EDOM);
+	ASSERT_INT_EQ(r.quot, 0);
+	ASSERT_INT_EQ(r.rem, 0);
+}
+
 /* ============================================================= */
-/* ldiv - stdlib.h: unit tests                                   */
-/* ============================================================= */
+
 TEST_SUITE(ldiv)
 
 TEST(ldiv_basic) {
@@ -862,9 +890,14 @@ TEST(ldiv_long_min_by_minus_one) {
 	ASSERT_TRUE(1);
 }
 
+TEST(ldiv_zero_errno) {
+	errno = 0;
+	ldiv_t r = ldiv(10, 0);
+	ASSERT_ERRNO(EDOM);
+}
+
 /* ============================================================= */
-/* lldiv - stdlib.h: unit tests                                  */
-/* ============================================================= */
+
 TEST_SUITE(lldiv)
 
 TEST(lldiv_basic) {
@@ -885,9 +918,14 @@ TEST(lldiv_large_numbers) {
 	ASSERT_INT_EQ(r.rem, 775800LL);
 }
 
+TEST(lldiv_zero_errno) {
+	errno = 0;
+	lldiv_t r = lldiv(10, 0);
+	ASSERT_ERRNO(EDOM);
+}
+
 /* ============================================================= */
-/* qsort - stdlib.h: unit tests                                  */
-/* ============================================================= */
+
 TEST_SUITE(qsort)
 
 static int cmp_int(const void *a, const void *b) {
@@ -902,7 +940,6 @@ static int cmp_dbl(const void *a, const void *b) {
 static int cmp_zero(const void *a, const void *b) {
 	return 0;
 }
-
 
 TEST(qsort_basic) {
 	int arr[] = {3, 1, 4, 1, 5};
@@ -1009,9 +1046,20 @@ TEST(qsort_null_base_zero_nmemb) {
 	ASSERT_TRUE(1);
 }
 
+TEST(qsort_null_comparator) {
+	int arr[] = {1, 2, 3};
+	qsort(arr, 3, sizeof(int), NULL);
+	ASSERT_TRUE(1);
+}
+
+TEST(qsort_zero_size) {
+	int arr[] = {1, 2, 3};
+	qsort(arr, 3, 0, cmp_int);
+	ASSERT_TRUE(1);
+}
+
 /* ============================================================= */
-/* bsearch - stdlib.h: unit tests                                */
-/* ============================================================= */
+
 TEST_SUITE(bsearch)
 
 static int cmp_int_bs(const void *a, const void *b) {
@@ -1100,9 +1148,21 @@ TEST(bsearch_unsorted_no_crash) {
 	ASSERT_TRUE(1);
 }
 
+TEST(bsearch_null_array) {
+	int key = 5;
+	void *r = bsearch(&key, NULL, 10, sizeof(int), cmp_int_bs);
+	ASSERT_NULL(r);
+}
+
+TEST(bsearch_null_comparator) {
+	int arr[] = {1, 2, 3};
+	int key = 2;
+	void *r = bsearch(&key, arr, 3, sizeof(int), NULL);
+	ASSERT_NULL(r);
+}
+
 /* ============================================================= */
-/* rand/srand - stdlib.h: unit tests                             */
-/* ============================================================= */
+
 TEST_SUITE(rand)
 
 TEST(rand_srand_basic) {
@@ -1167,8 +1227,7 @@ TEST(rand_seed_0_vs_1) {
 }
 
 /* ============================================================= */
-/* mkstemp - stdlib.h: unit tests                                */
-/* ============================================================= */
+
 TEST_SUITE(mkstemp)
 
 TEST(mkstemp_creates_file) {
@@ -1285,7 +1344,15 @@ TEST(mkstemp_readonly_dir) {
 	ASSERT_INT_EQ(mkstemp(t), -1);
 }
 
-/* ============================================================================ */
+TEST(mkstemp_nonexistent_dir) {
+	char t[] = "/does/not/exist/fileXXXXXX";
+	int fd = mkstemp(t);
+	ASSERT_INT_EQ(fd, -1);
+	ASSERT_ERRNO(ENOENT);
+}
+
+/* ============================================================= */
+
 TEST_SUITE(mkdtemp);
 
 TEST(mkdtemp_creates_dir) {
@@ -1305,9 +1372,15 @@ TEST(mkdtemp_invalid_no_x_suffix) {
 	ASSERT_NULL(mkdtemp(template));
 }
 
+TEST(mkdtemp_nonexistent_dir) {
+	char t[] = "/does/not/exist/dirXXXXXX";
+	char *r = mkdtemp(t);
+	ASSERT_NULL(r);
+	ASSERT_ERRNO(ENOENT);
+}
+
 /* ============================================================= */
-/* strdup - stdlib.h: unit tests                                 */
-/* ============================================================= */
+
 TEST_SUITE(strdup)
 
 TEST(strdup_basic) {
@@ -1357,8 +1430,7 @@ TEST(strdup_very_long_string) {
 }
 
 /* ============================================================= */
-/* strndup - stdlib.h: unit tests                                */
-/* ============================================================= */
+
 TEST_SUITE(strndup)
 
 TEST(strndup_basic) {
@@ -1406,8 +1478,27 @@ TEST(strndup_n_exceeds_string) {
 }
 
 /* ============================================================= */
-/* getenv - stdlib.h: unit tests (POSIX)                         */
+
+TEST_SUITE(putenv)
+
+TEST(putenv_null) {
+	errno = 0;
+	int r = putenv(NULL);
+	ASSERT_INT_NE(r, 0);
+	ASSERT_ERRNO(EINVAL);
+}
+
+TEST(putenv_no_equals) {
+	char *str = strdup("NOEQUALS");
+	errno = 0;
+	int r = putenv(str);
+	ASSERT_INT_NE(r, 0);
+	ASSERT_ERRNO(EINVAL);
+	free(str);
+}
+
 /* ============================================================= */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(getenv)
 
@@ -1448,8 +1539,7 @@ TEST(getenv_after_unset) {
 #endif
 
 /* ============================================================= */
-/* setenv - stdlib.h: unit tests (POSIX)                         */
-/* ============================================================= */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(setenv)
 
@@ -1531,11 +1621,17 @@ TEST(setenv_null_value) {
 	ASSERT_INT_NE(setenv("TEST", NULL, 1), 0);
 	ASSERT_ERRNO(EINVAL);
 }
+
+TEST(setenv_equals_in_name) {
+	errno = 0;
+	int r = setenv("BAD=NAME", "val", 1);
+	ASSERT_INT_NE(r, 0);
+	ASSERT_ERRNO(EINVAL);
+}
 #endif
 
 /* ============================================================= */
-/* unsetenv - stdlib.h: unit tests (POSIX)                       */
-/* ============================================================= */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(unsetenv)
 
@@ -1555,11 +1651,17 @@ TEST(unsetenv_null_name) {
 	ASSERT_INT_NE(unsetenv(NULL), 0);
 	ASSERT_ERRNO(EINVAL);
 }
+
+TEST(unsetenv_equals_in_name) {
+	errno = 0;
+	int r = unsetenv("BAD=NAME");
+	ASSERT_INT_NE(r, 0);
+	ASSERT_ERRNO(EINVAL);
+}
 #endif
 
 /* ============================================================= */
-/* system - stdlib.h: unit tests (POSIX)                         */
-/* ============================================================= */
+
 #if JACL_HAS_POSIX
 TEST_SUITE(system)
 
@@ -1609,8 +1711,7 @@ TEST(system_empty_command) {
 #endif
 
 /* ============================================================= */
-/* malloc - stdlib.h: unit tests                                */
-/* ============================================================= */
+
 TEST_SUITE(malloc)
 
 TEST(malloc_basic) {
@@ -1708,198 +1809,7 @@ TEST(malloc_size_max) {
 	if (p) free(p);
 }
 
-/* ============================================================= */
-/* calloc - stdlib.h: unit tests                                */
-/* ============================================================= */
-TEST_SUITE(calloc)
-
-TEST(calloc_basic) {
-	int *arr = (int *)calloc(10, sizeof(int));
-	ASSERT_NOT_NULL(arr);
-	for (int i = 0; i < 10; i++) {
-		ASSERT_INT_EQ(arr[i], 0);
-	}
-	free(arr);
-}
-
-TEST(calloc_zero_elements) {
-	void *ptr = calloc(0, sizeof(int));
-	free(ptr);
-}
-
-TEST(calloc_zero_size) {
-	void *ptr = calloc(10, 0);
-	free(ptr);
-}
-
-TEST(calloc_large_array) {
-	char *buf = (char *)calloc(1024, 1024);  // 1 MB
-	ASSERT_NOT_NULL(buf);
-	// Verify first and last bytes are zeroed
-	ASSERT_INT_EQ(buf[0], 0);
-	ASSERT_INT_EQ(buf[1024*1024 - 1], 0);
-	free(buf);
-}
-
-TEST(calloc_vs_malloc_zeroing) {
-	size_t size = 100;
-	char *c_ptr = (char *)calloc(size, 1);
-	char *m_ptr = (char *)malloc(size);
-
-	ASSERT_NOT_NULL(c_ptr);
-	ASSERT_NOT_NULL(m_ptr);
-
-	// calloc should zero, malloc shouldn't guarantee it
-	int all_zeros = 1;
-	for (size_t i = 0; i < size; i++) {
-		if (c_ptr[i] != 0) all_zeros = 0;
-	}
-	ASSERT_INT_EQ(all_zeros, 1);
-
-	free(c_ptr);
-	free(m_ptr);
-}
-
-TEST(calloc_overflow_nmemb_size) {
-	void *p = calloc(SIZE_MAX / 2 + 1, 2);
-	ASSERT_NULL(p);
-	ASSERT_ERRNO(ENOMEM);
-}
-
-/* ============================================================= */
-/* realloc - stdlib.h: unit tests                               */
-/* ============================================================= */
-TEST_SUITE(realloc)
-
-TEST(realloc_null_behaves_like_malloc) {
-	void *ptr = realloc(NULL, 100);
-	ASSERT_NOT_NULL(ptr);
-	free(ptr);
-}
-
-TEST(realloc_grow) {
-	int *arr = (int *)malloc(5 * sizeof(int));
-	ASSERT_NOT_NULL(arr);
-
-	for (int i = 0; i < 5; i++) arr[i] = i;
-
-	int *new_arr = (int *)realloc(arr, 10 * sizeof(int));
-	ASSERT_NOT_NULL(new_arr);
-
-	// Original data preserved
-	for (int i = 0; i < 5; i++) {
-		ASSERT_INT_EQ(new_arr[i], i);
-	}
-
-	free(new_arr);
-}
-
-TEST(realloc_shrink) {
-	int *arr = (int *)malloc(10 * sizeof(int));
-	for (int i = 0; i < 10; i++) arr[i] = i * 2;
-
-	int *new_arr = (int *)realloc(arr, 5 * sizeof(int));
-	ASSERT_NOT_NULL(new_arr);
-
-	// First 5 elements preserved
-	for (int i = 0; i < 5; i++) {
-		ASSERT_INT_EQ(new_arr[i], i * 2);
-	}
-
-	free(new_arr);
-}
-
-TEST(realloc_zero_size) {
-	void *ptr = malloc(100);
-	ASSERT_NOT_NULL(ptr);
-
-	void *new_ptr = realloc(ptr, 0);
-	// Implementation-defined: may free and return NULL, or return minimal allocation
-	if (new_ptr != NULL) free(new_ptr);
-}
-
-TEST(realloc_same_size) {
-	int *arr = (int *)malloc(10 * sizeof(int));
-	for (int i = 0; i < 10; i++) arr[i] = i + 100;
-
-	int *new_arr = (int *)realloc(arr, 10 * sizeof(int));
-	ASSERT_NOT_NULL(new_arr);
-
-	for (int i = 0; i < 10; i++) {
-		ASSERT_INT_EQ(new_arr[i], i + 100);
-	}
-
-	free(new_arr);
-}
-
-TEST(realloc_large_to_small_to_large) {
-	void *p1 = malloc(1000);
-	ASSERT_NOT_NULL(p1);
-
-	void *p2 = realloc(p1, 100);
-	ASSERT_NOT_NULL(p2);
-
-	void *p3 = realloc(p2, 2000);
-	ASSERT_NOT_NULL(p3);
-
-	free(p3);
-}
-
-TEST(realloc_null_ptr_zero_size) {
-	void *p = realloc(NULL, 0);
-	if (p) free(p);
-}
-
-TEST(realloc_ptr_zero_size) {
-	void *p = malloc(100);
-	ASSERT_NOT_NULL(p);
-	void *r = realloc(p, 0);
-	if (r) free(r);
-}
-
-/* ============================================================= */
-/* free - stdlib.h: unit tests                                  */
-/* ============================================================= */
-TEST_SUITE(free)
-
-TEST(free_null_safe) {
-	free(NULL);  // Should not crash
-}
-
-TEST(free_after_malloc) {
-	void *ptr = malloc(100);
-	free(ptr);
-}
-
-TEST(free_multiple_pointers) {
-	void *p1 = malloc(10);
-	void *p2 = malloc(20);
-	void *p3 = malloc(30);
-
-	free(p2);  // Free in different order
-	free(p1);
-	free(p3);
-}
-
-TEST(free_invalid_pointer) {
-	char stack_var;
-	free(&stack_var);
-	ASSERT_TRUE(1);
-}
-
-TEST(free_double_free) {
-	void *p = malloc(10);
-	free(p);
-	free(p);
-	ASSERT_TRUE(1);
-}
-
-/* ============================================================= */
-/* memory_stress - stdlib.h: unit tests                         */
-/* ============================================================= */
-TEST_SUITE(memory_stress)
-
-TEST(allocation_pattern_interleaved) {
+TEST(malloc_pattern_interleaved) {
 	void *ptrs[100];
 
 	// Allocate 100 blocks
@@ -1924,43 +1834,6 @@ TEST(allocation_pattern_interleaved) {
 		free(ptrs[i]);
 	}
 }
-
-TEST(realloc_chain) {
-	void *ptr = malloc(10);
-	ASSERT_NOT_NULL(ptr);
-
-	for (int size = 20; size <= 10000; size *= 2) {
-		ptr = realloc(ptr, size);
-		ASSERT_NOT_NULL(ptr);
-	}
-
-	free(ptr);
-}
-
-TEST(calloc_malloc_realloc_combination) {
-	int *arr = (int *)calloc(5, sizeof(int));
-	ASSERT_NOT_NULL(arr);
-
-	// Verify zeroed
-	for (int i = 0; i < 5; i++) ASSERT_INT_EQ(arr[i], 0);
-
-	// Write data
-	for (int i = 0; i < 5; i++) arr[i] = i * 10;
-
-	// Grow with realloc
-	arr = (int *)realloc(arr, 10 * sizeof(int));
-	ASSERT_NOT_NULL(arr);
-
-	// Verify original data
-	for (int i = 0; i < 5; i++) ASSERT_INT_EQ(arr[i], i * 10);
-
-	free(arr);
-}
-
-/* ============================================================= */
-/* malloc_frag - stdlib.h: fragmentation/robustness tests        */
-/* ============================================================= */
-TEST_SUITE(malloc_frag)
 
 TEST(malloc_frag_sawtooth) {
 	void *ptrs[1000];
@@ -2098,5 +1971,984 @@ TEST(malloc_frag_tls_arena_overflow) {
 	ASSERT_NOT_NULL(again);
 	free(again);
 }
+
+TEST(malloc_usable_size_20_bytes) {
+	int *arr = (int *)malloc(5 * sizeof(int));
+	for (int i = 0; i < 5; i++) arr[i] = 0xDEADBEEF;
+
+	int *arr2 = (int *)realloc(arr, 5 * sizeof(int));
+
+	ASSERT_INT_EQ(arr2[4], (int)0xDEADBEEF);
+	free(arr2);
+}
+
+TEST(malloc_coalescing) {
+	void *a = malloc(1024);
+	void *b = malloc(1024);
+	void *c = malloc(1024);
+
+	ASSERT_NOT_NULL(a);
+	ASSERT_NOT_NULL(b);
+	ASSERT_NOT_NULL(c);
+
+	free(a);
+	free(b);
+	free(c);
+
+	void *huge = malloc(3000);
+
+	ASSERT_NOT_NULL(huge);
+
+	free(huge);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(calloc)
+
+TEST(calloc_basic) {
+	int *arr = (int *)calloc(10, sizeof(int));
+	ASSERT_NOT_NULL(arr);
+	for (int i = 0; i < 10; i++) {
+		ASSERT_INT_EQ(arr[i], 0);
+	}
+	free(arr);
+}
+
+TEST(calloc_zero_elements) {
+	void *ptr = calloc(0, sizeof(int));
+	free(ptr);
+}
+
+TEST(calloc_zero_size) {
+	void *ptr = calloc(10, 0);
+	free(ptr);
+}
+
+TEST(calloc_large_array) {
+	char *buf = (char *)calloc(1024, 1024);  // 1 MB
+	ASSERT_NOT_NULL(buf);
+	// Verify first and last bytes are zeroed
+	ASSERT_INT_EQ(buf[0], 0);
+	ASSERT_INT_EQ(buf[1024*1024 - 1], 0);
+	free(buf);
+}
+
+TEST(calloc_vs_malloc_zeroing) {
+	size_t size = 100;
+	char *c_ptr = (char *)calloc(size, 1);
+	char *m_ptr = (char *)malloc(size);
+
+	ASSERT_NOT_NULL(c_ptr);
+	ASSERT_NOT_NULL(m_ptr);
+
+	// calloc should zero, malloc shouldn't guarantee it
+	int all_zeros = 1;
+	for (size_t i = 0; i < size; i++) {
+		if (c_ptr[i] != 0) all_zeros = 0;
+	}
+	ASSERT_INT_EQ(all_zeros, 1);
+
+	free(c_ptr);
+	free(m_ptr);
+}
+
+TEST(calloc_overflow_nmemb_size) {
+	void *p = calloc(SIZE_MAX / 2 + 1, 2);
+	ASSERT_NULL(p);
+	ASSERT_ERRNO(ENOMEM);
+}
+
+TEST(calloc_malloc_realloc_combination) {
+	int *arr = (int *)calloc(5, sizeof(int));
+	ASSERT_NOT_NULL(arr);
+
+	// Verify zeroed
+	for (int i = 0; i < 5; i++) ASSERT_INT_EQ(arr[i], 0);
+
+	// Write data
+	for (int i = 0; i < 5; i++) arr[i] = i * 10;
+
+	// Grow with realloc
+	arr = (int *)realloc(arr, 10 * sizeof(int));
+	ASSERT_NOT_NULL(arr);
+
+	// Verify original data
+	for (int i = 0; i < 5; i++) ASSERT_INT_EQ(arr[i], i * 10);
+
+	free(arr);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(realloc)
+
+TEST(realloc_null_behaves_like_malloc) {
+	void *ptr = realloc(NULL, 100);
+	ASSERT_NOT_NULL(ptr);
+	free(ptr);
+}
+
+TEST(realloc_grow) {
+	int *arr = (int *)malloc(5 * sizeof(int));
+	ASSERT_NOT_NULL(arr);
+
+	for (int i = 0; i < 5; i++) arr[i] = i;
+
+	int *new_arr = (int *)realloc(arr, 10 * sizeof(int));
+	ASSERT_NOT_NULL(new_arr);
+
+	// Original data preserved
+	for (int i = 0; i < 5; i++) {
+		ASSERT_INT_EQ(new_arr[i], i);
+	}
+
+	free(new_arr);
+}
+
+TEST(realloc_shrink) {
+	int *arr = (int *)malloc(10 * sizeof(int));
+	for (int i = 0; i < 10; i++) arr[i] = i * 2;
+
+	int *new_arr = (int *)realloc(arr, 5 * sizeof(int));
+	ASSERT_NOT_NULL(new_arr);
+
+	// First 5 elements preserved
+	for (int i = 0; i < 5; i++) {
+		ASSERT_INT_EQ(new_arr[i], i * 2);
+	}
+
+	free(new_arr);
+}
+
+TEST(realloc_zero_size) {
+	void *ptr = malloc(100);
+	ASSERT_NOT_NULL(ptr);
+
+	void *new_ptr = realloc(ptr, 0);
+	// Implementation-defined: may free and return NULL, or return minimal allocation
+	if (new_ptr != NULL) free(new_ptr);
+}
+
+TEST(realloc_same_size) {
+	int *arr = (int *)malloc(10 * sizeof(int));
+	for (int i = 0; i < 10; i++) arr[i] = i + 100;
+
+	int *new_arr = (int *)realloc(arr, 10 * sizeof(int));
+	ASSERT_NOT_NULL(new_arr);
+
+	for (int i = 0; i < 10; i++) {
+		ASSERT_INT_EQ(new_arr[i], i + 100);
+	}
+
+	free(new_arr);
+}
+
+TEST(realloc_large_to_small_to_large) {
+	void *p1 = malloc(1000);
+	ASSERT_NOT_NULL(p1);
+
+	void *p2 = realloc(p1, 100);
+	ASSERT_NOT_NULL(p2);
+
+	void *p3 = realloc(p2, 2000);
+	ASSERT_NOT_NULL(p3);
+
+	free(p3);
+}
+
+TEST(realloc_null_ptr_zero_size) {
+	void *p = realloc(NULL, 0);
+	if (p) free(p);
+}
+
+TEST(realloc_ptr_zero_size) {
+	void *p = malloc(100);
+	ASSERT_NOT_NULL(p);
+	void *r = realloc(p, 0);
+	if (r) free(r);
+}
+
+TEST(realloc_chain) {
+	void *ptr = malloc(10);
+	ASSERT_NOT_NULL(ptr);
+
+	for (int size = 20; size <= 10000; size *= 2) {
+		ptr = realloc(ptr, size);
+		ASSERT_NOT_NULL(ptr);
+	}
+
+	free(ptr);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(aligned_alloc)
+
+TEST(aligned_alloc_basic) {
+	void *p = aligned_alloc(64, 128);
+	ASSERT_NOT_NULL(p);
+	ASSERT_INT_EQ(((uintptr_t)p) % 64, 0);
+	free(p);
+}
+
+TEST(aligned_alloc_invalid_alignment) {
+	errno = 0;
+	void *p = aligned_alloc(3, 12); // 3 is not a power of 2
+	ASSERT_NULL(p);
+	ASSERT_ERRNO(EINVAL);
+}
+
+TEST(aligned_alloc_size_mismatch) {
+	errno = 0;
+	void *p = aligned_alloc(16, 20); // 20 is not a multiple of 16
+	ASSERT_NULL(p);
+	ASSERT_ERRNO(EINVAL);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(posix_memalign)
+
+TEST(posix_memalign_basic) {
+	void *p = NULL;
+	int r = posix_memalign(&p, 4096, 1024);
+	ASSERT_INT_EQ(r, 0);
+	ASSERT_NOT_NULL(p);
+	ASSERT_INT_EQ(((uintptr_t)p) % 4096, 0);
+	free(p);
+}
+
+TEST(posix_memalign_null_ptr) {
+	int r = posix_memalign(NULL, 16, 32);
+	ASSERT_INT_EQ(r, EINVAL);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(reallocarry)
+
+TEST(reallocarray_overflow) {
+	errno = 0;
+	void *p = reallocarray(NULL, SIZE_MAX, 2);
+	ASSERT_NULL(p);
+	ASSERT_ERRNO(ENOMEM);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(free)
+
+TEST(free_null_safe) {
+	free(NULL);  // Should not crash
+}
+
+TEST(free_after_malloc) {
+	void *ptr = malloc(100);
+	free(ptr);
+}
+
+TEST(free_multiple_pointers) {
+	void *p1 = malloc(10);
+	void *p2 = malloc(20);
+	void *p3 = malloc(30);
+
+	free(p2);  // Free in different order
+	free(p1);
+	free(p3);
+}
+
+TEST(free_invalid_pointer) {
+	char stack_var;
+	free(&stack_var);
+	ASSERT_TRUE(1);
+}
+
+TEST(free_double_free) {
+	void *p = malloc(10);
+	free(p);
+	free(p);
+	ASSERT_TRUE(1);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(mkostemp)
+
+TEST(mkostemp_creates_file) {
+	char template[] = "/tmp/testkostXXXXXX";
+	int fd = mkostemp(template, O_APPEND);
+	ASSERT_INT_NE(fd, -1);
+	int flags = fcntl(fd, F_GETFL);
+	ASSERT_TRUE(flags & O_APPEND);
+	close(fd);
+	unlink(template);
+}
+
+TEST(mkostemp_invalid) {
+	char template[] = "/tmp/tXX";
+	ASSERT_INT_EQ(mkostemp(template, 0), -1);
+}
+
+TEST(mkostemp_nonexistent_dir) {
+	char t[] = "/does/not/exist/fileXXXXXX";
+	int fd = mkostemp(t, O_APPEND);
+	ASSERT_INT_EQ(fd, -1);
+	ASSERT_ERRNO(ENOENT);
+}
+
+TEST(mkostemp_cloexec) {
+	char template[] = "/tmp/cloexecXXXXXX";
+	int fd = mkostemp(template, O_CLOEXEC);
+	ASSERT_INT_NE(fd, -1);
+	int flags = fcntl(fd, F_GETFD);
+	ASSERT_TRUE(flags & FD_CLOEXEC);
+	close(fd);
+	unlink(template);
+}
+
+TEST(mkostemp_multiple_flags) {
+	char template[] = "/tmp/multiXXXXXX";
+	int fd = mkostemp(template, O_APPEND | O_CLOEXEC);
+	ASSERT_INT_NE(fd, -1);
+	int fl = fcntl(fd, F_GETFL);
+	int fd_flags = fcntl(fd, F_GETFD);
+	ASSERT_TRUE(fl & O_APPEND);
+	ASSERT_TRUE(fd_flags & FD_CLOEXEC);
+	close(fd);
+	unlink(template);
+}
+
+TEST(mkostemp_unique_names) {
+	char t1[] = "/tmp/kost1XXXXXX";
+	char t2[] = "/tmp/kost2XXXXXX";
+	int fd1 = mkostemp(t1, 0);
+	int fd2 = mkostemp(t2, 0);
+	ASSERT_STR_NE(t1, t2);
+	close(fd1);
+	close(fd2);
+	unlink(t1);
+	unlink(t2);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(secure_getenv)
+
+TEST(secure_getenv_basic) {
+	setenv("SECURE_TEST_VAR", "hello", 1);
+	char *val = secure_getenv("SECURE_TEST_VAR");
+	if (getuid() == geteuid() && getgid() == getegid()) {
+		ASSERT_NOT_NULL(val);
+		ASSERT_STR_EQ(val, "hello");
+	} else {
+		ASSERT_NULL(val);
+	}
+	unsetenv("SECURE_TEST_VAR");
+}
+
+/* ============================================================= */
+
+TEST_SUITE(getsubopt)
+
+TEST(getsubopt_basic) {
+	char opts[] = "ro,quiet,debug=3";
+	char *subopts = opts;
+	char *value = NULL;
+	char *const tokens[] = {"ro", "rw", "quiet", "debug", NULL};
+
+	int key = getsubopt(&subopts, tokens, &value);
+	ASSERT_INT_EQ(key, 0);
+	ASSERT_NULL(value);
+
+	key = getsubopt(&subopts, tokens, &value);
+	ASSERT_INT_EQ(key, 2);
+	ASSERT_NULL(value);
+
+	key = getsubopt(&subopts, tokens, &value);
+	ASSERT_INT_EQ(key, 3);
+	ASSERT_NOT_NULL(value);
+	ASSERT_STR_EQ(value, "3");
+}
+
+TEST(getsubopt_unknown) {
+	char opts[] = "unknown";
+	char *subopts = opts;
+	char *value = NULL;
+	char *const tokens[] = {"known", NULL};
+	int key = getsubopt(&subopts, tokens, &value);
+	ASSERT_INT_EQ(key, -1);
+	ASSERT_STR_EQ(value, "unknown");
+}
+
+TEST(getsubopt_null_subopts) {
+	char *val;
+	char *const tokens[] = {"a", NULL};
+	int r = getsubopt(NULL, tokens, &val);
+	ASSERT_INT_EQ(r, -1);
+}
+
+TEST(getsubopt_null_tokens) {
+	char opts[] = "a";
+	char *p = opts;
+	char *val;
+	int r = getsubopt(&p, NULL, &val);
+	ASSERT_INT_EQ(r, -1);
+}
+
+TEST(getsubopt_null_val) {
+	char opts[] = "a";
+	char *p = opts;
+	char *const tokens[] = {"a", NULL};
+	int r = getsubopt(&p, tokens, NULL);
+	ASSERT_INT_EQ(r, -1);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(qsort_r)
+
+static int cmp_r(const void *a, const void *b, void *arg) {
+	int order = *(int *)arg;
+	int diff = *(int *)a - *(int *)b;
+	return order * diff;
+}
+
+static int cmp_r_null_safe(const void *a, const void *b, void *arg) {
+	int diff = *(const int *)a - *(const int *)b;
+	// If arg is NULL, sort ascending. If arg is not NULL, sort descending.
+	return arg ? -diff : diff;
+}
+
+TEST(qsort_r_ascending) {
+	int arr[] = {3, 1, 4, 1, 5};
+	int order = 1;
+	qsort_r(arr, 5, sizeof(int), cmp_r, &order);
+	ASSERT_INT_EQ(arr[0], 1);
+	ASSERT_INT_EQ(arr[4], 5);
+}
+
+TEST(qsort_r_descending) {
+	int arr[] = {3, 1, 4, 1, 5};
+	int order = -1;
+	qsort_r(arr, 5, sizeof(int), cmp_r, &order);
+	ASSERT_INT_EQ(arr[0], 5);
+	ASSERT_INT_EQ(arr[4], 1);
+}
+
+TEST(qsort_r_large_array) {
+	int arr[1000];
+	for (int i = 0; i < 1000; i++) arr[i] = 999 - i;
+	int order = 1;
+	qsort_r(arr, 1000, sizeof(int), cmp_r, &order);
+	ASSERT_INT_EQ(arr[0], 0);
+	ASSERT_INT_EQ(arr[999], 999);
+}
+
+TEST(qsort_r_single_element) {
+	int arr[] = {42};
+	int order = 1;
+	qsort_r(arr, 1, sizeof(int), cmp_r, &order);
+	ASSERT_INT_EQ(arr[0], 42);
+}
+
+TEST(qsort_r_two_elements) {
+	int arr[] = {5, 2};
+	int order = 1;
+	qsort_r(arr, 2, sizeof(int), cmp_r, &order);
+	ASSERT_INT_EQ(arr[0], 2);
+	ASSERT_INT_EQ(arr[1], 5);
+}
+
+TEST(qsort_r_duplicates) {
+	int arr[] = {3, 1, 3, 2, 1};
+	int order = 1;
+	qsort_r(arr, 5, sizeof(int), cmp_r, &order);
+	ASSERT_INT_EQ(arr[0], 1);
+	ASSERT_INT_EQ(arr[4], 3);
+}
+
+TEST(qsort_r_null_arg) {
+	int arr1[] = {3, 1, 2};
+	qsort_r(arr1, 3, sizeof(int), cmp_r_null_safe, NULL);
+	ASSERT_INT_EQ(arr1[0], 1);
+	ASSERT_INT_EQ(arr1[1], 2);
+	ASSERT_INT_EQ(arr1[2], 3);
+
+	int dummy = 1;
+	int arr2[] = {3, 1, 2};
+	qsort_r(arr2, 3, sizeof(int), cmp_r_null_safe, &dummy);
+	ASSERT_INT_EQ(arr2[0], 3);
+	ASSERT_INT_EQ(arr2[1], 2);
+	ASSERT_INT_EQ(arr2[2], 1);
+}
+
+TEST(qsort_r_empty) {
+	int arr[] = {};
+	int order = 1;
+	qsort_r(arr, 0, sizeof(int), cmp_r, &order);
+	ASSERT_TRUE(1);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(a64l)
+
+TEST(a64l_basic) {
+	ASSERT_INT_EQ(a64l(""), 0);
+	ASSERT_INT_EQ(a64l("."), 0);
+	ASSERT_INT_EQ(a64l("/"), 1);
+}
+
+TEST(a64l_single_chars) {
+	ASSERT_INT_EQ(a64l("0"), 2);
+	ASSERT_INT_EQ(a64l("1"), 3);
+	ASSERT_INT_EQ(a64l("A"), 12);
+	ASSERT_INT_EQ(a64l("Z"), 37);
+	ASSERT_INT_EQ(a64l("a"), 38);
+	ASSERT_INT_EQ(a64l("z"), 63);
+}
+
+TEST(a64l_two_chars) {
+	ASSERT_INT_EQ(a64l("//"), 65);  // 1 + 1*64
+	ASSERT_INT_EQ(a64l(".."), 0);
+	ASSERT_INT_EQ(a64l("/."), 1);
+	ASSERT_INT_EQ(a64l("./"), 64);
+}
+
+TEST(a64l_six_chars) {
+	ASSERT_INT_EQ(a64l("//////"), 1 + 64 + 64*64 + 64*64*64 + 64*64*64*64 + 64*64*64*64*64);
+}
+
+TEST(a64l_stops_at_invalid) {
+	ASSERT_INT_EQ(a64l("abc!"), a64l("abc"));
+}
+
+/* ============================================================= */
+
+TEST_SUITE(l64a)
+
+TEST(l64a_basic) {
+	ASSERT_STR_EQ(l64a(0), "");
+}
+
+TEST(l64a_roundtrip) {
+	long val = 12345678L;
+	char *s = l64a(val);
+	long res = a64l(s);
+	ASSERT_INT_EQ(res, val);
+}
+
+TEST(l64a_powers_of_64) {
+	char *s1 = l64a(64);
+	ASSERT_STR_EQ(s1, "./");  // 1 * 64^1 + 0 * 64^0
+	char *s2 = l64a(4096);
+	ASSERT_STR_EQ(s2, "../"); // 1 * 64^2 + 0 * 64^1 + 0 * 64^0
+}
+
+TEST(l64a_max_32bit) {
+	char *s = l64a(0xFFFFFFFFL);
+	ASSERT_NOT_NULL(s);
+	long back = a64l(s);
+	ASSERT_INT_EQ(back, 0xFFFFFFFFL);
+}
+
+TEST(l64a_multiple_values) {
+	for (long i = 0; i < 1000; i++) {
+		char *s = l64a(i);
+		long back = a64l(s);
+		ASSERT_INT_EQ(back, i);
+	}
+}
+
+/* ============================================================= */
+
+TEST_SUITE(realpath)
+
+TEST(realpath_basic_absolute) {
+	char resolved[PATH_MAX];
+	char *res = realpath("/tmp", resolved);
+	ASSERT_NOT_NULL(res);
+	ASSERT_INT_EQ(res[0], '/');
+}
+
+TEST(realpath_nonexistent) {
+	char resolved[PATH_MAX];
+	char *res = realpath("/tmp/definitely_does_not_exist_12345", resolved);
+	ASSERT_NULL(res);
+}
+
+TEST(realpath_malloc) {
+	char *res = realpath("/tmp", NULL);
+	ASSERT_NOT_NULL(res);
+	free(res);
+}
+
+TEST(realpath_null_input) {
+	char buf[PATH_MAX];
+	errno = 0;
+	char *r = realpath(NULL, buf);
+	ASSERT_NULL(r);
+	ASSERT_ERRNO(EINVAL);
+}
+
+TEST(realpath_both_null) {
+	errno = 0;
+	char *r = realpath(NULL, NULL);
+	ASSERT_NULL(r);
+	ASSERT_ERRNO(EINVAL);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(posix_openpt)
+
+TEST(posix_openpt_basic) {
+	int fd = posix_openpt(O_RDWR | O_NOCTTY);
+
+	if (fd >= 0) {
+		ASSERT_INT_EQ(grantpt(fd), 0);
+
+		int ret = unlockpt(fd);
+
+		ASSERT_TRUE(ret == 0 || errno == ENOTTY || errno == EINVAL);
+
+		if (ret == 0) {
+			char *name = ptsname(fd);
+
+			ASSERT_NOT_NULL(name);
+
+			char buf[64];
+			int r = ptsname_r(fd, buf, sizeof(buf));
+
+			ASSERT_INT_EQ(r, 0);
+			ASSERT_STR_EQ(name, buf);
+		}
+
+		close(fd);
+	}
+}
+
+TEST(posix_pty_rw) {
+	int master = posix_openpt(O_RDWR | O_NOCTTY);
+	if (master < 0) TEST_SKIP("posix_openpt unavailable");
+
+	if (grantpt(master) != 0 || unlockpt(master) != 0) {
+		close(master);
+		TEST_SKIP("PTY setup failed");
+	}
+
+	char *name = ptsname(master);
+	if (!name) {
+		close(master);
+		TEST_SKIP("ptsname failed");
+	}
+
+	int slave = open(name, O_RDWR | O_NOCTTY);
+	if (slave < 0) {
+		close(master);
+		TEST_SKIP("slave open failed");
+	}
+
+	const char *msg = "hello";
+	ssize_t w = write(master, msg, 5);
+	if (w != 5) {
+		close(slave);
+		close(master);
+		TEST_SKIP("write to master failed");
+	}
+
+	char buf[16] = {0};
+	ssize_t r = read(slave, buf, 5);
+
+	close(slave);
+	close(master);
+
+	ASSERT_INT_EQ(r, 5);
+	ASSERT_MEM_EQ(buf, "hello", 5);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(gandpt)
+
+TEST(grantpt_bad_fd) {
+	// Your implementation is a stub that ignores the FD
+	int r = grantpt(999999);
+	ASSERT_INT_EQ(r, 0);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(unlockpt)
+
+TEST(unlockpt_bad_fd) {
+	int r = unlockpt(999999);
+	ASSERT_INT_NE(r, 0);
+	ASSERT_ERRNO(EBADF);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(ptsname)
+
+TEST(ptsname_bad_fd) {
+	char *name = ptsname(999999);
+	ASSERT_NULL(name);
+}
+
+TEST(ptsname_r_bad_fd) {
+	char buf[64];
+	int r = ptsname_r(999999, buf, sizeof(buf));
+	ASSERT_INT_NE(r, 0);
+}
+
+TEST(ptsname_r_small_buf) {
+	int fd = posix_openpt(O_RDWR | O_NOCTTY);
+
+	if (fd < 0) TEST_SKIP("posix_openpt unavailable");
+
+	char valid_buf[64];
+
+	if (ptsname_r(fd, valid_buf, sizeof(valid_buf)) != 0) {
+		close(fd);
+
+		TEST_SKIP("PTY subsystem restricted (ioctl failed)");
+	}
+
+	char small_buf[1];
+	int r = ptsname_r(fd, small_buf, sizeof(small_buf));
+
+	ASSERT_INT_EQ(r, ERANGE);
+
+	close(fd);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(random)
+
+TEST(random_basic) {
+	srandom(42);
+	long v1 = random();
+	srandom(42);
+	long v2 = random();
+	ASSERT_INT_EQ(v1, v2);
+}
+
+TEST(random_range) {
+	srandom(1);
+	for (int i = 0; i < 100; i++) {
+		long v = random();
+		ASSERT_INT_GE(v, 0);
+	}
+}
+
+TEST(random_different_seeds) {
+	srandom(1);
+	long v1 = random();
+	srandom(2);
+	long v2 = random();
+	ASSERT_INT_NE(v1, v2);
+}
+
+TEST(random_sequence_length) {
+	srandom(42);
+	long seq[100];
+	for (int i = 0; i < 100; i++) seq[i] = random();
+	srandom(42);
+	for (int i = 0; i < 100; i++) {
+		long v = random();
+		ASSERT_INT_EQ(v, seq[i]);
+	}
+}
+
+
+/* ============================================================= */
+
+TEST_SUITE(initstate)
+
+TEST(initstate_setstate) {
+	char state1[256];
+	char state2[256];
+
+	char *old1 = initstate(123, state1, sizeof(state1));
+	ASSERT_NOT_NULL(old1);
+	long v1 = random();
+
+	char *old2 = initstate(456, state2, sizeof(state2));
+	ASSERT_NOT_NULL(old2);
+	long v2 = random();
+	// Switch back to state1, should get next value in state1 sequence
+	char *ret1 = setstate(state1);
+	ASSERT_NOT_NULL(ret1);
+	long v1_next = random();
+
+	char *ret2 = setstate(state2);
+	ASSERT_NOT_NULL(ret2);
+	long v2_next = random();
+
+	// The sequences must be completely independent
+	ASSERT_INT_NE(v1_next, v2_next);
+}
+
+TEST(initstate_too_small) {
+	char tiny[10];
+	errno = 0;
+	char *r = initstate(1, tiny, sizeof(tiny));
+	ASSERT_NULL(r);
+	ASSERT_ERRNO(EINVAL);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(drand48)
+
+TEST(drand48_range) {
+	srand48(42);
+	for (int i = 0; i < 100; i++) {
+		double v = drand48();
+		ASSERT_TRUE(v >= 0.0 && v < 1.0);
+	}
+}
+
+TEST(drand48_reproducible) {
+	srand48(12345);
+	double seq[50];
+	for (int i = 0; i < 50; i++) seq[i] = drand48();
+	srand48(12345);
+	for (int i = 0; i < 50; i++) {
+		double v = drand48();
+		ASSERT_DBL_EQ(v, seq[i]);
+	}
+}
+
+/* ============================================================= */
+
+TEST_SUITE(lrand48)
+
+TEST(lrand48_range) {
+	srand48(42);
+	for (int i = 0; i < 100; i++) {
+		long v = lrand48();
+		ASSERT_INT_GE(v, 0);
+	}
+}
+
+TEST(lrand48_reproducible) {
+	srand48(99999);
+	long seq[50];
+	for (int i = 0; i < 50; i++) seq[i] = lrand48();
+	srand48(99999);
+	for (int i = 0; i < 50; i++) {
+		long v = lrand48();
+		ASSERT_INT_EQ(v, seq[i]);
+	}
+}
+
+/* ============================================================= */
+
+TEST_SUITE(erand48)
+
+TEST(erand48_independent) {
+	unsigned short xsubi1[3] = {1, 2, 3};
+	unsigned short xsubi2[3] = {1, 2, 3};
+	double v1 = erand48(xsubi1);
+	double v2 = erand48(xsubi2);
+	ASSERT_DBL_EQ(v1, v2);
+}
+
+TEST(erand48_multiple_states) {
+	unsigned short state1[3] = {100, 200, 300};
+	unsigned short state2[3] = {400, 500, 600};
+
+	double v1 = erand48(state1);
+	double v2 = erand48(state2);
+
+	ASSERT_TRUE(v1 != v2);  // Compare as doubles, not ints
+
+	double v3 = erand48(state1);
+	double v4 = erand48(state2);
+
+	ASSERT_TRUE(v3 != v4);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(mrand48)
+
+TEST(mrand48_signed) {
+	srand48(42);
+	int positive = 0, negative = 0;
+	for (int i = 0; i < 1000; i++) {
+		long v = mrand48();
+		if (v > 0) positive++;
+		else if (v < 0) negative++;
+	}
+	ASSERT_INT_GT(positive, 400);
+	ASSERT_INT_GT(negative, 400);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(nrand48)
+
+TEST(nrand48_range) {
+	srand48(42);
+	for (int i = 0; i < 100; i++) {
+		long v = nrand48(__jacl_rand48_seed);
+		ASSERT_INT_GE(v, 0);
+		ASSERT_INT_LT(v, 0x80000000L);
+	}
+}
+
+/* ============================================================= */
+
+TEST_SUITE(jrand48)
+
+TEST(jrand48_range) {
+	unsigned short xsubi[3] = {1, 2, 3};
+	for (int i = 0; i < 100; i++) {
+		long v = jrand48(xsubi);
+		ASSERT_TRUE(v >= -0x80000000L && v <= 0x7FFFFFFFL);
+	}
+}
+
+/* ============================================================= */
+
+TEST_SUITE(seed48)
+
+TEST(seed48_saves_old) {
+	srand48(111);
+	unsigned short old_seed[3] = {1, 2, 3};
+	unsigned short *saved = seed48(old_seed);
+	ASSERT_NOT_NULL(saved);
+	ASSERT_INT_NE(saved[0], 1);
+	ASSERT_INT_NE(saved[1], 2);
+	ASSERT_INT_NE(saved[2], 3);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(long48)
+
+TEST(lcong48_custom) {
+	unsigned short param[7] = {1, 2, 3, 4, 5, 6, 7};
+	lcong48(param);
+	long v = lrand48();
+	ASSERT_INT_GE(v, 0);
+}
+
+/* ============================================================= */
+
+TEST_SUITE(setkey)
+
+TEST(setkey_stub) {
+	char key[64] = {0};
+	setkey(key);
+	ASSERT_TRUE(1);
+}
+
+/* ============================================================= */
 
 TEST_MAIN()

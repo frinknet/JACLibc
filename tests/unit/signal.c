@@ -7,6 +7,26 @@ TEST_UNIT(signal.h);
 
 /* ============================================================================ */
 
+static void suppress_stderr(void) {
+	/* Redirect stderr to /dev/null */
+	freopen("/dev/null", "w", stderr);
+}
+
+static void restore_stderr(void) {
+	/* Restore stderr to the terminal.
+	 * On Linux/ChromeOS, /proc/self/fd/2 is the safest bet if it exists,
+	 * otherwise try /dev/tty. */
+	FILE* tty = fopen("/dev/tty", "w");
+
+	if (tty) {
+		*stderr = *tty; /* Copy the struct content */
+		fclose(tty);
+	} else {
+		/* Fallback: reopen /dev/null if tty fails (better than crashing) */
+		freopen("/dev/null", "w", stderr);
+	}
+}
+
 TEST_SUITE(constants);
 
 TEST(constants_iso_signals_defined) {
@@ -201,9 +221,9 @@ TEST(siginfo_t_standard_fields) {
 
 /* ============================================================================ */
 
-TEST_SUITE(sigaction_struct);
+TEST_SUITE(struct_sigaction);
 
-TEST(sigaction_struct_basic) {
+TEST(struct_sigaction_basic) {
 	struct sigaction act;
 	act.sa_handler = SIG_DFL;
 	act.sa_flags = 0;
@@ -420,6 +440,14 @@ TEST(sigaddset_bit_isolation) {
 	if (SIGINT < JACL_SIGSET_MAX) ASSERT_FALSE(sigismember(&set, SIGINT + 1));
 }
 
+TEST(sigaddset_boundary_max) {
+	sigset_t set;
+	sigemptyset(&set);
+	/* Test the exact boundary of JACL_SIGSET_MAX */
+	ASSERT_EQ(0, sigaddset(&set, JACL_SIGSET_MAX));
+	ASSERT_TRUE(sigismember(&set, JACL_SIGSET_MAX));
+}
+
 /* ============================================================================ */
 
 TEST_SUITE(sigdelset);
@@ -457,6 +485,21 @@ TEST(sigdelset_invalid_high) {
 	sigfillset(&set);
 	errno = 0;
 	ASSERT_EQ(-1, sigdelset(&set, JACL_SIGSET_MAX + 1));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(sigdelset_boundary_max) {
+	sigset_t set;
+	sigfillset(&set);
+	ASSERT_EQ(0, sigdelset(&set, JACL_SIGSET_MAX));
+	ASSERT_FALSE(sigismember(&set, JACL_SIGSET_MAX));
+}
+
+TEST(sigdelset_signal_zero_rejected) {
+	sigset_t set;
+	sigfillset(&set);
+	errno = 0;
+	ASSERT_EQ(-1, sigdelset(&set, 0));
 	ASSERT_EQ(EINVAL, errno);
 }
 
@@ -538,6 +581,48 @@ TEST(sigaction_mask_operations) {
 	sigaddset(&act.sa_mask, SIGTERM);
 	ASSERT_TRUE(sigismember(&act.sa_mask, SIGINT));
 	ASSERT_TRUE(sigismember(&act.sa_mask, SIGTERM));
+}
+
+static volatile sig_atomic_t g_resethand_count = 0;
+static void resethand_handler(int sig) {
+		(void)sig;
+			g_resethand_count++;
+}
+
+TEST(sigaction_resethand_oneshot) {
+	struct sigaction act, old_act, query_act;
+
+	g_resethand_count = 0;
+	act.sa_handler = resethand_handler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_RESETHAND; /* Reset to SIG_DFL after first delivery */
+
+	ASSERT_EQ(0, sigaction(SIGUSR1, &act, &old_act));
+
+	raise(SIGUSR1);
+	ASSERT_EQ(1, g_resethand_count);
+
+	/* Verify the kernel reset the handler to SIG_DFL */
+	ASSERT_EQ(0, sigaction(SIGUSR1, NULL, &query_act));
+	ASSERT_EQ(SIG_DFL, query_act.sa_handler);
+
+	sigaction(SIGUSR1, &old_act, NULL);
+}
+
+TEST(sigaction_null_act_retrieves_current) {
+	struct sigaction old_act, query_act;
+
+	/* Set a known handler first */
+	struct sigaction set_act = { .sa_handler = SIG_IGN, .sa_flags = SA_RESTART };
+	sigemptyset(&set_act.sa_mask);
+	ASSERT_EQ(0, sigaction(SIGUSR2, &set_act, &old_act));
+
+	/* Retrieve it using NULL act */
+	ASSERT_EQ(0, sigaction(SIGUSR2, NULL, &query_act));
+	ASSERT_EQ(SIG_IGN, query_act.sa_handler);
+
+	/* Restore original */
+	sigaction(SIGUSR2, &old_act, NULL);
 }
 
 /* ============================================================================ */
@@ -648,16 +733,99 @@ TEST(sigpending_basic) {
     ASSERT_EQ(0, sigpending(&pending));
 }
 
-TEST(signal_queue_clean) {
-	siginfo_t info; \
-	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0 }; \
-	while (sigtimedwait(NULL, &info, &ts) >= 0) {} \
-}
-
 TEST(sigpending_null_pointer_error) {
     errno = 0;
     ASSERT_EQ(-1, sigpending(NULL));
     ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(sigpending_detects_blocked_signal) {
+	sigset_t block_set, old_set, pending_set;
+	sigemptyset(&block_set);
+	sigaddset(&block_set, SIGUSR1);
+
+	/* 1. Ignore SIGUSR1 so unblocking it later doesn't terminate the test runner */
+	struct sigaction act, old_act;
+	act.sa_handler = SIG_IGN;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	sigaction(SIGUSR1, &act, &old_act);
+
+	/* 2. Block and send */
+	ASSERT_EQ(0, sigprocmask(SIG_BLOCK, &block_set, &old_set));
+	ASSERT_EQ(0, kill(getpid(), SIGUSR1));
+
+	/* 3. Verify it is pending */
+	ASSERT_EQ(0, sigpending(&pending_set));
+	ASSERT_TRUE(sigismember(&pending_set, SIGUSR1));
+
+	/* 4. Unblock it. Because it is SIG_IGN, the pending signal is safely discarded. */
+	sigprocmask(SIG_SETMASK, &old_set, NULL);
+
+	/* 5. Restore the original handler */
+	sigaction(SIGUSR1, &old_act, NULL);
+}
+
+TEST(sigpending_no_pending_signals) {
+	sigset_t pending;
+	sigemptyset(&pending);
+
+	/* Ensure no signals are pending right now */
+	ASSERT_EQ(0, sigpending(&pending));
+	ASSERT_TRUE(sigisemptyset(&pending));
+}
+#endif /* JACL_HAS_POSIX */
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+
+TEST_SUITE(sigtimedwait);
+
+TEST(sigtimedwait_queue_drain) {
+    sigset_t empty;
+    sigemptyset(&empty);
+    siginfo_t info;
+    struct timespec ts = { .tv_sec = 0, .tv_nsec = 0 };
+
+    /* Drain any pending signals with 0 timeout */
+    while (sigtimedwait(&empty, &info, &ts) > 0) {}
+}
+
+TEST(sigtimedwait_timeout_returns_eagain) {
+	sigset_t set, old_set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+
+	ASSERT_EQ(0, sigprocmask(SIG_BLOCK, &set, &old_set));
+
+	struct timespec ts = { .tv_sec = 0, .tv_nsec = 10000000 }; /* 10ms */
+	siginfo_t info;
+
+	errno = 0;
+	int r = sigtimedwait(&set, &info, &ts);
+
+	ASSERT_EQ(-1, r);
+	ASSERT_EQ(EAGAIN, errno);
+
+	sigprocmask(SIG_SETMASK, &old_set, NULL);
+}
+
+TEST(sigtimedwait_invalid_timeout) {
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+	sigprocmask(SIG_BLOCK, &set, NULL);
+
+	struct timespec ts = { .tv_sec = 0, .tv_nsec = -1 }; /* Invalid */
+	siginfo_t info;
+
+	errno = 0;
+	ASSERT_EQ(-1, sigtimedwait(&set, &info, &ts));
+	ASSERT_EQ(EINVAL, errno);
+
+	/* Unblock for cleanup */
+	sigprocmask(SIG_UNBLOCK, &set, NULL);
 }
 
 #endif /* JACL_HAS_POSIX */
@@ -715,6 +883,12 @@ TEST(sigsuspend_timeout_guard) {
 	alarm(0);  /* Cancel alarm if we somehow get here */
 }
 
+TEST(sigsuspend_null_mask_error) {
+	errno = 0;
+	ASSERT_EQ(-1, sigsuspend(NULL));
+	ASSERT_EQ(EINVAL, errno);
+}
+
 #endif /* JACL_HAS_POSIX */
 
 /* ============================================================================ */
@@ -740,7 +914,539 @@ TEST(sigaltstack_null_pointer_error) {
 	ASSERT_EQ(EINVAL, errno);
 }
 
+TEST(sigaltstack_valid_set_and_get) {
+	void *stack_mem = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	ASSERT_NE(MAP_FAILED, stack_mem);
+
+	stack_t ss, query;
+	ss.ss_sp = stack_mem;
+	ss.ss_size = SIGSTKSZ;
+	ss.ss_flags = 0;
+
+	int r = sigaltstack(&ss, NULL);
+	if (r != 0) {
+		munmap(stack_mem, SIGSTKSZ);
+		/* Only skip if it's a permission/environment restriction */
+		if (errno == EPERM || errno == ENOMEM) {
+			TEST_SKIP("sigaltstack restricted by environment");
+		}
+		/* Otherwise, let it fail so we know our syscall wrapper is broken */
+	}
+
+	ASSERT_EQ(0, sigaltstack(NULL, &query));
+	ASSERT_EQ(stack_mem, query.ss_sp);
+
+	stack_t disable_ss = { .ss_flags = SS_DISABLE };
+	ASSERT_EQ(0, sigaltstack(&disable_ss, NULL));
+
+	munmap(stack_mem, SIGSTKSZ);
+}
+
 #endif /* JACL_HAS_POSIX */
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(kill);
+
+TEST(kill_self_null_signal) {
+	/* sig=0 is the null signal, used to check process validity */
+	ASSERT_EQ(0, kill(getpid(), 0));
+}
+
+TEST(kill_invalid_pid) {
+	errno = 0;
+	ASSERT_EQ(-1, kill(-999999, SIGINT));
+	ASSERT_EQ(ESRCH, errno);
+}
+
+TEST(kill_invalid_signal) {
+	errno = 0;
+	/* Signal 0 is valid (null signal), but -1 is not */
+	ASSERT_EQ(-1, kill(getpid(), -1));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(kill_invalid_pid_range) {
+	errno = 0;
+	/* PID 0 is valid (self group), but extremely large PIDs usually fail */
+	ASSERT_EQ(-1, kill(2147483647, SIGINT));
+	ASSERT_EQ(ESRCH, errno);
+}
+
+TEST(kill_signal_out_of_range) {
+	errno = 0;
+	/* NSIG + 1 should be invalid */
+	ASSERT_EQ(-1, kill(getpid(), NSIG + 1));
+	ASSERT_EQ(EINVAL, errno);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(killpg);
+
+TEST(killpg_self_group) {
+	/* killpg with 0 targets the caller's process group */
+	ASSERT_EQ(0, killpg(0, 0));
+}
+
+TEST(killpg_invalid_group) {
+	errno = 0;
+	/* Group 999999 likely doesn't exist */
+	ASSERT_EQ(-1, killpg(999999, SIGINT));
+	ASSERT_TRUE(errno == ESRCH || errno == EPERM);
+}
+
+TEST(killpg_null_signal) {
+	/* Signal 0 is valid (checks existence/permissions) */
+	ASSERT_EQ(0, killpg(0, 0));
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(sigprocmask);
+
+TEST(sigprocmask_block_and_unblock) {
+	sigset_t block_set, old_set, unblock_set;
+	sigemptyset(&block_set);
+	sigaddset(&block_set, SIGUSR1);
+
+	ASSERT_EQ(0, sigprocmask(SIG_BLOCK, &block_set, &old_set));
+
+	sigemptyset(&unblock_set);
+	sigaddset(&unblock_set, SIGUSR1);
+	ASSERT_EQ(0, sigprocmask(SIG_UNBLOCK, &unblock_set, NULL));
+
+	/* Restore original mask */
+	sigprocmask(SIG_SETMASK, &old_set, NULL);
+}
+
+TEST(sigprocmask_setmask_replaces) {
+	sigset_t set1, set2, old_set, query_set;
+	sigemptyset(&set1);
+	sigaddset(&set1, SIGINT);
+
+	sigemptyset(&set2);
+	sigaddset(&set2, SIGTERM);
+
+	ASSERT_EQ(0, sigprocmask(SIG_SETMASK, &set1, &old_set));
+
+	/* Replace entirely */
+	ASSERT_EQ(0, sigprocmask(SIG_SETMASK, &set2, NULL));
+
+	/* Verify ONLY SIGTERM is blocked now */
+	ASSERT_EQ(0, sigprocmask(SIG_BLOCK, NULL, &query_set));
+	ASSERT_TRUE(sigismember(&query_set, SIGTERM));
+	ASSERT_FALSE(sigismember(&query_set, SIGINT));
+
+	/* Restore */
+	sigprocmask(SIG_SETMASK, &old_set, NULL);
+}
+
+TEST(sigprocmask_invalid_how) {
+	errno = 0;
+	sigset_t set;
+	sigemptyset(&set);
+	ASSERT_EQ(-1, sigprocmask(99, &set, NULL)); /* Invalid 'how' */
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(sigprocmask_null_set_noop) {
+	sigset_t old_set;
+	/* Blocking a null set should succeed and return the old mask */
+	ASSERT_EQ(0, sigprocmask(SIG_BLOCK, NULL, &old_set));
+}
+
+TEST(sigprocmask_null_old_and_new) {
+	/* Passing NULL for both set and oldset should be a valid no-op */
+	ASSERT_EQ(0, sigprocmask(SIG_BLOCK, NULL, NULL));
+}
+
+TEST(sigprocmask_invalid_how_value) {
+	sigset_t set;
+	sigemptyset(&set);
+	errno = 0;
+	/* 3 is not a valid 'how' value */
+	ASSERT_EQ(-1, sigprocmask(3, &set, NULL));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(sigprocmask_how_max_int) {
+	sigset_t set;
+	sigemptyset(&set);
+	errno = 0;
+	ASSERT_EQ(-1, sigprocmask(INT_MAX, &set, NULL));
+	ASSERT_EQ(EINVAL, errno);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(sigqueue);
+
+static volatile int g_queue_signo = 0;
+static volatile int g_queue_code = 0;
+static volatile int g_queue_value = 0;
+static volatile int g_queue_received = 0;
+
+static void queue_handler(int sig, siginfo_t *info, void *context) {
+	(void)context;
+	g_queue_signo = info->si_signo;
+	g_queue_code = info->si_code;
+	g_queue_value = info->si_value.sival_int;
+	g_queue_received = 1;
+}
+
+TEST(sigqueue_delivers_value) {
+	struct sigaction act, old_act;
+
+	sigemptyset(&act.sa_mask);
+
+	/* Clean POSIX: The sigaction wrapper will inject the restorer automatically */
+	act.sa_flags = SA_SIGINFO;
+	act.sa_sigaction = queue_handler;
+
+	ASSERT_EQ(0, sigaction(SIGUSR1, &act, &old_act));
+
+	union sigval val;
+	val.sival_int = 0xDEADBEEF;
+
+	int sq_ret = sigqueue(getpid(), SIGUSR1, val);
+
+	if (sq_ret != 0) {
+		sigaction(SIGUSR1, &old_act, NULL);
+		TEST_SKIP("sigqueue not supported or permitted");
+	}
+
+	int timeout = 1000000;
+	while (!g_queue_received && timeout-- > 0) { }
+
+	ASSERT_TRUE(g_queue_received);
+	ASSERT_EQ(SIGUSR1, g_queue_signo);
+	ASSERT_EQ(SI_QUEUE, g_queue_code);
+	ASSERT_EQ((int)0xDEADBEEF, g_queue_value);
+
+	sigaction(SIGUSR1, &old_act, NULL);
+
+	g_queue_received = 0;
+	g_queue_signo = 0;
+	g_queue_code = 0;
+	g_queue_value = 0;
+}
+
+TEST(sigqueue_invalid_pid) {
+	union sigval val = { .sival_int = 0 };
+	errno = 0;
+	ASSERT_EQ(-1, sigqueue(-999999, SIGUSR1, val));
+	ASSERT_EQ(ESRCH, errno);
+}
+
+TEST(sigqueue_invalid_signal) {
+	union sigval val = { .sival_int = 0 };
+	errno = 0;
+	ASSERT_EQ(-1, sigqueue(getpid(), -1, val));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(sigqueue_nonexistent_pid) {
+	union sigval val = { .sival_int = 42 };
+	errno = 0;
+
+	/* Send to a PID that definitely doesn't exist */
+	ASSERT_EQ(-1, sigqueue(999999, SIGUSR1, val));
+	ASSERT_EQ(ESRCH, errno);
+}
+
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(sigwait);
+
+TEST(sigwait_captures_blocked_signal) {
+	sigset_t set, old_set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+
+	ASSERT_EQ(0, sigprocmask(SIG_BLOCK, &set, &old_set));
+	ASSERT_EQ(0, kill(getpid(), SIGUSR1));
+
+	int caught_sig = 0;
+	ASSERT_EQ(0, sigwait(&set, &caught_sig));
+	ASSERT_EQ(SIGUSR1, caught_sig);
+
+	sigprocmask(SIG_SETMASK, &old_set, NULL);
+}
+
+TEST(sigwait_unblocked_signal_error) {
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1); /* Don't block it! */
+
+	int caught_sig = 0;
+	errno = 0;
+
+	/* Our sanitized wrapper should catch this UB and return EINVAL */
+	ASSERT_EQ(EINVAL, sigwait(&set, &caught_sig));
+}
+
+TEST(sigwait_empty_set_error) {
+	sigset_t set;
+	sigemptyset(&set); /* No signals to wait for */
+
+	int caught_sig = 0;
+	errno = 0;
+	ASSERT_EQ(EINVAL, sigwait(&set, &caught_sig));
+}
+
+TEST(sigwait_null_inputs) {
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+
+	errno = 0;
+	ASSERT_EQ(EINVAL, sigwait(NULL, NULL));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(sigwaitinfo);
+
+TEST(sigwaitinfo_captures_blocked_signal) {
+	sigset_t set, old_set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+
+	ASSERT_EQ(0, sigprocmask(SIG_BLOCK, &set, &old_set));
+	ASSERT_EQ(0, kill(getpid(), SIGUSR1));
+
+	siginfo_t info;
+	int r = sigwaitinfo(&set, &info);
+
+	ASSERT_EQ(SIGUSR1, r);
+	ASSERT_EQ(SIGUSR1, info.si_signo);
+
+	sigprocmask(SIG_SETMASK, &old_set, NULL);
+}
+
+TEST(sigwaitinfo_null_pointer_error) {
+	errno = 0;
+	ASSERT_EQ(-1, sigwaitinfo(NULL, NULL));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(sigwaitinfo_invalid_set) {
+	errno = 0;
+	siginfo_t info;
+	ASSERT_EQ(-1, sigwaitinfo(NULL, &info));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(sigwaitinfo_empty_set_returns_einval) {
+	sigset_t set;
+	sigemptyset(&set); /* No signals to wait for */
+
+	siginfo_t info;
+	errno = 0;
+	/* Waiting on an empty set is logically invalid */
+	ASSERT_EQ(-1, sigwaitinfo(&set, &info));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(sigwaitinfo_with_timeout_eagain) {
+	sigset_t set, old_set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+
+	ASSERT_EQ(0, sigprocmask(SIG_BLOCK, &set, &old_set));
+
+	struct timespec ts = { .tv_sec = 0, .tv_nsec = 1000000 }; /* 1ms */
+	siginfo_t info;
+
+	errno = 0;
+	int r = sigtimedwait(&set, &info, &ts); /* Use sigtimedwait, not sigwaitinfo! */
+
+	ASSERT_EQ(-1, r);
+	ASSERT_EQ(EAGAIN, errno);
+
+	sigprocmask(SIG_SETMASK, &old_set, NULL);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(sig2str);
+
+TEST(sig2str_null_buffer) {
+	errno = 0;
+	ASSERT_EQ(-1, sig2str(SIGINT, NULL));
+	ASSERT_EQ(EINVAL, errno); /* Or ENOSYS if you prefer, but NULL check usually comes first */
+}
+
+TEST(sig2str_converts_signal) {
+	char buf[SIG2STR_MAX];
+	ASSERT_EQ(0, sig2str(SIGINT, buf));
+	ASSERT_STR_EQ("SIGINT", buf);
+}
+#endif
+
+/* ============================================================================ */
+
+#if JACL_HAS_POSIX
+TEST_SUITE(str2sig);
+
+TEST(str2sig_null_name) {
+	int sig = 0;
+	errno = 0;
+	ASSERT_EQ(-1, str2sig(NULL, &sig));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(str2sig_null_outptr) {
+	errno = 0;
+	ASSERT_EQ(-1, str2sig("SIGINT", NULL));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(str2sig_converts_string) {
+	int sig = 0;
+	ASSERT_EQ(0, str2sig("SIGINT", &sig));
+	ASSERT_EQ(SIGINT, sig);
+}
+
+TEST(str2sig_handles_no_prefix) {
+	int sig = 0;
+	ASSERT_EQ(0, str2sig("TERM", &sig));
+	ASSERT_EQ(SIGTERM, sig);
+}
+
+TEST(str2sig_case_sensitive) {
+	int sig = 0;
+	errno = 0;
+	/* POSIX requires uppercase */
+	ASSERT_EQ(-1, str2sig("sigint", &sig));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+TEST(str2sig_unknown_string) {
+	int sig = 0;
+	errno = 0;
+	ASSERT_EQ(-1, str2sig("SIGFAKE", &sig));
+	ASSERT_EQ(EINVAL, errno);
+}
+
+#endif
+
+/* ============================================================================ */
+
+TEST_SUITE(sigevent);
+
+TEST(sigevent_struct_fields) {
+	struct sigevent ev;
+	ev.sigev_notify = SIGEV_SIGNAL;
+	ev.sigev_signo = SIGUSR1;
+	ev.sigev_value.sival_int = 42;
+
+	ASSERT_EQ(SIGEV_SIGNAL, ev.sigev_notify);
+	ASSERT_EQ(SIGUSR1, ev.sigev_signo);
+	ASSERT_EQ(42, ev.sigev_value.sival_int);
+}
+
+TEST(sigevent_thread_notification) {
+	struct sigevent ev;
+	ev.sigev_notify = SIGEV_THREAD;
+	ev.sigev_notify_function = (void(*)(union sigval))0x12345678;
+	ev.sigev_notify_attributes = NULL;
+
+	ASSERT_EQ(SIGEV_THREAD, ev.sigev_notify);
+	ASSERT_EQ((void*)0x12345678, (void*)ev.sigev_notify_function);
+}
+
+TEST(sigevent_none_notification) {
+	struct sigevent ev;
+	ev.sigev_notify = SIGEV_NONE;
+	ev.sigev_signo = 0;
+
+	ASSERT_EQ(SIGEV_NONE, ev.sigev_notify);
+	ASSERT_EQ(0, ev.sigev_signo);
+}
+
+TEST(sigevent_zero_init) {
+	struct sigevent ev = {0};
+	ASSERT_EQ(0, ev.sigev_notify);
+	ASSERT_EQ(0, ev.sigev_signo);
+	ASSERT_EQ(0, ev.sigev_value.sival_int);
+	ASSERT_EQ(NULL, ev.sigev_notify_function);
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(psignal);
+
+TEST(psignal_basic_execution) {
+	/* Verify it doesn't crash on valid input */
+  suppress_stderr();
+	psignal(SIGINT, "Test psignal");
+  restore_stderr();
+}
+
+TEST(psignal_invalid_signal) {
+	/* Verify it handles out-of-bounds gracefully */
+	suppress_stderr();
+	psignal(999, "Invalid signal test");
+	restore_stderr();
+}
+
+TEST(psignal_empty_prefix) {
+	/* Should print "Signal 2" without a leading colon */
+	suppress_stderr();
+	psignal(SIGINT, "");
+	restore_stderr();
+}
+
+/* ============================================================================ */
+
+TEST_SUITE(psiginfo);
+
+TEST(psiginfo_basic_execution) {
+	siginfo_t info;
+	memset(&info, 0, sizeof(info));
+	info.si_signo = SIGINT;
+	info.si_code = SI_USER;
+
+	/* Verify it doesn't crash on valid input */
+	suppress_stderr();
+	psiginfo(&info, "Test psiginfo");
+	restore_stderr();
+}
+
+TEST(psiginfo_null_pointer) {
+	/* Verify it handles null gracefully without segfaulting */
+	suppress_stderr();
+	psiginfo(NULL, "Null psiginfo test");
+	restore_stderr();
+}
+
+TEST(psiginfo_empty_prefix) {
+	siginfo_t info = {0};
+	info.si_signo = SIGINT;
+	
+	/* Should print details without a leading colon */
+	suppress_stderr();
+	psiginfo(&info, "");
+	restore_stderr();
+}
 
 /* ============================================================================ */
 

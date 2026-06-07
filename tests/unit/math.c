@@ -813,9 +813,7 @@ GEN_C23_REDUC(_ldbl, l, long double, EPS, ASSERT_LDBL_NEAR)
 
 #endif /* JACL_HAS_C23 */
 
-/* =========================================
- * BESSEL (Double Only, Base/POSIX)
- * ========================================= */
+/* BESSEL (Double Only, Base/POSIX) */
 TEST_SUITE(bessel);
 TEST(bessel_j0_zero) { ASSERT_DBL_NEAR(1.0, j0(0.0), EPS); }
 TEST(bessel_j0_three) { ASSERT_DBL_NEAR(-0.260052, j0(3.0), 0.001); }
