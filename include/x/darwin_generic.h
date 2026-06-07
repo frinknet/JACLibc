@@ -1,5 +1,5 @@
 /**
- * DARWIN SYSCALLS IMPORTED  //  last updated: 2026-05-28 00:39:25 UTC
+ * DARWIN SYSCALLS IMPORTED  //  last updated: 2026-06-03 04:34:00 UTC
  * https://raw.githubusercontent.com/apple-oss-distributions/xnu/main/bsd/kern/syscalls.master
  */
 

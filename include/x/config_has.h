@@ -1,5 +1,5 @@
 /**
- * JACLIBC SYSCALLS MATRIX  //  last updated: 2026-05-28 00:39:40 UTC
+ * JACLIBC SYSCALLS MATRIX  //  last updated: 2026-06-03 04:34:15 UTC
  */
 
 /* check SYS_alarm */

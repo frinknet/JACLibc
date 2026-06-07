@@ -50,12 +50,12 @@ static inline int __jacl_parse_passwd_line(char *line, struct passwd *pwd) {
 		p++;
 		count = i + 1;
 	}
-	
+
 	if (count < 7) return -1;
 
 	pwd->pw_name   = fields[0];
 	pwd->pw_passwd = fields[1];
-	
+
 	char *endptr;
 	long uid = strtol(fields[2], &endptr, 10);
 	if (*endptr != '\0' || fields[2][0] == '\0') return -1;
@@ -88,7 +88,7 @@ static inline int __jacl_search_passwd(int (*match)(const struct passwd *, const
 
 	while (fgets(line, sizeof(line), f)) {
 		if (line[0] == '#' || line[0] == '\n') continue;
-		
+
 		if (strlen(line) >= buflen) continue;
 		strcpy(buf, line);
 

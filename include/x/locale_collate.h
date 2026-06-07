@@ -1,10 +1,10 @@
-/* (c) 2025 FRINKnet & Friends – MIT licence */
+/* (c) 2025-2026 FRINKnet & Friends – MIT licence */
 
 /* X_LANG(LANG, sort, fold_from, fold_to, sort_count, fold_count) */
 
-X_LANG(C,    0, 1, 1, 0, L"", L"", 0)
-X_LANG(EN,   0, 1, 1, 1, L"ÀÂÇÉÈÊËÎÏÔÙÛÜàâçéèêëîïôùûü", L"AACEEEEIIOUUUaaceeeeiiouuu", 28) // English
-X_LANG(ZH,   0, 1, 1, 0, L"", L"", 0) // Chinese
+X_LANG(C,    L"", L"", L"", 0, 0) // C
+X_LANG(EN,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"ÀÂÇÉÈÊËÎÏÔÙÛÜàâçéèêëîïôùûü", L"AACEEEEIIOUUUaaceeeeiiouuu", 62, 28) // English
+X_LANG(ZH,   L"", L"", L"", 0, 0) // Chinese
 X_LANG(HI,   L"", L"", L"", 0, 0) // Hindi
 X_LANG(ES,   L"0123456789ABCDEFGHIJKLMNÑOPQRSTUVWXYZabcdefghijklmnñopqrstuvwxyz", L"ÁÉÍÓÚáéíóú", L"AEIOUaeiou", 62, 10) // Spanish
 X_LANG(MS,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Malay
@@ -27,6 +27,7 @@ X_LANG(TA,   L"", L"", L"", 0, 0) // Tamil
 X_LANG(VI,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Vietnamese
 X_LANG(KO,   L"", L"", L"", 0, 0) // Korean
 X_LANG(HA,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Hausa
+X_LANG(WUU,  L"", L"", L"", 0, 0) // Wu Chinese
 X_LANG(FA,   L"۰۱۲۳۴۵۶۷۸۹ابتثجحخدذرزسشصضطظعغفقکگلمنهویپچژگ", L"", L"", 43, 0) // Farsi
 X_LANG(JV,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Javanese
 X_LANG(IT,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Italian
@@ -63,6 +64,7 @@ X_LANG(MG,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 
 X_LANG(NL,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"ÉÈÊËÏÓÀéèêëïóà", L"EEEEIOAeeeeoa", 62, 14) // Dutch
 X_LANG(AZ,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"ÇĞİÖŞçğıöş", L"CGIOScgios", 62, 10) // Azerbaijani
 X_LANG(SO,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Somali
+X_LANG(AK,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Akan
 X_LANG(ZA,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Zhuang
 X_LANG(HNE,  L"", L"", L"", 0, 0) // Chhattisgarhi
 X_LANG(SI,   L"", L"", L"", 0, 0) // Sinhala
@@ -70,6 +72,7 @@ X_LANG(NE,   L"", L"", L"", 0, 0) // Nepali
 X_LANG(KM,   L"", L"", L"", 0, 0) // Khmer
 X_LANG(AS,   L"", L"", L"", 0, 0) // Assamese
 X_LANG(LN,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Lingala
+X_LANG(SV,   L"", L"", L"", 0, 0) // Swedish
 X_LANG(LG,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Luganda
 X_LANG(MAD,  L"", L"", L"", 0, 0) // Madurese
 X_LANG(EL,   L"", L"", L"", 0, 0) // Greek
@@ -90,7 +93,7 @@ X_LANG(TK,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 
 X_LANG(SYL,  L"", L"", L"", 0, 0) // Sylheti
 X_LANG(DHD,  L"", L"", L"", 0, 0) // Dhundhari
 X_LANG(SN,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Shona
-X_LANG(AK,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Akan
+X_LANG(TW,   L"", L"", L"", 0, 0) // Twi
 X_LANG(CA,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"ÀÁÂÄÇÈÉÍÏÒÓÔÖÚÜàáâäçèéíïòóôöúü", L"AAAACEEIIOOOUUaaaaceeiiooouu", 62, 32) // Catalan
 X_LANG(CS,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"ÁČĎÉĚÍŇÓŘŠŤÚŮÝŽáčďéěíňóřšťúůýž", L"ACDEEINORSTUUYZacdeeinorstuuyz", 62, 34) // Czech
 X_LANG(MNP,  L"", L"", L"", 0, 0) // Min Bei Chinese
@@ -103,23 +106,33 @@ X_LANG(BAL,  L"۰۱۲۳۴۵۶۷۸۹ابتثجحخدذرزسشصضطظعغفقك�
 X_LANG(TI,   L"", L"", L"", 0, 0) // Tigrinya
 X_LANG(QU,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Quechua
 X_LANG(KI,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Kikuyu
+X_LANG(LO,   L"", L"", L"", 0, 0) // Lao
 X_LANG(XH,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Xhosa
 X_LANG(KOK,  L"", L"", L"", 0, 0) // Konkani
-X_LANG(KON,  L"", L"", L"", 0, 0) // Kongo
 X_LANG(SAT,  L"", L"", L"", 0, 0) // Santali
 X_LANG(AF,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Afrikaans
 X_LANG(KS,   L"۰۱۲۳۴۵۶۷۸۹ابتثجحخدذرزسشصضطظعغفقكلمنهويءآإؤة", L"", L"", 42, 0) // Kashmiri
-X_LANG(GN,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Guarani
-X_LANG(BO,   L"", L"", L"", 0, 0) // Tibetan
 X_LANG(KAB,  L"", L"", L"", 0, 0) // Kabyle
+X_LANG(GN,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Guarani
+X_LANG(DA,   L"", L"", L"", 0, 0) // Danish
+X_LANG(BG,   L"", L"", L"", 0, 0) // Bulgarian
+X_LANG(HY,   L"", L"", L"", 0, 0) // Armenian
+X_LANG(KON,  L"", L"", L"", 0, 0) // Kongo
+X_LANG(MN,   L"", L"", L"", 0, 0) // Mongolian
+X_LANG(BO,   L"", L"", L"", 0, 0) // Tibetan
+X_LANG(FI,   L"", L"", L"", 0, 0) // Finnish
 X_LANG(TT,   L"", L"", L"", 0, 0) // Tatar
 X_LANG(BE,   L"", L"", L"", 0, 0) // Belarusian
-X_LANG(LU,   L"", L"", L"", 0, 0) // Luo
-X_LANG(CE,   L"", L"", L"", 0, 0) // Chechen
-X_LANG(DTX,  L"", L"", L"", 0, 0) // Naxi
+X_LANG(FAT,  L"", L"", L"", 0, 0) // Fante
+X_LANG(LUO,  L"", L"", L"", 0, 0) // Luo
+X_LANG(SK,   L"", L"", L"", 0, 0) // Slovak
+X_LANG(HR,   L"", L"", L"", 0, 0) // Croatian
+X_LANG(SQ,   L"", L"", L"", 0, 0) // Albanian
 X_LANG(NB,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Norwegian Bokmål
+X_LANG(KA,   L"", L"", L"", 0, 0) // Georgian
 X_LANG(TPI,  L"", L"", L"", 0, 0) // Tok Pisin
 X_LANG(BEM,  L"", L"", L"", 0, 0) // Bemba
+X_LANG(LT,   L"", L"", L"", 0, 0) // Lithuanian
 X_LANG(DOI,  L"", L"", L"", 0, 0) // Dogri
 X_LANG(BS,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Bosnian
 X_LANG(GL,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Galician
@@ -129,18 +142,25 @@ X_LANG(EO,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 
 X_LANG(MNI,  L"", L"", L"", 0, 0) // Manipuri
 X_LANG(GA,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Irish Gaelic
 X_LANG(NAH,  L"", L"", L"", 0, 0) // Nahuatl
+X_LANG(CE,   L"", L"", L"", 0, 0) // Chechen
+X_LANG(LV,   L"", L"", L"", 0, 0) // Latvian
 X_LANG(BRX,  L"", L"", L"", 0, 0) // Bodo
 X_LANG(EU,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Basque
+X_LANG(ET,   L"", L"", L"", 0, 0) // Estonian
 X_LANG(SC,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Sardinian
 X_LANG(ARC,  L"", L"", L"", 0, 0) // Aramaic
+X_LANG(SYC,  L"", L"", L"", 0, 0) // Syriac
 X_LANG(CY,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Welsh
 X_LANG(YI,   L"", L"", L"", 0, 0) // Yiddish
+X_LANG(MT,   L"", L"", L"", 0, 0) // Maltese
 X_LANG(SM,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Samoan
 X_LANG(OC,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Occitan
 X_LANG(NN,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Norwegian Nynorsk
 X_LANG(LB,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Luxembourgish
-X_LANG(FJ,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Fijian
+X_LANG(IS,   L"", L"", L"", 0, 0) // Icelandic
 X_LANG(PAP,  L"", L"", L"", 0, 0) // Papiamento
+X_LANG(FJ,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Fijian
+X_LANG(DTX,  L"", L"", L"", 0, 0) // Naxi
 X_LANG(DZ,   L"", L"", L"", 0, 0) // Dzongkha
 X_LANG(CNR,  L"", L"", L"", 0, 0) // Montenegrin
 X_LANG(BR,   L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", L"", L"", 62, 0) // Breton

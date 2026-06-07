@@ -5,7 +5,7 @@
 #endif
 
 /* Locale Generator */
-#define X_LANG(lang, ...) X_LANG_##lang(__VA_ARGS__)
+#define X_LANG(LANG, ...) X_LANG_##LANG(__VA_ARGS__)
 
 /* Standard Locale */
 #define X_LANG_C(...) X(LANG_C, __VA_ARGS__)

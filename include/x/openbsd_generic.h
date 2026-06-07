@@ -1,5 +1,5 @@
 /**
- * OPENBSD SYSCALLS IMPORTED  //  last updated: 2026-05-28 00:39:34 UTC
+ * OPENBSD SYSCALLS IMPORTED  //  last updated: 2026-06-03 04:34:09 UTC
  * https://cvsweb.openbsd.org/checkout/src/sys/kern/syscalls.master
  */
 
@@ -145,7 +145,6 @@ X(SYS_pinsyscalls, 158, pinsyscalls, int, (void *, size_t, u_int *, int), (void 
 X(SYS_mimmutable, 159, mimmutable, int, (void *, size_t), (void *)a0, (size_t)a1)
 X(SYS_waitid, 160, waitid, int, (int, id_t, siginfo_t *, int), (int)a0, (id_t)a1, (siginfo_t *)a2, (int)a3)
 X(SYS_getfh, 161, getfh, int, (const char *, fhandle_t *), (const char *)a0, (fhandle_t *)a1)
-X(SYS___tmpfd, 164, __tmpfd, int, (int), (int)a0)
 X(SYS_sysarch, 165, sysarch, int, (int, void *), (int)a0, (void *)a1)
 X(SYS_lseek, 166, lseek, off_t, (int, off_t, int), (int)a0, (off_t)a1, (int)a2)
 X(SYS_truncate, 167, truncate, int, (const char *, off_t), (const char *)a0, (off_t)a1)
